@@ -523,6 +523,9 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <div style="text-align:center;margin-bottom:32px;">
       <div style="font-family:var(--font-h);font-size:28px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;">⚔ Military Sports System</div>
       <div style="color:var(--text3);font-size:13px;margin-top:4px;">© By Kozak — Wybierz lub utwórz zawody</div>
+      <div id="welcome-back-btn-wrap" style="margin-top:12px;display:none">
+        <button class="btn btn-sm btn-success" onclick="document.getElementById('welcome-screen').style.display='none'">← Wróć do aktywnych zawodów</button>
+      </div>
     </div>
 
     <!-- Lista slotów -->
@@ -609,12 +612,10 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="app-header-right">
     <span class="header-contest-name" id="header-contest-name"></span>
     <span class="header-autosave" id="header-autosave">● AUTO-SAVE</span>
-    <button class="btn btn-sm" id="switch-contest-btn" title="Przytrzymaj 2 sekundy aby zmienić zawody"
-      onmousedown="startSwitchHold(event)" onmouseup="cancelSwitchHold()" onmouseleave="cancelSwitchHold()"
-      ontouchstart="startSwitchHold(event)" ontouchend="cancelSwitchHold()"
+    <button class="btn btn-sm" id="switch-contest-btn" title="Zmień zawody"
+      onclick="switchModalGoWelcome()"
       style="position:relative;overflow:hidden;">
-      <span id="switch-btn-label">🏟</span>
-      <div id="switch-hold-bar" style="position:absolute;bottom:0;left:0;height:3px;width:0%;background:var(--accent);transition:none;border-radius:0 0 3px 3px;"></div>
+      <span id="switch-btn-label">🏟 Menu</span>
     </button>
     <button class="btn btn-sm" onclick="exportData()">💾 Eksport</button>
     <button class="btn btn-sm btn-success" onclick="openProjector()">📺 Projektor</button>
@@ -3275,6 +3276,9 @@ function openSlotFromSwitchModal(slotId) {
 function renderWelcomeSlots() {
   const el = document.getElementById('welcome-slots-list');
   if (!el) return;
+  // Pokaż przycisk powrotu jeśli są aktywne zawody
+  const backBtn = document.getElementById('welcome-back-btn-wrap');
+  if (backBtn) backBtn.style.display = ACTIVE_SLOT_ID ? 'block' : 'none';
   const slots = listSlots();
   if (!slots.length) { el.innerHTML = '<div class="empty-state text-muted">Brak zapisanych zawodów. Utwórz pierwsze zawody poniżej.</div>'; return; }
   el.innerHTML = slots.map(s => {
