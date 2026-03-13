@@ -545,6 +545,14 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           <input id="new-slot-date" type="date">
         </div>
       </div>
+      <div class="form-group">
+        <label>Hasło dostępu <span style="color:var(--red)">*</span></label>
+        <input id="new-slot-password" type="password" placeholder="Ustaw hasło do tych zawodów">
+      </div>
+      <div class="form-group">
+        <label>Powtórz hasło <span style="color:var(--red)">*</span></label>
+        <input id="new-slot-password2" type="password" placeholder="Powtórz hasło">
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success" onclick="welcomeCreateNew()">🆕 Utwórz nowe zawody</button>
         <button class="btn btn-sm" onclick="document.getElementById('import-welcome-file').click()">📤 Wczytaj z pliku JSON</button>
@@ -554,6 +562,26 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
     <div style="text-align:center;margin-top:16px;color:var(--text3);font-size:11px;">
       Dane każdych zawodów są przechowywane osobno w tej przeglądarce.<br>Używaj eksportu JSON jako kopii zapasowej.
+    </div>
+  </div>
+</div>
+
+<!-- Modal hasła — weryfikacja przed wejściem do zawodów -->
+<div id="modal-password" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.8);align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--accent);border-radius:8px;padding:28px;max-width:380px;width:90%;box-shadow:0 4px 32px rgba(0,0,0,.6)">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:32px;margin-bottom:8px;">🔐</div>
+      <div style="font-family:var(--font-h);font-size:16px;letter-spacing:2px;color:var(--accent);text-transform:uppercase">Weryfikacja hasła</div>
+      <div id="modal-password-contest-name" style="color:var(--text2);font-size:13px;margin-top:6px;"></div>
+    </div>
+    <div class="form-group">
+      <label>Hasło dostępu</label>
+      <input id="modal-password-input" type="password" placeholder="Wprowadź hasło..." onkeydown="if(event.key==='Enter')confirmPassword()">
+    </div>
+    <div id="modal-password-error" style="display:none;color:var(--red);font-size:12px;text-align:center;margin-bottom:10px;font-family:var(--font-h);letter-spacing:1px;">✗ NIEPRAWIDŁOWE HASŁO</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-sm" onclick="cancelPassword()">Anuluj</button>
+      <button class="btn btn-primary" onclick="confirmPassword()">🔓 Wejdź</button>
     </div>
   </div>
 </div>
@@ -1034,6 +1062,57 @@ const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_aPrFnhbnuEL0xlj8b8SpiQ_Jq7CD-KL';
 const SLOT_KEY = 'default'; // nazwa slotu w tabeli Supabase
 
+// ════════════════════════════════════════════════════════════
+// HASŁA — SHA-256 (Web Crypto API, wbudowane w każdą przeglądarkę)
+// ════════════════════════════════════════════════════════════
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+let _pwdPendingSlotId = null;
+let _pwdPendingCallback = null;
+
+function openPasswordModal(slotId, contestName, callback) {
+  _pwdPendingSlotId = slotId;
+  _pwdPendingCallback = callback;
+  const modal = document.getElementById('modal-password');
+  const nameEl = document.getElementById('modal-password-contest-name');
+  const input = document.getElementById('modal-password-input');
+  const errEl = document.getElementById('modal-password-error');
+  if (nameEl) nameEl.textContent = contestName || '';
+  if (input) { input.value = ''; }
+  if (errEl) errEl.style.display = 'none';
+  if (modal) { modal.style.display = 'flex'; setTimeout(() => input && input.focus(), 100); }
+}
+
+async function confirmPassword() {
+  const input = document.getElementById('modal-password-input');
+  const errEl = document.getElementById('modal-password-error');
+  if (!input || !_pwdPendingSlotId) return;
+  const idx = getSlotsIndex();
+  const slot = idx.find(s => s.id === _pwdPendingSlotId);
+  if (!slot) return;
+  const hash = await sha256(input.value);
+  if (hash === slot.passwordHash) {
+    document.getElementById('modal-password').style.display = 'none';
+    if (_pwdPendingCallback) _pwdPendingCallback(_pwdPendingSlotId);
+    _pwdPendingSlotId = null;
+    _pwdPendingCallback = null;
+  } else {
+    if (errEl) { errEl.style.display = 'block'; }
+    input.value = '';
+    input.focus();
+    setTimeout(() => { if (errEl) errEl.style.display = 'none'; }, 2000);
+  }
+}
+
+function cancelPassword() {
+  document.getElementById('modal-password').style.display = 'none';
+  _pwdPendingSlotId = null;
+  _pwdPendingCallback = null;
+}
+
 let _supabase = null;
 function getSupabase() {
   if (!_supabase) {
@@ -1072,10 +1151,10 @@ function listSlots() {
   });
 }
 
-function createSlot(name, place, date) {
+function createSlot(name, place, date, passwordHash) {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const idx = getSlotsIndex();
-  idx.push({ id, createdAt: new Date().toISOString() });
+  idx.push({ id, createdAt: new Date().toISOString(), passwordHash: passwordHash || '' });
   saveSlotsIndex(idx);
   const emptyState = {
     setup: { name: name||'', date: date||'', place: place||'', org:'', days:2, teamLimitM:5, teamLimitK:3 },
@@ -3162,11 +3241,32 @@ function renderSwitchModalSlots() {
   if (!el) return;
   const slots = listSlots();
   if (!slots.length) { el.innerHTML = '<div class="empty-state">Brak zapisanych zawodów.</div>'; return; }
-  el.innerHTML = slots.map(s => `
-    <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="switchToSlot('${s.id}');closeSwitchModal()">
-      <div class="bold">${s.name || '(bez nazwy)'}</div>
-      <div class="text-muted text-sm">${s.place || ''} ${s.date || ''} · ${s.nAthletes} zawodników</div>
-    </div>`).join('');
+  el.innerHTML = slots.map(s => {
+    const isActive = s.id === ACTIVE_SLOT_ID;
+    const hasPassword = !!getSlotsIndex().find(x => x.id === s.id)?.passwordHash;
+    return `
+    <div class="card" style="margin-bottom:8px;cursor:pointer;border:1px solid ${isActive ? 'var(--accent)' : 'var(--border)'}" onclick="openSlotFromSwitchModal('${s.id}')">
+      <div class="bold">${hasPassword ? '🔒' : '🔓'} ${s.name || '(bez nazwy)'}${isActive ? ' <span style="color:var(--accent);font-size:11px;font-family:var(--font-h);letter-spacing:1px">◀ AKTYWNE</span>' : ''}</div>
+      <div class="text-muted text-sm">${s.place || ''}${s.date ? ' · '+s.date : ''} · ${s.nAthletes} zawodników</div>
+    </div>`;
+  }).join('');
+}
+
+function openSlotFromSwitchModal(slotId) {
+  if (slotId === ACTIVE_SLOT_ID) { closeSwitchModal(); return; }
+  const idx = getSlotsIndex();
+  const slot = idx.find(s => s.id === slotId);
+  if (!slot) return;
+  if (slot.passwordHash) {
+    const name = listSlots().find(s => s.id === slotId)?.name || '';
+    openPasswordModal(slotId, name, (id) => {
+      switchToSlot(id);
+      closeSwitchModal();
+    });
+  } else {
+    switchToSlot(slotId);
+    closeSwitchModal();
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -3176,26 +3276,120 @@ function renderWelcomeSlots() {
   const el = document.getElementById('welcome-slots-list');
   if (!el) return;
   const slots = listSlots();
-  if (!slots.length) { el.innerHTML = '<div class="empty-state text-muted">Brak zapisanych zawodów.</div>'; return; }
-  el.innerHTML = slots.map(s => `
-    <div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+  if (!slots.length) { el.innerHTML = '<div class="empty-state text-muted">Brak zapisanych zawodów. Utwórz pierwsze zawody poniżej.</div>'; return; }
+  el.innerHTML = slots.map(s => {
+    const hasPassword = !!s.passwordHash;
+    const lockIcon = hasPassword ? '🔒' : '🔓';
+    return `
+    <div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;border:1px solid ${hasPassword ? 'var(--border2)' : 'rgba(232,148,77,.3)'}">
       <div>
-        <div class="bold">${s.name || '(bez nazwy)'}</div>
-        <div class="text-muted text-sm">${s.place || ''} ${s.date || ''} · ${s.nAthletes} zawodników</div>
+        <div class="bold">${lockIcon} ${s.name || '(bez nazwy)'}</div>
+        <div class="text-muted text-sm">${s.place || ''}${s.date ? ' · '+s.date : ''} · ${s.nAthletes} zawodników</div>
       </div>
       <div class="flex" style="gap:6px">
-        <button class="btn btn-primary btn-sm" onclick="switchToSlot('${s.id}');document.getElementById('welcome-screen').style.display='none'">Otwórz</button>
-        <button class="btn btn-danger btn-sm" onclick="if(confirm('Usunąć zawody?')){deleteSlot('${s.id}');renderWelcomeSlots();}">✕</button>
+        <button class="btn btn-primary btn-sm" onclick="openSlotFromWelcome('${s.id}')">Otwórz</button>
+        <button class="btn btn-sm" onclick="openChangePasswordModal('${s.id}')">🔑</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteSlot('${s.id}')">✕</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
-function welcomeCreateNew() {
+function openSlotFromWelcome(slotId) {
+  const idx = getSlotsIndex();
+  const slot = idx.find(s => s.id === slotId);
+  if (!slot) return;
+  if (slot.passwordHash) {
+    const name = listSlots().find(s => s.id === slotId)?.name || '';
+    openPasswordModal(slotId, name, (id) => {
+      switchToSlot(id);
+      document.getElementById('welcome-screen').style.display = 'none';
+    });
+  } else {
+    switchToSlot(slotId);
+    document.getElementById('welcome-screen').style.display = 'none';
+  }
+}
+
+function confirmDeleteSlot(slotId) {
+  const idx = getSlotsIndex();
+  const slot = idx.find(s => s.id === slotId);
+  if (!slot) return;
+  if (slot.passwordHash) {
+    const name = listSlots().find(s => s.id === slotId)?.name || '';
+    openPasswordModal(slotId, '🗑 Usunąć: ' + name, (id) => {
+      if (confirm('Na pewno usunąć te zawody? Tej operacji nie można cofnąć.')) {
+        deleteSlot(id);
+        renderWelcomeSlots();
+        toast('Zawody usunięte');
+      }
+    });
+  } else {
+    if (confirm('Usunąć zawody?')) { deleteSlot(slotId); renderWelcomeSlots(); }
+  }
+}
+
+// ─── ZMIANA HASŁA ───
+let _changePwdSlotId = null;
+function openChangePasswordModal(slotId) {
+  _changePwdSlotId = slotId;
+  const name = listSlots().find(s => s.id === slotId)?.name || '';
+  const idx = getSlotsIndex();
+  const slot = idx.find(s => s.id === slotId);
+  const hasOld = !!slot?.passwordHash;
+  const html = `
+    <div style="position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;" id="change-pwd-overlay">
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:24px;max-width:360px;width:90%">
+        <div style="font-family:var(--font-h);font-size:14px;letter-spacing:2px;color:var(--accent);margin-bottom:16px;">🔑 ZMIANA HASŁA</div>
+        <div style="color:var(--text2);font-size:12px;margin-bottom:12px">${name}</div>
+        ${hasOld ? `<div class="form-group"><label>Stare hasło</label><input id="cpwd-old" type="password" placeholder="Aktualne hasło"></div>` : ''}
+        <div class="form-group"><label>Nowe hasło</label><input id="cpwd-new" type="password" placeholder="Nowe hasło (zostaw puste = brak hasła)"></div>
+        <div class="form-group"><label>Powtórz nowe hasło</label><input id="cpwd-new2" type="password" placeholder="Powtórz nowe hasło"></div>
+        <div id="cpwd-error" style="display:none;color:var(--red);font-size:12px;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+          <button class="btn btn-sm" onclick="document.getElementById('change-pwd-overlay').remove()">Anuluj</button>
+          <button class="btn btn-primary" onclick="doChangePassword()">Zapisz hasło</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function doChangePassword() {
+  const slotId = _changePwdSlotId;
+  const idx = getSlotsIndex();
+  const slot = idx.find(s => s.id === slotId);
+  const errEl = document.getElementById('cpwd-error');
+  const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
+
+  if (slot?.passwordHash) {
+    const oldInput = document.getElementById('cpwd-old')?.value || '';
+    const oldHash = await sha256(oldInput);
+    if (oldHash !== slot.passwordHash) { showErr('✗ Stare hasło jest nieprawidłowe'); return; }
+  }
+  const newPwd = document.getElementById('cpwd-new')?.value || '';
+  const newPwd2 = document.getElementById('cpwd-new2')?.value || '';
+  if (newPwd !== newPwd2) { showErr('✗ Nowe hasła nie są identyczne'); return; }
+
+  const newHash = newPwd ? await sha256(newPwd) : '';
+  slot.passwordHash = newHash;
+  saveSlotsIndex(idx);
+  document.getElementById('change-pwd-overlay')?.remove();
+  renderWelcomeSlots();
+  toast(newHash ? '🔒 Hasło zmienione' : '🔓 Hasło usunięte');
+}
+
+async function welcomeCreateNew() {
   const name  = document.getElementById('new-slot-name')?.value.trim();
   const place = document.getElementById('new-slot-place')?.value.trim();
   const date  = document.getElementById('new-slot-date')?.value;
+  const pwd   = document.getElementById('new-slot-password')?.value || '';
+  const pwd2  = document.getElementById('new-slot-password2')?.value || '';
   if (!name) { toast('Podaj nazwę zawodów'); return; }
-  const id = createSlot(name, place, date);
+  if (!pwd) { toast('Hasło jest wymagane'); return; }
+  if (pwd !== pwd2) { toast('Hasła nie są identyczne'); return; }
+  const passwordHash = await sha256(pwd);
+  const id = createSlot(name, place, date, passwordHash);
   switchToSlot(id);
   document.getElementById('welcome-screen').style.display = 'none';
 }
@@ -3203,10 +3397,15 @@ function welcomeCreateNew() {
 function welcomeImportFile(e) {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
+  reader.onload = async ev => {
     try {
       const parsed = JSON.parse(ev.target.result);
-      const id = createSlot(parsed.setup?.name || 'Import', parsed.setup?.place || '', parsed.setup?.date || '');
+      const pwd = prompt('Ustaw hasło dla importowanych zawodów (wymagane):');
+      if (!pwd) { toast('Import anulowany — hasło jest wymagane'); return; }
+      const pwd2 = prompt('Powtórz hasło:');
+      if (pwd !== pwd2) { toast('Hasła nie są identyczne — import anulowany'); return; }
+      const passwordHash = await sha256(pwd);
+      const id = createSlot(parsed.setup?.name || 'Import', parsed.setup?.place || '', parsed.setup?.date || '', passwordHash);
       ACTIVE_SLOT_ID = id;
       STATE = parsed;
       ensureStateDefaults();
