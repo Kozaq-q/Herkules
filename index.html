@@ -675,7 +675,72 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       🏟 <span class="btn-label-long">Menu</span>
     </button>
     <button class="btn btn-sm" onclick="exportData()" style="white-space:nowrap;flex-shrink:0">💾 <span class="btn-label-long">Eksport</span></button>
-    <button class="btn btn-sm btn-success" onclick="openProjector()" style="white-space:nowrap;flex-shrink:0">📺 <span class="btn-label-long">Projektor</span></button>
+    <div style="position:relative;flex-shrink:0;display:flex;align-items:center;background:var(--green);border-radius:4px;overflow:hidden;border:1px solid var(--green)">
+      <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1">📺 <span class="btn-label-long">Projektor</span></button>
+      <div style="width:1px;height:16px;background:rgba(255,255,255,.25);flex-shrink:0"></div>
+      <button onclick="toggleProjectorSettings()" title="Ustawienia projektora" style="background:transparent;border:none;color:rgba(255,255,255,.75);font-size:12px;padding:6px 8px;cursor:pointer;line-height:1;display:flex;align-items:center">⚙</button>
+      <div id="projektor-settings-pop" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:14px 16px;min-width:280px;box-shadow:0 4px 20px rgba(0,0,0,.6)">
+        <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">⚙ Ustawienia projektora</div>
+
+        <!-- Kategorie -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Widoczne kategorie</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:4px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-cat-M35" checked style="width:14px;height:14px;accent-color:var(--accent)"> <span style="color:#5b9bd5;font-family:var(--font-h);font-weight:700;letter-spacing:1px">M35</span></label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:4px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-cat-M36" checked style="width:14px;height:14px;accent-color:var(--accent)"> <span style="color:#7b6fd4;font-family:var(--font-h);font-weight:700;letter-spacing:1px">M36</span></label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:4px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-cat-K35" checked style="width:14px;height:14px;accent-color:var(--accent)"> <span style="color:#d45b9b;font-family:var(--font-h);font-weight:700;letter-spacing:1px">K35</span></label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:4px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-cat-K36" checked style="width:14px;height:14px;accent-color:var(--accent)"> <span style="color:#d4845b;font-family:var(--font-h);font-weight:700;letter-spacing:1px">K36</span></label>
+          </div>
+        </div>
+
+        <!-- Zawodnicy per kategoria -->
+        <div style="margin-bottom:12px">
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase">Zawodnicy per kategoria</label>
+          <input id="proj-topn-input" type="number" min="1" max="97" value="10"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px">
+        </div>
+
+        <!-- Klasyfikacja drużynowa -->
+        <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Klasyfikacja drużynowa</div>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin-bottom:8px"><input type="checkbox" id="proj-show-teams" checked style="width:14px;height:14px;accent-color:var(--accent)"> Pokaż klasyfikację drużynową</label>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase">Maks. liczba drużyn</label>
+          <input id="proj-maxteams-input" type="number" min="1" max="99" value=""
+            placeholder="wszystkie"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px">
+        </div>
+
+        <!-- Klasyfikacja drużynowa -->
+        <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Klasyfikacja drużynowa</div>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin-bottom:8px"><input type="checkbox" id="proj-show-teams" checked style="width:14px;height:14px;accent-color:var(--accent)"> Pokaż klasyfikację drużynową</label>
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase">Maks. liczba drużyn</label>
+          <input id="proj-maxteams-input" type="number" min="1" max="99" value=""
+            placeholder="wszystkie"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px">
+        </div>
+
+        <!-- Pasek postępu -->
+        <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="proj-show-progress" checked style="width:14px;height:14px;accent-color:var(--accent)"> Pokaż pasek postępu konkurencji</label>
+        </div>
+
+        <!-- Punkty szczegółowe -->
+        <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="proj-show-detail" style="width:14px;height:14px;accent-color:var(--accent)"> Pokaż punkty K1/K2/K3/K4 zamiast sumy</label>
+        </div>
+
+        <!-- Własny nagłówek -->
+        <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase">Własny nagłówek projektora</label>
+          <input id="proj-custom-title" type="text" placeholder="(domyślnie: nazwa zawodów)"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text1);padding:5px 8px;font-family:var(--font-b);font-size:13px">
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">Zostaw puste by używać nazwy zawodów</div>
+        </div>
+
+        <button class="btn btn-sm btn-primary" onclick="saveProjectorSettings()" style="width:100%">Zapisz ustawienia</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3527,8 +3592,57 @@ function resetAllData() {
 }
 
 function openProjector() {
+  // Przekaż aktywny slot do projektora przez localStorage
+  localStorage.setItem('projektor_activeSlot', ACTIVE_SLOT_ID || SLOT_KEY);
   window.open('projektor.html','projektor','width=1920,height=1080');
 }
+
+function toggleProjectorSettings() {
+  const el = document.getElementById('projektor-settings-pop');
+  if (!el) return;
+  const isVisible = el.style.display !== 'none';
+  el.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) loadProjectorSettingsIntoUI();
+}
+
+function loadProjectorSettingsIntoUI() {
+  const s = getProjectorSettings();
+  document.getElementById('proj-topn-input').value = s.topN;
+  document.getElementById('proj-cat-M35').checked = s.cats.includes('M35');
+  document.getElementById('proj-cat-M36').checked = s.cats.includes('M36');
+  document.getElementById('proj-cat-K35').checked = s.cats.includes('K35');
+  document.getElementById('proj-cat-K36').checked = s.cats.includes('K36');
+  document.getElementById('proj-show-teams').checked = s.showTeams;
+  document.getElementById('proj-maxteams-input').value = s.maxTeams || '';
+  document.getElementById('proj-show-progress').checked = s.showProgress !== false;
+  document.getElementById('proj-show-detail').checked = !!s.showDetail;
+  document.getElementById('proj-custom-title').value = s.customTitle || '';
+}
+
+function getProjectorSettings() {
+  try {
+    const raw = localStorage.getItem('projektor_settings');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { topN: 10, cats: ['M35','M36','K35','K36'], showTeams: true, maxTeams: null, showProgress: true, showDetail: false, customTitle: '' };
+}
+
+function saveProjectorSettings() {
+  const topN = parseInt(document.getElementById('proj-topn-input').value) || 10;
+  const cats = ['M35','M36','K35','K36'].filter(c => document.getElementById('proj-cat-'+c).checked);
+  const showTeams = document.getElementById('proj-show-teams').checked;
+  const maxTeamsRaw = parseInt(document.getElementById('proj-maxteams-input').value);
+  const maxTeams = (!isNaN(maxTeamsRaw) && maxTeamsRaw > 0) ? maxTeamsRaw : null;
+  const showProgress = document.getElementById('proj-show-progress').checked;
+  const showDetail = document.getElementById('proj-show-detail').checked;
+  const customTitle = document.getElementById('proj-custom-title').value.trim();
+  if (!cats.length) return toast('Wybierz co najmniej jedną kategorię');
+  localStorage.setItem('projektor_settings', JSON.stringify({ topN, cats, showTeams, maxTeams, showProgress, showDetail, customTitle }));
+  document.getElementById('projektor-settings-pop').style.display = 'none';
+  toast('Ustawienia projektora zapisane');
+}
+
+function saveProjectorTopN() { saveProjectorSettings(); }
 
 // ════════════════════════════════════════════════════════════
 // SWITCH HOLD (przytrzymanie przycisku zmiany zawodów)
