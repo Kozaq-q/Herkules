@@ -3112,6 +3112,113 @@ function openProjector() {
   window.open('projektor.html','projektor','width=1920,height=1080');
 }
 
+// ════════════════════════════════════════════════════════════
+// SWITCH HOLD (przytrzymanie przycisku zmiany zawodów)
+// ════════════════════════════════════════════════════════════
+let _switchHoldTimer = null;
+let _switchHoldInterval = null;
+
+function startSwitchHold(e) {
+  e.preventDefault();
+  let progress = 0;
+  const bar = document.getElementById('switch-hold-bar');
+  if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
+  _switchHoldInterval = setInterval(() => {
+    progress += 5;
+    if (bar) bar.style.width = progress + '%';
+    if (progress >= 100) {
+      cancelSwitchHold();
+      openSwitchModal();
+    }
+  }, 100);
+}
+
+function cancelSwitchHold() {
+  clearInterval(_switchHoldInterval);
+  clearTimeout(_switchHoldTimer);
+  const bar = document.getElementById('switch-hold-bar');
+  if (bar) bar.style.width = '0%';
+}
+
+function openSwitchModal() {
+  const modal = document.getElementById('switch-modal');
+  if (modal) modal.style.display = 'flex';
+  renderSwitchModalSlots();
+}
+
+function closeSwitchModal() {
+  const modal = document.getElementById('switch-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function switchModalGoWelcome() {
+  closeSwitchModal();
+  const ws = document.getElementById('welcome-screen');
+  if (ws) { ws.style.display = 'block'; renderWelcomeSlots(); }
+}
+
+function renderSwitchModalSlots() {
+  const el = document.getElementById('switch-modal-slots');
+  if (!el) return;
+  const slots = listSlots();
+  if (!slots.length) { el.innerHTML = '<div class="empty-state">Brak zapisanych zawodów.</div>'; return; }
+  el.innerHTML = slots.map(s => `
+    <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="switchToSlot('${s.id}');closeSwitchModal()">
+      <div class="bold">${s.name || '(bez nazwy)'}</div>
+      <div class="text-muted text-sm">${s.place || ''} ${s.date || ''} · ${s.nAthletes} zawodników</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// WELCOME SCREEN
+// ════════════════════════════════════════════════════════════
+function renderWelcomeSlots() {
+  const el = document.getElementById('welcome-slots-list');
+  if (!el) return;
+  const slots = listSlots();
+  if (!slots.length) { el.innerHTML = '<div class="empty-state text-muted">Brak zapisanych zawodów.</div>'; return; }
+  el.innerHTML = slots.map(s => `
+    <div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="bold">${s.name || '(bez nazwy)'}</div>
+        <div class="text-muted text-sm">${s.place || ''} ${s.date || ''} · ${s.nAthletes} zawodników</div>
+      </div>
+      <div class="flex" style="gap:6px">
+        <button class="btn btn-primary btn-sm" onclick="switchToSlot('${s.id}');document.getElementById('welcome-screen').style.display='none'">Otwórz</button>
+        <button class="btn btn-danger btn-sm" onclick="if(confirm('Usunąć zawody?')){deleteSlot('${s.id}');renderWelcomeSlots();}">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function welcomeCreateNew() {
+  const name  = document.getElementById('new-slot-name')?.value.trim();
+  const place = document.getElementById('new-slot-place')?.value.trim();
+  const date  = document.getElementById('new-slot-date')?.value;
+  if (!name) { toast('Podaj nazwę zawodów'); return; }
+  const id = createSlot(name, place, date);
+  switchToSlot(id);
+  document.getElementById('welcome-screen').style.display = 'none';
+}
+
+function welcomeImportFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      const id = createSlot(parsed.setup?.name || 'Import', parsed.setup?.place || '', parsed.setup?.date || '');
+      ACTIVE_SLOT_ID = id;
+      STATE = parsed;
+      ensureStateDefaults();
+      save();
+      switchToSlot(id);
+      document.getElementById('welcome-screen').style.display = 'none';
+      toast('Dane zaimportowane!');
+    } catch(err) { toast('Błąd importu: ' + err.message); }
+  };
+  reader.readAsText(file); e.target.value = '';
+}
+
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', e => {
