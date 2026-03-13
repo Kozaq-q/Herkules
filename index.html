@@ -74,6 +74,31 @@ html, body {
   color: var(--green);
 }
 .k3-inline-input::placeholder { color: var(--text3); font-size:12px; }
+/* ─── ACCENT SWATCHES ─── */
+.accent-swatch {
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: transform .12s, border-color .12s; padding: 0;
+}
+.accent-swatch:hover { transform: scale(1.2); }
+.accent-swatch.active { border-color: var(--text1); transform: scale(1.15); }
+
+/* ─── JUDGE NOTES BAR ─── */
+.judge-notes-bar {
+  background: rgba(232,212,77,.07);
+  border: 1px solid rgba(232,212,77,.25);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--text2);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.judge-notes-bar::before {
+  content: '📝 ';
+  font-style: normal;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg2); }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
@@ -82,11 +107,13 @@ html, body {
 .app-header {
   background: var(--bg2);
   border-bottom: 2px solid var(--accent);
-  padding: 0 20px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 52px;
+  min-height: 52px;
+  flex-wrap: wrap;
+  gap: 6px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -94,43 +121,63 @@ html, body {
 .app-brand {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .app-brand-name {
   font-family: var(--font-h);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--accent);
   line-height: 1;
+  white-space: nowrap;
 }
 .app-brand-sub {
   font-size: 9px;
   color: var(--text3);
   letter-spacing: 1px;
   font-family: var(--font-m);
+  white-space: nowrap;
 }
 .app-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
 }
 .header-contest-name {
   font-family: var(--font-h);
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text2);
   letter-spacing: 1px;
-  max-width: 400px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 200px;
 }
 .header-autosave {
   font-size: 10px;
   color: var(--green);
   font-family: var(--font-m);
   opacity: 0.7;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .app-brand-sub { display: none; }
+  .header-autosave { display: none; }
+  .header-contest-name { max-width: 120px; }
+}
+@media (max-width: 480px) {
+  .app-brand-name { font-size: 14px; letter-spacing: 1px; }
+  .header-contest-name { display: none; }
+  #header-status-badge { display: none !important; }
+  .btn-label-long { display: none; }
 }
 
 /* ─── NAV ─── */
@@ -610,15 +657,18 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <span class="app-brand-sub">© By Kozak</span>
   </div>
   <div class="app-header-right">
-    <span class="header-contest-name" id="header-contest-name"></span>
-    <span class="header-autosave" id="header-autosave">● AUTO-SAVE</span>
-    <button class="btn btn-sm" id="switch-contest-btn" title="Zmień zawody"
+    <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden">
+      <span class="header-contest-name" id="header-contest-name"></span>
+      <span id="header-status-badge" style="display:none;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0"></span>
+    </div>
+    <span class="header-autosave" id="header-autosave">● SYNC</span>
+    <button class="btn btn-sm" id="switch-contest-btn" title="Menu zawodów"
       onclick="switchModalGoWelcome()"
-      style="position:relative;overflow:hidden;">
-      <span id="switch-btn-label">🏟 Menu</span>
+      style="white-space:nowrap;flex-shrink:0">
+      🏟 <span class="btn-label-long">Menu</span>
     </button>
-    <button class="btn btn-sm" onclick="exportData()">💾 Eksport</button>
-    <button class="btn btn-sm btn-success" onclick="openProjector()">📺 Projektor</button>
+    <button class="btn btn-sm" onclick="exportData()" style="white-space:nowrap;flex-shrink:0">💾 <span class="btn-label-long">Eksport</span></button>
+    <button class="btn btn-sm btn-success" onclick="openProjector()" style="white-space:nowrap;flex-shrink:0">📺 <span class="btn-label-long">Projektor</span></button>
   </div>
 </div>
 
@@ -642,26 +692,75 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="grid-2">
     <div>
       <div class="card">
-        <div class="card-title">📋 Informacje o zawodach</div>
+        <div class="card-title">🎨 Personalizacja &amp; status</div>
+        <div class="grid-2" style="margin-bottom:10px">
+          <div class="form-group" style="margin:0">
+            <label>Status zawodów</label>
+            <select id="setup-status" onchange="saveSetup()" style="font-weight:700">
+              <option value="planned">📅 Planowane</option>
+              <option value="active">🟢 W trakcie</option>
+              <option value="finished">🏁 Zakończone</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Kolor akcentu</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px" id="accent-picker">
+              <button class="accent-swatch" data-color="#e8d44d" style="background:#e8d44d" title="Złoty (domyślny)"></button>
+              <button class="accent-swatch" data-color="#4caf82" style="background:#4caf82" title="Zielony"></button>
+              <button class="accent-swatch" data-color="#5b9bd5" style="background:#5b9bd5" title="Niebieski"></button>
+              <button class="accent-swatch" data-color="#e05555" style="background:#e05555" title="Czerwony"></button>
+              <button class="accent-swatch" data-color="#e8944d" style="background:#e8944d" title="Pomarańczowy"></button>
+              <button class="accent-swatch" data-color="#c084fc" style="background:#c084fc" title="Fioletowy"></button>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group" style="margin:0">
+            <label>Logo jednostki (PNG/JPG)</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+              <img id="setup-logo-preview" src="" alt="" style="display:none;height:40px;width:40px;object-fit:contain;border:1px solid var(--border);border-radius:3px;background:var(--bg3)">
+              <div>
+                <button class="btn btn-sm" onclick="document.getElementById('logo-file-input').click()">📁 Wgraj logo</button>
+                <button class="btn btn-sm btn-danger" id="logo-remove-btn" style="display:none" onclick="removeLogo()">✕</button>
+              </div>
+              <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+            </div>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Regulamin (PDF)</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+              <a id="setup-rules-link" href="#" style="display:none" class="btn btn-sm btn-success" target="_blank">📄 Pobierz</a>
+              <button class="btn btn-sm" onclick="document.getElementById('rules-file-input').click()">📁 Wgraj PDF</button>
+              <button class="btn btn-sm btn-danger" id="rules-remove-btn" style="display:none" onclick="removeRules()">✕</button>
+            </div>
+            <input type="file" id="rules-file-input" accept=".pdf" style="display:none" onchange="handleRulesUpload(event)">
+          </div>
+        </div>
+      </div>
+
+
+      <div class="card">
+        <div class="card-title">📋 Informacje ogólne</div>
         <div class="form-group">
           <label>Nazwa zawodów</label>
           <input id="setup-name" type="text" placeholder="np. Mistrzostwa 18.DZ w Wieloboju Żołnierskim" oninput="saveSetup()">
         </div>
         <div class="grid-2">
           <div class="form-group">
-            <label>Liczba dni</label>
-            <select id="setup-days" onchange="saveSetup()">
-              <option value="1">1 dzień</option>
-              <option value="2" selected>2 dni</option>
-              <option value="3">3 dni</option>
-              <option value="4">4 dni</option>
-            </select>
-          </div>
-          <div class="form-group">
             <label>Data rozpoczęcia</label>
             <input id="setup-date" type="date" oninput="saveSetup()">
           </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px">
+              Data zakończenia
+              <button type="button" id="setup-date-end-toggle" class="btn btn-xs btn-sm" onclick="toggleDateEnd()" style="font-size:10px;padding:1px 7px;letter-spacing:0.5px">+ zmień</button>
+            </label>
+            <div id="setup-date-end-wrap" style="display:none">
+              <input id="setup-date-end" type="date" oninput="saveSetup()">
+            </div>
+          </div>
         </div>
+        <div id="setup-days-preview" class="text-muted text-sm mono" style="margin-top:-4px;margin-bottom:6px"></div>
         <div class="form-group">
           <label>Miejsce</label>
           <input id="setup-place" type="text" placeholder="np. Zamość" oninput="saveSetup()">
@@ -672,23 +771,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">🏆 Drużyny</div>
-        <div id="teams-list"></div>
-        <hr class="sep">
-        <div class="flex">
-          <div class="form-group" style="flex:1">
-            <label>Nazwa drużyny</label>
-            <input id="new-team-name" type="text" placeholder="np. Jednostka Wojskowa X">
-          </div>
-          <div class="form-group" style="width:80px">
-            <label>Nr</label>
-            <input id="new-team-num" type="number" min="1" placeholder="1">
-          </div>
-          <button class="btn btn-primary mt-12" onclick="addTeam()">Dodaj</button>
-        </div>
-      </div>
-    </div>
 
       <div class="card">
         <div class="card-title">🏅 Klasyfikacja drużynowa — regulamin
@@ -712,9 +794,39 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         </div>
         <div id="team-limit-preview" class="text-muted text-sm mono" style="margin-top:4px"></div>
       </div>
+
+      <div class="card">
+        <div class="card-title">📝 Notatki dla sędziów
+          <span class="text-muted text-sm" style="font-weight:400;text-transform:none;letter-spacing:0">— widoczne w każdej konkurencji</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="form-group" style="margin:0"><label>🪢 Lina</label><textarea id="notes-k1" rows="2" placeholder="np. Lina 6m, czas max 14s..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+          <div class="form-group" style="margin:0"><label>🏃 BTS</label><textarea id="notes-k2" rows="2" placeholder="np. Tor mokry, zgłosić sędziemu..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+          <div class="form-group" style="margin:0"><label>⚡ 15×15m</label><textarea id="notes-k3" rows="2" placeholder="np. Tor A — lewa strona, Tor B — prawa..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+          <div class="form-group" style="margin:0"><label>🏅 1000m</label><textarea id="notes-k4" rows="2" placeholder="np. Trasa przez las, uwaga na zakręt..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+        </div>
+      </div>
     </div>
 
     <div>
+      <div class="card">
+        <div class="card-title">🏆 Drużyny</div>
+        <div id="teams-list"></div>
+        <hr class="sep">
+        <div class="flex">
+          <div class="form-group" style="flex:1">
+            <label>Nazwa drużyny</label>
+            <input id="new-team-name" type="text" placeholder="np. Jednostka Wojskowa X">
+          </div>
+          <div class="form-group" style="width:80px">
+            <label>Nr</label>
+            <input id="new-team-num" type="number" min="1" placeholder="1">
+          </div>
+          <button class="btn btn-primary mt-12" onclick="addTeam()">Dodaj</button>
+        </div>
+      </div>
+
+
       <div class="card">
         <div class="card-title">📊 Tablice punktowe
           <span class="badge" style="background:rgba(232,212,77,.1);color:var(--accent);border:1px solid rgba(232,212,77,.3)">EDYTOWALNE</span>
@@ -796,6 +908,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <button class="btn btn-sm" onclick="renderK1()">⟳</button>
     </div>
   </div>
+  <div id="judge-notes-k1-bar" class="judge-notes-bar" style="display:none"></div>
   <div id="k1-content"></div>
 </div>
 
@@ -816,6 +929,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <button class="btn btn-sm" onclick="renderK2()">⟳</button>
     </div>
   </div>
+  <div id="judge-notes-k2-bar" class="judge-notes-bar" style="display:none"></div>
   <div id="k2-content"></div>
 </div>
 
@@ -831,6 +945,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <button class="btn btn-sm" onclick="renderK3()">⟳</button>
     </div>
   </div>
+  <div id="judge-notes-k3-bar" class="judge-notes-bar" style="display:none"></div>
   <div id="k3-progress" class="flex mb-8" style="gap:16px;align-items:center"></div>
   <div class="tab-row">
     <button class="tab-btn active" id="k3-tab-s1" onclick="switchK3Tab('s1',this)">1. Seria</button>
@@ -868,6 +983,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       </div>
     </div>
   </div>
+  <div id="judge-notes-k4-bar" class="judge-notes-bar" style="display:none"></div>
   <div id="k4-progress" class="flex mb-8" style="gap:16px;align-items:center"></div>
   <div id="k4-content"></div>
 </div>
@@ -1301,6 +1417,9 @@ function startRealtimeSync() {
 function ensureStateDefaults() {
   if (!STATE.setup) STATE.setup = { name:'', date:'', place:'', org:'', days:2 };
   if (!STATE.setup.days) STATE.setup.days = 2;
+  if (!STATE.setup.status) STATE.setup.status = 'planned';
+  if (!STATE.setup.accent) STATE.setup.accent = '#e8d44d';
+  if (!STATE.setup.notes) STATE.setup.notes = { k1:'', k2:'', k3:'', k4:'' };
   if (!STATE.scoreTables) STATE.scoreTables = defaultScoreTables();
   if (!STATE.scoreTablesByCat) STATE.scoreTablesByCat = {};
   if (!STATE.results) STATE.results = {};
@@ -1310,6 +1429,156 @@ function ensureStateDefaults() {
   if (!STATE.k3s2) STATE.k3s2 = {};
   if (!STATE.teams) STATE.teams = [];
   if (!STATE.athletes) STATE.athletes = [];
+}
+
+// ════════════════════════════════════════════════════════════
+// PERSONALIZACJA — akcent, logo, regulamin, status, notatki
+// ════════════════════════════════════════════════════════════
+function applyAccentColor(color) {
+  document.documentElement.style.setProperty('--accent', color);
+  document.documentElement.style.setProperty('--accent2', shadeColor(color, -20));
+  // Zaktualizuj aktywny swatch
+  document.querySelectorAll('.accent-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === color);
+  });
+}
+
+function shadeColor(hex, pct) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, Math.max(0, (n>>16) + pct));
+  const g = Math.min(255, Math.max(0, ((n>>8)&0xff) + pct));
+  const b = Math.min(255, Math.max(0, (n&0xff) + pct));
+  return '#' + [r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+function updateStatusBadge() {
+  const badge = document.getElementById('header-status-badge');
+  if (!badge) return;
+  const s = STATE.setup.status || 'planned';
+  const map = {
+    planned:  { text:'📅 Planowane',   bg:'rgba(91,155,213,.2)',  color:'var(--blue)' },
+    active:   { text:'🟢 W trakcie',   bg:'rgba(76,175,130,.2)',  color:'var(--green)' },
+    finished: { text:'🏁 Zakończone',  bg:'rgba(138,152,152,.2)', color:'var(--text3)' },
+  };
+  const cfg = map[s] || map.planned;
+  badge.textContent = cfg.text;
+  badge.style.background = cfg.bg;
+  badge.style.color = cfg.color;
+  badge.style.border = '1px solid ' + cfg.color;
+  badge.style.display = 'inline-block';
+}
+
+function handleLogoUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    STATE.setup.logo = ev.target.result;
+    save(); renderLogoPreview(); toast('Logo wgrane');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removeLogo() {
+  STATE.setup.logo = '';
+  save(); renderLogoPreview(); toast('Logo usunięte');
+}
+
+function renderLogoPreview() {
+  const img = document.getElementById('setup-logo-preview');
+  const removeBtn = document.getElementById('logo-remove-btn');
+  if (!img) return;
+  if (STATE.setup.logo) {
+    img.src = STATE.setup.logo; img.style.display = 'inline-block';
+    if (removeBtn) removeBtn.style.display = 'inline-block';
+  } else {
+    img.style.display = 'none'; img.src = '';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
+
+function handleRulesUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    STATE.setup.rulesFile = ev.target.result;
+    STATE.setup.rulesName = file.name;
+    save(); renderRulesLink(); toast('Regulamin wgrany');
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removeRules() {
+  STATE.setup.rulesFile = '';
+  STATE.setup.rulesName = '';
+  save(); renderRulesLink(); toast('Regulamin usunięty');
+}
+
+function renderRulesLink() {
+  const link = document.getElementById('setup-rules-link');
+  const removeBtn = document.getElementById('rules-remove-btn');
+  if (!link) return;
+  if (STATE.setup.rulesFile) {
+    link.href = STATE.setup.rulesFile;
+    link.download = STATE.setup.rulesName || 'regulamin.pdf';
+    link.style.display = 'inline-block';
+    if (removeBtn) removeBtn.style.display = 'inline-block';
+  } else {
+    link.style.display = 'none';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
+
+function saveNotes() {
+  if (!STATE.setup.notes) STATE.setup.notes = {};
+  STATE.setup.notes.k1 = document.getElementById('notes-k1')?.value || '';
+  STATE.setup.notes.k2 = document.getElementById('notes-k2')?.value || '';
+  STATE.setup.notes.k3 = document.getElementById('notes-k3')?.value || '';
+  STATE.setup.notes.k4 = document.getElementById('notes-k4')?.value || '';
+  save();
+  renderAllNotesBars();
+}
+
+function renderAllNotesBars() {
+  ['k1','k2','k3','k4'].forEach(k => {
+    const bar = document.getElementById('judge-notes-' + k + '-bar');
+    if (!bar) return;
+    const note = STATE.setup.notes?.[k] || '';
+    if (note.trim()) {
+      bar.textContent = note;
+      bar.style.display = 'block';
+    } else {
+      bar.style.display = 'none';
+    }
+  });
+}
+
+function renderPersonalization() {
+  // Status
+  const statusEl = document.getElementById('setup-status');
+  if (statusEl) statusEl.value = STATE.setup.status || 'planned';
+  updateStatusBadge();
+  // Kolor akcentu
+  applyAccentColor(STATE.setup.accent || '#e8d44d');
+  // Logo
+  renderLogoPreview();
+  // Regulamin
+  renderRulesLink();
+  // Notatki
+  ['k1','k2','k3','k4'].forEach(k => {
+    const el = document.getElementById('notes-' + k);
+    if (el) el.value = STATE.setup.notes?.[k] || '';
+  });
+  renderAllNotesBars();
+  // Accent swatch listeners
+  document.querySelectorAll('.accent-swatch').forEach(s => {
+    s.onclick = () => {
+      STATE.setup.accent = s.dataset.color;
+      applyAccentColor(s.dataset.color);
+      save();
+    };
+  });
 }
 
 function load() {
@@ -1362,13 +1631,49 @@ function showPage(id) {
 // SETUP
 // ════════════════════════════════════════════════════════════
 function saveSetup() {
-  STATE.setup.name  = document.getElementById('setup-name').value;
-  STATE.setup.date  = document.getElementById('setup-date').value;
-  STATE.setup.place = document.getElementById('setup-place').value;
-  STATE.setup.org   = document.getElementById('setup-org').value;
-  STATE.setup.days  = parseInt(document.getElementById('setup-days').value) || 2;
+  STATE.setup.name    = document.getElementById('setup-name').value;
+  STATE.setup.date    = document.getElementById('setup-date').value;
+  STATE.setup.dateEnd = document.getElementById('setup-date-end').value;
+  STATE.setup.place   = document.getElementById('setup-place').value;
+  STATE.setup.org     = document.getElementById('setup-org').value;
+  STATE.setup.status  = document.getElementById('setup-status')?.value || 'planned';
+  // Oblicz liczbę dni na podstawie dat
+  if (STATE.setup.date && STATE.setup.dateEnd) {
+    const d1 = new Date(STATE.setup.date);
+    const d2 = new Date(STATE.setup.dateEnd);
+    const diff = Math.round((d2 - d1) / (1000*60*60*24));
+    STATE.setup.days = diff >= 0 ? diff + 1 : 1;
+  } else {
+    STATE.setup.days = 1;
+  }
+  // Podgląd liczby dni
+  const prevEl = document.getElementById('setup-days-preview');
+  const endWrap = document.getElementById('setup-date-end-wrap');
+  if (prevEl) {
+    if (STATE.setup.date && STATE.setup.dateEnd) {
+      prevEl.textContent = STATE.setup.days === 1 ? '→ Zawody jednodniowe' : '→ ' + STATE.setup.days + ' dni zawodów';
+    } else { prevEl.textContent = ''; }
+  }
+  // Pokaż/ukryj datę zakończenia — jeśli ta sama data, schowaj input ale pokaż toggle
+  if (endWrap) {
+    const isSingleDay = STATE.setup.date && STATE.setup.dateEnd && STATE.setup.date === STATE.setup.dateEnd;
+    if (isSingleDay) endWrap.style.display = 'none';
+    const toggleBtn = document.getElementById('setup-date-end-toggle');
+    if (toggleBtn) toggleBtn.textContent = endWrap.style.display === 'none' ? '+ zmień' : '− schowaj';
+  }
   save();
   document.getElementById('header-contest-name').textContent = STATE.setup.name;
+  updateStatusBadge();
+}
+
+function toggleDateEnd() {
+  const wrap = document.getElementById('setup-date-end-wrap');
+  const btn = document.getElementById('setup-date-end-toggle');
+  if (!wrap) return;
+  const isHidden = wrap.style.display === 'none' || wrap.style.display === '';
+  wrap.style.display = isHidden ? 'block' : 'none';
+  if (btn) btn.textContent = isHidden ? '− schowaj' : '+ zmień';
+  if (isHidden) setTimeout(() => document.getElementById('setup-date-end')?.focus(), 50);
 }
 
 function saveTeamLimits() {
@@ -1398,9 +1703,23 @@ function renderTeamLimitPreview() {
 function renderSetup() {
   document.getElementById('setup-name').value  = STATE.setup.name  || '';
   document.getElementById('setup-date').value  = STATE.setup.date  || '';
+  const dateEndEl = document.getElementById('setup-date-end');
+  if (dateEndEl) dateEndEl.value = STATE.setup.dateEnd || '';
+  const prevEl2 = document.getElementById('setup-days-preview');
+  if (prevEl2 && STATE.setup.date && STATE.setup.dateEnd) {
+    prevEl2.textContent = STATE.setup.days === 1 ? '→ Zawody jednodniowe' : '→ ' + STATE.setup.days + ' dni zawodów';
+  }
+  // Pokaż/ukryj datę zakończenia
+  const endWrap2 = document.getElementById('setup-date-end-wrap');
+  if (endWrap2) {
+    const isSingleDay = STATE.setup.date && STATE.setup.dateEnd && STATE.setup.date === STATE.setup.dateEnd;
+    endWrap2.style.display = (isSingleDay || !STATE.setup.dateEnd) ? 'none' : '';
+    const toggleBtn2 = document.getElementById('setup-date-end-toggle');
+    if (toggleBtn2) toggleBtn2.textContent = endWrap2.style.display === 'none' ? '+ zmień' : '− schowaj';
+  }
   document.getElementById('setup-place').value = STATE.setup.place || '';
   document.getElementById('setup-org').value   = STATE.setup.org   || '';
-  document.getElementById('setup-days').value  = STATE.setup.days  || 2;
+  // setup-days removed
   document.getElementById('header-contest-name').textContent = STATE.setup.name || '';
   const lmEl = document.getElementById('setup-limit-m');
   const lkEl = document.getElementById('setup-limit-k');
@@ -1409,6 +1728,7 @@ function renderSetup() {
   renderTeamLimitPreview();
   renderTeamsList();
   renderScoreTablesEditor();
+  renderPersonalization();
 }
 
 // ─── TEAMS ───
