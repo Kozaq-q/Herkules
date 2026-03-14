@@ -721,9 +721,25 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="proj-show-progress" checked style="width:14px;height:14px;accent-color:var(--accent)"> Pokaż pasek postępu konkurencji</label>
   </div>
 
+  <!-- Auto-scroll -->
+  <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;margin-bottom:8px"><input type="checkbox" id="proj-auto-scroll" style="width:14px;height:14px;accent-color:var(--accent)"> Automatyczne przewijanie rubryk</label>
+    <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase">Szybkość (px/s)</label>
+    <input id="proj-scroll-speed" type="number" min="1" max="100" value="20" placeholder="20"
+      style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px">
+    <div style="font-size:10px;color:var(--text3);margin-top:3px">Zalecane: 15–30 px/s. Im mniejsza liczba, tym wolniej.</div>
+  </div>
+
   <!-- Punkty szczegółowe -->
   <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
-    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="proj-show-detail" style="width:14px;height:14px;accent-color:var(--accent)"> Pokaż punkty K1/K2/K3/K4 zamiast sumy</label>
+    <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Pokaż punkty per konkurencja</div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k1" style="width:14px;height:14px;accent-color:var(--accent)"> 🪢 Lina (K1)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k2" style="width:14px;height:14px;accent-color:var(--accent)"> 🏃 BTS (K2)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k3" style="width:14px;height:14px;accent-color:var(--accent)"> ⚡ 15×15m (K3)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k4" style="width:14px;height:14px;accent-color:var(--accent)"> 🏅 1000m (K4)</label>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:4px">Suma punktów zawsze widoczna.</div>
   </div>
 
   <!-- Własny nagłówek -->
@@ -3608,7 +3624,12 @@ function loadProjectorSettingsIntoUI() {
   document.getElementById('proj-show-teams').checked = s.showTeams;
   document.getElementById('proj-maxteams-input').value = s.maxTeams || '';
   document.getElementById('proj-show-progress').checked = s.showProgress !== false;
-  document.getElementById('proj-show-detail').checked = !!s.showDetail;
+  document.getElementById('proj-auto-scroll').checked = !!s.autoScroll;
+  document.getElementById('proj-scroll-speed').value = s.scrollSpeed || 20;
+  document.getElementById('proj-show-k1').checked = !!s.showK1;
+  document.getElementById('proj-show-k2').checked = !!s.showK2;
+  document.getElementById('proj-show-k3').checked = !!s.showK3;
+  document.getElementById('proj-show-k4').checked = !!s.showK4;
   document.getElementById('proj-custom-title').value = s.customTitle || '';
 }
 
@@ -3617,7 +3638,8 @@ function getProjectorSettings() {
     const raw = localStorage.getItem('projektor_settings');
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  return { topN: 10, cats: ['M35','M36','K35','K36'], showTeams: true, maxTeams: null, showProgress: true, showDetail: false, customTitle: '' };
+  const topN = parseInt(localStorage.getItem('projektor_topN')) || 10;
+  return { topN, cats: ['M35','M36','K35','K36'], showTeams: true, maxTeams: null, showProgress: true, autoScroll: false, scrollSpeed: 20, showK1: false, showK2: false, showK3: false, showK4: false, customTitle: '' };
 }
 
 function saveProjectorSettings() {
@@ -3627,10 +3649,15 @@ function saveProjectorSettings() {
   const maxTeamsRaw = parseInt(document.getElementById('proj-maxteams-input').value);
   const maxTeams = (!isNaN(maxTeamsRaw) && maxTeamsRaw > 0) ? maxTeamsRaw : null;
   const showProgress = document.getElementById('proj-show-progress').checked;
-  const showDetail = document.getElementById('proj-show-detail').checked;
+  const autoScroll = document.getElementById('proj-auto-scroll').checked;
+  const scrollSpeed = Math.max(1, parseInt(document.getElementById('proj-scroll-speed').value) || 20);
+  const showK1 = document.getElementById('proj-show-k1').checked;
+  const showK2 = document.getElementById('proj-show-k2').checked;
+  const showK3 = document.getElementById('proj-show-k3').checked;
+  const showK4 = document.getElementById('proj-show-k4').checked;
   const customTitle = document.getElementById('proj-custom-title').value.trim();
   if (!cats.length) return toast('Wybierz co najmniej jedną kategorię');
-  localStorage.setItem('projektor_settings', JSON.stringify({ topN, cats, showTeams, maxTeams, showProgress, showDetail, customTitle }));
+  localStorage.setItem('projektor_settings', JSON.stringify({ topN, cats, showTeams, maxTeams, showProgress, autoScroll, scrollSpeed, showK1, showK2, showK3, showK4, customTitle }));
   document.getElementById('projektor-settings-pop').style.display = 'none';
   toast('Ustawienia projektora zapisane');
 }
