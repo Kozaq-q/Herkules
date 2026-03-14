@@ -202,6 +202,20 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.rank-table-scroll-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.rank-table-scroll-track {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  will-change: transform;
 }
 
 .rank-table {
@@ -457,7 +471,7 @@ function getProjectorSettings() {
     if (raw) return JSON.parse(raw);
   } catch(e) {}
   const topN = parseInt(localStorage.getItem('projektor_topN')) || 10;
-  return { topN, cats: ['M35','M36','K35','K36'], showTeams: true, maxTeams: null, showProgress: true, showDetail: false, customTitle: '' };
+  return { topN, cats: ['M35','M36','K35','K36'], showTeams: true, maxTeams: null, showProgress: true, autoScroll: false, scrollSpeed: 20, showK1: false, showK2: false, showK3: false, showK4: false, customTitle: '' };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -651,12 +665,81 @@ function renderProgress() {
 }
 
 // ── INDIV RANKING ─────────────────────────────────────────
+const _catScrollRAFs = {};
+
+function buildRowsHTML(shown, s) {
+  const showK1 = !!s.showK1, showK2 = !!s.showK2, showK3 = !!s.showK3, showK4 = !!s.showK4;
+  return shown.map((a, i) => {
+    const rank  = i + 1;
+    const rkCls = rank===1?'rk-1':rank===2?'rk-2':rank===3?'rk-3':'';
+    const team  = STATE.teams.find(t => t.id == a.teamId);
+    const extraCells = [
+      showK1 ? `<td style="width:36px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k1||'—'}</td>` : '',
+      showK2 ? `<td style="width:36px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k2||'—'}</td>` : '',
+      showK3 ? `<td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k3||'—'}</td>` : '',
+      showK4 ? `<td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k4||'—'}</td>` : '',
+    ].join('');
+    return `<tr>
+      <td style="width:26px"><span class="rk-pos ${rkCls}">${rank}</span></td>
+      <td><div class="rk-name">${a.name}</div><div class="rk-team">${team?.name||'—'}</div></td>
+      ${extraCells}
+      <td class="rk-pts">${a.pts.total||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function startCatInfiniteScroll(cat, speed) {
+  if (_catScrollRAFs[cat]) cancelAnimationFrame(_catScrollRAFs[cat]);
+
+  const track = document.getElementById('scroll-track-' + cat);
+  if (!track) return;
+
+  const listA = track.querySelector('.scroll-list-a');
+  const listB = track.querySelector('.scroll-list-b');
+  if (!listA || !listB) return;
+
+  // Poczekaj aż DOM wyrenderuje i zmierz rzeczywistą wysokość
+  requestAnimationFrame(() => {
+    const listH = listA.offsetHeight;
+    if (listH === 0) return; // brak zawodników — nie scrolluj
+
+    // Ustaw kopię B dokładnie pod A
+    listB.style.top = listH + 'px';
+
+    let pos = 0;
+    let lastTime = null;
+
+    function step(now) {
+      if (!lastTime) lastTime = now;
+      const delta = now - lastTime;
+      lastTime = now;
+
+      pos += speed * delta / 1000; // px per second
+
+      // Gdy scrollujemy o całą wysokość listy A — resetuj bez skoku
+      if (pos >= listH) pos -= listH;
+
+      track.style.transform = `translateY(-${pos}px)`;
+      _catScrollRAFs[cat] = requestAnimationFrame(step);
+    }
+
+    _catScrollRAFs[cat] = requestAnimationFrame(step);
+  });
+}
+
 function renderIndiv(s) {
+  // Zatrzymaj stare animacje
+  Object.keys(_catScrollRAFs).forEach(cat => {
+    if (_catScrollRAFs[cat]) cancelAnimationFrame(_catScrollRAFs[cat]);
+    delete _catScrollRAFs[cat];
+  });
+
   const grid = document.getElementById('proj-cats-grid');
   const allCats = ['M35','M36','K35','K36'];
   const cats = allCats.filter(c => s.cats.includes(c));
-  const catColors = { M35:'#5b9bd5', M36:'#7b6fd4', K35:'#d45b9b', K36:'#d4845b' };
-  const showDetail = !!s.showDetail;
+  const showDetail = false; // zastąpione przez showK1/K2/K3/K4
+  const doScroll = !!s.autoScroll;
+  const speed = s.scrollSpeed || 20;
 
   const cols = cats.length <= 2 ? cats.length : 2;
   const gridRows = Math.ceil(cats.length / cols);
@@ -664,9 +747,8 @@ function renderIndiv(s) {
   grid.style.gridTemplateRows = `repeat(${gridRows}, 1fr)`;
 
   grid.innerHTML = cats.map(cat => {
-    let athletes = STATE.athletes.filter(a => a.cat === cat)
+    const athletes = STATE.athletes.filter(a => a.cat === cat)
       .map(a => ({ ...a, pts: getAthletePoints(a.id) }));
-
     const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total);
     const shown  = normal.slice(0, s.topN);
 
@@ -674,38 +756,46 @@ function renderIndiv(s) {
       ? `<tr><th style="width:26px">#</th><th>Zawodnik / Drużyna</th><th style="width:36px;text-align:right;padding-right:6px">Lina</th><th style="width:36px;text-align:right;padding-right:6px">BTS</th><th style="width:40px;text-align:right;padding-right:6px">15×15</th><th style="width:40px;text-align:right;padding-right:10px">1000m</th></tr>`
       : `<tr><th style="width:26px">#</th><th>Zawodnik / Drużyna</th><th style="width:52px;text-align:right;padding-right:10px">Pkt</th></tr>`;
 
-    const tableRows = shown.length
-      ? shown.map((a, i) => {
-          const rank  = i + 1;
-          const rkCls = rank===1?'rk-1':rank===2?'rk-2':rank===3?'rk-3':'';
-          const team  = STATE.teams.find(t => t.id == a.teamId);
-          const cells = showDetail
-            ? `<td style="width:36px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k1||'—'}</td>
-               <td style="width:36px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k2||'—'}</td>
-               <td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k3||'—'}</td>
-               <td style="width:40px;text-align:right;padding-right:10px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k4||'—'}</td>`
-            : `<td class="rk-pts">${a.pts.total||'—'}</td>`;
-          return `<tr>
-            <td style="width:26px"><span class="rk-pos ${rkCls}">${rank}</span></td>
-            <td><div class="rk-name">${a.name}</div><div class="rk-team">${team?.name||'—'}</div></td>
-            ${cells}
-          </tr>`;
-        }).join('')
-      : `<tr><td colspan="${showDetail?6:3}" style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Brak wyników</td></tr>`;
+    const emptyRow = `<tr><td colspan="2" style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Brak wyników</td></tr>`;
+    const rowsHTML = shown.length ? buildRowsHTML(shown, s) : emptyRow;
 
+    if (doScroll && shown.length > 0) {
+      return `<div class="cat-block" data-cat="${cat}">
+        <div class="cat-block-header cat-${cat}">
+          <span class="cat-block-title cat-color-${cat}">${cat}</span>
+          <span class="cat-count">${normal.length} zaw.</span>
+        </div>
+        <div class="rank-table-wrap">
+          <div class="rank-table-scroll-viewport">
+            <div class="rank-table-scroll-track" id="scroll-track-${cat}" style="position:absolute;top:0;left:0;right:0;will-change:transform">
+              <table class="scroll-list-a" style="width:100%;border-collapse:collapse;table-layout:fixed;display:table"><tbody>${rowsHTML}</tbody></table>
+              <table class="scroll-list-b" style="width:100%;border-collapse:collapse;table-layout:fixed;display:table;position:absolute;left:0;right:0"><tbody>${rowsHTML}</tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Tryb statyczny
     return `<div class="cat-block" data-cat="${cat}">
       <div class="cat-block-header cat-${cat}">
         <span class="cat-block-title cat-color-${cat}">${cat}</span>
         <span class="cat-count">${normal.length} zaw.</span>
       </div>
       <div class="rank-table-wrap">
-        <table class="rank-table">
-          <thead style="flex-shrink:0;display:table;width:100%;table-layout:fixed">${thead}</thead>
-          <tbody style="flex:1;display:table;width:100%;table-layout:fixed">${tableRows}</tbody>
-        </table>
+        <div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+            <tbody>${rowsHTML}</tbody>
+          </table>
+        </div>
       </div>
     </div>`;
   }).join('');
+
+  // Uruchom scrollowanie po wyrenderowaniu DOM
+  if (doScroll) {
+    cats.forEach(cat => startCatInfiniteScroll(cat, speed));
+  }
 }
 
 // ── TEAM RANKING ──────────────────────────────────────────
