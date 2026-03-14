@@ -691,19 +691,17 @@ function buildRowsHTML(shown, s) {
 function startCatInfiniteScroll(cat, speed) {
   if (_catScrollRAFs[cat]) cancelAnimationFrame(_catScrollRAFs[cat]);
 
-  const track = document.getElementById('scroll-track-' + cat);
-  if (!track) return;
+  setTimeout(() => {
+    const track = document.getElementById('scroll-track-' + cat);
+    if (!track) return;
 
-  const listA = track.querySelector('.scroll-list-a');
-  const listB = track.querySelector('.scroll-list-b');
-  if (!listA || !listB) return;
+    const listA = track.querySelector('.scroll-list-a');
+    const listB = track.querySelector('.scroll-list-b');
+    if (!listA || !listB) return;
 
-  // Poczekaj aż DOM wyrenderuje i zmierz rzeczywistą wysokość
-  requestAnimationFrame(() => {
     const listH = listA.offsetHeight;
-    if (listH === 0) return; // brak zawodników — nie scrolluj
+    if (listH === 0) return;
 
-    // Ustaw kopię B dokładnie pod A
     listB.style.top = listH + 'px';
 
     let pos = 0;
@@ -714,9 +712,7 @@ function startCatInfiniteScroll(cat, speed) {
       const delta = now - lastTime;
       lastTime = now;
 
-      pos += speed * delta / 1000; // px per second
-
-      // Gdy scrollujemy o całą wysokość listy A — resetuj bez skoku
+      pos += speed * delta / 1000;
       if (pos >= listH) pos -= listH;
 
       track.style.transform = `translateY(-${pos}px)`;
@@ -724,7 +720,7 @@ function startCatInfiniteScroll(cat, speed) {
     }
 
     _catScrollRAFs[cat] = requestAnimationFrame(step);
-  });
+  }, 100);
 }
 
 function renderIndiv(s) {
@@ -737,7 +733,6 @@ function renderIndiv(s) {
   const grid = document.getElementById('proj-cats-grid');
   const allCats = ['M35','M36','K35','K36'];
   const cats = allCats.filter(c => s.cats.includes(c));
-  const showDetail = false; // zastąpione przez showK1/K2/K3/K4
   const doScroll = !!s.autoScroll;
   const speed = s.scrollSpeed || 20;
 
@@ -752,10 +747,6 @@ function renderIndiv(s) {
     const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total);
     const shown  = normal.slice(0, s.topN);
 
-    const thead = showDetail
-      ? `<tr><th style="width:26px">#</th><th>Zawodnik / Drużyna</th><th style="width:36px;text-align:right;padding-right:6px">Lina</th><th style="width:36px;text-align:right;padding-right:6px">BTS</th><th style="width:40px;text-align:right;padding-right:6px">15×15</th><th style="width:40px;text-align:right;padding-right:10px">1000m</th></tr>`
-      : `<tr><th style="width:26px">#</th><th>Zawodnik / Drużyna</th><th style="width:52px;text-align:right;padding-right:10px">Pkt</th></tr>`;
-
     const emptyRow = `<tr><td colspan="2" style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Brak wyników</td></tr>`;
     const rowsHTML = shown.length ? buildRowsHTML(shown, s) : emptyRow;
 
@@ -767,9 +758,9 @@ function renderIndiv(s) {
         </div>
         <div class="rank-table-wrap">
           <div class="rank-table-scroll-viewport">
-            <div class="rank-table-scroll-track" id="scroll-track-${cat}" style="position:absolute;top:0;left:0;right:0;will-change:transform">
-              <table class="scroll-list-a" style="width:100%;border-collapse:collapse;table-layout:fixed;display:table"><tbody>${rowsHTML}</tbody></table>
-              <table class="scroll-list-b" style="width:100%;border-collapse:collapse;table-layout:fixed;display:table;position:absolute;left:0;right:0"><tbody>${rowsHTML}</tbody></table>
+            <div class="rank-table-scroll-track" id="scroll-track-${cat}">
+              <table class="scroll-list-a" style="width:100%;border-collapse:collapse;table-layout:fixed"><tbody>${rowsHTML}</tbody></table>
+              <table class="scroll-list-b" style="width:100%;border-collapse:collapse;table-layout:fixed;position:absolute;left:0;right:0;top:0"><tbody>${rowsHTML}</tbody></table>
             </div>
           </div>
         </div>
