@@ -675,10 +675,12 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       🏟 <span class="btn-label-long">Menu</span>
     </button>
     <button class="btn btn-sm" onclick="exportData()" style="white-space:nowrap;flex-shrink:0">💾 <span class="btn-label-long">Eksport</span></button>
-    <div style="position:relative;flex-shrink:0;display:flex;align-items:center;background:var(--green);border-radius:4px;overflow:hidden;border:1px solid var(--green)">
-      <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1">📺 <span class="btn-label-long">Projektor</span></button>
-      <div style="width:1px;height:16px;background:rgba(255,255,255,.25);flex-shrink:0"></div>
-      <button onclick="toggleProjectorSettings()" title="Ustawienia projektora" style="background:transparent;border:none;color:rgba(255,255,255,.75);font-size:12px;padding:6px 8px;cursor:pointer;line-height:1;display:flex;align-items:center">⚙</button>
+    <div style="position:relative;flex-shrink:0">
+      <div style="display:flex;align-items:center;background:var(--green);border-radius:4px;overflow:hidden;border:1px solid var(--green)">
+        <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1">📺 <span class="btn-label-long">Projektor</span></button>
+        <div style="width:1px;height:16px;background:rgba(255,255,255,.25);flex-shrink:0"></div>
+        <button onclick="toggleProjectorSettings()" title="Ustawienia projektora" style="background:transparent;border:none;color:rgba(255,255,255,.75);font-size:12px;padding:6px 8px;cursor:pointer;line-height:1;display:flex;align-items:center">⚙</button>
+      </div>
       <div id="projektor-settings-pop" style="display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:14px 16px;min-width:280px;box-shadow:0 4px 20px rgba(0,0,0,.6)">
         <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">⚙ Ustawienia projektora</div>
 
