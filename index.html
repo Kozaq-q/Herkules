@@ -1098,6 +1098,26 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         <div id="team-limit-preview" class="text-muted text-sm mono" style="margin-top:4px"></div>
       </div>
 
+      <div class="card">
+        <div class="card-title">📝 Notatki dla sędziów
+          <span class="text-muted text-sm" style="font-weight:400;text-transform:none;letter-spacing:0">— widoczne w każdej konkurencji</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="form-group" style="margin:0"><label>🪢 Lina</label><textarea id="notes-k1" rows="2" placeholder="np. Lina 6m, czas max 14s..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+          <div class="form-group" style="margin:0"><label>🏃 BTS</label><textarea id="notes-k2" rows="2" placeholder="np. Tor mokry, zgłosić sędziemu..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+          <div class="form-group" style="margin:0"><label>⚡ 15×15m</label><textarea id="notes-k3" rows="2" placeholder="np. Tor A — lewa strona, Tor B — prawa..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+          <div class="form-group" style="margin:0"><label>🏅 1000m</label><textarea id="notes-k4" rows="2" placeholder="np. Trasa przez las, uwaga na zakręt..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
+        </div>
+      </div>
+
+      <div class="card" data-admin-only>
+        <div class="card-title">🔐 Bezpieczeństwo</div>
+        <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
+      </div>
+
+    </div>
+
+    <div>
       <div class="card" data-admin-only>
         <div class="card-title">📋 Listy startowe
           <span class="badge" style="background:rgba(91,155,213,.1);color:var(--blue);border:1px solid rgba(91,155,213,.3)">IMPORT / EXPORT</span>
@@ -1136,26 +1156,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         <div id="startlist-preview" style="display:none;margin-top:12px"></div>
       </div>
 
-      <div class="card">
-        <div class="card-title">📝 Notatki dla sędziów
-          <span class="text-muted text-sm" style="font-weight:400;text-transform:none;letter-spacing:0">— widoczne w każdej konkurencji</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div class="form-group" style="margin:0"><label>🪢 Lina</label><textarea id="notes-k1" rows="2" placeholder="np. Lina 6m, czas max 14s..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
-          <div class="form-group" style="margin:0"><label>🏃 BTS</label><textarea id="notes-k2" rows="2" placeholder="np. Tor mokry, zgłosić sędziemu..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
-          <div class="form-group" style="margin:0"><label>⚡ 15×15m</label><textarea id="notes-k3" rows="2" placeholder="np. Tor A — lewa strona, Tor B — prawa..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
-          <div class="form-group" style="margin:0"><label>🏅 1000m</label><textarea id="notes-k4" rows="2" placeholder="np. Trasa przez las, uwaga na zakręt..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
-        </div>
-      </div>
-
-      <div class="card" data-admin-only>
-        <div class="card-title">🔐 Bezpieczeństwo</div>
-        <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
-      </div>
-
-    </div>
-
-    <div>
       <div class="card">
         <div class="card-title">🏆 Drużyny</div>
         <div id="teams-list"></div>
@@ -1198,7 +1198,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <span>👥 Lista zawodników</span>
       <div class="flex">
         <button class="btn btn-sm" onclick="openAddAthleteModal()">+ Dodaj</button>
-        <button class="btn btn-sm" onclick="document.getElementById('import-csv').click()" data-admin-only>Import CSV</button>
       </div>
     </div>
 
@@ -1252,6 +1251,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="tab-row" id="k1-series-tabs">
     <button class="tab-btn active" id="k1-tab-s1" onclick="switchKSeries('k1',1,this)">📋 Seria 1 — kolejność zespołami</button>
     <button class="tab-btn" id="k1-tab-s2" onclick="switchKSeries('k1',2,this)">🔁 Seria 2 — od najsłabszego</button>
+    <button class="tab-btn" id="k1-tab-who" onclick="switchKSeries('k1','who',this)">👥 Kto startuje w S2</button>
   </div>
   <!-- Seria 1 -->
   <div id="k1-s1-wrap">
@@ -1267,6 +1267,10 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <!-- Seria 2 -->
   <div id="k1-s2-wrap" style="display:none">
     <div id="k1-s2-content"></div>
+  </div>
+  <!-- Kto startuje w S2 -->
+  <div id="k1-who-wrap" style="display:none">
+    <div id="k1-who-content"></div>
   </div>
 </div>
 
@@ -1284,6 +1288,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="tab-row" id="k2-series-tabs">
     <button class="tab-btn active" id="k2-tab-s1" onclick="switchKSeries('k2',1,this)">📋 Seria 1 — kolejność zespołami</button>
     <button class="tab-btn" id="k2-tab-s2" onclick="switchKSeries('k2',2,this)">🔁 Seria 2 — od najsłabszego</button>
+    <button class="tab-btn" id="k2-tab-who" onclick="switchKSeries('k2','who',this)">👥 Kto startuje w S2</button>
   </div>
   <!-- Seria 1 -->
   <div id="k2-s1-wrap">
@@ -1299,6 +1304,10 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <!-- Seria 2 -->
   <div id="k2-s2-wrap" style="display:none">
     <div id="k2-s2-content"></div>
+  </div>
+  <!-- Kto startuje w S2 -->
+  <div id="k2-who-wrap" style="display:none">
+    <div id="k2-who-content"></div>
   </div>
 </div>
 
@@ -1506,7 +1515,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 <!-- HIDDEN INPUTS -->
 <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
 <input type="file" id="import-score-file" accept=".csv,.xlsx,.json" style="display:none" onchange="handleScoreImport(event)">
-<input type="file" id="import-csv" accept=".csv" style="display:none" onchange="handleCSV(event)">
 
 <script>
 
@@ -1783,6 +1791,7 @@ function defaultScoreTables() {
 // SUPABASE — konfiguracja
 // ════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+const SESSION_ID = Math.random().toString(36).slice(2); // unikalny ID sesji
 const SUPABASE_KEY = 'sb_publishable_aPrFnhbnuEL0xlj8b8SpiQ_Jq7CD-KL';
 const SLOT_KEY = 'default'; // nazwa slotu w tabeli Supabase
 
@@ -1937,6 +1946,7 @@ async function saveToSupabase() {
     const db = getSupabase();
     const payload = {
       slot_id: ACTIVE_SLOT_ID || SLOT_KEY,
+      session_id: SESSION_ID,
       state_json: JSON.stringify(STATE),
       updated_at: new Date().toISOString()
     };
@@ -1992,6 +2002,8 @@ function startRealtimeSync() {
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'app_state', filter: `slot_id=eq.${ACTIVE_SLOT_ID || SLOT_KEY}` },
       (payload) => {
+        // Ignoruj własne zmiany (ta sama sesja)
+        if (payload.new.session_id === SESSION_ID) return;
         // Ktoś inny zapisał — wczytaj nowy stan
         try {
           const newState = JSON.parse(payload.new.state_json);
@@ -2002,12 +2014,13 @@ function startRealtimeSync() {
           const activePage = document.querySelector('.page.active');
           if (activePage) {
             const id = activePage.id;
-            if (id === 'page-k1') renderK1();
-            else if (id === 'page-k2') renderK2();
-            else if (id === 'page-k3') renderK3();
-            else if (id === 'page-k4') renderK4();
+            // Zachowaj scroll i fokus przy rerenderze z innego urządzenia
+            if (id === 'page-k1') preserveScrollAndFocus(() => renderK1());
+            else if (id === 'page-k2') preserveScrollAndFocus(() => renderK2());
+            else if (id === 'page-k3') preserveScrollAndFocus(() => renderK3());
+            else if (id === 'page-k4') preserveScrollAndFocus(() => renderK4());
             else if (id === 'page-ranking') renderRanking();
-            else if (id === 'page-zawodnicy') renderAthletesList();
+            else if (id === 'page-zawodnicy') preserveScrollAndFocus(() => renderAthletesList());
             else if (id === 'page-setup') { renderSetup(); }
           }
           const el = document.getElementById('header-autosave');
@@ -3030,6 +3043,9 @@ function qeFocus(input) {
 }
 
 function qeSave(input, mode) {
+  if (input._qeSaving) return; // zapobiegaj podwójnemu wywołaniu (Tab/Enter + onchange)
+  input._qeSaving = true;
+  setTimeout(() => { input._qeSaving = false; }, 100);
   const aid  = input.dataset.aid;
   const ev   = input.dataset.ev;
   const att  = parseInt(input.dataset.att);
@@ -3091,10 +3107,38 @@ function toggleDisq(aid, ev, att) {
   while (STATE.disq[aid][ev].length <= att) STATE.disq[aid][ev].push(false);
   STATE.disq[aid][ev][att] = !STATE.disq[aid][ev][att];
   save();
-  // Re-render the event
-  if (ev==='k1') renderK1();
-  else if (ev==='k2') renderK2();
-  else if (ev==='k4') renderK4();
+  // Aktualizuj tylko ten wiersz — nie przebudowuj całego DOM
+  const row = document.getElementById('qe-row-' + aid) ||
+              document.getElementById('qe-s2-row-' + aid);
+  if (row) {
+    const r     = STATE.results[aid]?.[ev] || [];
+    const disqA = STATE.disq[aid]?.[ev]   || [];
+    const dnfA  = STATE.dnf[aid]?.[ev]    || [];
+    const bestT = getBestValidTime(r, disqA, dnfA);
+    const a     = STATE.athletes.find(x => String(x.id) === String(aid));
+    const pts   = a && bestT ? getPoints(a.cat, ev, bestT) : 0;
+    const isK4  = ev === 'k4';
+    row.querySelectorAll('.qe-time').forEach((inp, i) => {
+      const tv = r[i];
+      inp.classList.toggle('dq-val',  !!(disqA[i]));
+      inp.classList.toggle('dnf-val', !!(dnfA[i]));
+      inp.classList.toggle('has-val', !!(tv || dnfA[i]));
+      inp.classList.toggle('is-best', !!(tv && tv===bestT && !disqA[i] && !dnfA[i]));
+      const btn = inp.nextElementSibling;
+      if (btn) btn.classList.toggle('dq-active', !!(disqA[i]));
+    });
+    const bestCell = row.querySelector('.qe-best');
+    const ptsCell  = row.querySelector('.qe-pts');
+    if (bestCell) bestCell.innerHTML = bestT
+      ? (isK4 ? secToTimeK4(bestT) : secToTime(bestT))
+      : '<span class="text-muted">—</span>';
+    if (ptsCell) { ptsCell.textContent = pts||'—'; ptsCell.classList.toggle('zero', !pts); }
+  } else {
+    // Fallback — pełny rerender tylko gdy brak wiersza w DOM
+    if (ev==='k1') renderK1();
+    else if (ev==='k2') renderK2();
+    else if (ev==='k4') renderK4();
+  }
 }
 
 function qeKeydown(e, idx, event) {
@@ -3294,7 +3338,7 @@ function k3PairCard(pair, pairNum, isLast, series) {
     else if (dq) { txt = 'S1: DSQ'; color = 'var(--orange)'; }
     else if (t)  { txt = 'S1: ' + fmtSec1(t) + 's'; color = 'var(--green)'; }
     else         { txt = 'S1: —';  color = 'var(--text3)'; }
-    return `<div style="font-size:10px;font-family:var(--font-m);color:${color};margin-top:2px;letter-spacing:0.5px">${txt}</div>`;
+    return `<div style="font-size:11px;font-family:var(--font-m);font-weight:600;color:${color};margin-top:3px;letter-spacing:0.5px;border-top:1px solid var(--border);padding-top:2px">${txt}</div>`;
   }
 
   const leftSide = `
@@ -3328,6 +3372,9 @@ function k3PairCard(pair, pairNum, isLast, series) {
 }
 
 function k3InlineSave(input) {
+  if (input._k3Saving) return; // zapobiegaj podwójnemu wywołaniu (Tab + onchange)
+  input._k3Saving = true;
+  setTimeout(() => { input._k3Saving = false; }, 100);
   const aid = parseInt(input.dataset.aid);
   const series = input.dataset.series;
   const key = series === 's1' ? 'k3' : 'k3s2';
@@ -3367,11 +3414,25 @@ function k3InlineSave(input) {
 function k3InlineKey(e, input) {
   if (e.key === 'Enter' || e.key === 'Tab') {
     e.preventDefault();
-    input.blur();
-    // Move to next k3 input
+    k3InlineSave(input);  // zapisz najpierw
+    // Przenieś fokus na następne pole — bez blur który triggeruje onchange ponownie
     const all = Array.from(document.querySelectorAll('.k3-inline-input'));
     const idx = all.indexOf(input);
-    if (idx >= 0 && idx < all.length - 1) all[idx + 1].focus();
+    if (idx >= 0 && idx < all.length - 1) {
+      all[idx + 1].focus();
+      all[idx + 1].select();
+    }
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    const all = Array.from(document.querySelectorAll('.k3-inline-input'));
+    const idx = all.indexOf(input);
+    // K3 ma 2 inputy na parę — skok o 2
+    if (idx >= 0 && idx + 2 < all.length) { all[idx + 2].focus(); all[idx + 2].select(); }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    const all = Array.from(document.querySelectorAll('.k3-inline-input'));
+    const idx = all.indexOf(input);
+    if (idx >= 2) { all[idx - 2].focus(); all[idx - 2].select(); }
   }
 }
 
@@ -4797,6 +4858,49 @@ function checkGenderSuspicious(name, gender) {
 }
 
 
+
+// ════════════════════════════════════════════════════════════
+// PRESERVE SCROLL & FOCUS — wrapper dla rerenderów z real-time sync
+// ════════════════════════════════════════════════════════════
+function preserveScrollAndFocus(renderFn) {
+  // Zapamiętaj aktywny element i jego dane
+  const active = document.activeElement;
+  const activeId    = active?.id || null;
+  const activeAid   = active?.dataset?.aid || null;
+  const activeEv    = active?.dataset?.ev  || null;
+  const activeAtt   = active?.dataset?.att || null;
+  const activeSeries= active?.dataset?.series || null;
+  const activeVal   = active?.value || null;
+
+  // Zapamiętaj pozycję scrolla głównego okna i elementu qe-scroll
+  const winScrollY = window.scrollY;
+  const qeScroll   = document.querySelector('.qe-scroll');
+  const qeScrollTop = qeScroll ? qeScroll.scrollTop : 0;
+
+  // Wykonaj rerender
+  renderFn();
+
+  // Przywróć scroll okna
+  window.scrollTo(0, winScrollY);
+  const qeScrollNew = document.querySelector('.qe-scroll');
+  if (qeScrollNew) qeScrollNew.scrollTop = qeScrollTop;
+
+  // Przywróć fokus
+  if (activeAid && activeEv && activeAtt !== null) {
+    // Pole wyników (qe-time)
+    const selector = `[data-aid="${activeAid}"][data-ev="${activeEv}"][data-att="${activeAtt}"]`;
+    const el = document.querySelector(selector);
+    if (el) { el.focus(); el.select(); }
+  } else if (activeAid && activeSeries) {
+    // Pole K3 inline
+    const el = document.querySelector(`.k3-inline-input[data-aid="${activeAid}"][data-series="${activeSeries}"]`);
+    if (el) { el.focus(); el.select(); }
+  } else if (activeId) {
+    const el = document.getElementById(activeId);
+    if (el) el.focus();
+  }
+}
+
 // ════════════════════════════════════════════════════════════
 // SERIA 2 — K1 i K2
 // Kolejność: od najsłabszego do najlepszego wg wyniku 1. serii
@@ -4812,9 +4916,12 @@ function switchKSeries(ev, seriesNum, btn) {
   document.querySelectorAll(`#${ev}-series-tabs .tab-btn`).forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   // Pokaż/ukryj zawartość
-  document.getElementById(`${ev}-s1-wrap`).style.display = seriesNum === 1 ? '' : 'none';
-  document.getElementById(`${ev}-s2-wrap`).style.display = seriesNum === 2 ? '' : 'none';
-  if (seriesNum === 2) renderKSeries2(ev);
+  document.getElementById(`${ev}-s1-wrap`).style.display  = seriesNum === 1     ? '' : 'none';
+  document.getElementById(`${ev}-s2-wrap`).style.display  = seriesNum === 2     ? '' : 'none';
+  const whoWrap = document.getElementById(`${ev}-who-wrap`);
+  if (whoWrap) whoWrap.style.display = seriesNum === 'who' ? '' : 'none';
+  if (seriesNum === 2)   renderKSeries2(ev);
+  if (seriesNum === 'who') renderKWho(ev);
 }
 
 // Pobierz uczestników serii 2 — domyślnie wszyscy (nie-PK z wylosowaną kolejnością)
@@ -4836,7 +4943,8 @@ function toggleSeries2Participant(ev, aid) {
   // default true → toggle
   STATE.series2Participants[ev][aid] = cur === undefined ? false : !cur;
   save();
-  renderKSeries2(ev);
+  if (_kActiveSeries[ev] === 'who') renderKWho(ev);
+  else renderKSeries2(ev);
 }
 
 function renderKSeries2(ev) {
@@ -4882,18 +4990,13 @@ function renderKSeries2(ev) {
     <div class="flex-between mb-8" style="flex-wrap:wrap;gap:8px">
       <div class="mono text-sm">
         Startujących: <strong class="text-accent">${totalStarting}/${totalAll}</strong>
-        <span class="text-muted" style="margin-left:8px">— kliknij checkbox aby odpiąć zawodnika z 2. serii</span>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-sm" onclick="setAllSeries2('${ev}',true)">✓ Zaznacz wszystkich</button>
-        <button class="btn btn-sm" onclick="setAllSeries2('${ev}',false)">✕ Odznacz wszystkich</button>
+        <span class="text-muted" style="margin-left:8px">— zmień listę startujących w zakładce "Kto startuje w S2"</span>
       </div>
     </div>
     <div class="qe-scroll">
     <table class="qe-table">
       <thead>
         <tr>
-          <th style="width:36px">Start</th>
           <th style="width:36px">#</th>
           <th>Zawodnik</th>
           <th>Drużyna</th>
@@ -4911,7 +5014,7 @@ function renderKSeries2(ev) {
 
   [[men,'Mężczyźni'],[women,'Kobiety']].forEach(([group, label]) => {
     if (!group.length) return;
-    html += `<tr><td colspan="9" class="qe-group-header">${label}</td></tr>`;
+    html += `<tr><td colspan="8" class="qe-group-header">${label}</td></tr>`;
 
     // Najpierw startujący, potem nie-startujący
     const starting    = group.filter(a => participants[a.id] !== false);
@@ -4921,7 +5024,7 @@ function renderKSeries2(ev) {
       html += renderS2Row(a, ev, pos++, participants, inputIndex, true);
     });
     if (notStarting.length) {
-      html += `<tr><td colspan="9" style="background:var(--bg3);color:var(--text3);font-size:11px;padding:4px 8px;font-family:var(--font-m);letter-spacing:1px">— NIE STARTUJĄ W 2. SERII —</td></tr>`;
+      html += `<tr><td colspan="8" style="background:var(--bg3);color:var(--text3);font-size:11px;padding:4px 8px;font-family:var(--font-m);letter-spacing:1px">— NIE STARTUJĄ W 2. SERII —</td></tr>`;
       notStarting.forEach(a => {
         html += renderS2Row(a, ev, null, participants, inputIndex, false);
       });
@@ -4974,12 +5077,6 @@ function renderS2Row(a, ev, pos, participants, inputIndex, isStarting) {
   const parseMode = isK4 ? 'k4' : 'sec';
 
   return `<tr class="qe-row" id="qe-s2-row-${a.id}" style="${rowStyle}">
-    <td style="text-align:center">
-      <input type="checkbox" ${checked}
-        style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
-        onchange="toggleSeries2Participant('${ev}',${a.id})"
-        title="Odznacz aby usunąć z 2. serii">
-    </td>
     <td class="qe-num">${pos !== null ? pos : '—'}</td>
     <td class="qe-name">${a.name}</td>
     <td class="qe-team">${team?.name||'—'}</td>
@@ -5005,6 +5102,79 @@ function renderS2Row(a, ev, pos, participants, inputIndex, isStarting) {
   </tr>`;
 }
 
+// ════════════════════════════════════════════════════════════
+// KTO STARTUJE W S2 — K1 i K2
+// ════════════════════════════════════════════════════════════
+function renderKWho(ev) {
+  const container = document.getElementById(`${ev}-who-content`);
+  if (!container) return;
+
+  const participants = getSeries2Participants(ev);
+  const allAthletes  = STATE.athletes.filter(a => !a.pk);
+  const men   = allAthletes.filter(a => a.gender === 'M');
+  const women = allAthletes.filter(a => a.gender === 'K');
+
+  const totalStarting = allAthletes.filter(a => participants[a.id] !== false).length;
+
+  let html = `
+    <div class="flex-between mb-8" style="flex-wrap:wrap;gap:8px">
+      <div class="mono text-sm">
+        Startujących w S2: <strong class="text-accent">${totalStarting}/${allAthletes.length}</strong>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-success" onclick="setAllSeries2('${ev}',true)">✓ Wszyscy</button>
+        <button class="btn btn-sm btn-danger" onclick="setAllSeries2('${ev}',false)">✕ Nikt</button>
+      </div>
+    </div>
+    <div class="qe-scroll">
+    <table class="qe-table">
+      <thead><tr>
+        <th style="width:40px">Start</th>
+        <th>Zawodnik</th>
+        <th>Drużyna</th>
+        <th style="width:58px">Kat.</th>
+        <th style="width:100px">Wynik S1</th>
+      </tr></thead>
+      <tbody>`;
+
+  [[men,'Mężczyźni'],[women,'Kobiety']].forEach(([group, label]) => {
+    if (!group.length) return;
+    html += `<tr><td colspan="5" class="qe-group-header">${label}</td></tr>`;
+    // Posortuj alfabetycznie po nazwisku
+    const sorted = [...group].sort((a,b) => a.name.localeCompare(b.name));
+    sorted.forEach(a => {
+      const team     = STATE.teams.find(t => t.id == a.teamId);
+      const starting = participants[a.id] !== false;
+      // Wynik S1 — times[0]
+      const r     = STATE.results[a.id]?.[ev] || [];
+      const disqA = STATE.disq[a.id]?.[ev]   || [];
+      const dnfA  = STATE.dnf[a.id]?.[ev]    || [];
+      const t1    = r[0];
+      const dnf1  = dnfA[0], dq1 = disqA[0];
+      let s1txt, s1color;
+      if (dnf1)      { s1txt = 'NKL';           s1color = 'var(--red)'; }
+      else if (dq1)  { s1txt = 'DSQ';           s1color = 'var(--orange)'; }
+      else if (t1)   { s1txt = fmtSec1(t1)+'s'; s1color = 'var(--green)'; }
+      else           { s1txt = '—';             s1color = 'var(--text3)'; }
+
+      html += `<tr class="qe-row" style="${starting ? '' : 'opacity:0.45'}">
+        <td style="text-align:center">
+          <input type="checkbox" ${starting ? 'checked' : ''}
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
+            onchange="toggleSeries2Participant('${ev}',${a.id})">
+        </td>
+        <td class="qe-name">${a.name}</td>
+        <td class="qe-team">${team?.name||'—'}</td>
+        <td class="qe-cat"><span class="cat-badge cat-${a.cat}">${a.cat}</span></td>
+        <td style="font-family:var(--font-m);font-size:13px;text-align:center;color:${s1color}">${s1txt}</td>
+      </tr>`;
+    });
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
 function setAllSeries2(ev, val) {
   if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
   if (!STATE.series2Participants[ev]) STATE.series2Participants[ev] = {};
@@ -5012,7 +5182,8 @@ function setAllSeries2(ev, val) {
     STATE.series2Participants[ev][a.id] = val;
   });
   save();
-  renderKSeries2(ev);
+  if (_kActiveSeries[ev] === 'who') renderKWho(ev);
+  else renderKSeries2(ev);
 }
 
 

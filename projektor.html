@@ -679,7 +679,7 @@ function buildRowsHTML(shown, s) {
       showK3 ? `<td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k3||'—'}</td>` : '',
       showK4 ? `<td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k4||'—'}</td>` : '',
     ].join('');
-    return `<tr>
+    return `<tr style="${i%2===1 ? 'background:rgba(255,255,255,0.03)' : ''}">
       <td style="width:26px"><span class="rk-pos ${rkCls}">${rank}</span></td>
       <td><div class="rk-name">${a.name}</div><div class="rk-team">${team?.name||'—'}</div></td>
       ${extraCells}
@@ -692,66 +692,61 @@ function startCatInfiniteScroll(cat, speed) {
   if (_catScrollRAFs[cat]) cancelAnimationFrame(_catScrollRAFs[cat]);
 
   setTimeout(() => {
-    const track    = document.getElementById('scroll-track-' + cat);
+    const track = document.getElementById('scroll-track-' + cat);
     if (!track) return;
 
-    const viewport = track.closest('.rank-table-scroll-viewport');
-    const listA    = track.querySelector('.scroll-list-a');
-    const listB    = track.querySelector('.scroll-list-b');
-    if (!listA || !listB || !viewport) return;
+    // Użyj tylko listA — listB jest zbędna w tym podejściu
+    const listA = track.querySelector('.scroll-list-a');
+    if (!listA) return;
 
-    const viewH  = viewport.offsetHeight || 300;
-    const rowsH  = listA.offsetHeight;
-    if (rowsH === 0) return;
+    const tbody = listA.querySelector('tbody');
+    if (!tbody) return;
 
-    // Powiel wiersze żeby lista była co najmniej 4x viewport — płynny scroll przez minuty
-    const minH    = viewH * 4;
-    const origHTML = listA.querySelector('tbody').innerHTML;
-    if (rowsH < minH) {
-      const repeats = Math.ceil(minH / rowsH) + 1;
-      const repeated = Array(repeats).fill(origHTML).join('');
-      listA.querySelector('tbody').innerHTML = repeated;
-      listB.querySelector('tbody').innerHTML = repeated;
-    }
+    // Zmierz wysokość jednego zestawu wierszy
+    const origHTML  = tbody.innerHTML;
+    const origH     = listA.offsetHeight;
+    if (origH === 0) return;
 
-    // Poczekaj na reflow po zmianie DOM
+    // Powiel wiersze: 3 kopie = środkowa to "widoczna", reset jest niewidoczny
+    // Przy prędkości 20px/s i 3 kopiach mamy ~origH*3/20 sekund na pełny obrót
+    // Dla 10 wierszy ~30px każdy = 300px * 3 / 20 = 45s, dla 20 wierszy = 90s
+    const COPIES = Math.max(3, Math.ceil(120 * speed / origH) + 2); // min 2 minuty
+    tbody.innerHTML = Array(COPIES).fill(origHTML).join('');
+
+    // Ukryj listB — nie używamy
+    const listB = track.querySelector('.scroll-list-b');
+    if (listB) listB.style.display = 'none';
+
+    // Poczekaj na reflow
     requestAnimationFrame(() => {
-      const listH = listA.offsetHeight;
-      if (listH === 0) return;
+      requestAnimationFrame(() => {
+        const totalH = listA.offsetHeight; // wysokość wszystkich kopii
+        const oneH   = totalH / COPIES;   // wysokość jednego zestawu
 
-      listB.style.top = listH + 'px';
+        if (oneH === 0) return;
 
-      let pos = 0;
-      let lastTime = null;
+        let pos      = 0;
+        let lastTime = null;
 
-      // Pauza na górze — zatrzymaj na 3s przed każdym pełnym obrotem
-      let pauseTimer = 0;
-      const PAUSE_DURATION = 3000; // ms pauzy co pełny obrót
+        function step(now) {
+          if (!lastTime) { lastTime = now; }
+          const delta = Math.min(now - lastTime, 50); // cap delta na 50ms (np. po nieaktywności karty)
+          lastTime = now;
 
-      function step(now) {
-        if (!lastTime) lastTime = now;
-        const delta = now - lastTime;
-        lastTime = now;
+          pos += speed * delta / 1000;
 
-        if (pauseTimer > 0) {
-          pauseTimer -= delta;
+          // Reset niewidoczny: gdy przewinęliśmy jeden pełny zestaw, cofnij o dokładnie oneH
+          // Użytkownik nie widzi skoku bo wiersze się powtarzają
+          if (pos >= oneH) pos -= oneH;
+
+          track.style.transform = `translateY(-${pos}px)`;
           _catScrollRAFs[cat] = requestAnimationFrame(step);
-          return;
         }
 
-        pos += speed * delta / 1000;
-        if (pos >= listH) {
-          pos -= listH;
-          pauseTimer = PAUSE_DURATION;
-        }
-
-        track.style.transform = `translateY(-${pos}px)`;
         _catScrollRAFs[cat] = requestAnimationFrame(step);
-      }
-
-      _catScrollRAFs[cat] = requestAnimationFrame(step);
+      });
     });
-  }, 150);
+  }, 200);
 }
 
 function renderIndiv(s) {
