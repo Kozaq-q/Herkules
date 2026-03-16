@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════
    DESIGN SYSTEM — Military Industrial Aesthetic
@@ -739,6 +740,33 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   </div>
 </div>
 
+
+<!-- ══════════ MODAL RESET DANYCH ══════════ -->
+<div id="modal-reset-data" class="modal-overlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" style="color:var(--red)">⚠ Reset wszystkich danych</div>
+    <div class="alert alert-danger" style="margin-bottom:16px">
+      <strong>Ta operacja jest nieodwracalna.</strong><br>
+      Wszystkie wyniki, zawodnicy i drużyny zostaną trwale usunięte.<br>
+      Upewnij się że masz backup JSON.
+    </div>
+    <div class="form-group">
+      <label>Wpisz <strong style="color:var(--red);font-family:var(--font-m);letter-spacing:2px">RESET</strong> aby potwierdzić</label>
+      <input id="reset-confirm-input" type="text" placeholder="RESET"
+        oninput="resetCheckInput()"
+        onkeydown="if(event.key==='Enter')confirmResetData()"
+        autocomplete="off" style="font-family:var(--font-m);letter-spacing:2px;text-transform:uppercase">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-reset-data')">Anuluj</button>
+      <button id="reset-confirm-btn" class="btn btn-danger" onclick="confirmResetData()" disabled
+        style="opacity:0.4;cursor:not-allowed">
+        🗑 Resetuj wszystko
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ EKRAN POWITALNY ══════════ -->
 <div id="welcome-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);overflow-y:auto;">
   <div style="max-width:640px;margin:0 auto;padding:32px 16px;">
@@ -1014,12 +1042,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         </div>
       </div>
 
-      <div class="card" data-admin-only>
-        <div class="card-title">🔐 Bezpieczeństwo</div>
-        <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
-      </div>
-
-
       <div class="card">
         <div class="card-title">📋 Informacje ogólne</div>
         <div class="form-group">
@@ -1076,6 +1098,43 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         <div id="team-limit-preview" class="text-muted text-sm mono" style="margin-top:4px"></div>
       </div>
 
+      <div class="card" data-admin-only>
+        <div class="card-title">📋 Listy startowe
+          <span class="badge" style="background:rgba(91,155,213,.1);color:var(--blue);border:1px solid rgba(91,155,213,.3)">IMPORT / EXPORT</span>
+        </div>
+
+        <div class="alert alert-info" style="margin-bottom:12px;font-size:12px">
+          Pobierz template, wypełnij i wczytaj z powrotem.<br>
+          Aplikacja automatycznie utworzy drużyny i przypisze zawodników do kategorii.
+        </div>
+
+        <!-- Pobieranie template -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Pobierz template</div>
+          <div class="flex" style="gap:8px">
+            <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">📥 Excel (.xlsx)</button>
+            <button class="btn btn-sm" onclick="downloadTemplateCSV()">📥 CSV</button>
+          </div>
+        </div>
+
+        <hr class="sep">
+
+        <!-- Import listy -->
+        <div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Wczytaj listę startową</div>
+          <div class="alert alert-warning" style="font-size:11px;margin-bottom:8px">
+            Zawodnicy zostaną <strong>dopisani</strong> do istniejących. Drużyny tworzone automatycznie po nazwie.
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="document.getElementById('import-startlist-file').click()">
+            📤 Wczytaj Excel lub CSV
+          </button>
+          <input type="file" id="import-startlist-file" accept=".xlsx,.csv" style="display:none" onchange="importStartList(event)">
+        </div>
+
+        <!-- Podgląd importu -->
+        <div id="startlist-preview" style="display:none;margin-top:12px"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">📝 Notatki dla sędziów
           <span class="text-muted text-sm" style="font-weight:400;text-transform:none;letter-spacing:0">— widoczne w każdej konkurencji</span>
@@ -1086,6 +1145,11 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           <div class="form-group" style="margin:0"><label>⚡ 15×15m</label><textarea id="notes-k3" rows="2" placeholder="np. Tor A — lewa strona, Tor B — prawa..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
           <div class="form-group" style="margin:0"><label>🏅 1000m</label><textarea id="notes-k4" rows="2" placeholder="np. Trasa przez las, uwaga na zakręt..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
         </div>
+      </div>
+
+      <div class="card" data-admin-only>
+        <div class="card-title">🔐 Bezpieczeństwo</div>
+        <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
       </div>
 
     </div>
@@ -1321,7 +1385,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <div class="flex" style="flex-direction:column;gap:8px">
         <button class="btn btn-success" onclick="exportData()">📥 Eksportuj backup JSON</button>
         <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">📤 Importuj z pliku JSON</button>
-        <button class="btn btn-sm btn-warn" onclick="resetAllData()" data-admin-only>⚠ Reset wszystkich danych</button>
+        <button class="btn btn-sm btn-warn" onclick="openResetModal()" data-admin-only>⚠ Reset wszystkich danych</button>
       </div>
     </div>
     <div class="card">
@@ -4032,13 +4096,34 @@ function handleImport(e) {
   reader.readAsText(file); e.target.value='';
 }
 
-function resetAllData() {
-  if (!confirm('NA PEWNO zresetować WSZYSTKIE dane zawodów?\n\nTej operacji NIE MOŻNA cofnąć!\nUpewnij się że masz backup JSON.')) return;
-  if (!confirm('OSTATNIE OSTRZEŻENIE — zresetować wszystko?')) return;
+function openResetModal() {
+  const input = document.getElementById('reset-confirm-input');
+  if (input) input.value = '';
+  const btn = document.getElementById('reset-confirm-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; }
+  document.getElementById('modal-reset-data').classList.add('open');
+  setTimeout(() => { if (input) input.focus(); }, 100);
+}
+
+function resetCheckInput() {
+  const val = document.getElementById('reset-confirm-input').value.trim().toUpperCase();
+  const btn = document.getElementById('reset-confirm-btn');
+  const ok  = val === 'RESET';
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.4';
+  btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
+}
+
+function confirmResetData() {
+  const val = document.getElementById('reset-confirm-input').value.trim().toUpperCase();
+  if (val !== 'RESET') return;
+  closeModal('modal-reset-data');
   STATE = { setup:{name:'',date:'',place:'',org:'',days:2,teamLimitM:5,teamLimitK:3}, teams:[], athletes:[], results:{}, disq:{}, dnf:{}, series2:{}, scoreTablesByCat: JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT)), scoreTables: defaultScoreTables(), editingAthleteId: null };
   save(); renderSetup(); renderAthletesList(); toast('Dane zresetowane');
   showPage('page-setup');
 }
+
+function resetAllData() { openResetModal(); }
 
 function openProjector() {
   // Przekaż aktywny slot do projektora przez localStorage
@@ -4534,6 +4619,258 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
     setTimeout(() => banner.remove(), 600);
   }, 2500);
 })();
+
+// ════════════════════════════════════════════════════════════
+// LISTY STARTOWE — template download + import
+// Kolumny: Lp | Stopień imię nazwisko | Drużyna | Rok ur. | Płeć
+// ════════════════════════════════════════════════════════════
+
+const STARTLIST_HEADERS = ['Lp', 'Stopień imię nazwisko', 'Drużyna', 'Rok urodzenia', 'Płeć (M/K)'];
+const STARTLIST_EXAMPLE = [
+  [1, 'sierż. Jan Kowalski',   'JW 1234', 1989, 'M'],
+  [2, 'kpr. Anna Nowak',       'JW 1234', 1992, 'K'],
+  [3, 'st.szer. Piotr Wiśniewski', 'JW 5678', 1985, 'M'],
+];
+
+// ── Pobierz template XLSX ──
+function downloadTemplateXLSX() {
+  if (typeof XLSX === 'undefined') {
+    toast('Ładowanie biblioteki Excel — spróbuj za chwilę');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const wsData = [STARTLIST_HEADERS, ...STARTLIST_EXAMPLE];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Szerokości kolumn
+  ws['!cols'] = [
+    { wch: 5 },   // Lp
+    { wch: 32 },  // Stopień imię nazwisko
+    { wch: 20 },  // Drużyna
+    { wch: 14 },  // Rok urodzenia
+    { wch: 12 },  // Płeć
+  ];
+
+  // Styl nagłówka (bold przez komentarz — SheetJS nie wymaga licencji do stylów basic)
+  XLSX.utils.book_append_sheet(wb, ws, 'Lista startowa');
+
+  // Drugi arkusz — instrukcja
+  const wsInfo = XLSX.utils.aoa_to_sheet([
+    ['INSTRUKCJA WYPEŁNIANIA LISTY STARTOWEJ'],
+    [''],
+    ['Kolumna', 'Opis', 'Przykład'],
+    ['Lp', 'Liczba porządkowa (opcjonalna)', '1'],
+    ['Stopień imię nazwisko', 'Stopień wojskowy, imię i nazwisko w jednej komórce', 'sierż. Jan Kowalski'],
+    ['Drużyna', 'Nazwa drużyny — taka sama dla wszystkich z tej samej jednostki', 'JW 1234'],
+    ['Rok urodzenia', '4-cyfrowy rok urodzenia', '1989'],
+    ['Płeć (M/K)', 'M — mężczyzna, K — kobieta', 'M'],
+    [''],
+    ['UWAGI:'],
+    ['- Można wgrać wiele plików (np. osobno dla każdej drużyny) — zawodnicy będą dopisywani'],
+    ['- Kategoria (M35/M36/K35/K36) jest wyznaczana automatycznie na podstawie roku urodzenia i płci'],
+    ['- Drużyny tworzone automatycznie — ta sama nazwa = ta sama drużyna'],
+    ['- Wiersz nagłówkowy jest wymagany'],
+  ]);
+  wsInfo['!cols'] = [{ wch: 28 }, { wch: 52 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrukcja');
+
+  XLSX.writeFile(wb, 'lista_startowa_template.xlsx');
+  toast('Template Excel pobrany');
+}
+
+// ── Pobierz template CSV ──
+function downloadTemplateCSV() {
+  const lines = [
+    STARTLIST_HEADERS.join(';'),
+    ...STARTLIST_EXAMPLE.map(r => r.join(';'))
+  ];
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'lista_startowa_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Template CSV pobrany');
+}
+
+// ── Import listy startowej ──
+async function importStartList(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  try {
+    let rows = [];
+    if (ext === 'xlsx' || ext === 'xls') {
+      rows = await parseStartListXLSX(file);
+    } else if (ext === 'csv') {
+      rows = await parseStartListCSV(file);
+    } else {
+      return toast('Nieobsługiwany format — użyj .xlsx lub .csv');
+    }
+
+    if (!rows.length) return toast('Brak danych w pliku');
+
+    applyStartList(rows);
+  } catch(err) {
+    toast('Błąd importu: ' + err.message);
+    console.error(err);
+  }
+}
+
+// ── Parsuj XLSX ──
+function parseStartListXLSX(file) {
+  return new Promise((resolve, reject) => {
+    if (typeof XLSX === 'undefined') return reject(new Error('Biblioteka Excel nie jest załadowana'));
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+        // Użyj pierwszego arkusza
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        resolve(parseStartListRows(raw));
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Błąd odczytu pliku'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── Parsuj CSV ──
+function parseStartListCSV(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        // Wykryj separator: ; lub ,
+        const sep = lines[0].includes(';') ? ';' : ',';
+        const raw = lines.map(l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, '')));
+        resolve(parseStartListRows(raw));
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Błąd odczytu pliku'));
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+// ── Normalizuj wiersze — znajdź kolumny po nagłówkach ──
+function parseStartListRows(raw) {
+  if (!raw.length) return [];
+
+  // Znajdź wiersz nagłówkowy — szukaj wiersza zawierającego "nazwisko" lub "imię" lub "drużyna"
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, raw.length); i++) {
+    const row = raw[i].map(c => String(c).toLowerCase());
+    if (row.some(c => c.includes('nazwisko') || c.includes('imi') || c.includes('dru'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const headers = raw[headerIdx].map(c => String(c).toLowerCase().trim());
+
+  // Mapuj kolumny elastycznie
+  const colIdx = {
+    name:  headers.findIndex(h => h.includes('nazwisko') || h.includes('imię') || h.includes('imi') || h.includes('stopień') || h.includes('stopien')),
+    team:  headers.findIndex(h => h.includes('drużyna') || h.includes('druzyna') || h.includes('jednostka') || h.includes('zespół')),
+    year:  headers.findIndex(h => h.includes('rok') || h.includes('rocznik') || h.includes('urodz')),
+    gender:headers.findIndex(h => h.includes('płeć') || h.includes('plec') || h.includes('płec') || h.includes('m/k') || h.includes('k/m')),
+  };
+
+  // Fallback pozycji gdy nagłówek nie znaleziony (Lp, Nazwisko, Drużyna, Rok, Płeć)
+  if (colIdx.name   < 0) colIdx.name   = 1;
+  if (colIdx.team   < 0) colIdx.team   = 2;
+  if (colIdx.year   < 0) colIdx.year   = 3;
+  if (colIdx.gender < 0) colIdx.gender = 4;
+
+  const result = [];
+  for (let i = headerIdx + 1; i < raw.length; i++) {
+    const row = raw[i];
+    if (!row || !row.length) continue;
+
+    const name   = String(row[colIdx.name]   || '').trim();
+    const team   = String(row[colIdx.team]   || '').trim();
+    const year   = parseInt(row[colIdx.year]);
+    const gender = String(row[colIdx.gender] || '').trim().toUpperCase();
+
+    // Pomiń puste wiersze
+    if (!name || !team || isNaN(year)) continue;
+    // Pomiń jeśli płeć nierozpoznana
+    if (gender !== 'M' && gender !== 'K') continue;
+
+    result.push({ name, team, year, gender });
+  }
+
+  return result;
+}
+
+// ── Zastosuj listę — utwórz drużyny i zawodników ──
+function applyStartList(rows) {
+  let teamsCreated   = 0;
+  let athletesAdded  = 0;
+  let athletesSkipped = 0;
+
+  rows.forEach(({ name, team: teamName, year, gender }) => {
+    // 1. Znajdź lub utwórz drużynę
+    let team = STATE.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
+    if (!team) {
+      const maxNum = STATE.teams.reduce((m, t) => Math.max(m, t.num || 0), 0);
+      team = { id: Date.now() + Math.random(), name: teamName, num: maxNum + 1 };
+      STATE.teams.push(team);
+      teamsCreated++;
+    }
+
+    // 2. Sprawdź duplikat (to samo imię + ta sama drużyna)
+    const exists = STATE.athletes.find(a =>
+      a.name.toLowerCase() === name.toLowerCase() && a.teamId === team.id
+    );
+    if (exists) { athletesSkipped++; return; }
+
+    // 3. Wyznacz kategorię
+    const cat = getCategory(gender, year);
+
+    // 4. Dodaj zawodnika
+    STATE.athletes.push({
+      id: Date.now() + Math.random(),
+      name,
+      teamId: team.id,
+      year,
+      gender,
+      cat,
+      pk: false,
+      startOrder: null,
+    });
+    athletesAdded++;
+  });
+
+  STATE.teams.sort((a, b) => a.num - b.num);
+  save();
+  renderSetup();
+  renderAthletesList();
+
+  // Podsumowanie w podglądzie
+  const preview = document.getElementById('startlist-preview');
+  if (preview) {
+    preview.style.display = 'block';
+    preview.innerHTML = `
+      <div class="alert alert-success">
+        ✓ Import zakończony:<br>
+        <span class="mono">+${athletesAdded} zawodników</span> dodanych<br>
+        ${teamsCreated ? `<span class="mono">+${teamsCreated} drużyn</span> utworzonych<br>` : ''}
+        ${athletesSkipped ? `<span class="mono">${athletesSkipped} pominiętych</span> (duplikaty)<br>` : ''}
+      </div>`;
+    setTimeout(() => { preview.style.display = 'none'; }, 6000);
+  }
+
+  toast(`✓ Dodano ${athletesAdded} zawodników${teamsCreated ? ', '+teamsCreated+' drużyn' : ''}`);
+}
+
 </script>
 </body>
 </html>
