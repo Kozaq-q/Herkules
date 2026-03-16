@@ -697,7 +697,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 .auth-role-badge.admin { background: rgba(232,212,77,.15); color: var(--accent); border: 1px solid rgba(232,212,77,.3); }
 .auth-role-badge.judge { background: rgba(91,155,213,.15); color: var(--blue); border: 1px solid rgba(91,155,213,.3); }
 /* Admin panel - zmiana haseł */
-#auth-admin-panel { display: none; }
+/* #auth-admin-panel hidden via inline style */
 </style>
 </head>
 <body>
@@ -787,6 +787,35 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
     <div style="text-align:center;margin-top:16px;color:var(--text3);font-size:11px;">
       Dane każdych zawodów są przechowywane osobno w tej przeglądarce.<br>Używaj eksportu JSON jako kopii zapasowej.
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ MODAL ZMIANY HASEŁ (Admin) ══════════ -->
+<div id="modal-change-passwords" class="modal-overlay">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title">🔑 Zmiana haseł logowania</div>
+    <div class="alert alert-warning" style="margin-bottom:16px;font-size:12px">
+      Hasła zapisywane w Supabase. Zmiana obowiązuje natychmiast na wszystkich urządzeniach.
+    </div>
+    <div class="form-group">
+      <label>🔒 Aktualne hasło admina <span style="color:var(--red)">*</span></label>
+      <input id="auth-current-admin" type="password" placeholder="Wpisz aktualne hasło admina">
+    </div>
+    <div id="auth-current-error" class="alert alert-danger" style="display:none;margin-bottom:8px">✗ Nieprawidłowe aktualne hasło</div>
+    <hr class="sep">
+    <div class="form-group">
+      <label>🛡 Nowe hasło Admin <span style="color:var(--text3);font-weight:400">(zostaw puste = bez zmian)</span></label>
+      <input id="auth-new-admin" type="password" placeholder="Nowe hasło admina">
+    </div>
+    <div class="form-group">
+      <label>👮 Nowe hasło Sędzia <span style="color:var(--text3);font-weight:400">(zostaw puste = bez zmian)</span></label>
+      <input id="auth-new-judge" type="password" placeholder="Nowe hasło sędziego">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-change-passwords')">Anuluj</button>
+      <button class="btn btn-primary" onclick="authSavePasswords()">💾 Zapisz hasła</button>
     </div>
   </div>
 </div>
@@ -1056,38 +1085,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           <div class="form-group" style="margin:0"><label>🏃 BTS</label><textarea id="notes-k2" rows="2" placeholder="np. Tor mokry, zgłosić sędziemu..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
           <div class="form-group" style="margin:0"><label>⚡ 15×15m</label><textarea id="notes-k3" rows="2" placeholder="np. Tor A — lewa strona, Tor B — prawa..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
           <div class="form-group" style="margin:0"><label>🏅 1000m</label><textarea id="notes-k4" rows="2" placeholder="np. Trasa przez las, uwaga na zakręt..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
-        </div>
-      </div>
-
-      <!-- Panel zmiany haseł — tylko admin -->
-      <div id="auth-admin-panel" class="card" style="border-color:rgba(232,212,77,.3)">
-        <div class="card-title">🔑 Zarządzanie hasłami
-          <span class="badge" style="background:rgba(232,212,77,.1);color:var(--accent);border:1px solid rgba(232,212,77,.3)">ADMIN</span>
-        </div>
-        <div class="alert alert-warning" style="margin-bottom:12px">
-          Hasła są przechowywane w Supabase (SHA-256). Zmiana obowiązuje natychmiast dla wszystkich urządzeń.
-        </div>
-        <div class="form-group">
-          <label>🔒 Aktualne hasło admina <span style="color:var(--red)">*</span></label>
-          <input id="auth-current-admin" type="password" placeholder="Wpisz aktualne hasło admina aby potwierdzić zmiany">
-        </div>
-        <div id="auth-current-error" class="alert alert-danger" style="display:none;margin-bottom:8px">✗ Nieprawidłowe aktualne hasło</div>
-        <hr class="sep">
-        <div class="grid-2">
-          <div class="form-group">
-            <label>🛡 Nowe hasło Admin</label>
-            <input id="auth-new-admin" type="password" placeholder="Zostaw puste = bez zmian">
-          </div>
-          <div class="form-group">
-            <label>👮 Nowe hasło Sędzia</label>
-            <input id="auth-new-judge" type="password" placeholder="Zostaw puste = bez zmian">
-          </div>
-        </div>
-        <div class="flex" style="gap:8px;margin-top:4px">
-          <button class="btn btn-primary" onclick="authSavePasswords()">💾 Zapisz hasła</button>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--font-m);align-self:center">
-            Oba hasła działają — ustaw jedno wspólne lub dwa różne
-          </div>
         </div>
       </div>
 
@@ -1549,6 +1546,11 @@ function applyRoleRestrictions(role) {
     document.querySelectorAll('[data-admin-only]').forEach(el => {
       el.style.display = 'none';
     });
+    // Przekieruj z Konfiguracji na Zawodnicy jeśli sędzia ląduje na ukrytym tabie
+    const activePage = document.querySelector('.page.active');
+    if (!activePage || activePage.id === 'page-setup') {
+      showPage('page-zawodnicy');
+    }
   }
 }
 
@@ -1565,10 +1567,20 @@ function updateAuthBadge() {
 }
 
 // ── Panel zmiany haseł (tylko admin) ──
-async function openAuthAdminPanel() {
-  const panel = document.getElementById('auth-admin-panel');
-  if (!panel) return;
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+function openAuthAdminPanel() {
+  // Wyczyść pola
+  ['auth-current-admin','auth-new-admin','auth-new-judge'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const err = document.getElementById('auth-current-error');
+  if (err) err.style.display = 'none';
+  // Otwórz modal
+  document.getElementById('modal-change-passwords').classList.add('open');
+  setTimeout(() => {
+    const cur = document.getElementById('auth-current-admin');
+    if (cur) cur.focus();
+  }, 100);
 }
 
 async function authSavePasswords() {
@@ -1616,7 +1628,7 @@ async function authSavePasswords() {
     document.getElementById('auth-current-admin').value = '';
     document.getElementById('auth-new-admin').value = '';
     document.getElementById('auth-new-judge').value = '';
-    document.getElementById('auth-admin-panel').style.display = 'none';
+    closeModal('modal-change-passwords');
   } catch(e) {
     toast('Błąd zapisu: ' + e.message);
   }
