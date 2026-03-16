@@ -567,9 +567,177 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 /* ─── RANKING SEARCH ─── */
 #ranking-search-wrap { margin-bottom: 12px; }
+
+/* ═══════════════════════════════════════════════════════
+   GLOBAL AUTH OVERLAY
+═══════════════════════════════════════════════════════ */
+#auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+.auth-box {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.7);
+  margin: 20px 16px;
+}
+.auth-logo {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.auth-logo-title {
+  font-family: var(--font-h);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  line-height: 1;
+}
+.auth-logo-sub {
+  font-family: var(--font-m);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  margin-top: 5px;
+}
+.auth-role-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.auth-role-btn {
+  padding: 10px;
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--font-h);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text2);
+  transition: all .15s;
+  text-align: center;
+}
+.auth-role-btn:hover { border-color: var(--text3); color: var(--text1); }
+.auth-role-btn.selected {
+  border-color: var(--accent);
+  background: rgba(232,212,77,.1);
+  color: var(--accent);
+}
+.auth-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text1);
+  padding: 11px 14px;
+  font-family: var(--font-m);
+  font-size: 16px;
+  letter-spacing: 2px;
+  outline: none;
+  transition: border-color .12s;
+  margin-top: 6px;
+}
+.auth-input:focus { border-color: var(--accent); }
+.auth-error {
+  background: rgba(224,85,85,.1);
+  border: 1px solid rgba(224,85,85,.35);
+  color: #e87878;
+  border-radius: var(--radius);
+  padding: 9px 14px;
+  font-size: 13px;
+  margin-top: 12px;
+  display: none;
+}
+.auth-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--accent);
+  color: #111;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-h);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .12s;
+}
+.auth-btn:hover { background: var(--accent2); }
+.auth-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-h);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+  cursor: default;
+}
+.auth-role-badge.admin { background: rgba(232,212,77,.15); color: var(--accent); border: 1px solid rgba(232,212,77,.3); }
+.auth-role-badge.judge { background: rgba(91,155,213,.15); color: var(--blue); border: 1px solid rgba(91,155,213,.3); }
+/* Admin panel - zmiana haseł */
+#auth-admin-panel { display: none; }
 </style>
 </head>
 <body>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     GLOBALNY EKRAN LOGOWANIA
+══════════════════════════════════════════════════════════ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div style="font-size:32px;margin-bottom:8px">⚔</div>
+      <div class="auth-logo-title">Military Sports System</div>
+      <div class="auth-logo-sub">© By Kozak — Wymagana autoryzacja</div>
+    </div>
+
+    <div class="auth-role-tabs">
+      <button class="auth-role-btn selected" data-role="judge" onclick="authSelectRole('judge',this)">
+        👮 Sędzia
+      </button>
+      <button class="auth-role-btn" data-role="admin" onclick="authSelectRole('admin',this)">
+        🛡 Admin
+      </button>
+    </div>
+
+    <div>
+      <label style="font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3)">Hasło dostępu</label>
+      <input id="auth-password-input" class="auth-input" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')authLogin()">
+    </div>
+
+    <div id="auth-error" class="auth-error">✗ Nieprawidłowe hasło</div>
+
+    <button class="auth-btn" onclick="authLogin()">🔓 Zaloguj</button>
+
+    <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--text3);font-family:var(--font-m)">
+      Sesja ważna 12 godzin
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ EKRAN POWITALNY ══════════ -->
 <div id="welcome-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg);overflow-y:auto;">
@@ -586,7 +754,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <div id="welcome-slots-list" style="margin-bottom:24px;"></div>
 
     <!-- Nowe zawody -->
-    <div class="card" style="border:1px solid var(--accent);background:rgba(var(--accent-rgb),.04);">
+    <div class="card" data-admin-only style="border:1px solid var(--accent);background:rgba(var(--accent-rgb),.04);">
       <div class="card-title">➕ Nowe zawody</div>
       <div class="form-group">
         <label>Nazwa zawodów</label>
@@ -612,7 +780,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success" onclick="welcomeCreateNew()">🆕 Utwórz nowe zawody</button>
-        <button class="btn btn-sm" onclick="document.getElementById('import-welcome-file').click()">📤 Wczytaj z pliku JSON</button>
+        <button class="btn btn-sm" onclick="document.getElementById('import-welcome-file').click()" data-admin-only>📤 Wczytaj z pliku JSON</button>
         <input type="file" id="import-welcome-file" accept=".json" style="display:none" onchange="welcomeImportFile(event)">
       </div>
     </div>
@@ -669,8 +837,11 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <span id="header-status-badge" style="display:none;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0"></span>
     </div>
     <span class="header-autosave" id="header-autosave">● SYNC</span>
+    <span id="auth-role-badge" style="display:none;flex-shrink:0"></span>
+    <button class="btn btn-sm btn-xs" onclick="authLogout()" title="Wyloguj" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--text3);border-color:var(--border)">⏻ Wyloguj</button>
     <button class="btn btn-sm" id="switch-contest-btn" title="Menu zawodów"
       onclick="switchModalGoWelcome()"
+      data-admin-only
       style="white-space:nowrap;flex-shrink:0">
       🏟 <span class="btn-label-long">Menu</span>
     </button>
@@ -755,7 +926,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 <!-- NAV -->
 <div class="nav-bar">
-  <button class="nav-tab active" onclick="showPage('page-setup')">⚙ Konfiguracja</button>
+  <button class="nav-tab active" onclick="showPage('page-setup')" data-admin-only>⚙ Konfiguracja</button>
   <button class="nav-tab" onclick="showPage('page-zawodnicy')">👥 Zawodnicy</button>
   <button class="nav-tab" onclick="showPage('page-k1')">🪢 Lina</button>
   <button class="nav-tab" onclick="showPage('page-k2')">🏃 BTS</button>
@@ -817,6 +988,11 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
             <input type="file" id="rules-file-input" accept=".pdf" style="display:none" onchange="handleRulesUpload(event)">
           </div>
         </div>
+      </div>
+
+      <div class="card" data-admin-only>
+        <div class="card-title">🔐 Bezpieczeństwo</div>
+        <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
       </div>
 
 
@@ -887,6 +1063,33 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           <div class="form-group" style="margin:0"><label>🏅 1000m</label><textarea id="notes-k4" rows="2" placeholder="np. Trasa przez las, uwaga na zakręt..." oninput="saveNotes()" style="resize:vertical;font-size:13px"></textarea></div>
         </div>
       </div>
+
+      <!-- Panel zmiany haseł — tylko admin -->
+      <div id="auth-admin-panel" class="card" style="border-color:rgba(232,212,77,.3)">
+        <div class="card-title">🔑 Zarządzanie hasłami
+          <span class="badge" style="background:rgba(232,212,77,.1);color:var(--accent);border:1px solid rgba(232,212,77,.3)">ADMIN</span>
+        </div>
+        <div class="alert alert-warning" style="margin-bottom:12px">
+          Hasła są przechowywane w Supabase (SHA-256). Zmiana obowiązuje natychmiast dla wszystkich urządzeń.
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>🛡 Nowe hasło Admin</label>
+            <input id="auth-new-admin" type="password" placeholder="Zostaw puste = bez zmian">
+          </div>
+          <div class="form-group">
+            <label>👮 Nowe hasło Sędzia</label>
+            <input id="auth-new-judge" type="password" placeholder="Zostaw puste = bez zmian">
+          </div>
+        </div>
+        <div class="flex" style="gap:8px;margin-top:4px">
+          <button class="btn btn-primary" onclick="authSavePasswords()">💾 Zapisz hasła</button>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--font-m);align-self:center">
+            Oba hasła działają — ustaw jedno wspólne lub dwa różne
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <div>
@@ -903,7 +1106,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
             <label>Nr</label>
             <input id="new-team-num" type="number" min="1" placeholder="1">
           </div>
-          <button class="btn btn-primary mt-12" onclick="addTeam()">Dodaj</button>
+          <button class="btn btn-primary mt-12" onclick="addTeam()" data-admin-only>Dodaj</button>
         </div>
       </div>
 
@@ -932,7 +1135,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <span>👥 Lista zawodników</span>
       <div class="flex">
         <button class="btn btn-sm" onclick="openAddAthleteModal()">+ Dodaj</button>
-        <button class="btn btn-sm" onclick="document.getElementById('import-csv').click()">Import CSV</button>
+        <button class="btn btn-sm" onclick="document.getElementById('import-csv').click()" data-admin-only>Import CSV</button>
       </div>
     </div>
 
@@ -1120,7 +1323,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <div class="flex" style="flex-direction:column;gap:8px">
         <button class="btn btn-success" onclick="exportData()">📥 Eksportuj backup JSON</button>
         <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">📤 Importuj z pliku JSON</button>
-        <button class="btn btn-sm btn-warn" onclick="resetAllData()">⚠ Reset wszystkich danych</button>
+        <button class="btn btn-sm btn-warn" onclick="resetAllData()" data-admin-only>⚠ Reset wszystkich danych</button>
       </div>
     </div>
     <div class="card">
@@ -1221,6 +1424,207 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 <input type="file" id="import-csv" accept=".csv" style="display:none" onchange="handleCSV(event)">
 
 <script>
+
+// ════════════════════════════════════════════════════════════
+// GLOBAL AUTH — Bramka logowania
+// Hasła przechowywane w Supabase (tabela: auth_config)
+// Sesja 8h w sessionStorage
+// ════════════════════════════════════════════════════════════
+
+// Domyślne hashe SHA-256 (fallback gdy Supabase niedostępny)
+// admin: "admin2025", judge: "sedzia2025"
+const AUTH_DEFAULTS = {
+  admin: 'f2dbeac01286a77db30e2b4e73e0c44d6bd2e07528b8c9f4d48c965b17a4db99',
+  judge: '9bca72b15c40a882bd36a5c0a6b16c07ceaa668e2e4a42a3d6e1a7c27e0c5b31'
+};
+
+let _authRole = 'judge'; // selekcja roli w UI
+let _sessionRole = null; // aktywna rola (po zalogowaniu)
+let _authPasswords = null; // hashe wczytane z Supabase
+
+// Klucze sessionStorage
+const AUTH_SESSION_KEY  = 'mss_auth_session';
+const AUTH_EXPIRY_KEY   = 'mss_auth_expiry';
+const AUTH_ROLE_KEY     = 'mss_auth_role';
+
+// ── Sprawdź czy sesja jest aktywna ──
+function authCheckSession() {
+  try {
+    const token  = sessionStorage.getItem(AUTH_SESSION_KEY);
+    const expiry = parseInt(sessionStorage.getItem(AUTH_EXPIRY_KEY) || '0');
+    const role   = sessionStorage.getItem(AUTH_ROLE_KEY);
+    if (token === 'ok' && expiry > Date.now() && (role === 'admin' || role === 'judge')) {
+      _sessionRole = role;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// ── Zapisz sesję (8h) ──
+function authSaveSession(role) {
+  _sessionRole = role;
+  const expiry = Date.now() + 12 * 60 * 60 * 1000;
+  sessionStorage.setItem(AUTH_SESSION_KEY, 'ok');
+  sessionStorage.setItem(AUTH_EXPIRY_KEY, String(expiry));
+  sessionStorage.setItem(AUTH_ROLE_KEY, role);
+}
+
+// ── Wyloguj ──
+function authLogout() {
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  sessionStorage.removeItem(AUTH_EXPIRY_KEY);
+  sessionStorage.removeItem(AUTH_ROLE_KEY);
+  _sessionRole = null;
+  location.reload();
+}
+
+// ── Selekcja roli w UI ──
+function authSelectRole(role, btn) {
+  _authRole = role;
+  document.querySelectorAll('.auth-role-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+// ── Załaduj hashe z Supabase ──
+async function authLoadPasswords() {
+  try {
+    const db = getSupabase();
+    const { data, error } = await db
+      .from('auth_config')
+      .select('role, password_hash');
+    if (error || !data || !data.length) return null;
+    const map = {};
+    data.forEach(row => { map[row.role] = row.password_hash; });
+    return map;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── Logowanie ──
+async function authLogin() {
+  const input = document.getElementById('auth-password-input');
+  const errEl = document.getElementById('auth-error');
+  const btn   = document.querySelector('.auth-btn');
+  if (!input) return;
+
+  btn.textContent = '⏳ Sprawdzanie...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const hash = await sha256(input.value);
+
+  if (!_authPasswords) {
+    _authPasswords = await authLoadPasswords();
+  }
+
+  const passwords = _authPasswords || AUTH_DEFAULTS;
+  const expectedHash = passwords[_authRole];
+
+  if (expectedHash && hash === expectedHash) {
+    authSaveSession(_authRole);
+    document.getElementById('auth-overlay').style.display = 'none';
+    applyRoleRestrictions(_sessionRole);
+    toast(_authRole === 'admin' ? '🛡 Zalogowano jako Admin' : '👮 Zalogowano jako Sędzia');
+    updateAuthBadge();
+  } else {
+    errEl.style.display = 'block';
+    input.value = '';
+    input.focus();
+    setTimeout(() => { errEl.style.display = 'none'; }, 3000);
+  }
+
+  btn.textContent = '🔓 Zaloguj';
+  btn.disabled = false;
+}
+
+// ── Zastosuj ograniczenia roli ──
+function applyRoleRestrictions(role) {
+  if (role === 'admin') {
+    document.querySelectorAll('[data-admin-only]').forEach(el => el.style.removeProperty('display'));
+  } else {
+    // Sędzia — ukryj konfigurację i reset
+    document.querySelectorAll('[data-admin-only]').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
+}
+
+// ── Badge roli w headerze ──
+function updateAuthBadge() {
+  const el = document.getElementById('auth-role-badge');
+  if (!el || !_sessionRole) return;
+  if (_sessionRole === 'admin') {
+    el.innerHTML = '<span class="auth-role-badge admin">🛡 Admin</span>';
+  } else {
+    el.innerHTML = '<span class="auth-role-badge judge">👮 Sędzia</span>';
+  }
+  el.style.display = 'inline-flex';
+}
+
+// ── Panel zmiany haseł (tylko admin) ──
+async function openAuthAdminPanel() {
+  const panel = document.getElementById('auth-admin-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+async function authSavePasswords() {
+  const adminPwd  = document.getElementById('auth-new-admin').value.trim();
+  const judgePwd  = document.getElementById('auth-new-judge').value.trim();
+  if (!adminPwd && !judgePwd) return toast('Wpisz co najmniej jedno nowe hasło');
+
+  const db = getSupabase();
+  const updates = [];
+
+  if (adminPwd) {
+    const h = await sha256(adminPwd);
+    updates.push(db.from('auth_config').upsert({ role:'admin', password_hash: h }, { onConflict:'role' }));
+  }
+  if (judgePwd) {
+    const h = await sha256(judgePwd);
+    updates.push(db.from('auth_config').upsert({ role:'judge', password_hash: h }, { onConflict:'role' }));
+  }
+
+  try {
+    await Promise.all(updates);
+    _authPasswords = null; // reset cache
+    toast('✓ Hasła zapisane w Supabase');
+    document.getElementById('auth-new-admin').value = '';
+    document.getElementById('auth-new-judge').value = '';
+    document.getElementById('auth-admin-panel').style.display = 'none';
+  } catch(e) {
+    toast('Błąd zapisu: ' + e.message);
+  }
+}
+
+// ── Init auth (wywoływany na starcie) ──
+function authInit() {
+  if (authCheckSession()) {
+    // Sesja aktywna — ukryj overlay
+    const overlay = document.getElementById('auth-overlay');
+    if (overlay) overlay.style.display = 'none';
+    applyRoleRestrictions(_sessionRole);
+    updateAuthBadge();
+    // Prefetch haseł w tle
+    authLoadPasswords().then(p => { if (p) _authPasswords = p; });
+  } else {
+    // Pokaż overlay — blokuje całą aplikację
+    const overlay = document.getElementById('auth-overlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      setTimeout(() => {
+        const inp = document.getElementById('auth-password-input');
+        if (inp) inp.focus();
+      }, 100);
+    }
+    // Prefetch haseł z Supabase żeby login był szybszy
+    authLoadPasswords().then(p => { if (p) _authPasswords = p; });
+  }
+}
+
+
 // ════════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════════
@@ -3704,6 +4108,7 @@ function closeSwitchModal() {
 }
 
 function switchModalGoWelcome() {
+  if (_sessionRole !== 'admin') return toast('✗ Brak uprawnień — wymagana rola Admin');
   closeSwitchModal();
   const ws = document.getElementById('welcome-screen');
   if (ws) { ws.style.display = 'block'; renderWelcomeSlots(); }
@@ -3790,8 +4195,7 @@ function renderWelcomeSlots() {
       </div>
       <div class="flex" style="gap:6px">
         <button class="btn btn-primary btn-sm" onclick="openSlotFromWelcome('${s.id}')">Otwórz</button>
-        <button class="btn btn-sm" onclick="openChangePasswordModal('${s.id}')">🔑</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmDeleteSlot('${s.id}')">✕</button>
+        ${_sessionRole === 'admin' ? `<button class="btn btn-sm" onclick="openChangePasswordModal('${s.id}')">🔑</button><button class="btn btn-danger btn-sm" onclick="confirmDeleteSlot('${s.id}')">✕</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -3884,6 +4288,7 @@ async function doChangePassword() {
 }
 
 async function welcomeCreateNew() {
+  if (_sessionRole !== 'admin') return toast('✗ Brak uprawnień — wymagana rola Admin');
   const name  = document.getElementById('new-slot-name')?.value.trim();
   const place = document.getElementById('new-slot-place')?.value.trim();
   const date  = document.getElementById('new-slot-date')?.value;
@@ -4026,6 +4431,7 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   }
   // ── koniec K1 Turskiego ──
 
+  authInit();
   renderSetup();
   console.log('App initialized. Athletes:', STATE.athletes.length, 'Results:', Object.keys(STATE.results).length);
 
@@ -4077,6 +4483,7 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
     // Stan z chmury — przeładuj UI
     STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
     renderSetup();
+    if (_sessionRole) applyRoleRestrictions(_sessionRole);
     try { renderAthletesList(); } catch(e) {}
     banner.style.borderColor = 'var(--green)';
     banner.style.color = 'var(--green)';
