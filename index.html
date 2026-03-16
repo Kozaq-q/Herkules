@@ -1251,7 +1251,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="tab-row" id="k1-series-tabs">
     <button class="tab-btn active" id="k1-tab-s1" onclick="switchKSeries('k1',1,this)">📋 Seria 1 — kolejność zespołami</button>
     <button class="tab-btn" id="k1-tab-s2" onclick="switchKSeries('k1',2,this)">🔁 Seria 2 — od najsłabszego</button>
-    <button class="tab-btn" id="k1-tab-who" onclick="switchKSeries('k1','who',this)">👥 Kto startuje w S2</button>
   </div>
   <!-- Seria 1 -->
   <div id="k1-s1-wrap">
@@ -1268,10 +1267,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div id="k1-s2-wrap" style="display:none">
     <div id="k1-s2-content"></div>
   </div>
-  <!-- Kto startuje w S2 -->
-  <div id="k1-who-wrap" style="display:none">
-    <div id="k1-who-content"></div>
-  </div>
+
 </div>
 
 <!-- ═══ PAGE: K2 — BTS ═══ -->
@@ -1288,7 +1284,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="tab-row" id="k2-series-tabs">
     <button class="tab-btn active" id="k2-tab-s1" onclick="switchKSeries('k2',1,this)">📋 Seria 1 — kolejność zespołami</button>
     <button class="tab-btn" id="k2-tab-s2" onclick="switchKSeries('k2',2,this)">🔁 Seria 2 — od najsłabszego</button>
-    <button class="tab-btn" id="k2-tab-who" onclick="switchKSeries('k2','who',this)">👥 Kto startuje w S2</button>
   </div>
   <!-- Seria 1 -->
   <div id="k2-s1-wrap">
@@ -1305,10 +1300,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div id="k2-s2-wrap" style="display:none">
     <div id="k2-s2-content"></div>
   </div>
-  <!-- Kto startuje w S2 -->
-  <div id="k2-who-wrap" style="display:none">
-    <div id="k2-who-content"></div>
-  </div>
+
 </div>
 
 <!-- ═══ PAGE: K3 — BIEG 15x15 ═══ -->
@@ -3307,7 +3299,7 @@ function k3ToggleDisq(aid, series) {
   save();
   renderK3();
   const isDq = STATE.disq[aid][key][0];
-  const a = STATE.athletes.find(x => x.id == aid);
+  const a = STATE.athletes.find(x => String(x.id) === String(aid));
   toast(isDq ? `${a.name} — K3 ${series==='s1'?'1.':'2.'} seria DQ` : `${a.name} — K3 ${series==='s1'?'1.':'2.'} seria odDQ`);
 }
 
@@ -3375,7 +3367,11 @@ function k3InlineSave(input) {
   if (input._k3Saving) return; // zapobiegaj podwójnemu wywołaniu (Tab + onchange)
   input._k3Saving = true;
   setTimeout(() => { input._k3Saving = false; }, 100);
-  const aid = parseInt(input.dataset.aid);
+  const aidRaw = input.dataset.aid;
+  // Znajdź zawodnika przez String porównanie (id może być float)
+  const aidKey = Object.keys(STATE.results).find(k => String(k) === String(aidRaw))
+              || String(aidRaw);
+  const aid = aidRaw; // zachowaj oryginał do wyszukiwania
   const series = input.dataset.series;
   const key = series === 's1' ? 'k3' : 'k3s2';
   const raw = input.value.trim();
@@ -3405,7 +3401,8 @@ function k3InlineSave(input) {
 
   // Show quick pts feedback
   if (t && t !== 'DNF') {
-    const a = STATE.athletes.find(x => x.id == aid);
+    const a = STATE.athletes.find(x => String(x.id) === String(aid));
+    if (!a) return;
     const pts = getPoints(a.cat, 'k3', t);
     toast(`${fmtSec1(t)}s → ${pts} pkt`);
   }
@@ -4918,10 +4915,7 @@ function switchKSeries(ev, seriesNum, btn) {
   // Pokaż/ukryj zawartość
   document.getElementById(`${ev}-s1-wrap`).style.display  = seriesNum === 1     ? '' : 'none';
   document.getElementById(`${ev}-s2-wrap`).style.display  = seriesNum === 2     ? '' : 'none';
-  const whoWrap = document.getElementById(`${ev}-who-wrap`);
-  if (whoWrap) whoWrap.style.display = seriesNum === 'who' ? '' : 'none';
-  if (seriesNum === 2)   renderKSeries2(ev);
-  if (seriesNum === 'who') renderKWho(ev);
+  if (seriesNum === 2) renderKSeries2(ev);
 }
 
 // Pobierz uczestników serii 2 — domyślnie wszyscy (nie-PK z wylosowaną kolejnością)
@@ -5014,7 +5008,12 @@ function renderKSeries2(ev) {
 
   [[men,'Mężczyźni'],[women,'Kobiety']].forEach(([group, label]) => {
     if (!group.length) return;
-    html += `<tr><td colspan="8" class="qe-group-header">${label}</td></tr>`;
+    const genderKey = label === 'Mężczyźni' ? 'M' : 'K';
+    html += `<tr><td colspan="8" class="qe-group-header" style="display:flex;justify-content:space-between;align-items:center">
+      <span>${label}</span>
+      <button class="btn btn-xs" style="font-size:10px;padding:2px 8px;letter-spacing:0.5px"
+        onclick="openKS2Selector('${ev}','${genderKey}')">✎ Kto startuje</button>
+    </td></tr>`;
 
     // Najpierw startujący, potem nie-startujący
     const starting    = group.filter(a => participants[a.id] !== false);
@@ -5173,6 +5172,125 @@ function renderKWho(ev) {
 
   html += `</tbody></table></div>`;
   container.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════
+// KTO STARTUJE W S2 — K1 i K2 — modal jak w K3
+// ════════════════════════════════════════════════════════════
+let _ks2Ev = '', _ks2Gender = '';
+
+function openKS2Selector(ev, gender) {
+  _ks2Ev     = ev;
+  _ks2Gender = gender;
+
+  const label = gender === 'M' ? 'Mężczyźni' : 'Kobiety';
+  const evLabel = ev === 'k1' ? 'Lina' : 'BTS';
+  const participants = getSeries2Participants(ev);
+
+  // Posortuj od najsłabszego do najlepszego (wg wyniku S1)
+  const athletes = STATE.athletes
+    .filter(a => !a.pk && a.gender === gender)
+    .sort((a, b) => {
+      const tA = (STATE.results[a.id]?.[ev] || [])[0];
+      const tB = (STATE.results[b.id]?.[ev] || [])[0];
+      const dA = ((STATE.disq[a.id]?.[ev] || []))[0];
+      const dB = ((STATE.disq[b.id]?.[ev] || []))[0];
+      const nA = ((STATE.dnf[a.id]?.[ev]  || []))[0];
+      const nB = ((STATE.dnf[b.id]?.[ev]  || []))[0];
+      const validA = tA && !dA && !nA ? tA : null;
+      const validB = tB && !dB && !nB ? tB : null;
+      if (!validA && !validB) return a.name.localeCompare(b.name);
+      if (!validA) return 1;
+      if (!validB) return -1;
+      return validB - validA; // najsłabszy (najwyższy czas) pierwszy
+    });
+
+  const rows = athletes.map(a => {
+    const team  = STATE.teams.find(t => t.id == a.teamId);
+    const starts = participants[a.id] !== false;
+    // Wynik S1
+    const t1  = (STATE.results[a.id]?.[ev] || [])[0];
+    const dq1 = (STATE.disq[a.id]?.[ev] || [])[0];
+    const nk1 = (STATE.dnf[a.id]?.[ev]  || [])[0];
+    let s1txt, s1color;
+    if (nk1)      { s1txt = 'NKL';            s1color = 'var(--red)'; }
+    else if (dq1) { s1txt = 'DSQ';            s1color = 'var(--orange)'; }
+    else if (t1)  { s1txt = fmtSec1(t1)+'s';  s1color = 'var(--green)'; }
+    else          { s1txt = '—';              s1color = 'var(--text3)'; }
+
+    return `<tr style="border-bottom:1px solid var(--border2)">
+      <td style="padding:6px 8px;width:36px">
+        <input type="checkbox" id="ks2-${ev}-${a.id}" ${starts?'checked':''}
+          onchange="ks2Toggle(${a.id},this.checked)"
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+      </td>
+      <td style="padding:6px 8px;font-weight:600">${a.name}</td>
+      <td style="padding:6px 8px;font-size:12px;color:var(--text3)">${team?.name||'—'}</td>
+      <td style="padding:6px 8px;font-family:var(--font-m);font-size:13px;color:${s1color}">${s1txt}</td>
+    </tr>`;
+  }).join('');
+
+  const startCount = athletes.filter(a => participants[a.id] !== false).length;
+
+  document.getElementById('modal-result-title').textContent =
+    `${evLabel} — S2 — ${label} (${startCount}/${athletes.length} startuje)`;
+
+  document.getElementById('modal-result-body').innerHTML = `
+    <div style="margin-bottom:10px;display:flex;gap:6px;align-items:center">
+      <button class="btn btn-sm btn-success" onclick="ks2SelectAll(true)">✓ Wszyscy</button>
+      <button class="btn btn-sm" onclick="ks2SelectAll(false)">✗ Nikt</button>
+      <span style="margin-left:auto;font-size:11px;color:var(--text3)">posortowani od najsłabszego</span>
+    </div>
+    <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:4px">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--bg3)">
+          <th style="padding:6px 8px;font-size:11px;color:var(--text3);text-align:left">Start</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--text3);text-align:left">Zawodnik</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--text3);text-align:left">Drużyna</th>
+          <th style="padding:6px 8px;font-size:11px;color:var(--text3);text-align:left">Wynik S1</th>
+        </tr></thead>
+        <tbody id="ks2-modal-body">${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text3)">
+      Odznaczeni zawodnicy nie startują w 2. serii. Lista S2 aktualizuje się na bieżąco.
+    </div>`;
+
+  document.getElementById('modal-result').classList.add('open');
+  STATE.currentResultModal = { event: 'ks2selector' };
+}
+
+function ks2Toggle(aid, val) {
+  if (!STATE.series2Participants) STATE.series2Participants = {};
+  if (!STATE.series2Participants[_ks2Ev]) STATE.series2Participants[_ks2Ev] = {};
+  STATE.series2Participants[_ks2Ev][aid] = val;
+  save();
+  // Odśwież tytuł modala z nową liczbą startujących
+  const athletes = STATE.athletes.filter(a => !a.pk && a.gender === _ks2Gender);
+  const participants = getSeries2Participants(_ks2Ev);
+  const startCount = athletes.filter(a => participants[a.id] !== false).length;
+  const label = _ks2Gender === 'M' ? 'Mężczyźni' : 'Kobiety';
+  const evLabel = _ks2Ev === 'k1' ? 'Lina' : 'BTS';
+  document.getElementById('modal-result-title').textContent =
+    `${evLabel} — S2 — ${label} (${startCount}/${athletes.length} startuje)`;
+}
+
+function ks2SelectAll(val) {
+  const athletes = STATE.athletes.filter(a => !a.pk && a.gender === _ks2Gender);
+  if (!STATE.series2Participants) STATE.series2Participants = {};
+  if (!STATE.series2Participants[_ks2Ev]) STATE.series2Participants[_ks2Ev] = {};
+  athletes.forEach(a => {
+    STATE.series2Participants[_ks2Ev][a.id] = val;
+    const cb = document.getElementById(`ks2-${_ks2Ev}-${a.id}`);
+    if (cb) cb.checked = val;
+  });
+  save();
+  // Odśwież tytuł
+  const startCount = val ? athletes.length : 0;
+  const label = _ks2Gender === 'M' ? 'Mężczyźni' : 'Kobiety';
+  const evLabel = _ks2Ev === 'k1' ? 'Lina' : 'BTS';
+  document.getElementById('modal-result-title').textContent =
+    `${evLabel} — S2 — ${label} (${startCount}/${athletes.length} startuje)`;
 }
 
 function setAllSeries2(ev, val) {
