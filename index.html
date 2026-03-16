@@ -926,7 +926,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <!-- Zawodnicy per kategoria -->
   <div style="margin-bottom:12px">
     <label style="font-size:10px;color:var(--text3);display:block;margin-bottom:4px;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase">Zawodnicy per kategoria</label>
-    <input id="proj-topn-input" type="number" min="1" max="97" value="10"
+    <input id="proj-topn-input" type="number" min="0" max="999" value="" placeholder="wszyscy"
       style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px">
   </div>
 
@@ -1240,44 +1240,66 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 <!-- ═══ PAGE: K1 — LINA ═══ -->
 <div id="page-k1" class="page">
-  <div class="flex-between mb-12">
+  <div class="flex-between mb-8">
     <div>
       <div class="head" style="font-size:22px;color:var(--text1)">KONKURENCJA 1 — WSPINANIE NA LINIE</div>
-      <div class="text-muted text-sm mono mt-4">2 podejścia · sekundy (max 1 miejsce po przecinku, bez minut) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
+      <div class="text-muted text-sm mono mt-4">1 próba per seria · sekundy (max 1 miejsce po przecinku) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
     </div>
-    <div class="flex" style="gap:4px">
+    <button class="btn btn-sm" onclick="renderK1()">⟳</button>
+  </div>
+  <div id="judge-notes-k1-bar" class="judge-notes-bar" style="display:none"></div>
+  <!-- Podzakładki serii -->
+  <div class="tab-row" id="k1-series-tabs">
+    <button class="tab-btn active" id="k1-tab-s1" onclick="switchKSeries('k1',1,this)">📋 Seria 1 — kolejność zespołami</button>
+    <button class="tab-btn" id="k1-tab-s2" onclick="switchKSeries('k1',2,this)">🔁 Seria 2 — od najsłabszego</button>
+  </div>
+  <!-- Seria 1 -->
+  <div id="k1-s1-wrap">
+    <div class="flex mb-8" style="gap:4px">
       <div class="flex" id="k1-filter-btns" style="gap:4px">
         <button class="btn btn-sm active" onclick="quickEntryFilter('k1','')">Wszyscy</button>
         <button class="btn btn-sm" onclick="quickEntryFilter('k1','M')">Mężczyźni</button>
         <button class="btn btn-sm" onclick="quickEntryFilter('k1','K')">Kobiety</button>
       </div>
-      <button class="btn btn-sm btn-warn" onclick="openSeriesSelector('k1')" title="Wybierz startujących w 2. serii">2. Seria</button>
-      <button class="btn btn-sm" onclick="renderK1()">⟳</button>
     </div>
+    <div id="k1-content"></div>
   </div>
-  <div id="judge-notes-k1-bar" class="judge-notes-bar" style="display:none"></div>
-  <div id="k1-content"></div>
+  <!-- Seria 2 -->
+  <div id="k1-s2-wrap" style="display:none">
+    <div id="k1-s2-content"></div>
+  </div>
 </div>
 
 <!-- ═══ PAGE: K2 — BTS ═══ -->
 <div id="page-k2" class="page">
-  <div class="flex-between mb-12">
+  <div class="flex-between mb-8">
     <div>
       <div class="head" style="font-size:22px;color:var(--text1)">KONKURENCJA 2 — BTS (TOR PRZESZKÓD)</div>
-      <div class="text-muted text-sm mono mt-4">2 podejścia · sekundy (można powyżej 60, bez minut) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
+      <div class="text-muted text-sm mono mt-4">1 próba per seria · sekundy (można powyżej 60) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
     </div>
-    <div class="flex" style="gap:4px">
+    <button class="btn btn-sm" onclick="renderK2()">⟳</button>
+  </div>
+  <div id="judge-notes-k2-bar" class="judge-notes-bar" style="display:none"></div>
+  <!-- Podzakładki serii -->
+  <div class="tab-row" id="k2-series-tabs">
+    <button class="tab-btn active" id="k2-tab-s1" onclick="switchKSeries('k2',1,this)">📋 Seria 1 — kolejność zespołami</button>
+    <button class="tab-btn" id="k2-tab-s2" onclick="switchKSeries('k2',2,this)">🔁 Seria 2 — od najsłabszego</button>
+  </div>
+  <!-- Seria 1 -->
+  <div id="k2-s1-wrap">
+    <div class="flex mb-8" style="gap:4px">
       <div class="flex" id="k2-filter-btns" style="gap:4px">
         <button class="btn btn-sm active" onclick="quickEntryFilter('k2','')">Wszyscy</button>
         <button class="btn btn-sm" onclick="quickEntryFilter('k2','M')">Mężczyźni</button>
         <button class="btn btn-sm" onclick="quickEntryFilter('k2','K')">Kobiety</button>
       </div>
-      <button class="btn btn-sm btn-warn" onclick="openSeriesSelector('k2')" title="Wybierz startujących w 2. serii">2. Seria</button>
-      <button class="btn btn-sm" onclick="renderK2()">⟳</button>
     </div>
+    <div id="k2-content"></div>
   </div>
-  <div id="judge-notes-k2-bar" class="judge-notes-bar" style="display:none"></div>
-  <div id="k2-content"></div>
+  <!-- Seria 2 -->
+  <div id="k2-s2-wrap" style="display:none">
+    <div id="k2-s2-content"></div>
+  </div>
 </div>
 
 <!-- ═══ PAGE: K3 — BIEG 15x15 ═══ -->
@@ -1295,8 +1317,8 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div id="judge-notes-k3-bar" class="judge-notes-bar" style="display:none"></div>
   <div id="k3-progress" class="flex mb-8" style="gap:16px;align-items:center"></div>
   <div class="tab-row">
-    <button class="tab-btn active" id="k3-tab-s1" onclick="switchK3Tab('s1',this)">1. Seria</button>
-    <button class="tab-btn" id="k3-tab-s2" onclick="switchK3Tab('s2',this)">2. Seria</button>
+    <button class="tab-btn active" id="k3-tab-s1" onclick="switchK3Tab('s1',this)">📋 Seria 1 — kolejność zespołami</button>
+    <button class="tab-btn" id="k3-tab-s2" onclick="switchK3Tab('s2',this)">🔁 Seria 2 — od najsłabszego</button>
   </div>
   <div id="k3-content"></div>
 </div>
@@ -2011,6 +2033,7 @@ function ensureStateDefaults() {
   if (!STATE.results) STATE.results = {};
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
+  if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
   if (!STATE.disq) STATE.disq = {};
   if (!STATE.dnf) STATE.dnf = {};
   if (!STATE.series2) STATE.series2 = {};
@@ -2587,26 +2610,37 @@ function getCategory(gender, birthYear) {
 function openAddAthleteModal(id) {
   STATE.editingAthleteId = id || null;
   const teamSel = document.getElementById('modal-team');
-  teamSel.innerHTML = STATE.teams.map(t => `<option value="${t.id}">${t.num}. ${t.name}</option>`).join('');
+
+  if (!STATE.teams.length) {
+    teamSel.innerHTML = '<option value="">Brak drużyn — dodaj drużynę w Konfiguracji</option>';
+  } else {
+    teamSel.innerHTML = '<option value="">\u2014 wybierz dru\u017cyn\u0119 \u2014</option>' +
+      STATE.teams.map(t => `<option value="${t.id}">${t.num}. ${t.name}</option>`).join('');
+  }
+
   if (id) {
     const a = STATE.athletes.find(x => x.id == id);
+    if (!a) return;
     document.getElementById('modal-athlete-title').textContent = 'Edytuj zawodnika';
     document.getElementById('modal-name').value   = a.name;
-    teamSel.value = a.teamId;
     document.getElementById('modal-year').value   = a.year;
     document.getElementById('modal-gender').value = a.gender;
     document.getElementById('modal-pk').checked   = !!a.pk;
+    // Dopasuj opcj\u0119 przez String == (unikamy problemu number vs string)
+    const match = Array.from(teamSel.options).find(o => String(o.value) === String(a.teamId));
+    teamSel.value = match ? match.value : '';
   } else {
     document.getElementById('modal-athlete-title').textContent = 'Dodaj zawodnika';
     document.getElementById('modal-name').value   = '';
     document.getElementById('modal-year').value   = '';
     document.getElementById('modal-gender').value = 'M';
     document.getElementById('modal-pk').checked   = false;
+    teamSel.value = '';
   }
   updateCatPreview();
   document.getElementById('modal-athlete').classList.add('open');
+  setTimeout(() => { document.getElementById('modal-name').focus(); }, 100);
 }
-
 function updateCatPreview() {
   const year   = parseInt(document.getElementById('modal-year').value);
   const gender = document.getElementById('modal-gender').value;
@@ -2620,13 +2654,14 @@ function updateCatPreview() {
 
 function saveAthlete() {
   const name   = document.getElementById('modal-name').value.trim();
-  const teamId = parseInt(document.getElementById('modal-team').value);
+  const _teamRaw = document.getElementById('modal-team').value;
+  const teamId = _teamRaw ? Number(_teamRaw) : null;
   const year   = parseInt(document.getElementById('modal-year').value);
   const gender = document.getElementById('modal-gender').value;
   const pk     = document.getElementById('modal-pk').checked;
   if (!name)   return toast('Podaj imię i nazwisko');
   if (!year)   return toast('Podaj rok urodzenia');
-  if (!teamId) return toast('Wybierz drużynę');
+  if (!teamId) return toast('Wybierz drużynę — jeśli brak na liście, dodaj ją najpierw w Konfiguracji');
   const cat = getCategory(gender, year);
   if (STATE.editingAthleteId) {
     const a = STATE.athletes.find(x => x.id == STATE.editingAthleteId);
@@ -2688,30 +2723,42 @@ function renderAthletesList() {
   if (!athletes.length) { tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Brak zawodników</div></td></tr>`; return; }
 
   tbody.innerHTML = athletes.map((a,i) => {
-    const team = STATE.teams.find(t => t.id == a.teamId);
+    const team    = STATE.teams.find(t => t.id == a.teamId);
+    const missing = checkMissingData(a);
+    const genderSusp = checkGenderSuspicious(a.name, a.gender) && !STATE.genderConfirmed[a.id];
+    const loneSusp   = checkLoneAthlete(a) && !STATE.loneConfirmed[a.id];
+
+    // Kolumna Drużyna
+    const teamCell = team
+      ? `<span class="druzyna-chip">${team.num}. ${team.name}</span>${loneSusp
+          ? ` <span onclick="confirmLoneAthlete(${a.id})"
+                style="cursor:pointer;font-size:12px;color:var(--orange)"
+                title="Jedyny zawodnik w tej drużynie — możliwa literówka w nazwie. Kliknij aby potwierdzić.">🟡 tylko 1 zawodnik</span>`
+          : ''}`
+      : `<span class="text-muted" style="cursor:pointer" onclick="openAddAthleteModal(${a.id})" title="Kliknij aby przypisać drużynę">—</span>`;
+
+    // Kolumna Płeć
+    const genderIcon = a.gender === 'M' ? '♂' : '♀';
+    const genderCell = genderSusp
+      ? `<span style="color:var(--orange);cursor:pointer;white-space:nowrap"
+           onclick="confirmGender(${a.id})"
+           title="Imię nie pasuje do płci — kliknij aby potwierdzić że dane są poprawne">
+           ${genderIcon} ⚠️
+         </span>`
+      : genderIcon;
+
+    // Kolumna Nazwisko — tylko braki danych (🔴)
+    const missingBadge = missing.length
+      ? ` <span style="cursor:help;font-size:12px;color:var(--red)"
+             title="Brakujące dane: ${missing.join(', ')}">🔴 ${missing.join(', ')}</span>`
+      : '';
+
     return `<tr class="${a.pk ? 'pk-row' : ''}">
       <td class="mono text-muted">${i+1}</td>
-      <td class="bold">${a.name}${a.pk ? ' <span class="pk-badge">PK</span>' : ''}${checkGenderSuspicious(a.name, a.gender) && !STATE.genderConfirmed[a.id]
-  ? ` <span
-      onclick="confirmGender(${a.id})"
-      title="Podejrzana płeć — kliknij aby potwierdzić że dane są poprawne"
-      style="cursor:pointer;font-size:13px;opacity:0.9"
-    >⚠️</span>`
-  : ''}${(() => {
-    const missing = checkMissingData(a);
-    return missing.length
-      ? ` <span title="Niekompletne dane: ${missing.join(', ')}" style="cursor:help;font-size:13px">🔴</span>`
-      : '';
-  })()}${checkLoneAthlete(a) && !STATE.loneConfirmed[a.id]
-  ? ` <span
-      onclick="confirmLoneAthlete(${a.id})"
-      title="Jedyny zawodnik w drużynie — możliwa błędna nazwa. Kliknij aby potwierdzić"
-      style="cursor:pointer;font-size:13px;opacity:0.9"
-    >🟡</span>`
-  : ''}</td>
-      <td><span class="druzyna-chip">${team ? team.num+'. '+team.name : '—'}</span></td>
+      <td class="bold">${a.name}${a.pk ? ' <span class="pk-badge">PK</span>' : ''}${missingBadge}</td>
+      <td>${teamCell}</td>
       <td><span class="cat-badge cat-${a.cat}">${a.cat}</span></td>
-      <td>${a.gender==='M'?'♂':'♀'}</td>
+      <td>${genderCell}</td>
       <td class="mono text-muted">${a.startOrder !== null ? '#'+a.startOrder : '—'}</td>
       <td><button class="btn btn-xs ${a.pk ? 'btn-warn' : ''}" onclick="togglePK(${a.id})">${a.pk ? 'PK ✓' : 'PK'}</button></td>
       <td class="flex">
@@ -2871,7 +2918,6 @@ function renderQuickEntry(event, containerId) {
   const inputIndex = [];
   athletes.forEach(a => {
     inputIndex.push({aid:a.id,attempt:0});
-    inputIndex.push({aid:a.id,attempt:1});
   });
 
   const men   = athletes.filter(a => a.gender === 'M');
@@ -2906,8 +2952,7 @@ function renderQuickEntry(event, containerId) {
           <th>Zawodnik</th>
           <th>Drużyna</th>
           <th style="width:58px">Kat.</th>
-          <th style="width:175px">Próba 1</th>
-          <th style="width:175px">Próba 2</th>
+          <th style="width:175px">Wynik serii</th>
           <th style="width:80px">Najlepszy</th>
           <th style="width:54px">PKT</th>
         </tr>
@@ -2934,21 +2979,20 @@ function renderQuickEntry(event, containerId) {
       const r    = STATE.results[a.id] || {};
       const disq = STATE.disq[a.id]    || {};
       const dnf  = STATE.dnf[a.id]     || {};
-      const times = r[event] || [null, null];
+      const times = r[event] || [];
       const dnfArr = dnf[event] || [];
       const disqArr = disq[event] || [];
-      const t1 = times[0], t2 = times[1];
-      const dnf1 = dnfArr[0], dnf2 = dnfArr[1];
-      const dq1  = disqArr[0], dq2 = disqArr[1];
+      const t1   = times[0];
+      const dnf1 = dnfArr[0];
+      const dq1  = disqArr[0];
+      // bestT = lepsza z serii 1 (times[0]) i serii 2 (times[1])
       const bestT = getBestValidTime(times, disqArr, dnfArr);
       const p     = bestT ? getPoints(a.cat, event, bestT) : 0;
       const team  = STATE.teams.find(t => t.id == a.teamId);
-      const isBest1 = t1 && t1===bestT && !dq1;
-      const isBest2 = t2 && t2===bestT && !dq2;
-      const idx1 = globalIdx++; const idx2 = globalIdx++;
+      const isBest1 = !!(t1 && t1===bestT && !dq1 && !dnf1);
+      const idx1 = globalIdx++;
 
       const v1 = dnf1 ? 'NKL' : (t1 ? fmtSec1(t1) : '');
-      const v2 = dnf2 ? 'NKL' : (t2 ? fmtSec1(t2) : '');
 
       html += `
         <tr class="qe-row${a.pk?' pk-row':''}" id="qe-row-${a.id}" data-aid="${a.id}">
@@ -2967,19 +3011,6 @@ function renderQuickEntry(event, containerId) {
                 onchange="qeSave(this,'${event==='k4'?'k4':'sec'}')"
                 onfocus="qeFocus(this)">
               <button class="btn btn-xs qe-disq-btn ${dq1?'dq-active':''}" onclick="toggleDisq(${a.id},'${event}',0)" title="Zdyskwalifikuj próbę">⊘</button>
-            </div>
-          </td>
-          <td>
-            <div style="display:flex;align-items:center;gap:3px">
-              <input class="qe-time ${(t2||dnf2)?'has-val':''} ${isBest2?'is-best':''} ${dnf2?'dnf-val':''} ${dq2?'dq-val':''}"
-                type="text" inputmode="decimal"
-                value="${dq2 ? (t2?fmtSec1(t2):'') : v2}"
-                placeholder="${isK4?'m.ss':'ss.s'}"
-                data-aid="${a.id}" data-ev="${event}" data-att="1" data-idx="${idx2}"
-                onkeydown="qeKeydown(event,${idx2},'${event}')"
-                onchange="qeSave(this,'${event==='k4'?'k4':'sec'}')"
-                onfocus="qeFocus(this)">
-              <button class="btn btn-xs qe-disq-btn ${dq2?'dq-active':''}" onclick="toggleDisq(${a.id},'${event}',1)" title="Zdyskwalifikuj próbę">⊘</button>
             </div>
           </td>
           <td class="qe-best">${bestT ? (isK4?secToTimeK4(bestT):secToTime(bestT)) : '<span class="text-muted">—</span>'}</td>
@@ -3084,8 +3115,14 @@ function qeKeydown(e, idx, event) {
   }
 }
 
-function renderK1() { renderQuickEntry('k1','k1-content'); }
-function renderK2() { renderQuickEntry('k2','k2-content'); }
+function renderK1() {
+  renderQuickEntry('k1','k1-content');
+  if (_kActiveSeries.k1 === 2) renderKSeries2('k1');
+}
+function renderK2() {
+  renderQuickEntry('k2','k2-content');
+  if (_kActiveSeries.k2 === 2) renderKSeries2('k2');
+}
 
 function renderProgressBar(elId, done, total) {
   const el = document.getElementById(elId);
@@ -3245,12 +3282,28 @@ function k3PairCard(pair, pairNum, isLast, series) {
     ? 'color:var(--red);'
     : (isLast ? 'color:var(--accent);font-weight:800' : '');
 
+  // Wynik S1 read-only (tylko dla serii 2)
+  function k3S1Badge(athleteId) {
+    if (series === 's1') return '';
+    const r   = (STATE.results[athleteId] || {}).k3 || [];
+    const dnf = ((STATE.dnf[athleteId]  || {}).k3  || [])[0];
+    const dq  = ((STATE.disq[athleteId] || {}).k3  || [])[0];
+    const t   = r[0];
+    let txt, color;
+    if (dnf)     { txt = 'S1: NKL'; color = 'var(--red)'; }
+    else if (dq) { txt = 'S1: DSQ'; color = 'var(--orange)'; }
+    else if (t)  { txt = 'S1: ' + fmtSec1(t) + 's'; color = 'var(--green)'; }
+    else         { txt = 'S1: —';  color = 'var(--text3)'; }
+    return `<div style="font-size:10px;font-family:var(--font-m);color:${color};margin-top:2px;letter-spacing:0.5px">${txt}</div>`;
+  }
+
   const leftSide = `
     <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px">
       <span class="pair-lane pair-lane-L" style="flex-shrink:0">L</span>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a1.name}${pkNameBadge(a1)}</div>
         <div style="font-size:11px;color:var(--text3);font-family:var(--font-m)">${a1.pts12} pkt</div>
+        ${k3S1Badge(a1.id)}
       </div>
       <div style="width:110px;flex-shrink:0">${k3TimeInput(a1.id, series)}</div>
     </div>`;
@@ -3261,6 +3314,7 @@ function k3PairCard(pair, pairNum, isLast, series) {
       <div style="flex:1;min-width:0;text-align:right">
         <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pkNameBadge(a2)}${a2.name}</div>
         <div style="font-size:11px;color:var(--text3);font-family:var(--font-m)">${a2.pts12} pkt</div>
+        ${k3S1Badge(a2.id)}
       </div>
       <span class="pair-lane pair-lane-P" style="flex-shrink:0">P</span>
     </div>` : `<div style="flex:1;display:flex;align-items:center;color:var(--text3);font-size:12px;font-family:var(--font-m)">BYE</div>`;
@@ -4187,12 +4241,13 @@ function getProjectorSettings() {
     const raw = localStorage.getItem('projektor_settings');
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  const topN = parseInt(localStorage.getItem('projektor_topN')) || 10;
+  const topN = parseInt(localStorage.getItem('projektor_topN')) || 0;
   return { topN, cats: ['M35','M36','K35','K36'], showTeams: true, maxTeams: null, showProgress: true, autoScroll: false, scrollSpeed: 20, showK1: false, showK2: false, showK3: false, showK4: false, customTitle: '' };
 }
 
 function saveProjectorSettings() {
-  const topN = parseInt(document.getElementById('proj-topn-input').value) || 10;
+  const _topNRaw = parseInt(document.getElementById('proj-topn-input').value);
+  const topN = (!isNaN(_topNRaw) && _topNRaw > 0) ? _topNRaw : 0; // 0 = wszyscy
   const cats = ['M35','M36','K35','K36'].filter(c => document.getElementById('proj-cat-'+c).checked);
   const showTeams = document.getElementById('proj-show-teams').checked;
   const maxTeamsRaw = parseInt(document.getElementById('proj-maxteams-input').value);
@@ -4515,6 +4570,7 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   if (!STATE.results) STATE.results = {};
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
+  if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
   if (!STATE.k3s2) STATE.k3s2 = {};
   let k3injected = 0;
   for (const [aid, times] of Object.entries(K3_FROM_EXCEL)) {
@@ -4717,6 +4773,7 @@ function checkLoneAthlete(a) {
 function confirmGender(athleteId) {
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
+  if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
   STATE.genderConfirmed[athleteId] = true;
   save();
   renderAthletesList();
@@ -4738,6 +4795,226 @@ function checkGenderSuspicious(name, gender) {
   if (gender === 'K' && MALE_NAMES.has(firstName) && !FEMALE_NAMES.has(firstName)) return true;
   return false;
 }
+
+
+// ════════════════════════════════════════════════════════════
+// SERIA 2 — K1 i K2
+// Kolejność: od najsłabszego do najlepszego wg wyniku 1. serii
+// Oddzielnie mężczyźni i kobiety
+// Domyślnie wszyscy startują
+// ════════════════════════════════════════════════════════════
+
+let _kActiveSeries = { k1: 1, k2: 1 };
+
+function switchKSeries(ev, seriesNum, btn) {
+  _kActiveSeries[ev] = seriesNum;
+  // Przełącz aktywny tab
+  document.querySelectorAll(`#${ev}-series-tabs .tab-btn`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Pokaż/ukryj zawartość
+  document.getElementById(`${ev}-s1-wrap`).style.display = seriesNum === 1 ? '' : 'none';
+  document.getElementById(`${ev}-s2-wrap`).style.display = seriesNum === 2 ? '' : 'none';
+  if (seriesNum === 2) renderKSeries2(ev);
+}
+
+// Pobierz uczestników serii 2 — domyślnie wszyscy (nie-PK z wylosowaną kolejnością)
+function getSeries2Participants(ev) {
+  const stored = STATE.series2Participants?.[ev] || {};
+  return STATE.athletes
+    .filter(a => !a.pk)
+    .reduce((acc, a) => {
+      // default true jeśli nie ustawiono
+      acc[a.id] = stored[a.id] !== undefined ? stored[a.id] : true;
+      return acc;
+    }, {});
+}
+
+function toggleSeries2Participant(ev, aid) {
+  if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (!STATE.series2Participants[ev]) STATE.series2Participants[ev] = {};
+  const cur = STATE.series2Participants[ev][aid];
+  // default true → toggle
+  STATE.series2Participants[ev][aid] = cur === undefined ? false : !cur;
+  save();
+  renderKSeries2(ev);
+}
+
+function renderKSeries2(ev) {
+  const container = document.getElementById(`${ev}-s2-content`);
+  if (!container) return;
+
+  const participants = getSeries2Participants(ev);
+
+  // Pobierz wynik serii 1 (próba 1 z renderQuickEntry — pole k1/k2 attempt 0)
+  function getS1Time(a) {
+    const r     = STATE.results[a.id] || {};
+    const disq  = STATE.disq[a.id]    || {};
+    const dnf   = STATE.dnf[a.id]     || {};
+    const times = r[ev] || [];
+    const dArr  = disq[ev] || [];
+    const nArr  = dnf[ev]  || [];
+    // Tylko próba 1 (attempt 0)
+    const t = times[0];
+    if (!t || nArr[0] || dArr[0]) return null;
+    return t;
+  }
+
+  // Sortuj od najsłabszego (najwyższy czas) do najlepszego (najniższy)
+  // Zawodnicy bez wyniku idą NA KOŃCU grupy
+  function sortWeakestFirst(list) {
+    return [...list].sort((a, b) => {
+      const tA = getS1Time(a), tB = getS1Time(b);
+      if (tA === null && tB === null) return a.name.localeCompare(b.name);
+      if (tA === null) return 1;   // bez wyniku → na koniec
+      if (tB === null) return -1;
+      return tB - tA; // wyższy czas = słabszy = idzie pierwszy
+    });
+  }
+
+  const allAthletes = STATE.athletes.filter(a => !a.pk);
+  const men   = sortWeakestFirst(allAthletes.filter(a => a.gender === 'M'));
+  const women = sortWeakestFirst(allAthletes.filter(a => a.gender === 'K'));
+
+  const totalStarting = [...men, ...women].filter(a => participants[a.id] !== false).length;
+  const totalAll      = men.length + women.length;
+
+  let html = `
+    <div class="flex-between mb-8" style="flex-wrap:wrap;gap:8px">
+      <div class="mono text-sm">
+        Startujących: <strong class="text-accent">${totalStarting}/${totalAll}</strong>
+        <span class="text-muted" style="margin-left:8px">— kliknij checkbox aby odpiąć zawodnika z 2. serii</span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="setAllSeries2('${ev}',true)">✓ Zaznacz wszystkich</button>
+        <button class="btn btn-sm" onclick="setAllSeries2('${ev}',false)">✕ Odznacz wszystkich</button>
+      </div>
+    </div>
+    <div class="qe-scroll">
+    <table class="qe-table">
+      <thead>
+        <tr>
+          <th style="width:36px">Start</th>
+          <th style="width:36px">#</th>
+          <th>Zawodnik</th>
+          <th>Drużyna</th>
+          <th style="width:58px">Kat.</th>
+          <th style="width:100px">Wynik S1 (Seria 1)</th>
+          <th style="width:175px">Wynik S2 (Seria 2)</th>
+          <th style="width:80px">Najlepszy</th>
+          <th style="width:54px">PKT</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  const inputIndex = [];
+  let pos = 1;
+
+  [[men,'Mężczyźni'],[women,'Kobiety']].forEach(([group, label]) => {
+    if (!group.length) return;
+    html += `<tr><td colspan="9" class="qe-group-header">${label}</td></tr>`;
+
+    // Najpierw startujący, potem nie-startujący
+    const starting    = group.filter(a => participants[a.id] !== false);
+    const notStarting = group.filter(a => participants[a.id] === false);
+
+    starting.forEach(a => {
+      html += renderS2Row(a, ev, pos++, participants, inputIndex, true);
+    });
+    if (notStarting.length) {
+      html += `<tr><td colspan="9" style="background:var(--bg3);color:var(--text3);font-size:11px;padding:4px 8px;font-family:var(--font-m);letter-spacing:1px">— NIE STARTUJĄ W 2. SERII —</td></tr>`;
+      notStarting.forEach(a => {
+        html += renderS2Row(a, ev, null, participants, inputIndex, false);
+      });
+    }
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function renderS2Row(a, ev, pos, participants, inputIndex, isStarting) {
+  const r     = STATE.results[a.id] || {};
+  const disq  = STATE.disq[a.id]    || {};
+  const dnf   = STATE.dnf[a.id]     || {};
+  const team  = STATE.teams.find(t => t.id == a.teamId);
+  const isK4  = ev === 'k4';
+  const fmtF  = isK4 ? secToTimeK4 : fmtSec1;
+
+  const times = r[ev] || [];
+  const disqA = disq[ev] || [];
+  const dnfA  = dnf[ev]  || [];
+
+  // Próby serii 1 — read-only
+  function s1Cell(att) {
+    const t = times[att], dq = disqA[att], nkl = dnfA[att];
+    if (nkl)      return { txt: 'NKL', color: 'var(--red)',    bold: false };
+    if (dq)       return { txt: 'DSQ', color: 'var(--orange)', bold: false };
+    if (t)        return { txt: fmtF(t), color: 'var(--text1)', bold: true  };
+                  return { txt: '—',   color: 'var(--text3)', bold: false };
+  }
+  const c1 = s1Cell(0);
+
+  // Próba serii 2 — attempt index 1
+  const t2s2   = times[1];
+  const dnf2s2 = dnfA[1];
+  const dq2s2  = disqA[1];
+  const v2s2   = dnf2s2 ? 'NKL' : (t2s2 ? fmtF(t2s2) : '');
+
+  // Najlepszy ze wszystkich prób
+  const bestT = getBestValidTime([times[0],times[1]], [disqA[0],disqA[1]], [dnfA[0],dnfA[1]]);
+  const pts   = bestT ? getPoints(a.cat, ev, bestT) : 0;
+  const isBestS1 = !!(times[0] && times[0]===bestT && !disqA[0] && !dnfA[0]);
+  const isBestS2 = !!(times[1] && times[1]===bestT && !disqA[1] && !dnfA[1]);
+
+  const idx = inputIndex.length;
+  inputIndex.push({ aid: a.id, attempt: 2 });
+
+  const checked  = isStarting ? 'checked' : '';
+  const rowStyle = isStarting ? '' : 'opacity:0.5';
+  const parseMode = isK4 ? 'k4' : 'sec';
+
+  return `<tr class="qe-row" id="qe-s2-row-${a.id}" style="${rowStyle}">
+    <td style="text-align:center">
+      <input type="checkbox" ${checked}
+        style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
+        onchange="toggleSeries2Participant('${ev}',${a.id})"
+        title="Odznacz aby usunąć z 2. serii">
+    </td>
+    <td class="qe-num">${pos !== null ? pos : '—'}</td>
+    <td class="qe-name">${a.name}</td>
+    <td class="qe-team">${team?.name||'—'}</td>
+    <td class="qe-cat"><span class="cat-badge cat-${a.cat}">${a.cat}</span></td>
+    <td style="font-family:var(--font-m);font-size:13px;text-align:center;color:${isBestS1 ? 'var(--green)' : c1.color};font-weight:${isBestS1 ? '700' : (c1.bold?'700':'400')}">${c1.txt}</td>
+    <td>
+      ${isStarting ? `<div style="display:flex;align-items:center;gap:3px">
+        <input class="qe-time ${(t2s2||dnf2s2)?'has-val':''} ${isBestS2?'is-best':''} ${dnf2s2?'dnf-val':''} ${dq2s2?'dq-val':''}"
+          type="text" inputmode="decimal"
+          value="${dq2s2 ? (t2s2?fmtF(t2s2):'') : v2s2}"
+          placeholder="${isK4?'m.ss':'ss.s'}"
+          data-aid="${a.id}" data-ev="${ev}" data-att="1" data-idx="${idx}"
+          data-series="2"
+          onkeydown="qeKeydown(event,${idx},'${ev}')"
+          onchange="qeSave(this,'${parseMode}')"
+          onfocus="qeFocus(this)">
+        <button class="btn btn-xs qe-disq-btn ${dq2s2?'dq-active':''}"
+          onclick="toggleDisq(${a.id},'${ev}',1)" title="Zdyskwalifikuj próbę">⊘</button>
+      </div>` : '<span style="color:var(--text3);font-size:12px">—</span>'}
+    </td>
+    <td class="qe-best">${bestT ? (isK4?secToTimeK4(bestT):secToTime(bestT)) : '<span class="text-muted">—</span>'}</td>
+    <td class="qe-pts ${pts?'':'zero'}">${pts||'—'}</td>
+  </tr>`;
+}
+
+function setAllSeries2(ev, val) {
+  if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (!STATE.series2Participants[ev]) STATE.series2Participants[ev] = {};
+  STATE.athletes.filter(a => !a.pk).forEach(a => {
+    STATE.series2Participants[ev][a.id] = val;
+  });
+  save();
+  renderKSeries2(ev);
+}
+
 
 // ════════════════════════════════════════════════════════════
 // LISTY STARTOWE — template download + import

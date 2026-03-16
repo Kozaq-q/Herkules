@@ -692,35 +692,66 @@ function startCatInfiniteScroll(cat, speed) {
   if (_catScrollRAFs[cat]) cancelAnimationFrame(_catScrollRAFs[cat]);
 
   setTimeout(() => {
-    const track = document.getElementById('scroll-track-' + cat);
+    const track    = document.getElementById('scroll-track-' + cat);
     if (!track) return;
 
-    const listA = track.querySelector('.scroll-list-a');
-    const listB = track.querySelector('.scroll-list-b');
-    if (!listA || !listB) return;
+    const viewport = track.closest('.rank-table-scroll-viewport');
+    const listA    = track.querySelector('.scroll-list-a');
+    const listB    = track.querySelector('.scroll-list-b');
+    if (!listA || !listB || !viewport) return;
 
-    const listH = listA.offsetHeight;
-    if (listH === 0) return;
+    const viewH  = viewport.offsetHeight || 300;
+    const rowsH  = listA.offsetHeight;
+    if (rowsH === 0) return;
 
-    listB.style.top = listH + 'px';
-
-    let pos = 0;
-    let lastTime = null;
-
-    function step(now) {
-      if (!lastTime) lastTime = now;
-      const delta = now - lastTime;
-      lastTime = now;
-
-      pos += speed * delta / 1000;
-      if (pos >= listH) pos -= listH;
-
-      track.style.transform = `translateY(-${pos}px)`;
-      _catScrollRAFs[cat] = requestAnimationFrame(step);
+    // Powiel wiersze żeby lista była co najmniej 4x viewport — płynny scroll przez minuty
+    const minH    = viewH * 4;
+    const origHTML = listA.querySelector('tbody').innerHTML;
+    if (rowsH < minH) {
+      const repeats = Math.ceil(minH / rowsH) + 1;
+      const repeated = Array(repeats).fill(origHTML).join('');
+      listA.querySelector('tbody').innerHTML = repeated;
+      listB.querySelector('tbody').innerHTML = repeated;
     }
 
-    _catScrollRAFs[cat] = requestAnimationFrame(step);
-  }, 100);
+    // Poczekaj na reflow po zmianie DOM
+    requestAnimationFrame(() => {
+      const listH = listA.offsetHeight;
+      if (listH === 0) return;
+
+      listB.style.top = listH + 'px';
+
+      let pos = 0;
+      let lastTime = null;
+
+      // Pauza na górze — zatrzymaj na 3s przed każdym pełnym obrotem
+      let pauseTimer = 0;
+      const PAUSE_DURATION = 3000; // ms pauzy co pełny obrót
+
+      function step(now) {
+        if (!lastTime) lastTime = now;
+        const delta = now - lastTime;
+        lastTime = now;
+
+        if (pauseTimer > 0) {
+          pauseTimer -= delta;
+          _catScrollRAFs[cat] = requestAnimationFrame(step);
+          return;
+        }
+
+        pos += speed * delta / 1000;
+        if (pos >= listH) {
+          pos -= listH;
+          pauseTimer = PAUSE_DURATION;
+        }
+
+        track.style.transform = `translateY(-${pos}px)`;
+        _catScrollRAFs[cat] = requestAnimationFrame(step);
+      }
+
+      _catScrollRAFs[cat] = requestAnimationFrame(step);
+    });
+  }, 150);
 }
 
 function renderIndiv(s) {
@@ -745,7 +776,7 @@ function renderIndiv(s) {
     const athletes = STATE.athletes.filter(a => a.cat === cat)
       .map(a => ({ ...a, pts: getAthletePoints(a.id) }));
     const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total);
-    const shown  = normal.slice(0, s.topN);
+    const shown  = (s.topN && s.topN > 0) ? normal.slice(0, s.topN) : normal;
 
     const emptyRow = `<tr><td colspan="2" style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Brak wyników</td></tr>`;
     const rowsHTML = shown.length ? buildRowsHTML(shown, s) : emptyRow;
