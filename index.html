@@ -1113,6 +1113,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           <div style="font-size:11px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Pobierz template</div>
           <div class="flex" style="gap:8px">
             <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">📥 Excel (.xlsx)</button>
+            <button class="btn btn-sm btn-success" onclick="downloadTemplateODS()">📥 LibreOffice (.ods)</button>
             <button class="btn btn-sm" onclick="downloadTemplateCSV()">📥 CSV</button>
           </div>
         </div>
@@ -1128,7 +1129,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           <button class="btn btn-sm btn-primary" onclick="document.getElementById('import-startlist-file').click()">
             📤 Wczytaj Excel lub CSV
           </button>
-          <input type="file" id="import-startlist-file" accept=".xlsx,.csv" style="display:none" onchange="importStartList(event)">
+          <input type="file" id="import-startlist-file" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importStartList(event)">
         </div>
 
         <!-- Podgląd importu -->
@@ -2008,6 +2009,8 @@ function ensureStateDefaults() {
   if (!STATE.scoreTables) STATE.scoreTables = defaultScoreTables();
   if (!STATE.scoreTablesByCat) STATE.scoreTablesByCat = {};
   if (!STATE.results) STATE.results = {};
+  if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
+  if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
   if (!STATE.disq) STATE.disq = {};
   if (!STATE.dnf) STATE.dnf = {};
   if (!STATE.series2) STATE.series2 = {};
@@ -2661,7 +2664,11 @@ function renderAthletesList() {
     teamSel.value = cur;
   }
 
-  let athletes = STATE.athletes;
+  let athletes = [...STATE.athletes].sort((a, b) => {
+    const tA = STATE.teams.find(t => t.id == a.teamId);
+    const tB = STATE.teams.find(t => t.id == b.teamId);
+    return (tA?.num || 0) - (tB?.num || 0);
+  });
   if (filterTeam) athletes = athletes.filter(a => a.teamId == filterTeam);
   if (filterCat)  athletes = athletes.filter(a => a.cat  === filterCat);
   if (search)     athletes = athletes.filter(a => a.name.toLowerCase().includes(search));
@@ -2684,7 +2691,24 @@ function renderAthletesList() {
     const team = STATE.teams.find(t => t.id == a.teamId);
     return `<tr class="${a.pk ? 'pk-row' : ''}">
       <td class="mono text-muted">${i+1}</td>
-      <td class="bold">${a.name}${a.pk ? ' <span class="pk-badge">PK</span>' : ''}</td>
+      <td class="bold">${a.name}${a.pk ? ' <span class="pk-badge">PK</span>' : ''}${checkGenderSuspicious(a.name, a.gender) && !STATE.genderConfirmed[a.id]
+  ? ` <span
+      onclick="confirmGender(${a.id})"
+      title="Podejrzana płeć — kliknij aby potwierdzić że dane są poprawne"
+      style="cursor:pointer;font-size:13px;opacity:0.9"
+    >⚠️</span>`
+  : ''}${(() => {
+    const missing = checkMissingData(a);
+    return missing.length
+      ? ` <span title="Niekompletne dane: ${missing.join(', ')}" style="cursor:help;font-size:13px">🔴</span>`
+      : '';
+  })()}${checkLoneAthlete(a) && !STATE.loneConfirmed[a.id]
+  ? ` <span
+      onclick="confirmLoneAthlete(${a.id})"
+      title="Jedyny zawodnik w drużynie — możliwa błędna nazwa. Kliknij aby potwierdzić"
+      style="cursor:pointer;font-size:13px;opacity:0.9"
+    >🟡</span>`
+  : ''}</td>
       <td><span class="druzyna-chip">${team ? team.num+'. '+team.name : '—'}</span></td>
       <td><span class="cat-badge cat-${a.cat}">${a.cat}</span></td>
       <td>${a.gender==='M'?'♂':'♀'}</td>
@@ -4489,6 +4513,8 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   // ── ZAWSZE wstrzyknij wyniki K3 z Excela (nawet jeśli STATE już istnieje) ──
   const K3_FROM_EXCEL = {"1": {"s1": 49.4, "s2": null}, "2": {"s1": 47.5, "s2": null}, "3": {"s1": 48.6, "s2": null}, "4": {"s1": 50.0, "s2": null}, "5": {"s1": 53.2, "s2": null}, "6": {"s1": 53.7, "s2": null}, "7": {"s1": 54.2, "s2": null}, "8": {"s1": 58.4, "s2": null}, "9": {"s1": 51.5, "s2": null}, "10": {"s1": 53.1, "s2": null}, "11": {"s1": 53.9, "s2": null}, "12": {"s1": null, "s2": 55.9}, "13": {"s1": 51.6, "s2": null}, "14": {"s1": 59.0, "s2": null}, "15": {"s1": 57.2, "s2": null}, "16": {"s1": 66.3, "s2": null}, "17": {"s1": 50.3, "s2": null}, "18": {"s1": 51.0, "s2": null}, "19": {"s1": 49.6, "s2": null}, "20": {"s1": 54.0, "s2": null}, "21": {"s1": 52.0, "s2": null}, "22": {"s1": 63.3, "s2": null}, "23": {"s1": 59.0, "s2": null}, "24": {"s1": 58.9, "s2": null}, "25": {"s1": 48.7, "s2": null}, "26": {"s1": 51.8, "s2": null}, "27": {"s1": 48.1, "s2": null}, "28": {"s1": null, "s2": 51.9}, "29": {"s1": 54.8, "s2": null}, "30": {"s1": 53.8, "s2": null}, "31": {"s1": 55.3, "s2": null}, "32": {"s1": 58.2, "s2": null}, "33": {"s1": 50.0, "s2": null}, "34": {"s1": 52.9, "s2": null}, "36": {"s1": 51.7, "s2": null}, "37": {"s1": null, "s2": 60.8}, "38": {"s1": 60.1, "s2": null}, "39": {"s1": 67.5, "s2": null}, "40": {"s1": 76.7, "s2": null}, "41": {"s1": null, "s2": 53.4}, "42": {"s1": 50.6, "s2": null}, "43": {"s1": 51.7, "s2": null}, "44": {"s1": 53.0, "s2": null}, "45": {"s1": 52.8, "s2": null}, "46": {"s1": 55.0, "s2": null}, "47": {"s1": 58.0, "s2": null}, "48": {"s1": 61.0, "s2": null}, "49": {"s1": 55.8, "s2": null}, "50": {"s1": 59.5, "s2": null}, "51": {"s1": 48.5, "s2": null}, "52": {"s1": 49.9, "s2": null}, "53": {"s1": 48.3, "s2": null}, "54": {"s1": 52.4, "s2": null}, "55": {"s1": 52.3, "s2": null}, "56": {"s1": 54.9, "s2": null}, "57": {"s1": 59.5, "s2": null}, "58": {"s1": 60.5, "s2": null}, "59": {"s1": 49.9, "s2": null}, "60": {"s1": 49.0, "s2": null}, "61": {"s1": 50.9, "s2": null}, "62": {"s1": null, "s2": null}, "63": {"s1": 52.0, "s2": null}, "64": {"s1": 55.1, "s2": null}, "65": {"s1": 56.0, "s2": null}, "66": {"s1": 56.1, "s2": null}, "67": {"s1": 46.2, "s2": null}, "68": {"s1": 48.0, "s2": null}, "69": {"s1": 48.3, "s2": null}, "70": {"s1": 48.7, "s2": null}, "71": {"s1": 49.5, "s2": null}, "72": {"s1": 55.3, "s2": null}, "73": {"s1": 54.8, "s2": null}, "74": {"s1": 50.9, "s2": null}, "75": {"s1": 56.0, "s2": null}, "76": {"s1": 47.5, "s2": null}, "77": {"s1": 59.8, "s2": null}, "78": {"s1": 52.4, "s2": null}, "79": {"s1": 56.0, "s2": null}, "80": {"s1": 57.7, "s2": null}, "81": {"s1": 59.7, "s2": null}, "82": {"s1": 47.8, "s2": null}, "83": {"s1": 48.1, "s2": null}, "84": {"s1": 50.5, "s2": null}, "85": {"s1": 49.4, "s2": null}, "86": {"s1": 48.0, "s2": null}, "87": {"s1": null, "s2": 54.8}, "88": {"s1": 54.3, "s2": null}, "89": {"s1": 53.2, "s2": null}, "90": {"s1": 48.8, "s2": null}, "91": {"s1": 49.0, "s2": null}, "92": {"s1": 47.7, "s2": null}, "93": {"s1": 50.9, "s2": null}, "94": {"s1": 49.5, "s2": null}, "95": {"s1": 54.8, "s2": null}, "96": {"s1": 56.9, "s2": null}, "97": {"s1": 56.3, "s2": null}, "35": {"s1": 53.3, "s2": null}};
   if (!STATE.results) STATE.results = {};
+  if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
+  if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
   if (!STATE.k3s2) STATE.k3s2 = {};
   let k3injected = 0;
   for (const [aid, times] of Object.entries(K3_FROM_EXCEL)) {
@@ -4620,6 +4646,99 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   }, 2500);
 })();
 
+
+// ════════════════════════════════════════════════════════════
+// WERYFIKACJA PŁCI — na podstawie imienia
+// ════════════════════════════════════════════════════════════
+const MALE_NAMES = new Set(['adam','adrian','albert','aleksander','aleksy','andrzej',
+'arkadiusz','artur','bartłomiej','bartosz','bernard','bogdan','bogusław','borys',
+'bronisław','cezary','damian','daniel','dariusz','dawid','dominik','edmund','edward',
+'emil','eugeniusz','eryk','feliks','filip','franciszek','grzegorz','henryk','hubert',
+'igor','ireneusz','jacek','jakub','jan','janusz','jarosław','jerzy','józef','julian',
+'juliusz','kamil','karol','kazimierz','konrad','krystian','krzysztof','lech','leon',
+'leszek','łukasz','marek','marian','mariusz','mateusz','maciej','michał','marcin',
+'mieczysław','mikołaj','miłosz','mirosław','norbert','olaf','patryk','paweł','piotr',
+'przemysław','radosław','rafał','robert','ryszard','sławomir','stanisław','stefan',
+'szymon','tadeusz','tomasz','tymon','waldemar','wiesław','wiktor','witold','władysław',
+'wojciech','zbigniew','zygmunt','sebastian','martin','christian','max','bartosz',
+'tomek','jarek','krzysiek','marek','piotrek','romek','waldek']);
+
+const FEMALE_NAMES = new Set(['agata','agnieszka','aldona','aleksandra','alicja','alina',
+'anna','antonina','barbara','beata','bożena','celina','danuta','diana','dominika',
+'dorota','edyta','elżbieta','ewa','ewelina','grażyna','halina','hanna','honorata',
+'irena','iwona','izabela','jadwiga','jagoda','joanna','jolanta','julia','justyna',
+'kamila','karolina','katarzyna','klaudia','kinga','krystyna','laura','lidia','luiza',
+'łucja','magda','magdalena','małgorzata','marta','martyna','maria','marzena','milena',
+'monika','natalia','nikola','nina','oliwia','patrycja','paulina','roksana','sabina',
+'sandra','sylwia','teresa','urszula','wanda','weronika','wiktoria','zofia','zuzanna',
+'żaneta','aneta','ania','kasia','basia','gosia','asia','ola']);
+
+// Stopnie wojskowe do odfiltrowania
+const MILITARY_RANKS = new Set(['szer','st','szer','kpr','st','kpr','plut','sierż',
+'sierż','st','sierż','mł','chor','chor','st','chor','ppor','por','kpt','mjr',
+'ppłk','płk','gen','bryg','dyw','broni','arm','marszałek','mar','szer.','kpr.',
+'plut.','sierż.','chor.','ppor.','por.','kpt.','mjr.','ppłk.','płk.','gen.',
+'st.','mł.','bryg.','dyw.']);
+
+function extractFirstName(fullName) {
+  if (!fullName) return null;
+  // Usuń znaki diakrytyczne dla porównania, ale zachowaj oryginał
+  const parts = fullName.trim().split(/\s+/);
+  // Szukaj pierwszego słowa które NIE jest stopniem wojskowym
+  for (const part of parts) {
+    const clean = part.replace(/[.,]/g,'').toLowerCase();
+    if (!MILITARY_RANKS.has(clean) && clean.length > 1) {
+      // To potencjalnie imię — sprawdź czy nie jest samym inicjałem
+      if (part.length > 1 && !part.endsWith('.')) {
+        return clean;
+      }
+    }
+  }
+  return null;
+}
+
+
+// ── Sprawdź braki danych zawodnika ──
+function checkMissingData(a) {
+  const missing = [];
+  if (!a.name || !a.name.trim())   missing.push('brak nazwiska');
+  if (!a.year || a.year < 1940 || a.year > 2010) missing.push('błędny rok urodzenia');
+  if (!a.gender || (a.gender !== 'M' && a.gender !== 'K')) missing.push('brak płci');
+  if (!a.teamId) missing.push('brak drużyny');
+  return missing;
+}
+
+// ── Sprawdź czy zawodnik jest jedynym w drużynie ──
+function checkLoneAthlete(a) {
+  const count = STATE.athletes.filter(x => x.teamId === a.teamId).length;
+  return count === 1;
+}
+
+function confirmGender(athleteId) {
+  if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
+  if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
+  STATE.genderConfirmed[athleteId] = true;
+  save();
+  renderAthletesList();
+  toast('✓ Płeć potwierdzona');
+}
+
+function confirmLoneAthlete(athleteId) {
+  if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
+  STATE.loneConfirmed[athleteId] = true;
+  save();
+  renderAthletesList();
+  toast('✓ Potwierdzone');
+}
+
+function checkGenderSuspicious(name, gender) {
+  const firstName = extractFirstName(name);
+  if (!firstName) return false;
+  if (gender === 'M' && FEMALE_NAMES.has(firstName) && !MALE_NAMES.has(firstName)) return true;
+  if (gender === 'K' && MALE_NAMES.has(firstName) && !FEMALE_NAMES.has(firstName)) return true;
+  return false;
+}
+
 // ════════════════════════════════════════════════════════════
 // LISTY STARTOWE — template download + import
 // Kolumny: Lp | Stopień imię nazwisko | Drużyna | Rok ur. | Płeć
@@ -4632,50 +4751,37 @@ const STARTLIST_EXAMPLE = [
   [3, 'st.szer. Piotr Wiśniewski', 'JW 5678', 1985, 'M'],
 ];
 
-// ── Pobierz template XLSX ──
+// ── Pobierz template XLSX (sformatowany, wbudowany) ──
+const STARTLIST_TEMPLATE_B64 = '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';
+
 function downloadTemplateXLSX() {
+  const bin = atob(STARTLIST_TEMPLATE_B64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'lista_startowa_template.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Template Excel pobrany');
+}
+
+
+// ── Pobierz template ODS (LibreOffice) — konwersja z wbudowanego xlsx ──
+function downloadTemplateODS() {
   if (typeof XLSX === 'undefined') {
-    toast('Ładowanie biblioteki Excel — spróbuj za chwilę');
+    toast('Ładowanie biblioteki — spróbuj za chwilę');
     return;
   }
-  const wb = XLSX.utils.book_new();
-  const wsData = [STARTLIST_HEADERS, ...STARTLIST_EXAMPLE];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Szerokości kolumn
-  ws['!cols'] = [
-    { wch: 5 },   // Lp
-    { wch: 32 },  // Stopień imię nazwisko
-    { wch: 20 },  // Drużyna
-    { wch: 14 },  // Rok urodzenia
-    { wch: 12 },  // Płeć
-  ];
-
-  // Styl nagłówka (bold przez komentarz — SheetJS nie wymaga licencji do stylów basic)
-  XLSX.utils.book_append_sheet(wb, ws, 'Lista startowa');
-
-  // Drugi arkusz — instrukcja
-  const wsInfo = XLSX.utils.aoa_to_sheet([
-    ['INSTRUKCJA WYPEŁNIANIA LISTY STARTOWEJ'],
-    [''],
-    ['Kolumna', 'Opis', 'Przykład'],
-    ['Lp', 'Liczba porządkowa (opcjonalna)', '1'],
-    ['Stopień imię nazwisko', 'Stopień wojskowy, imię i nazwisko w jednej komórce', 'sierż. Jan Kowalski'],
-    ['Drużyna', 'Nazwa drużyny — taka sama dla wszystkich z tej samej jednostki', 'JW 1234'],
-    ['Rok urodzenia', '4-cyfrowy rok urodzenia', '1989'],
-    ['Płeć (M/K)', 'M — mężczyzna, K — kobieta', 'M'],
-    [''],
-    ['UWAGI:'],
-    ['- Można wgrać wiele plików (np. osobno dla każdej drużyny) — zawodnicy będą dopisywani'],
-    ['- Kategoria (M35/M36/K35/K36) jest wyznaczana automatycznie na podstawie roku urodzenia i płci'],
-    ['- Drużyny tworzone automatycznie — ta sama nazwa = ta sama drużyna'],
-    ['- Wiersz nagłówkowy jest wymagany'],
-  ]);
-  wsInfo['!cols'] = [{ wch: 28 }, { wch: 52 }, { wch: 24 }];
-  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrukcja');
-
-  XLSX.writeFile(wb, 'lista_startowa_template.xlsx');
-  toast('Template Excel pobrany');
+  // Wczytaj wbudowany xlsx i zapisz jako ods
+  const bin = atob(STARTLIST_TEMPLATE_B64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const wb = XLSX.read(arr, { type: 'array' });
+  XLSX.writeFile(wb, 'lista_startowa_template.ods', { bookType: 'ods' });
+  toast('Template LibreOffice pobrany');
 }
 
 // ── Pobierz template CSV ──
@@ -4704,7 +4810,7 @@ async function importStartList(e) {
 
   try {
     let rows = [];
-    if (ext === 'xlsx' || ext === 'xls') {
+    if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') {
       rows = await parseStartListXLSX(file);
     } else if (ext === 'csv') {
       rows = await parseStartListCSV(file);
