@@ -1242,15 +1242,15 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="flex-between mb-8">
     <div>
       <div class="head" style="font-size:22px;color:var(--text1)">KONKURENCJA 1 — WSPINANIE NA LINIE</div>
-      <div class="text-muted text-sm mono mt-4">1 próba per seria · sekundy (max 1 miejsce po przecinku) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
+      <div class="text-muted text-sm mono mt-4">Kolejność identyczna w obu seriach · sekundy (max 1 miejsce po przecinku) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
     </div>
     <button class="btn btn-sm" onclick="renderK1()">⟳</button>
   </div>
   <div id="judge-notes-k1-bar" class="judge-notes-bar" style="display:none"></div>
   <!-- Podzakładki serii -->
   <div class="tab-row" id="k1-series-tabs">
-    <button class="tab-btn active" id="k1-tab-s1" onclick="switchKSeries('k1',1,this)">📋 Seria 1 — kolejność zespołami</button>
-    <button class="tab-btn" id="k1-tab-s2" onclick="switchKSeries('k1',2,this)">🔁 Seria 2 — od najsłabszego</button>
+    <button class="tab-btn active" id="k1-tab-s1" onclick="switchKSeries('k1',1,this)">📋 Seria 1</button>
+    <button class="tab-btn" id="k1-tab-s2" onclick="switchKSeries('k1',2,this)">🔁 Seria 2</button>
   </div>
   <!-- Seria 1 -->
   <div id="k1-s1-wrap">
@@ -1275,15 +1275,15 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="flex-between mb-8">
     <div>
       <div class="head" style="font-size:22px;color:var(--text1)">KONKURENCJA 2 — BTS (TOR PRZESZKÓD)</div>
-      <div class="text-muted text-sm mono mt-4">1 próba per seria · sekundy (można powyżej 60) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
+      <div class="text-muted text-sm mono mt-4">Kolejność identyczna w obu seriach · sekundy (można powyżej 60) · <kbd>Enter</kbd>/<kbd>Tab</kbd> = następne · ↑↓ = zmiana zawodnika</div>
     </div>
     <button class="btn btn-sm" onclick="renderK2()">⟳</button>
   </div>
   <div id="judge-notes-k2-bar" class="judge-notes-bar" style="display:none"></div>
   <!-- Podzakładki serii -->
   <div class="tab-row" id="k2-series-tabs">
-    <button class="tab-btn active" id="k2-tab-s1" onclick="switchKSeries('k2',1,this)">📋 Seria 1 — kolejność zespołami</button>
-    <button class="tab-btn" id="k2-tab-s2" onclick="switchKSeries('k2',2,this)">🔁 Seria 2 — od najsłabszego</button>
+    <button class="tab-btn active" id="k2-tab-s1" onclick="switchKSeries('k2',1,this)">📋 Seria 1</button>
+    <button class="tab-btn" id="k2-tab-s2" onclick="switchKSeries('k2',2,this)">🔁 Seria 2</button>
   </div>
   <!-- Seria 1 -->
   <div id="k2-s1-wrap">
@@ -1318,8 +1318,8 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div id="judge-notes-k3-bar" class="judge-notes-bar" style="display:none"></div>
   <div id="k3-progress" class="flex mb-8" style="gap:16px;align-items:center"></div>
   <div class="tab-row">
-    <button class="tab-btn active" id="k3-tab-s1" onclick="switchK3Tab('s1',this)">📋 Seria 1 — kolejność zespołami</button>
-    <button class="tab-btn" id="k3-tab-s2" onclick="switchK3Tab('s2',this)">🔁 Seria 2 — od najsłabszego</button>
+    <button class="tab-btn active" id="k3-tab-s1" onclick="switchK3Tab('s1',this)">📋 Seria 1</button>
+    <button class="tab-btn" id="k3-tab-s2" onclick="switchK3Tab('s2',this)">🔁 Seria 2</button>
   </div>
   <div id="k3-content"></div>
 </div>
@@ -1996,28 +1996,36 @@ function startRealtimeSync() {
       (payload) => {
         // Ignoruj własne zmiany (ta sama sesja)
         if (payload.new.session_id === SESSION_ID) return;
-        // Ktoś inny zapisał — wczytaj nowy stan
+        // Ktoś inny zapisał — wczytaj nowy stan i odśwież UI
         try {
           const newState = JSON.parse(payload.new.state_json);
           STATE = newState;
           ensureStateDefaults();
-          localStorage.setItem('zawody_state_v2', JSON.stringify(STATE));
-          // Odśwież aktualną zakładkę
+          STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
+          localStorage.setItem(_slotKey(ACTIVE_SLOT_ID || SLOT_KEY), JSON.stringify(STATE));
+
+          // Odśwież aktywną zakładkę (z zachowaniem scrolla i fokusa)
           const activePage = document.querySelector('.page.active');
-          if (activePage) {
-            const id = activePage.id;
-            // Zachowaj scroll i fokus przy rerenderze z innego urządzenia
-            if (id === 'page-k1') preserveScrollAndFocus(() => renderK1());
-            else if (id === 'page-k2') preserveScrollAndFocus(() => renderK2());
-            else if (id === 'page-k3') preserveScrollAndFocus(() => renderK3());
-            else if (id === 'page-k4') preserveScrollAndFocus(() => renderK4());
-            else if (id === 'page-ranking') renderRanking();
-            else if (id === 'page-zawodnicy') preserveScrollAndFocus(() => renderAthletesList());
-            else if (id === 'page-setup') { renderSetup(); }
-          }
+          const id = activePage ? activePage.id : '';
+          if      (id === 'page-k1')       preserveScrollAndFocus(() => renderK1());
+          else if (id === 'page-k2')       preserveScrollAndFocus(() => renderK2());
+          else if (id === 'page-k3')       preserveScrollAndFocus(() => renderK3());
+          else if (id === 'page-k4')       preserveScrollAndFocus(() => renderK4());
+          else if (id === 'page-ranking')  renderRanking();
+          else if (id === 'page-zawodnicy') preserveScrollAndFocus(() => renderAthletesList());
+          else if (id === 'page-setup')    { renderSetup(); renderTeamsList(); }
+
+          // Zawsze odśwież elementy wspólne (header, notatki, personalizacja)
+          updateHeaderContestName();
+          renderAllNotesBars();
+          applyRoleRestrictions(_sessionRole);
+          updateAuthBadge();
+          renderPersonalization();
+
+          _lastSyncTime = Date.now();
           const el = document.getElementById('header-autosave');
           if (el) {
-            el.textContent = '↓ SYNC od sędziego';
+            el.textContent = '↓ SYNC';
             setTimeout(() => { el.textContent = '● AUTO-SAVE'; }, 2000);
           }
         } catch(e) { console.error('Realtime parse error:', e); }
@@ -2025,6 +2033,46 @@ function startRealtimeSync() {
     )
     .subscribe();
   console.log('Real-time sync aktywny.');
+}
+
+// ── Fallback polling co 12s — gdy WebSocket się rozłączy ──
+let _lastSyncTime = Date.now();
+let _pollFallback = null;
+
+function startPollingFallback() {
+  if (_pollFallback) return;
+  _pollFallback = setInterval(async () => {
+    // Polling tylko jeśli realtime nie wysłał nic przez ostatnie 30s
+    if (Date.now() - _lastSyncTime < 30000) return;
+    try {
+      const db = getSupabase();
+      const { data } = await db
+        .from('app_state')
+        .select('session_id, updated_at, state_json')
+        .eq('slot_id', ACTIVE_SLOT_ID || SLOT_KEY)
+        .single();
+      if (data && data.session_id !== SESSION_ID) {
+        const newState = JSON.parse(data.state_json);
+        STATE = newState;
+        ensureStateDefaults();
+        STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
+        localStorage.setItem(_slotKey(ACTIVE_SLOT_ID || SLOT_KEY), JSON.stringify(STATE));
+        const activePage = document.querySelector('.page.active');
+        const id = activePage ? activePage.id : '';
+        if      (id === 'page-k1')        preserveScrollAndFocus(() => renderK1());
+        else if (id === 'page-k2')        preserveScrollAndFocus(() => renderK2());
+        else if (id === 'page-k3')        preserveScrollAndFocus(() => renderK3());
+        else if (id === 'page-k4')        preserveScrollAndFocus(() => renderK4());
+        else if (id === 'page-ranking')   renderRanking();
+        else if (id === 'page-zawodnicy') preserveScrollAndFocus(() => renderAthletesList());
+        else if (id === 'page-setup')     { renderSetup(); renderTeamsList(); }
+        updateHeaderContestName();
+        renderAllNotesBars();
+        renderPersonalization();
+        _lastSyncTime = Date.now();
+      }
+    } catch(e) { /* cicho — polling jest tylko fallbackiem */ }
+  }, 12000);
 }
 
 function ensureStateDefaults() {
@@ -4722,6 +4770,7 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
 
   // ── Uruchom real-time sync po inicjalizacji ──
   startRealtimeSync();
+  startPollingFallback();
 })();
 
 // ════════════════════════════════════════════════════════════
@@ -4947,35 +4996,9 @@ function renderKSeries2(ev) {
 
   const participants = getSeries2Participants(ev);
 
-  // Pobierz wynik serii 1 (próba 1 z renderQuickEntry — pole k1/k2 attempt 0)
-  function getS1Time(a) {
-    const r     = STATE.results[a.id] || {};
-    const disq  = STATE.disq[a.id]    || {};
-    const dnf   = STATE.dnf[a.id]     || {};
-    const times = r[ev] || [];
-    const dArr  = disq[ev] || [];
-    const nArr  = dnf[ev]  || [];
-    // Tylko próba 1 (attempt 0)
-    const t = times[0];
-    if (!t || nArr[0] || dArr[0]) return null;
-    return t;
-  }
-
-  // Sortuj od najsłabszego (najwyższy czas) do najlepszego (najniższy)
-  // Zawodnicy bez wyniku idą NA KOŃCU grupy
-  function sortWeakestFirst(list) {
-    return [...list].sort((a, b) => {
-      const tA = getS1Time(a), tB = getS1Time(b);
-      if (tA === null && tB === null) return a.name.localeCompare(b.name);
-      if (tA === null) return 1;   // bez wyniku → na koniec
-      if (tB === null) return -1;
-      return tB - tA; // wyższy czas = słabszy = idzie pierwszy
-    });
-  }
-
-  const allAthletes = STATE.athletes.filter(a => !a.pk);
-  const men   = sortWeakestFirst(allAthletes.filter(a => a.gender === 'M'));
-  const women = sortWeakestFirst(allAthletes.filter(a => a.gender === 'K'));
+  // Kolejność taka sama jak w serii 1 — startOrder, grupowane drużynami
+  const men   = getOrderedAthletes(ev, 'M').filter(a => !a.pk);
+  const women = getOrderedAthletes(ev, 'K').filter(a => !a.pk);
 
   const totalStarting = [...men, ...women].filter(a => participants[a.id] !== false).length;
   const totalAll      = men.length + women.length;
@@ -4984,7 +5007,7 @@ function renderKSeries2(ev) {
     <div class="flex-between mb-8" style="flex-wrap:wrap;gap:8px">
       <div class="mono text-sm">
         Startujących: <strong class="text-accent">${totalStarting}/${totalAll}</strong>
-        <span class="text-muted" style="margin-left:8px">— zmień listę startujących w zakładce "Kto startuje w S2"</span>
+        <span class="text-muted" style="margin-left:8px">— kolejność jak w Serii 1 · zmień startujących w zakładce "Kto startuje w S2"</span>
       </div>
     </div>
     <div class="qe-scroll">
@@ -5109,9 +5132,9 @@ function renderKWho(ev) {
   if (!container) return;
 
   const participants = getSeries2Participants(ev);
-  const allAthletes  = STATE.athletes.filter(a => !a.pk);
-  const men   = allAthletes.filter(a => a.gender === 'M');
-  const women = allAthletes.filter(a => a.gender === 'K');
+  // Kolejność taka sama jak w serii 1
+  const men   = getOrderedAthletes(ev, 'M').filter(a => !a.pk);
+  const women = getOrderedAthletes(ev, 'K').filter(a => !a.pk);
 
   const totalStarting = allAthletes.filter(a => participants[a.id] !== false).length;
 
@@ -5139,9 +5162,8 @@ function renderKWho(ev) {
   [[men,'Mężczyźni'],[women,'Kobiety']].forEach(([group, label]) => {
     if (!group.length) return;
     html += `<tr><td colspan="5" class="qe-group-header">${label}</td></tr>`;
-    // Posortuj alfabetycznie po nazwisku
-    const sorted = [...group].sort((a,b) => a.name.localeCompare(b.name));
-    sorted.forEach(a => {
+    // Kolejność zgodna z S1 (już posortowane przez getOrderedAthletes)
+    group.forEach(a => {
       const team     = STATE.teams.find(t => t.id == a.teamId);
       const starting = participants[a.id] !== false;
       // Wynik S1 — times[0]
@@ -5524,7 +5546,9 @@ function applyStartList(rows) {
   STATE.teams.sort((a, b) => a.num - b.num);
   save();
   renderSetup();
+  renderTeamsList();
   renderAthletesList();
+  updateHeaderContestName();
 
   // Podsumowanie w podglądzie
   const preview = document.getElementById('startlist-preview');
