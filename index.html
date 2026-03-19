@@ -1333,6 +1333,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     </div>
     <div class="flex" style="gap:4px">
       <button class="btn btn-sm btn-success" onclick="printK4StartLists()">🖨 Listy startowe</button>
+      <button class="btn btn-sm btn-success" onclick="printK4Results()">🖨 Wyniki</button>
       <button class="btn btn-sm" onclick="renderK4()">⟳</button>
     </div>
   </div>
@@ -2420,14 +2421,47 @@ function renderTeamsList() {
   el.innerHTML = `<table><thead><tr><th>Nr</th><th>Nazwa</th><th>Zawodnicy</th><th></th></tr></thead><tbody>
     ${STATE.teams.map(t => {
       const cnt = STATE.athletes.filter(a => a.teamId === t.id).length;
-      return `<tr>
+      return `<tr id="team-row-${t.id}">
         <td class="mono text-accent">${t.num}</td>
-        <td class="bold">${t.name}</td>
+        <td class="bold" id="team-name-cell-${t.id}">${t.name}</td>
         <td class="text-muted">${cnt}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="removeTeam(${t.id})">✕</button></td>
+        <td style="display:flex;gap:4px">
+          <button class="btn btn-sm" onclick="startEditTeam(${t.id})" title="Edytuj nazwę">✎</button>
+          <button class="btn btn-sm btn-danger" onclick="removeTeam(${t.id})">✕</button>
+        </td>
       </tr>`;
     }).join('')}
   </tbody></table>`;
+}
+
+function startEditTeam(id) {
+  const team = STATE.teams.find(t => t.id == id);
+  if (!team) return;
+  const cell = document.getElementById('team-name-cell-' + id);
+  if (!cell) return;
+  cell.innerHTML = `
+    <div style="display:flex;gap:4px;align-items:center">
+      <input id="team-edit-input-${id}" type="text" value="${team.name.replace(/"/g,'&quot;')}"
+        style="flex:1;font-family:var(--font-b);font-size:13px;padding:3px 6px;background:var(--bg3);border:1px solid var(--accent);border-radius:var(--radius);color:var(--text1)"
+        onkeydown="if(event.key==='Enter'){saveEditTeam(${id})}else if(event.key==='Escape'){renderTeamsList()}">
+      <button class="btn btn-sm" onclick="saveEditTeam(${id})">✓</button>
+      <button class="btn btn-sm" onclick="renderTeamsList()">✕</button>
+    </div>`;
+  const input = document.getElementById('team-edit-input-' + id);
+  if (input) { input.focus(); input.select(); }
+}
+
+function saveEditTeam(id) {
+  const input = document.getElementById('team-edit-input-' + id);
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) { toast('Nazwa nie może być pusta'); return; }
+  const team = STATE.teams.find(t => t.id == id);
+  if (!team) return;
+  team.name = newName;
+  save();
+  renderTeamsList();
+  toast('Nazwa drużyny zaktualizowana');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -4141,7 +4175,7 @@ function printK3PDF() {
   let body = '';
 
   cats.forEach(cat => {
-    const pairs = buildK3Pairs(cat);
+    const pairs = (_k3Tab === 's2' ? buildK3PairsS2(cat) : buildK3PairsS1(cat));
     if (!pairs.length) return;
     body += `<div class="cat-block">
       <h2>${cat} — Bieg 15×15m — PARY STARTOWE</h2>
@@ -4216,11 +4250,11 @@ function printK4StartLists() {
       body += `<div class="serie-block">
         <h3>${cat} — Seria ${si}${isLast?' (FINAŁOWA)':''} ${stStr?'— Start: <strong>'+stStr+'</strong>':''}</h3>
         <table>
-          <thead><tr><th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Pkt K1+K2+K3</th></tr></thead>
+          <thead><tr><th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Pkt K1+K2+K3</th><th style="width:90px">Czas (m:ss)</th></tr></thead>
           <tbody>
             ${serie.map((a,ai) => {
               const team = STATE.teams.find(t=>t.id==a.teamId);
-              return `<tr><td>${ai+1}</td><td>${a.name}</td><td>${team?.name||''}</td><td>${a.ptsK123}</td></tr>`;
+              return `<tr><td>${ai+1}</td><td>${a.name}</td><td>${team?.name||''}</td><td>${a.ptsK123}</td><td class="time-cell"></td></tr>`;
             }).join('')}
           </tbody>
         </table>
@@ -4238,12 +4272,115 @@ function printK4StartLists() {
       table{width:100%;border-collapse:collapse;margin-bottom:8px}
       th{background:#000;color:#fff;padding:5px 8px;font-size:11px;text-align:left}
       td{padding:5px 8px;border:1px solid #bbb}
+      .time-cell{width:90px;min-height:22px;border:1px solid #000 !important;background:#fff}
       .serie-block{page-break-inside:avoid;margin-bottom:16px}
       @media print{@page{size:A4;margin:12mm}}
     </style>
   </head><body>
     <h2>Listy startowe — Bieg 1000m</h2>
     <p style="font-size:11px;color:#555;margin-bottom:12px">${STATE.setup.name} · ${STATE.setup.place} · Start serii: co ${breakMin} min</p>
+    ${body}
+    <script>window.print();<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+// ════════════════════════════════════════════════════════════
+// PDF — K4 RESULTS
+// ════════════════════════════════════════════════════════════
+function printK4Results() {
+  const cats       = ['K36','K35','M36','M35'];
+  const startTimeStr = document.getElementById('k4-start-time')?.value || '09:00';
+  const breakMin   = parseInt(document.getElementById('k4-break-min')?.value) || 10;
+  let startTime    = parseK4StartTime(startTimeStr);
+  let seriesCount  = 0;
+  let body         = '';
+
+  cats.forEach(cat => {
+    const athletesInCat = STATE.athletes.filter(a => a.cat === cat);
+    if (!athletesInCat.length) return;
+
+    // Ta sama kolejność serii co w listach startowych
+    const withPts = athletesInCat.map(a => {
+      const p = getAthletePoints(a.id);
+      return {...a, pts: p, ptsK123: p.k1 + p.k2 + p.k3};
+    }).sort((a, b) => a.ptsK123 - b.ptsK123);
+
+    const rem = withPts.length % 10;
+    let idx = 0; let si = 0;
+    const allSeries = [];
+    if (rem > 0) { allSeries.push(withPts.slice(0, rem)); idx = rem; }
+    while (idx < withPts.length) { allSeries.push(withPts.slice(idx, idx + 10)); idx += 10; }
+
+    allSeries.forEach(serie => {
+      const stStr = startTime ? addMinutesToTime(startTime, seriesCount * breakMin) : null;
+      const isLast = si === allSeries.length - 1;
+      seriesCount++; si++;
+
+      // Posortuj serię wg czasu K4 (najlepszy na górze), bez wyniku na końcu
+      const withTime = serie.map(a => {
+        const r    = STATE.results[a.id] || {};
+        const disq = STATE.disq[a.id]    || {};
+        const dnf  = STATE.dnf[a.id]     || {};
+        const t    = getBestValidTime(r.k4, disq.k4, dnf.k4);
+        const isDnf = (dnf.k4 || [])[0];
+        return {...a, k4time: t, k4dnf: isDnf};
+      }).sort((a, b) => {
+        if (a.k4time && b.k4time) return a.k4time - b.k4time;
+        if (a.k4time) return -1;
+        if (b.k4time) return 1;
+        return 0;
+      });
+
+      body += `<div class="serie-block">
+        <h3>${cat} — Seria ${si}${isLast ? ' (FINAŁOWA)' : ''} ${stStr ? '— Start: <strong>' + stStr + '</strong>' : ''}</h3>
+        <table>
+          <thead><tr>
+            <th style="width:28px">#</th>
+            <th>Zawodnik</th>
+            <th>Drużyna</th>
+            <th style="width:80px">Czas 1000m</th>
+            <th style="width:60px">Pkt K4</th>
+            <th style="width:70px">Suma (K1–K4)</th>
+          </tr></thead>
+          <tbody>
+            ${withTime.map((a, ai) => {
+              const team   = STATE.teams.find(t => t.id == a.teamId);
+              const tStr   = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '—');
+              const k4pts  = a.pts.k4 || 0;
+              const total  = a.pts.total || 0;
+              const hasResult = a.k4time || a.k4dnf;
+              return `<tr${!hasResult ? ' style="color:#aaa"' : ''}>
+                <td>${ai + 1}</td>
+                <td><strong>${a.name}</strong></td>
+                <td style="font-size:11px">${team?.name || ''}</td>
+                <td style="font-family:monospace;font-weight:bold;font-size:13px">${tStr}</td>
+                <td style="text-align:center">${hasResult ? k4pts : '—'}</td>
+                <td style="text-align:center;font-weight:bold">${hasResult ? total : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    });
+  });
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Wyniki 1000m</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:16px}
+      h2{font-size:15px;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px}
+      h3{font-size:13px;margin:14px 0 5px}
+      table{width:100%;border-collapse:collapse;margin-bottom:8px}
+      th{background:#000;color:#fff;padding:5px 8px;font-size:11px;text-align:left}
+      td{padding:5px 8px;border:1px solid #bbb;vertical-align:middle}
+      .serie-block{page-break-inside:avoid;margin-bottom:18px}
+      @media print{@page{size:A4;margin:12mm}}
+    </style>
+  </head><body>
+    <h2>Wyniki — Bieg 1000m</h2>
+    <p style="font-size:11px;color:#555;margin-bottom:12px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
     ${body}
     <script>window.print();<\/script>
   </body></html>`);
@@ -4281,7 +4418,24 @@ function printResultsAll() {
       ${athletes.map(a=>{
         if(!a.pk) rank++;
         const team=STATE.teams.find(t=>t.id==a.teamId);
-        return `<tr${a.pk?' style="color:#888"':''}><td>${a.pk?'PK':rank}</td><td>${a.name}</td><td>${team?.name||''}</td><td>${a.pts.k1||0}</td><td>${a.pts.k2||0}</td><td>${a.pts.k3||0}</td><td>${a.pts.k4||0}</td><td><strong>${a.pts.total}</strong></td></tr>`;
+        // Pobierz najlepszy czas dla każdej konkurencji
+        function bestTime(ev, isK4) {
+          const r    = (STATE.results[a.id]||{})[ev] || [];
+          const disq = (STATE.disq[a.id]||{})[ev]   || [];
+          const dnf  = (STATE.dnf[a.id]||{})[ev]    || [];
+          const t = getBestValidTime(r, disq, dnf);
+          if (!t) return '—';
+          return isK4 ? secToTimeK4(t) : fmtSec1(t) + 's';
+        }
+        // K3: klucz 'k3', K3s2 nie liczy się do rankingu
+        function bestTimeK3() {
+          const r    = (STATE.results[a.id]||{}).k3 || [];
+          const disq = (STATE.disq[a.id]||{}).k3   || [];
+          const dnf  = (STATE.dnf[a.id]||{}).k3    || [];
+          const t = getBestValidTime(r, disq, dnf);
+          return t ? fmtSec1(t) + 's' : '—';
+        }
+        return `<tr${a.pk?' style="color:#888"':''}><td>${a.pk?'PK':rank}</td><td>${a.name}</td><td>${team?.name||''}</td><td>${bestTime('k1',false)}</td><td>${bestTime('k2',false)}</td><td>${bestTimeK3()}</td><td>${bestTime('k4',true)}</td><td><strong>${a.pts.total||0}</strong></td></tr>`;
       }).join('')}
       </tbody></table>`;
   });
