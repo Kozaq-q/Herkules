@@ -2833,8 +2833,8 @@ function _generateStartOrderSilent() {
   const teams = [...STATE.teams].sort((a,b) => a.num - b.num);
   STATE.athletes.forEach(a => a.startOrder = null);
   let order = 1;
-  [['K','K36'],['K','K35'],['M','M36'],['M','M35']].forEach(([gender, cat]) => {
-    teams.forEach(team => {
+  teams.forEach(team => {
+    [['K','K36'],['K','K35'],['M','M36'],['M','M35']].forEach(([gender, cat]) => {
       STATE.athletes.filter(a => a.teamId==team.id && a.gender===gender && a.cat===cat && !a.pk)
         .forEach(a => { a.startOrder = order++; });
     });
@@ -2846,9 +2846,9 @@ function generateStartOrder() {
   const teams = [...STATE.teams].sort((a,b) => a.num - b.num);
   STATE.athletes.forEach(a => a.startOrder = null);
 
-  // Kolejność: K36 → K35 → M36 → M35, drużyna po drużynie
-  [['K','K36'],['K','K35'],['M','M36'],['M','M35']].forEach(([gender, cat]) => {
-    teams.forEach(team => {
+  // Kolejność: drużyna po drużynie, w każdej drużynie K36→K35→M36→M35
+  teams.forEach(team => {
+    [['K','K36'],['K','K35'],['M','M36'],['M','M35']].forEach(([gender, cat]) => {
       STATE.athletes.filter(a => a.teamId==team.id && a.gender===gender && a.cat===cat && !a.pk)
         .forEach(a => { a.startOrder = order++; });
     });
