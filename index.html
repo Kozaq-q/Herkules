@@ -2754,20 +2754,15 @@ function renderAthletesList() {
     teamSel.value = cur;
   }
 
-  // Sortuj: mężczyźni wg startOrder, potem kobiety wg startOrder
-  // Zawodnicy bez startOrder (PK lub nowo dodani) na końcu swojej grupy
+  // Sortuj: drużyna po drużynie, w każdej drużynie M35→M36→K35→K36
+  const _catOrd = {'M35':0,'M36':1,'K35':2,'K36':3};
   let athletes = [...STATE.athletes].sort((a, b) => {
-    // Kolejność grup: K36→K35→M36→M35
-    const grpOrder = {'K36':0,'K35':1,'M36':2,'M35':3};
-    if (a.cat !== b.cat || a.gender !== b.gender) return (grpOrder[a.cat]??9) - (grpOrder[b.cat]??9);
-    // Potem startOrder (null na koniec)
-    if (a.startOrder !== null && b.startOrder !== null) return a.startOrder - b.startOrder;
-    if (a.startOrder !== null) return -1;
-    if (b.startOrder !== null) return 1;
-    // Obaj null — sortuj po drużynie, potem kategorii
     const tA = STATE.teams.find(t => t.id == a.teamId);
     const tB = STATE.teams.find(t => t.id == b.teamId);
-    return (tA?.num || 0) - (tB?.num || 0);
+    const numA = tA?.num ?? 999, numB = tB?.num ?? 999;
+    if (numA !== numB) return numA - numB;
+    // Ta sama drużyna — sortuj M35→M36→K35→K36
+    return (_catOrd[a.cat]??9) - (_catOrd[b.cat]??9);
   });
   if (filterTeam) athletes = athletes.filter(a => a.teamId == filterTeam);
   if (filterCat)  athletes = athletes.filter(a => a.cat  === filterCat);
@@ -2832,6 +2827,18 @@ function renderAthletesList() {
       </td>
     </tr>`;
   }).join('');
+}
+
+function _generateStartOrderSilent() {
+  const teams = [...STATE.teams].sort((a,b) => a.num - b.num);
+  STATE.athletes.forEach(a => a.startOrder = null);
+  let order = 1;
+  [['K','K36'],['K','K35'],['M','M36'],['M','M35']].forEach(([gender, cat]) => {
+    teams.forEach(team => {
+      STATE.athletes.filter(a => a.teamId==team.id && a.gender===gender && a.cat===cat && !a.pk)
+        .forEach(a => { a.startOrder = order++; });
+    });
+  });
 }
 
 function generateStartOrder() {
@@ -5603,6 +5610,8 @@ function applyStartList(rows) {
   });
 
   STATE.teams.sort((a, b) => a.num - b.num);
+  // Automatycznie przypisz kolejność startową po imporcie
+  _generateStartOrderSilent();
   save();
   renderSetup();
   renderTeamsList();
