@@ -2720,7 +2720,9 @@ function saveAthlete() {
     const a = STATE.athletes.find(x => x.id == STATE.editingAthleteId);
     Object.assign(a, {name, teamId, year, gender, cat, pk});
   } else {
-    STATE.athletes.push({ id: Date.now()+Math.random(), name, teamId, year, gender, cat, pk, startOrder:null });
+    const newAthlete = { id: Date.now()+Math.random(), name, teamId, year, gender, cat, pk, startOrder:null };
+    STATE.athletes.push(newAthlete);
+    assignStartOrderForNew(newAthlete);
   }
   save(); closeModal('modal-athlete'); renderAthletesList(); toast('Zawodnik zapisany');
 }
@@ -2752,7 +2754,17 @@ function renderAthletesList() {
     teamSel.value = cur;
   }
 
+  // Sortuj: mężczyźni wg startOrder, potem kobiety wg startOrder
+  // Zawodnicy bez startOrder (PK lub nowo dodani) na końcu swojej grupy
   let athletes = [...STATE.athletes].sort((a, b) => {
+    // Kolejność grup: K36→K35→M36→M35
+    const grpOrder = {'K36':0,'K35':1,'M36':2,'M35':3};
+    if (a.cat !== b.cat || a.gender !== b.gender) return (grpOrder[a.cat]??9) - (grpOrder[b.cat]??9);
+    // Potem startOrder (null na koniec)
+    if (a.startOrder !== null && b.startOrder !== null) return a.startOrder - b.startOrder;
+    if (a.startOrder !== null) return -1;
+    if (b.startOrder !== null) return 1;
+    // Obaj null — sortuj po drużynie, potem kategorii
     const tA = STATE.teams.find(t => t.id == a.teamId);
     const tB = STATE.teams.find(t => t.id == b.teamId);
     return (tA?.num || 0) - (tB?.num || 0);
@@ -2827,17 +2839,64 @@ function generateStartOrder() {
   const teams = [...STATE.teams].sort((a,b) => a.num - b.num);
   STATE.athletes.forEach(a => a.startOrder = null);
 
-  // PK nie mają numerów startowych (startOrder=null)
-  // Normalni zawodnicy: najpierw wszyscy mężczyźni (po drużynach), potem kobiety
-  teams.forEach(team => {
-    STATE.athletes.filter(a => a.teamId==team.id && a.gender==='M' && !a.pk)
-      .forEach(a => { a.startOrder = order++; });
-  });
-  teams.forEach(team => {
-    STATE.athletes.filter(a => a.teamId==team.id && a.gender==='K' && !a.pk)
-      .forEach(a => { a.startOrder = order++; });
+  // Kolejność: K36 → K35 → M36 → M35, drużyna po drużynie
+  [['K','K36'],['K','K35'],['M','M36'],['M','M35']].forEach(([gender, cat]) => {
+    teams.forEach(team => {
+      STATE.athletes.filter(a => a.teamId==team.id && a.gender===gender && a.cat===cat && !a.pk)
+        .forEach(a => { a.startOrder = order++; });
+    });
   });
   save(); renderAthletesList(); toast('Kolejność startów wygenerowana!');
+}
+
+// Przypisz startOrder nowemu zawodnikowi wg schematu drużyna→M35→M36 / K35→K36
+function assignStartOrderForNew(athlete) {
+  if (athlete.pk) return; // PK nie mają startOrder
+
+  const teams = [...STATE.teams].sort((a,b) => a.num - b.num);
+  const gender = athlete.gender;
+  const cat    = athlete.cat;
+  const teamId = athlete.teamId;
+
+  // Zbuduj pełną kolejność jak generateStartOrder, znajdź właściwe miejsce
+  // Kolejność grup: K36 → K35 → M36 → M35
+  const groupOrder = [['K','K36'],['K','K35'],['M','M36'],['M','M35']];
+  const myGroupIdx = groupOrder.findIndex(([g,c]) => g===gender && c===cat);
+
+  // Oblicz offset: ile zawodników startuje przed moją grupą
+  let offset = 0;
+  for (let i = 0; i < myGroupIdx; i++) {
+    const [g, c] = groupOrder[i];
+    offset += STATE.athletes.filter(a => a.gender===g && a.cat===c && !a.pk).length;
+  }
+
+  // Zbuduj listę mojej grupy z nowym zawodnikiem we właściwym miejscu (drużyna)
+  const ordered = [];
+  teams.forEach(t => {
+    STATE.athletes
+      .filter(a => a.teamId==t.id && a.gender===gender && a.cat===cat && !a.pk && a.id !== athlete.id)
+      .forEach(a => ordered.push(a));
+    if (t.id === teamId) ordered.push(athlete);
+  });
+
+  // Przypisz startOrder dla mojej grupy
+  ordered.forEach((a, i) => { a.startOrder = offset + i + 1; });
+
+  // Przelicz grupy po mojej (ich offsety się przesunęły o 1)
+  for (let i = myGroupIdx + 1; i < groupOrder.length; i++) {
+    const [g, c] = groupOrder[i];
+    let off = 0;
+    for (let j = 0; j < i; j++) {
+      const [gj, cj] = groupOrder[j];
+      off += STATE.athletes.filter(a => a.gender===gj && a.cat===cj && !a.pk).length;
+    }
+    let pos = 0;
+    teams.forEach(t => {
+      STATE.athletes
+        .filter(a => a.teamId==t.id && a.gender===g && a.cat===c && !a.pk)
+        .forEach(a => { a.startOrder = off + (pos++); });
+    });
+  }
 }
 
 // CSV import
