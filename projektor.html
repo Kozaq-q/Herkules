@@ -603,10 +603,13 @@ function getTeamScore(teamId) {
 // RENDER
 // ═══════════════════════════════════════════════════════════
 function render() {
+  renderFull();
+}
+
+function renderFull() {
   if (!STATE) return;
   const s = getProjectorSettings();
 
-  // Nagłówek — własny tytuł lub nazwa zawodów
   document.getElementById('proj-contest-name').textContent =
     (s.customTitle || STATE.setup?.name || '').toUpperCase();
 
@@ -614,11 +617,9 @@ function render() {
     document.documentElement.style.setProperty('--accent', STATE.setup.accentColor);
   }
 
-  // Pasek postępu — pokaż/ukryj
   const progressRow = document.getElementById('proj-progress');
   progressRow.style.display = s.showProgress !== false ? 'flex' : 'none';
 
-  // Kolumna drużynowa — pokaż/ukryj
   const body = document.getElementById('proj-body');
   const teamCol = document.getElementById('proj-team');
   if (s.showTeams) {
@@ -632,6 +633,66 @@ function render() {
   if (s.showProgress !== false) renderProgress();
   renderIndiv(s);
   if (s.showTeams) renderTeam(s);
+}
+
+// Miękki rerender — aktualizuje dane bez przerywania scrollu
+function renderSoft() {
+  if (!STATE) return;
+  const s = getProjectorSettings();
+
+  // Nagłówek i postęp — bezpiecznie
+  document.getElementById('proj-contest-name').textContent =
+    (s.customTitle || STATE.setup?.name || '').toUpperCase();
+  if (s.showProgress !== false) renderProgress();
+  if (s.showTeams) renderTeam(s);
+
+  // Sprawdź czy istniejące bloki kategorii pasują do bieżących ustawień
+  const allCats = ['M35','M36','K35','K36'];
+  const cats = allCats.filter(c => s.cats.includes(c));
+  const grid = document.getElementById('proj-cats-grid');
+  const existingBlocks = grid ? Array.from(grid.querySelectorAll('.cat-block[data-cat]')).map(b => b.dataset.cat) : [];
+
+  // Jeśli zestaw kategorii się zmienił — pełny rerender
+  const sameSet = cats.length === existingBlocks.length && cats.every((c,i) => c === existingBlocks[i]);
+  if (!sameSet) { renderFull(); return; }
+
+  // Aktualizuj tylko zawartość wierszy — bez dotykania tbody scrollujących kopii
+  cats.forEach(cat => {
+    const athletes = STATE.athletes.filter(a => a.cat === cat)
+      .map(a => ({ ...a, pts: getAthletePoints(a.id) }));
+    const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total);
+    const shown  = (s.topN && s.topN > 0) ? normal.slice(0, s.topN) : normal;
+
+    const newRowsHTML = shown.length ? buildRowsHTML(shown, s)
+      : `<tr><td colspan="2" style="text-align:center;color:var(--text3);font-size:12px;padding:12px">Brak wyników</td></tr>`;
+
+    const track = document.getElementById('scroll-track-' + cat);
+    if (!track) return;
+
+    const listA = track.querySelector('.scroll-list-a');
+    if (!listA) return;
+
+    // Sprawdź czy scroll jest aktywny (tbody ma więcej niż 1 kopię)
+    const tbody = listA.querySelector('tbody');
+    if (!tbody) return;
+
+    // Policz ile kopii jest (szacuj po liczbie wierszy vs oryginał)
+    // Jeśli scroll nie startował — pełny rerender
+    const isScrolling = !!_catScrollRAFs[cat];
+    if (!isScrolling) { renderFull(); return; }
+
+    // Zaktualizuj każdą kopię wierszy
+    // Kopiujemy nowy HTML do każdej sekcji odpowiadającej jednej kopii oryginału
+    // Prościej: nadpisz wszystkie wiersze w tbody powtarzając nowy HTML tyle razy co kopii
+    const allRows = tbody.querySelectorAll('tr');
+    const origRowCount = shown.length || 1;
+    // Ile kopii jest aktualnie?
+    const copies = Math.round(allRows.length / origRowCount);
+    if (copies < 1) { renderFull(); return; }
+
+    // Zastąp zawartość tbody nowymi kopiami — scroll kontynuuje od tej samej pozycji
+    tbody.innerHTML = Array(copies).fill(newRowsHTML).join('');
+  });
 }
 
 // ── PROGRESS ──────────────────────────────────────────────
@@ -667,17 +728,60 @@ function renderProgress() {
 // ── INDIV RANKING ─────────────────────────────────────────
 const _catScrollRAFs = {};
 
+function getAthleteTime(athleteId, ev) {
+  const r    = (STATE.results[athleteId] || {})[ev]  || [];
+  const disq = (STATE.disq[athleteId]    || {})[ev]  || [];
+  const dnf  = (STATE.dnf[athleteId]     || {})[ev]  || [];
+  // K3: sprawdź też k3s2
+  let t = null;
+  if (ev === 'k3') {
+    const r2    = (STATE.results[athleteId] || {}).k3s2 || [];
+    const disq2 = (STATE.disq[athleteId]    || {}).k3s2 || [];
+    const dnf2  = (STATE.dnf[athleteId]     || {}).k3s2 || [];
+    const t1 = getBestValidTime(r,    disq,  dnf);
+    const t2 = getBestValidTime(r2,   disq2, dnf2);
+    t = t1 && t2 ? Math.min(t1, t2) : (t1 || t2);
+  } else {
+    t = getBestValidTime(r, disq, dnf);
+  }
+  if (!t) return '—';
+  if (ev === 'k4') {
+    // format m:ss.s
+    const m  = Math.floor(t / 60);
+    const s  = (t % 60).toFixed(1).padStart(4, '0');
+    return m + ':' + s;
+  }
+  return t.toFixed(1) + 's';
+}
+
+function buildTheadHTML(s) {
+  const showK1 = !!s.showK1, showK2 = !!s.showK2, showK3 = !!s.showK3, showK4 = !!s.showK4;
+  if (!showK1 && !showK2 && !showK3 && !showK4) return '';
+  const thStyle = 'font-family:var(--font-m);font-size:9px;color:var(--text3);text-align:right;padding:2px 6px 2px 0;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap';
+  const cols = [
+    '<th style="width:26px"></th>',
+    '<th style="flex:1"></th>',
+    showK1 ? `<th style="width:50px;${thStyle}">Lina</th>` : '',
+    showK2 ? `<th style="width:50px;${thStyle}">BTS</th>` : '',
+    showK3 ? `<th style="width:50px;${thStyle}">15×15</th>` : '',
+    showK4 ? `<th style="width:56px;${thStyle}">1000m</th>` : '',
+    '<th style="width:46px"></th>',
+  ].join('');
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;flex-shrink:0"><thead><tr>${cols}</tr></thead></table>`;
+}
+
 function buildRowsHTML(shown, s) {
   const showK1 = !!s.showK1, showK2 = !!s.showK2, showK3 = !!s.showK3, showK4 = !!s.showK4;
   return shown.map((a, i) => {
     const rank  = i + 1;
     const rkCls = rank===1?'rk-1':rank===2?'rk-2':rank===3?'rk-3':'';
     const team  = STATE.teams.find(t => t.id == a.teamId);
+    const tdStyle = 'text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)';
     const extraCells = [
-      showK1 ? `<td style="width:36px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k1||'—'}</td>` : '',
-      showK2 ? `<td style="width:36px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k2||'—'}</td>` : '',
-      showK3 ? `<td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k3||'—'}</td>` : '',
-      showK4 ? `<td style="width:40px;text-align:right;padding-right:6px;font-family:var(--font-m);font-size:11px;color:var(--text2)">${a.pts.k4||'—'}</td>` : '',
+      showK1 ? `<td style="width:50px;${tdStyle}">${getAthleteTime(a.id,'k1')}</td>` : '',
+      showK2 ? `<td style="width:50px;${tdStyle}">${getAthleteTime(a.id,'k2')}</td>` : '',
+      showK3 ? `<td style="width:50px;${tdStyle}">${getAthleteTime(a.id,'k3')}</td>` : '',
+      showK4 ? `<td style="width:56px;${tdStyle}">${getAthleteTime(a.id,'k4')}</td>` : '',
     ].join('');
     return `<tr style="${i%2===1 ? 'background:rgba(255,255,255,0.03)' : ''}">
       <td style="width:26px"><span class="rk-pos ${rkCls}">${rank}</span></td>
@@ -777,11 +881,13 @@ function renderIndiv(s) {
     const rowsHTML = shown.length ? buildRowsHTML(shown, s) : emptyRow;
 
     if (doScroll && shown.length > 0) {
+      const theadHTML = buildTheadHTML(s);
       return `<div class="cat-block" data-cat="${cat}">
         <div class="cat-block-header cat-${cat}">
           <span class="cat-block-title cat-color-${cat}">${cat}</span>
           <span class="cat-count">${normal.length} zaw.</span>
         </div>
+        ${theadHTML}
         <div class="rank-table-wrap">
           <div class="rank-table-scroll-viewport">
             <div class="rank-table-scroll-track" id="scroll-track-${cat}">
@@ -794,11 +900,13 @@ function renderIndiv(s) {
     }
 
     // Tryb statyczny
+    const theadHTMLstatic = buildTheadHTML(s);
     return `<div class="cat-block" data-cat="${cat}">
       <div class="cat-block-header cat-${cat}">
         <span class="cat-block-title cat-color-${cat}">${cat}</span>
         <span class="cat-count">${normal.length} zaw.</span>
       </div>
+      ${theadHTMLstatic}
       <div class="rank-table-wrap">
         <div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none">
           <table style="width:100%;border-collapse:collapse;table-layout:fixed">
@@ -897,7 +1005,7 @@ function startRealtimeSync() {
       (payload) => {
         try {
           STATE = JSON.parse(payload.new.state_json);
-          render();
+          renderSoft();
           setSyncStatus(true);
         } catch(e) { console.error('Realtime parse error:', e); }
       }
@@ -914,7 +1022,7 @@ let _pollTimer = null;
 function startPolling() {
   _pollTimer = setInterval(async () => {
     const ok = await loadState();
-    if (ok) render();
+    if (ok) renderSoft();
   }, 15000);
 }
 
