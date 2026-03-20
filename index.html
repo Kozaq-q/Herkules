@@ -1858,7 +1858,7 @@ function getSupabase() {
 // ════════════════════════════════════════════════════════════
 // MULTI-SLOT PERSISTENCE (Supabase + localStorage fallback)
 // ════════════════════════════════════════════════════════════
-let ACTIVE_SLOT_ID = SLOT_KEY;
+let ACTIVE_SLOT_ID = localStorage.getItem('zawody_active_slot') || SLOT_KEY;
 
 function _slotKey(id) { return 'zawody_slot_' + id; }
 function _slotsIndexKey() { return 'zawody_slots_index'; }
@@ -1908,6 +1908,7 @@ function deleteSlot(id) {
 
 function switchToSlot(id) {
   ACTIVE_SLOT_ID = id;
+  localStorage.setItem('zawody_active_slot', id);
   load();
   // Ukryj welcome screen jeśli otwarty
   const ws = document.getElementById('welcome-screen');
@@ -4181,60 +4182,75 @@ function renderCompetitionProgress() {
 function printKStartList(ev) {
   const label = ev === 'k1' ? 'Wspinanie na linę' : 'BTS (Tor przeszkód)';
   const cats  = ['K36','K35','M36','M35'];
-  const participants = getSeries2Participants(ev);
-  let body = '';
+  let startBody = '';   // lista dla zawodników
+  let judgeBody = '';   // lista sędziowska
 
   cats.forEach(cat => {
-    // Seria 1 — kolejność startOrder
-    const s1 = getOrderedAthletes(ev, '').filter(a => a.cat === cat);
-    if (!s1.length) return;
+    const athletes = getOrderedAthletes(ev, '').filter(a => a.cat === cat);
+    if (!athletes.length) return;
 
-    body += `<div class="serie-block">
-      <h3><span class="cat-lbl cat-${cat}">${cat}</span> — Seria 1</h3>
+    // ── Lista dla zawodników — bez rubryk na czas ──
+    startBody += `<div class="cat-block">
+      <h3><span class="cat-lbl cat-${cat}">${cat}</span></h3>
       <table>
-        <thead><tr><th>#</th><th style="width:90px">Czas (ss.s)</th><th>Zawodnik</th><th>Drużyna</th></tr></thead>
-        <tbody>${s1.map((a,i) => {
+        <thead><tr><th style="width:30px">#</th><th>Zawodnik</th><th>Drużyna</th></tr></thead>
+        <tbody>${athletes.map((a,i) => {
           const team = STATE.teams.find(t => t.id == a.teamId);
-          return `<tr><td>${i+1}</td><td class="time-cell"></td><td>${a.name}</td><td style="font-size:11px">${team?.name||''}</td></tr>`;
+          return `<tr><td>${i+1}</td><td>${a.name}</td><td style="font-size:11px">${team?.name||''}</td></tr>`;
         }).join('')}</tbody>
       </table>
     </div>`;
 
-    // Seria 2 — tylko startujący, ta sama kolejność
-    const s2 = s1.filter(a => participants[a.id] !== false);
-    if (!s2.length) return;
-    body += `<div class="serie-block">
-      <h3><span class="cat-lbl cat-${cat}">${cat}</span> — Seria 2</h3>
+    // ── Lista sędziowska — rubryki S1 i S2 na lewo od danych ──
+    judgeBody += `<div class="cat-block">
+      <h3><span class="cat-lbl cat-${cat}">${cat}</span></h3>
       <table>
-        <thead><tr><th>#</th><th style="width:90px">Czas (ss.s)</th><th>Zawodnik</th><th>Drużyna</th></tr></thead>
-        <tbody>${s2.map((a,i) => {
+        <thead><tr>
+          <th style="width:30px">#</th>
+          <th style="width:72px">S1 (ss.s)</th>
+          <th style="width:72px">S2 (ss.s)</th>
+          <th>Zawodnik</th>
+          <th>Drużyna</th>
+        </tr></thead>
+        <tbody>${athletes.map((a,i) => {
           const team = STATE.teams.find(t => t.id == a.teamId);
-          return `<tr><td>${i+1}</td><td class="time-cell"></td><td>${a.name}</td><td style="font-size:11px">${team?.name||''}</td></tr>`;
+          return `<tr>
+            <td>${i+1}</td>
+            <td class="time-cell"></td>
+            <td class="time-cell"></td>
+            <td>${a.name}</td>
+            <td style="font-size:11px">${team?.name||''}</td>
+          </tr>`;
         }).join('')}</tbody>
       </table>
     </div>`;
   });
 
-  const win = window.open('','_blank');
+  const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Listy startowe — ${label}</title>
     <style>
-      body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:16px}
+      body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:14px}
       h2{font-size:15px;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px}
-      h3{font-size:13px;margin:12px 0 5px;display:flex;align-items:center;gap:8px}
-      table{width:100%;border-collapse:collapse;margin-bottom:8px}
+      h3{font-size:13px;margin:10px 0 4px;display:flex;align-items:center;gap:8px}
+      table{width:100%;border-collapse:collapse;margin-bottom:10px}
       th{background:#000;color:#fff;padding:5px 8px;font-size:11px;text-align:left}
-      td{padding:5px 8px;border:1px solid #bbb}
-      .time-cell{width:90px;min-height:22px;border:1px solid #000 !important;background:#fff}
-      .serie-block{page-break-inside:avoid;margin-bottom:14px}
+      td{padding:5px 8px;border:1px solid #bbb;vertical-align:middle}
+      .time-cell{width:72px;min-height:20px;border:1.5px solid #000 !important;background:#fff}
+      .cat-block{page-break-inside:avoid;margin-bottom:12px}
       .cat-lbl{display:inline-block;padding:1px 7px;border-radius:3px;font-weight:bold;font-size:12px;color:#fff}
       .cat-M35{background:#5b9bd5}.cat-M36{background:#7b6fd4}.cat-K35{background:#d45b9b}.cat-K36{background:#d4845b}
-      @media print{@page{size:A4;margin:12mm}}
+      .page-break{page-break-before:always}
+      @media print{@page{size:A4;margin:10mm}}
     </style>
   </head><body>
-    <h2>Listy startowe — ${label}</h2>
-    <p style="font-size:11px;color:#555;margin-bottom:12px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
-    ${body}
+    <h2>Lista startowa — ${label}</h2>
+    <p style="font-size:10px;color:#555;margin-bottom:10px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
+    ${startBody}
+    <div class="page-break"></div>
+    <h2>Lista sędziowska — ${label}</h2>
+    <p style="font-size:10px;color:#555;margin-bottom:10px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
+    ${judgeBody}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
@@ -5131,9 +5147,8 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   // Load state (existing or freshly bootstrapped)
   load();
 
-  // ── ZAWSZE zastąp tabele punktowe pełnymi danymi z Excela ──
+  // ── ZAWSZE zastąp tabele punktowe pełnymi danymi z Excela (bez save — to tylko metadane) ──
   STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
-  save();
   // ── koniec zastępowania tabel ──
 
   // ── ZAWSZE wstrzyknij wyniki K3 z Excela (nawet jeśli STATE już istnieje) ──
@@ -5190,15 +5205,14 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
       STATE.results[aid].k4 = [tsec];
     }
   }
-  save();
-  console.log('K4 z Excela wstrzyknięto dla 93 zawodników.');
+  // save() tylko jeśli cokolwiek wstrzyknięto (nie rób save na każdym starcie)
+  console.log('K4 sprawdzono (dane z Excela jako fallback).');
   // ── koniec wstrzykiwania K4 ──
 
   // ── Wstrzyknij K1 Turskiego (aid=35) ──
   if (!STATE.results['35']) STATE.results['35'] = {};
   if (!STATE.results['35'].k1 || !STATE.results['35'].k1.some(t => t !== null)) {
     STATE.results['35'].k1 = [7.5];
-    save();
   }
   // ── koniec K1 Turskiego ──
 
