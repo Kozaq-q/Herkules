@@ -4289,7 +4289,7 @@ function printKJudgeList(ev) {
 }
 
 function printKResults(ev) {
-  const label = ev === 'k1' ? 'Wspinanie na linę' : 'BTS (Tor przeszkód)';
+  const label = ev === 'k1' ? 'Wspinanie na linę (K1)' : 'BTS — Tor przeszkód (K2)';
   const cats  = ['K36','K35','M36','M35'];
   let body = '';
 
@@ -4306,17 +4306,21 @@ function printKResults(ev) {
   cats.forEach(cat => {
     const all = getOrderedAthletes(ev, '').filter(a => a.cat === cat);
     if (!all.length) return;
+    const catNames = {M35:'Mężczyźni 35+',M36:'Mężczyźni 36+',K35:'Kobiety 35+',K36:'Kobiety 36+'};
 
-    body += `<div class="cat-block">
-      <h3><span class="cat-lbl cat-${cat}">${cat}</span></h3>
+    body += `<div class="section">
+      <div class="section-title">
+        <span class="cat-pill cat-${cat}">${cat}</span>
+        <span>${catNames[cat]||cat}</span>
+      </div>
       <table>
         <thead><tr>
-          <th style="width:28px">#</th>
+          <th style="width:32px">#</th>
           <th>Zawodnik</th>
-          <th>Drużyna</th>
-          <th style="width:70px">Czas S1</th>
-          <th style="width:70px">Czas S2</th>
-          <th style="width:60px">Pkt (best)</th>
+          <th style="width:130px">Drużyna</th>
+          <th style="width:74px;text-align:center">Seria 1</th>
+          <th style="width:74px;text-align:center">Seria 2</th>
+          <th style="width:64px;text-align:center">Pkt</th>
         </tr></thead>
         <tbody>${all.map((a,i) => {
           const team  = STATE.teams.find(t => t.id == a.teamId);
@@ -4328,22 +4332,18 @@ function printKResults(ev) {
           const bestT = getBestValidTime(r, disq, dnf);
           const pts   = bestT ? getPoints(a.cat, ev, bestT) : 0;
           const hasAny = t1 !== '—' || t2 !== '—';
-          // Pogrub lepszy wynik
-          const better = (() => {
-            const tv1 = (!dnf[0] && !disq[0]) ? r[0] : null;
-            const tv2 = (!dnf[1] && !disq[1]) ? r[1] : null;
-            if (tv1 && tv2) return tv1 <= tv2 ? 1 : 2;
-            return tv1 ? 1 : (tv2 ? 2 : 0);
-          })();
-          const s1style = better===1 ? 'font-family:monospace;font-weight:bold' : 'font-family:monospace;color:#666';
-          const s2style = better===2 ? 'font-family:monospace;font-weight:bold' : 'font-family:monospace;color:#666';
-          return `<tr${!hasAny?' style="color:#bbb"':''}>
-            <td>${i+1}</td>
-            <td>${a.name}</td>
-            <td style="font-size:11px">${team?.name||''}</td>
-            <td style="${s1style}">${t1}</td>
-            <td style="${s2style}">${t2}</td>
-            <td style="text-align:center;font-weight:bold">${hasAny ? pts : '—'}</td>
+          const tv1 = (!dnf[0] && !disq[0]) ? r[0] : null;
+          const tv2 = (!dnf[1] && !disq[1]) ? r[1] : null;
+          const better = tv1 && tv2 ? (tv1<=tv2?1:2) : (tv1?1:(tv2?2:0));
+          const rk = i+1;
+          const rkCls = rk===1?'rank rank-1':(rk===2?'rank rank-2':(rk===3?'rank rank-3':'rank'));
+          return `<tr class="${!hasAny?'no-result':''}">
+            <td class="${rkCls}">${rk}</td>
+            <td><span class="name">${a.name}</span><br><span class="team">${team?.name||''}</span></td>
+            <td class="team">${team?.name||''}</td>
+            <td style="text-align:center" class="${better===1?'time-best':'time-dim'}">${t1}</td>
+            <td style="text-align:center" class="${better===2?'time-best':'time-dim'}">${t2}</td>
+            <td class="pts">${hasAny?pts:'—'}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>
@@ -4352,23 +4352,13 @@ function printKResults(ev) {
 
   const win = window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Wyniki — ${label}</title>
-    <style>
-      body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:14px}
-      h2{font-size:15px;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px}
-      h3{font-size:13px;margin:10px 0 4px;display:flex;align-items:center;gap:8px}
-      table{width:100%;border-collapse:collapse;margin-bottom:10px}
-      th{background:#000;color:#fff;padding:5px 8px;font-size:11px;text-align:left}
-      td{padding:4px 7px;border:1px solid #bbb;vertical-align:middle}
-      .cat-block{page-break-inside:avoid;margin-bottom:14px}
-      .cat-lbl{display:inline-block;padding:1px 6px;border-radius:3px;font-weight:bold;font-size:10px;color:#fff}
-      .cat-M35{background:#5b9bd5}.cat-M36{background:#7b6fd4}.cat-K35{background:#d45b9b}.cat-K36{background:#d4845b}
-      @media print{@page{size:A4;margin:10mm}}
-    </style>
+    <title>Wyniki — \${label}</title><style>${RESULTS_CSS}</style>
   </head><body>
-    <h2>Wyniki — ${label}</h2>
-    <p style="font-size:10px;color:#555;margin-bottom:10px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
-    ${body}
+    <div class="doc-header">
+      <div class="doc-title">Wyniki — \${label}</div>
+      <div class="doc-meta">\${STATE.setup.name} · \${STATE.setup.place} · \${STATE.setup.date}</div>
+    </div>
+    \${body}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
@@ -4662,68 +4652,67 @@ function printK4Results() {
   let startTime    = parseK4StartTime(startTimeStr);
   let seriesCount  = 0;
   let body         = '';
+  const catNames   = {M35:'Mężczyźni 35+',M36:'Mężczyźni 36+',K35:'Kobiety 35+',K36:'Kobiety 36+'};
 
   cats.forEach(cat => {
     const athletesInCat = STATE.athletes.filter(a => a.cat === cat);
     if (!athletesInCat.length) return;
-
-    // Ta sama kolejność serii co w listach startowych
     const withPts = athletesInCat.map(a => {
       const p = getAthletePoints(a.id);
-      return {...a, pts: p, ptsK123: p.k1 + p.k2 + p.k3};
-    }).sort((a, b) => a.ptsK123 - b.ptsK123);
+      return {...a, pts: p, ptsK123: p.k1+p.k2+p.k3};
+    }).sort((a,b) => a.ptsK123 - b.ptsK123);
 
     const rem = withPts.length % 10;
     let idx = 0; let si = 0;
     const allSeries = [];
-    if (rem > 0) { allSeries.push(withPts.slice(0, rem)); idx = rem; }
-    while (idx < withPts.length) { allSeries.push(withPts.slice(idx, idx + 10)); idx += 10; }
+    if (rem > 0) { allSeries.push(withPts.slice(0,rem)); idx=rem; }
+    while (idx < withPts.length) { allSeries.push(withPts.slice(idx,idx+10)); idx+=10; }
 
     allSeries.forEach(serie => {
-      const stStr = startTime ? addMinutesToTime(startTime, seriesCount * breakMin) : null;
-      const isLast = si === allSeries.length - 1;
+      const stStr  = startTime ? addMinutesToTime(startTime, seriesCount*breakMin) : null;
+      const isLast = si === allSeries.length-1;
       seriesCount++; si++;
 
-      // Posortuj serię wg czasu K4 (najlepszy na górze), bez wyniku na końcu
       const withTime = serie.map(a => {
-        const r    = STATE.results[a.id] || {};
-        const disq = STATE.disq[a.id]    || {};
-        const dnf  = STATE.dnf[a.id]     || {};
-        const t    = getBestValidTime(r.k4, disq.k4, dnf.k4);
-        const isDnf = (dnf.k4 || [])[0];
-        return {...a, k4time: t, k4dnf: isDnf};
-      }).sort((a, b) => {
+        const r   = STATE.results[a.id] || {};
+        const disq= STATE.disq[a.id]    || {};
+        const dnf = STATE.dnf[a.id]     || {};
+        const t   = getBestValidTime(r.k4, disq.k4, dnf.k4);
+        return {...a, k4time:t, k4dnf:(dnf.k4||[])[0]};
+      }).sort((a,b) => {
         if (a.k4time && b.k4time) return a.k4time - b.k4time;
-        if (a.k4time) return -1;
-        if (b.k4time) return 1;
-        return 0;
+        return a.k4time ? -1 : 1;
       });
 
-      body += `<div class="serie-block">
-        <h3>${cat} — Seria ${si}${isLast ? ' (FINAŁOWA)' : ''} ${stStr ? '— Start: <strong>' + stStr + '</strong>' : ''}</h3>
+      body += `<div class="section">
+        <div class="section-title">
+          <span class="cat-pill cat-\${cat}">\${cat}</span>
+          <span>\${catNames[cat]||cat}</span>
+          <span class="serie-label">Seria \${si}\${isLast?' — FINAŁOWA':''}\${stStr?' · Start: '+stStr:''}</span>
+        </div>
         <table>
           <thead><tr>
-            <th style="width:28px">#</th>
+            <th style="width:32px">#</th>
             <th>Zawodnik</th>
-            <th>Drużyna</th>
-            <th style="width:80px">Czas 1000m</th>
-            <th style="width:60px">Pkt K4</th>
-            <th style="width:70px">Suma (K1–K4)</th>
+            <th style="width:130px">Drużyna</th>
+            <th style="width:80px;text-align:center">Czas 1000m</th>
+            <th style="width:60px;text-align:center">Pkt K4</th>
+            <th style="width:70px;text-align:center">Suma</th>
           </tr></thead>
           <tbody>
-            ${withTime.map((a, ai) => {
-              const team   = STATE.teams.find(t => t.id == a.teamId);
-              const tStr   = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '—');
-              const k4pts  = a.pts.k4 || 0;
-              const total  = a.pts.total || 0;
+            \${withTime.map((a,ai) => {
+              const team = STATE.teams.find(t => t.id==a.teamId);
+              const tStr = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '—');
               const hasResult = a.k4time || a.k4dnf;
-              return `<tr${!hasResult ? ' style="color:#aaa"' : ''}>
-                <td>${ai + 1}</td>
-                <td><strong>${a.name}</strong></td>
-                <td style="font-size:11px">${team?.name || ''}</td>
-                <td style="font-family:monospace;font-weight:bold;font-size:13px">${tStr}</td>
-                <td style="text-align:center">${hasResult ? k4pts : '—'}</td>
-                <td style="text-align:center;font-weight:bold">${hasResult ? total : '—'}</td>
+              const rk = ai+1;
+              const rkCls = rk===1?'rank rank-1':(rk===2?'rank rank-2':(rk===3?'rank rank-3':'rank'));
+              return `<tr class="\${!hasResult?'no-result':''}">
+                <td class="\${rkCls}">\${rk}</td>
+                <td><span class="name">\${a.name}</span></td>
+                <td class="team">\${team?.name||''}</td>
+                <td style="text-align:center" class="\${hasResult?'time-best':'time-dim'}">\${tStr}</td>
+                <td class="pts">\${hasResult?a.pts.k4:''}</td>
+                <td class="pts-total">\${hasResult?a.pts.total:''}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -4732,23 +4721,15 @@ function printK4Results() {
     });
   });
 
-  const win = window.open('', '_blank');
+  const win = window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Wyniki 1000m</title>
-    <style>
-      body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:16px}
-      h2{font-size:15px;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px}
-      h3{font-size:13px;margin:14px 0 5px}
-      table{width:100%;border-collapse:collapse;margin-bottom:8px}
-      th{background:#000;color:#fff;padding:5px 8px;font-size:11px;text-align:left}
-      td{padding:5px 8px;border:1px solid #bbb;vertical-align:middle}
-      .serie-block{page-break-inside:avoid;margin-bottom:18px}
-      @media print{@page{size:A4;margin:12mm}}
-    </style>
+    <title>Wyniki — Bieg 1000m</title><style>${RESULTS_CSS}</style>
   </head><body>
-    <h2>Wyniki — Bieg 1000m</h2>
-    <p style="font-size:11px;color:#555;margin-bottom:12px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
-    ${body}
+    <div class="doc-header">
+      <div class="doc-title">Wyniki — Bieg na 1000m</div>
+      <div class="doc-meta">\${STATE.setup.name} · \${STATE.setup.place} · \${STATE.setup.date}</div>
+    </div>
+    \${body}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
@@ -4759,70 +4740,101 @@ function printK4Results() {
 // ════════════════════════════════════════════════════════════
 function printResultsAll() {
   let body = '';
+  const catNames = {M35:'Mężczyźni 35+',M36:'Mężczyźni 36+',K35:'Kobiety 35+',K36:'Kobiety 36+'};
 
-  // Team ranking
+  // Klasyfikacja drużynowa
   const teams = STATE.teams.map(team => {
-    const athletes = STATE.athletes.filter(a=>a.teamId==team.id && !a.pk);
-    const total = athletes.reduce((sum,a)=>sum+getAthletePoints(a.id).total,0);
-    return {...team, total};
+    const ath = STATE.athletes.filter(a=>a.teamId==team.id && !a.pk);
+    return {...team, total: ath.reduce((s,a)=>s+getAthletePoints(a.id).total,0)};
   }).sort((a,b)=>b.total-a.total);
 
-  body += `<h2>KLASYFIKACJA DRUŻYNOWA</h2>
-    <table><thead><tr><th>#</th><th>Drużyna</th><th>Punkty</th></tr></thead><tbody>
-    ${teams.map((t,i)=>`<tr><td>${i+1}</td><td>${t.name}</td><td>${t.total}</td></tr>`).join('')}
-    </tbody></table>`;
+  body += `<div class="section">
+    <div class="section-title">Klasyfikacja drużynowa</div>
+    <table>
+      <thead><tr><th style="width:32px">#</th><th>Drużyna</th><th style="width:80px;text-align:center">Punkty</th></tr></thead>
+      <tbody>\${teams.map((t,i) => {
+        const rk=i+1;
+        const rkCls=rk===1?'rank rank-1':(rk===2?'rank rank-2':(rk===3?'rank rank-3':'rank'));
+        return `<tr class="team-rank-row">
+          <td class="\${rkCls}">\${rk}</td>
+          <td><strong>\${t.name}</strong></td>
+          <td class="pts-total">\${t.total}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  </div>`;
 
   ['M35','M36','K35','K36'].forEach(cat => {
     let athletes = STATE.athletes.filter(a=>a.cat===cat)
-      .map(a=>({...a,pts:getAthletePoints(a.id)}));
+      .map(a=>({...a, pts:getAthletePoints(a.id)}));
     const normal = athletes.filter(a=>!a.pk).sort((a,b)=>b.pts.total-a.pts.total);
     const pk     = athletes.filter(a=>a.pk).sort((a,b)=>b.pts.total-a.pts.total);
     athletes = [...normal, ...pk];
     if (!athletes.length) return;
-    let rank=0;
-    body += `<h2>KLASYFIKACJA ${cat}</h2>
-      <table><thead><tr><th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Lina</th><th>BTS</th><th>15×15</th><th>1000m</th><th>SUMA</th></tr></thead><tbody>
-      ${athletes.map(a=>{
-        if(!a.pk) rank++;
-        const team=STATE.teams.find(t=>t.id==a.teamId);
-        // Pobierz najlepszy czas dla każdej konkurencji
-        function bestTime(ev, isK4) {
-          const r    = (STATE.results[a.id]||{})[ev] || [];
-          const disq = (STATE.disq[a.id]||{})[ev]   || [];
-          const dnf  = (STATE.dnf[a.id]||{})[ev]    || [];
-          const t = getBestValidTime(r, disq, dnf);
-          if (!t) return '—';
-          return isK4 ? secToTimeK4(t) : fmtSec1(t) + 's';
-        }
-        // K3: klucz 'k3', K3s2 nie liczy się do rankingu
-        function bestTimeK3() {
-          const r    = (STATE.results[a.id]||{}).k3 || [];
-          const disq = (STATE.disq[a.id]||{}).k3   || [];
-          const dnf  = (STATE.dnf[a.id]||{}).k3    || [];
-          const t = getBestValidTime(r, disq, dnf);
-          return t ? fmtSec1(t) + 's' : '—';
-        }
-        return `<tr${a.pk?' style="color:#888"':''}><td>${a.pk?'PK':rank}</td><td>${a.name}</td><td>${team?.name||''}</td><td>${bestTime('k1',false)}</td><td>${bestTime('k2',false)}</td><td>${bestTimeK3()}</td><td>${bestTime('k4',true)}</td><td><strong>${a.pts.total||0}</strong></td></tr>`;
-      }).join('')}
-      </tbody></table>`;
+    let rank = 0;
+
+    function bestTime(aid, ev, isK4) {
+      const r   = (STATE.results[aid]||{})[ev]  || [];
+      const disq= (STATE.disq[aid]  ||{})[ev]   || [];
+      const dnf = (STATE.dnf[aid]   ||{})[ev]   || [];
+      const t = getBestValidTime(r, disq, dnf);
+      if (!t) return '—';
+      return isK4 ? secToTimeK4(t) : fmtSec1(t)+'s';
+    }
+    function bestTimeK3(aid) {
+      const r   = (STATE.results[aid]||{}).k3    || [];
+      const disq= (STATE.disq[aid]  ||{}).k3    || [];
+      const dnf = (STATE.dnf[aid]   ||{}).k3    || [];
+      const t = getBestValidTime(r, disq, dnf);
+      return t ? fmtSec1(t)+'s' : '—';
+    }
+
+    body += `<div class="section">
+      <div class="section-title">
+        <span class="cat-pill cat-\${cat}">\${cat}</span>
+        <span>\${catNames[cat]||cat}</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th style="width:32px">#</th>
+          <th>Zawodnik</th>
+          <th style="width:110px">Drużyna</th>
+          <th style="width:62px;text-align:center">Lina</th>
+          <th style="width:62px;text-align:center">BTS</th>
+          <th style="width:62px;text-align:center">15×15</th>
+          <th style="width:66px;text-align:center">1000m</th>
+          <th style="width:54px;text-align:center">Suma</th>
+        </tr></thead>
+        <tbody>\${athletes.map(a => {
+          if (!a.pk) rank++;
+          const team = STATE.teams.find(t=>t.id==a.teamId);
+          const rk = a.pk?'PK':rank;
+          const rkCls = rank===1?'rank rank-1':(rank===2?'rank rank-2':(rank===3?'rank rank-3':'rank'));
+          const medalCls = !a.pk&&rank===1?'medal-1':(!a.pk&&rank===2?'medal-2':(!a.pk&&rank===3?'medal-3':''));
+          return `<tr\${a.pk?' class="no-result"':''}>
+            <td class="\${a.pk?'rank':rkCls}">\${rk}</td>
+            <td><span class="name \${medalCls}">\${a.name}</span></td>
+            <td class="team">\${team?.name||''}</td>
+            <td class="time" style="text-align:center">\${bestTime(a.id,'k1',false)}</td>
+            <td class="time" style="text-align:center">\${bestTime(a.id,'k2',false)}</td>
+            <td class="time" style="text-align:center">\${bestTimeK3(a.id)}</td>
+            <td class="time" style="text-align:center">\${bestTime(a.id,'k4',true)}</td>
+            <td class="pts-total">\${a.pts.total||0}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`;
   });
 
   const win = window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Wyniki</title>
-    <style>
-      body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:16px}
-      h1{font-size:16px;margin-bottom:4px}
-      h2{font-size:14px;font-weight:bold;border-bottom:2px solid #000;padding-bottom:3px;margin:16px 0 6px}
-      table{width:100%;border-collapse:collapse;margin-bottom:12px}
-      th{background:#000;color:#fff;padding:5px 8px;font-size:11px;text-align:left}
-      td{padding:5px 8px;border:1px solid #ccc}
-      @media print{@page{size:A4;margin:12mm}}
-    </style>
+    <title>Wyniki zawodów</title><style>${RESULTS_CSS}</style>
   </head><body>
-    <h1>${STATE.setup.name||'Zawody'}</h1>
-    <p style="font-size:11px;color:#555;margin-bottom:12px">${STATE.setup.place} · ${STATE.setup.date}</p>
-    ${body}
+    <div class="doc-header">
+      <div class="doc-title">\${STATE.setup.name||'Wyniki zawodów'}</div>
+      <div class="doc-meta">\${STATE.setup.place} · \${STATE.setup.date}</div>
+    </div>
+    \${body}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
