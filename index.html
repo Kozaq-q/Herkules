@@ -4352,13 +4352,13 @@ function printKResults(ev) {
 
   const win = window.open('','_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Wyniki — \${label}</title><style>${RESULTS_CSS}</style>
+    <title>Wyniki — ${label}</title><style>${RESULTS_CSS}</style>
   </head><body>
     <div class="doc-header">
-      <div class="doc-title">Wyniki — \${label}</div>
-      <div class="doc-meta">\${STATE.setup.name} · \${STATE.setup.place} · \${STATE.setup.date}</div>
+      <div class="doc-title">Wyniki — ${label}</div>
+      <div class="doc-meta">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</div>
     </div>
-    \${body}
+    ${body}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
@@ -4686,9 +4686,9 @@ function printK4Results() {
 
       body += `<div class="section">
         <div class="section-title">
-          <span class="cat-pill cat-\${cat}">\${cat}</span>
-          <span>\${catNames[cat]||cat}</span>
-          <span class="serie-label">Seria \${si}\${isLast?' — FINAŁOWA':''}\${stStr?' · Start: '+stStr:''}</span>
+          <span class="cat-pill cat-${cat}">${cat}</span>
+          <span>${catNames[cat]||cat}</span>
+          <span class="serie-label">Seria ${si}${isLast?' — FINAŁOWA':''}${stStr?' · Start: '+stStr:''}</span>
         </div>
         <table>
           <thead><tr>
@@ -4700,19 +4700,19 @@ function printK4Results() {
             <th style="width:70px;text-align:center">Suma</th>
           </tr></thead>
           <tbody>
-            \${withTime.map((a,ai) => {
+            ${withTime.map((a,ai) => {
               const team = STATE.teams.find(t => t.id==a.teamId);
               const tStr = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '—');
               const hasResult = a.k4time || a.k4dnf;
               const rk = ai+1;
               const rkCls = rk===1?'rank rank-1':(rk===2?'rank rank-2':(rk===3?'rank rank-3':'rank'));
-              return `<tr class="\${!hasResult?'no-result':''}">
-                <td class="\${rkCls}">\${rk}</td>
-                <td><span class="name">\${a.name}</span></td>
-                <td class="team">\${team?.name||''}</td>
-                <td style="text-align:center" class="\${hasResult?'time-best':'time-dim'}">\${tStr}</td>
-                <td class="pts">\${hasResult?a.pts.k4:''}</td>
-                <td class="pts-total">\${hasResult?a.pts.total:''}</td>
+              return `<tr class="${!hasResult?'no-result':''}">
+                <td class="${rkCls}">${rk}</td>
+                <td><span class="name">${a.name}</span></td>
+                <td class="team">${team?.name||''}</td>
+                <td style="text-align:center" class="${hasResult?'time-best':'time-dim'}">${tStr}</td>
+                <td class="pts">${hasResult?a.pts.k4:''}</td>
+                <td class="pts-total">${hasResult?a.pts.total:''}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -4727,9 +4727,9 @@ function printK4Results() {
   </head><body>
     <div class="doc-header">
       <div class="doc-title">Wyniki — Bieg na 1000m</div>
-      <div class="doc-meta">\${STATE.setup.name} · \${STATE.setup.place} · \${STATE.setup.date}</div>
+      <div class="doc-meta">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</div>
     </div>
-    \${body}
+    ${body}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
@@ -4752,13 +4752,13 @@ function printResultsAll() {
     <div class="section-title">Klasyfikacja drużynowa</div>
     <table>
       <thead><tr><th style="width:32px">#</th><th>Drużyna</th><th style="width:80px;text-align:center">Punkty</th></tr></thead>
-      <tbody>\${teams.map((t,i) => {
+      <tbody>${teams.map((t,i) => {
         const rk=i+1;
         const rkCls=rk===1?'rank rank-1':(rk===2?'rank rank-2':(rk===3?'rank rank-3':'rank'));
         return `<tr class="team-rank-row">
-          <td class="\${rkCls}">\${rk}</td>
-          <td><strong>\${t.name}</strong></td>
-          <td class="pts-total">\${t.total}</td>
+          <td class="${rkCls}">${rk}</td>
+          <td><strong>${t.name}</strong></td>
+          <td class="pts-total">${t.total}</td>
         </tr>`;
       }).join('')}</tbody>
     </table>
@@ -4791,8 +4791,8 @@ function printResultsAll() {
 
     body += `<div class="section">
       <div class="section-title">
-        <span class="cat-pill cat-\${cat}">\${cat}</span>
-        <span>\${catNames[cat]||cat}</span>
+        <span class="cat-pill cat-${cat}">${cat}</span>
+        <span>${catNames[cat]||cat}</span>
       </div>
       <table>
         <thead><tr>
@@ -4805,21 +4805,21 @@ function printResultsAll() {
           <th style="width:66px;text-align:center">1000m</th>
           <th style="width:54px;text-align:center">Suma</th>
         </tr></thead>
-        <tbody>\${athletes.map(a => {
+        <tbody>${athletes.map(a => {
           if (!a.pk) rank++;
           const team = STATE.teams.find(t=>t.id==a.teamId);
           const rk = a.pk?'PK':rank;
           const rkCls = rank===1?'rank rank-1':(rank===2?'rank rank-2':(rank===3?'rank rank-3':'rank'));
           const medalCls = !a.pk&&rank===1?'medal-1':(!a.pk&&rank===2?'medal-2':(!a.pk&&rank===3?'medal-3':''));
-          return `<tr\${a.pk?' class="no-result"':''}>
-            <td class="\${a.pk?'rank':rkCls}">\${rk}</td>
-            <td><span class="name \${medalCls}">\${a.name}</span></td>
-            <td class="team">\${team?.name||''}</td>
-            <td class="time" style="text-align:center">\${bestTime(a.id,'k1',false)}</td>
-            <td class="time" style="text-align:center">\${bestTime(a.id,'k2',false)}</td>
-            <td class="time" style="text-align:center">\${bestTimeK3(a.id)}</td>
-            <td class="time" style="text-align:center">\${bestTime(a.id,'k4',true)}</td>
-            <td class="pts-total">\${a.pts.total||0}</td>
+          return `<tr${a.pk?' class="no-result"':''}>
+            <td class="${a.pk?'rank':rkCls}">${rk}</td>
+            <td><span class="name ${medalCls}">${a.name}</span></td>
+            <td class="team">${team?.name||''}</td>
+            <td class="time" style="text-align:center">${bestTime(a.id,'k1',false)}</td>
+            <td class="time" style="text-align:center">${bestTime(a.id,'k2',false)}</td>
+            <td class="time" style="text-align:center">${bestTimeK3(a.id)}</td>
+            <td class="time" style="text-align:center">${bestTime(a.id,'k4',true)}</td>
+            <td class="pts-total">${a.pts.total||0}</td>
           </tr>`;
         }).join('')}</tbody>
       </table>
@@ -4831,10 +4831,10 @@ function printResultsAll() {
     <title>Wyniki zawodów</title><style>${RESULTS_CSS}</style>
   </head><body>
     <div class="doc-header">
-      <div class="doc-title">\${STATE.setup.name||'Wyniki zawodów'}</div>
-      <div class="doc-meta">\${STATE.setup.place} · \${STATE.setup.date}</div>
+      <div class="doc-title">${STATE.setup.name||'Wyniki zawodów'}</div>
+      <div class="doc-meta">${STATE.setup.place} · ${STATE.setup.date}</div>
     </div>
-    \${body}
+    ${body}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
