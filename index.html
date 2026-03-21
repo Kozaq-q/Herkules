@@ -4242,11 +4242,11 @@ function printKJudgeList(ev) {
       const team = STATE.teams.find(t => t.id == a.teamId);
       return `<tr>
         <td>${offset+i+1}</td>
-        <td class="time-cell"></td>
-        <td class="time-cell"></td>
         <td>${catBadge(a)}</td>
         <td>${a.name}</td>
         <td style="font-size:11px">${team?.name||''}</td>
+        <td class="time-cell"></td>
+        <td class="time-cell"></td>
       </tr>`;
     }).join('');
   }
@@ -4272,11 +4272,11 @@ function printKJudgeList(ev) {
     <table>
       <thead><tr>
         <th style="width:28px">#</th>
-        <th style="width:72px">S1 (ss.s)</th>
-        <th style="width:72px">S2 (ss.s)</th>
         <th style="width:46px">Kat.</th>
         <th>Zawodnik</th>
         <th>Drużyna</th>
+        <th style="width:72px">S1 (ss.s)</th>
+        <th style="width:72px">S2 (ss.s)</th>
       </tr></thead>
       <tbody>
         ${women.length ? `<tr><td colspan="6" class="gender-header">— KOBIETY —</td></tr>${rows(women, 0)}` : ''}
@@ -4617,11 +4617,11 @@ function printK4StartLists() {
       body += `<div class="serie-block">
         <h3>${cat} — Seria ${si}${isLast?' (FINAŁOWA)':''} ${stStr?'— Start: <strong>'+stStr+'</strong>':''}</h3>
         <table>
-          <thead><tr><th>#</th><th style="width:90px">Czas (m:ss)</th><th>Zawodnik</th><th>Drużyna</th><th>Pkt K1+K2+K3</th></tr></thead>
+          <thead><tr><th style="width:28px">#</th><th>Zawodnik</th><th>Drużyna</th><th style="width:70px">Pkt K1+K2+K3</th><th style="width:90px">Czas (m:ss)</th></tr></thead>
           <tbody>
             ${serie.map((a,ai) => {
               const team = STATE.teams.find(t=>t.id==a.teamId);
-              return `<tr><td>${ai+1}</td><td class="time-cell"></td><td>${a.name}</td><td>${team?.name||''}</td><td>${a.ptsK123}</td></tr>`;
+              return `<tr><td>${ai+1}</td><td>${a.name}</td><td style="font-size:11px">${team?.name||''}</td><td style="text-align:center">${a.ptsK123}</td><td class="time-cell"></td></tr>`;
             }).join('')}
           </tbody>
         </table>
