@@ -4335,15 +4335,17 @@ function printK3Results() {
       var better = a.t1 && a.t2 ? (a.t1 <= a.t2 ? 1 : 2) : (a.t1 ? 1 : 2);
       var s1style = better===1 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
       var s2style = better===2 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
-      var bg = i%2===1 ? 'background:#f0f0f0' : 'background:#fff';
-      var bt = i>0 ? 'border-top:1px solid #bbb;' : '';
-      return '<tr style="' + bg + bt + (!hasAny?';color:#ccc':'') + '">'
-        + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (i+1) + '</td>'
-        + '<td style="font-weight:600">' + a.name + '</td>'
-        + '<td style="font-size:10px;color:#555;width:120px">' + team + '</td>'
-        + '<td style="' + s1style + ';width:70px;text-align:center">' + a.s1str + '</td>'
-        + '<td style="' + s2style + ';width:70px;text-align:center">' + a.s2str + '</td>'
-        + '<td style="text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny?a.pts:'-') + '</td>'
+      var bg3  = i%2===1 ? '#ebebeb' : '#ffffff';
+      var sep3 = i>0 ? 'border-top:2px solid #888;' : '';
+      var td3  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg3 + ';' + sep3;
+      var dim3 = !hasAny ? ';color:#ccc' : '';
+      return '<tr>'
+        + '<td style="' + td3 + 'text-align:center;font-weight:bold;font-size:13px;width:28px' + dim3 + '">' + (i+1) + '</td>'
+        + '<td style="' + td3 + 'font-weight:600' + dim3 + '">' + a.name + '</td>'
+        + '<td style="' + td3 + 'font-size:10px;color:#777;width:120px' + dim3 + '">' + team + '</td>'
+        + '<td style="' + td3 + s1style + ';width:70px;text-align:center' + dim3 + '">' + a.s1str + '</td>'
+        + '<td style="' + td3 + s2style + ';width:70px;text-align:center' + dim3 + '">' + a.s2str + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #ccc;' + sep3 + 'text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny?a.pts:'-') + '</td>'
         + '</tr>';
     }).join('');
 
@@ -4475,9 +4477,25 @@ function printKJudgeList(ev) {
       </tr></thead>
       <tbody>
         ${women.length ? `<tr><td colspan="6" class="gender-header">— KOBIETY —</td></tr>${rows(women, 0)}` : ''}
-        ${men.length   ? `<tr><td colspan="6" class="gender-header">— MĘŻCZYŹNI —</td></tr>${rows(men, women.length)}` : ''}
       </tbody>
     </table>
+    ${men.length ? `
+    <div style="page-break-before:always"></div>
+    <h2>Lista sędziowska — ${label}</h2>
+    <p style="font-size:10px;color:#555;margin-bottom:10px">${STATE.setup.name} · ${STATE.setup.place} · ${STATE.setup.date}</p>
+    <table>
+      <thead><tr>
+        <th style="width:28px">#</th>
+        <th style="width:46px">Kat.</th>
+        <th>Zawodnik</th>
+        <th style="width:72px">S1 (ss.s)</th>
+        <th style="width:72px">S2 (ss.s)</th>
+        <th>Drużyna</th>
+      </tr></thead>
+      <tbody>
+        <tr><td colspan="6" class="gender-header">— MĘŻCZYŹNI —</td></tr>${rows(men, women.length)}
+      </tbody>
+    </table>` : ''}
     <script>window.print();<\/script>
   </body></html>`);
   win.document.close();
@@ -4608,15 +4626,17 @@ function printK4Results() {
         var team = STATE.teams.find(function(t) { return t.id == a.teamId; });
         var tStr = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '-');
         var hasr = a.k4time || a.k4dnf;
-        var bg   = ai % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
-        var bt   = ai > 0 ? 'border-top:1px solid #bbb;' : '';
-        return '<tr style="' + bg + bt + (!hasr ? ';color:#ccc' : '') + '">'
-          + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (ai+1) + '</td>'
-          + '<td style="font-weight:600">' + a.name + '</td>'
-          + '<td style="font-size:10px;color:#555;width:120px">' + (team ? team.name : '') + '</td>'
-          + '<td style="font-family:monospace;font-weight:bold;font-size:13px;text-align:center;width:80px">' + tStr + '</td>'
-          + '<td style="text-align:center;font-weight:700;font-size:12px;width:54px">' + (hasr ? a.pts.k4 : '-') + '</td>'
-          + '<td style="text-align:center;font-weight:800;font-size:13px;width:60px;background:#111;color:#fff">' + (hasr ? a.pts.total : '-') + '</td>'
+        var bg2  = ai % 2 === 1 ? '#ebebeb' : '#ffffff';
+        var sep2 = ai > 0 ? 'border-top:2px solid #888;' : '';
+        var td2  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg2 + ';' + sep2;
+        var dim2 = !hasr ? ';color:#ccc' : '';
+        return '<tr>'
+          + '<td style="' + td2 + 'text-align:center;font-weight:bold;font-size:13px;width:28px' + dim2 + '">' + (ai+1) + '</td>'
+          + '<td style="' + td2 + 'font-weight:600' + dim2 + '">' + a.name + '</td>'
+          + '<td style="' + td2 + 'font-size:10px;color:#777;width:120px' + dim2 + '">' + (team ? team.name : '') + '</td>'
+          + '<td style="' + td2 + 'font-family:monospace;font-weight:bold;font-size:13px;text-align:center;width:80px' + dim2 + '">' + tStr + '</td>'
+          + '<td style="' + td2 + 'text-align:center;font-weight:700;font-size:12px;width:54px' + dim2 + '">' + (hasr ? a.pts.k4 : '-') + '</td>'
+          + '<td style="padding:6px 8px;border:1px solid #ccc;' + sep2 + 'text-align:center;font-weight:800;font-size:13px;width:60px;background:#111;color:#fff">' + (hasr ? a.pts.total : '-') + '</td>'
           + '</tr>';
       }).join('');
 
@@ -4715,19 +4735,21 @@ function printResultsAll() {
       if (!a.pk) rank++;
       var team = STATE.teams.find(function(t) { return t.id == a.teamId; });
       var rk   = a.pk ? 'PK' : rank;
-      var rn   = a.pk ? 0 : rank;
-      var bg   = rn % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
-      var bt   = (rank > 1 || a.pk) ? 'border-top:1px solid #bbb;' : '';
+      var rowNum = a.pk ? rank+1000 : rank;
+      var bgI   = rowNum % 2 === 1 ? '#ebebeb' : '#ffffff';
+      var sepI  = rank > 1 || a.pk ? 'border-top:2px solid #888;' : '';
+      var tdI   = 'padding:5px 8px;border:1px solid #ccc;background:' + bgI + ';' + sepI;
+      var dimI  = a.pk ? ';color:#aaa' : '';
       var medal = !a.pk && rank===1 ? '🥇 ' : !a.pk && rank===2 ? '🥈 ' : !a.pk && rank===3 ? '🥉 ' : '';
-      return '<tr style="' + bg + bt + (a.pk?';color:#aaa':'') + '">'
-        + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + rk + '</td>'
-        + '<td style="font-weight:600">' + medal + a.name + '</td>'
-        + '<td style="font-size:10px;color:#555;width:110px">' + (team ? team.name : '') + '</td>'
-        + '<td style="font-family:monospace;text-align:center;font-size:11px;width:58px">' + bestTime(a.id,'k1',false) + '</td>'
-        + '<td style="font-family:monospace;text-align:center;font-size:11px;width:58px">' + bestTime(a.id,'k2',false) + '</td>'
-        + '<td style="font-family:monospace;text-align:center;font-size:11px;width:58px">' + bestTimeK3(a.id) + '</td>'
-        + '<td style="font-family:monospace;text-align:center;font-size:11px;width:62px">' + bestTime(a.id,'k4',true) + '</td>'
-        + '<td style="text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (a.pts.total||0) + '</td>'
+      return '<tr>'
+        + '<td style="' + tdI + 'text-align:center;font-weight:bold;font-size:13px;width:28px' + dimI + '">' + rk + '</td>'
+        + '<td style="' + tdI + 'font-weight:600' + dimI + '">' + medal + a.name + '</td>'
+        + '<td style="' + tdI + 'font-size:10px;color:#777;width:110px' + dimI + '">' + (team ? team.name : '') + '</td>'
+        + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:58px' + dimI + '">' + bestTime(a.id,'k1',false) + '</td>'
+        + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:58px' + dimI + '">' + bestTime(a.id,'k2',false) + '</td>'
+        + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:58px' + dimI + '">' + bestTimeK3(a.id) + '</td>'
+        + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:62px' + dimI + '">' + bestTime(a.id,'k4',true) + '</td>'
+        + '<td style="padding:5px 8px;border:1px solid #ccc;' + sepI + 'text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (a.pts.total||0) + '</td>'
         + '</tr>';
     }).join('');
 
