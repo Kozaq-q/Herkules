@@ -4202,7 +4202,7 @@ function printK3PDF() {
       var pts1  = p1.k1 + p1.k2;
       var pts2  = a2 ? (function(){ var p=getAthletePoints(a2.id); return p.k1+p.k2; })() : '';
       var bg    = i === pairs.length-1 ? 'background:#eee' : (i%2===1?'background:#f7f7f7':'');
-      return '<tr style="' + bg + '">'
+      return '<tr style="' + bg + bt + '">'
         + '<td style="text-align:center;font-weight:bold;font-size:16px;width:36px">' + (i+1) + '</td>'
         + '<td style="font-weight:600"><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:3px;font-weight:bold;font-size:11px;margin-right:5px;background:#1a6bb5;color:#fff;vertical-align:middle">L</span>' + a1.name + '<br><span style="font-size:10px;color:#555">' + team1 + '</span></td>'
         + '<td style="text-align:center;font-family:monospace;font-weight:bold;width:70px">' + pts1 + '</td>'
@@ -4335,8 +4335,9 @@ function printK3Results() {
       var better = a.t1 && a.t2 ? (a.t1 <= a.t2 ? 1 : 2) : (a.t1 ? 1 : 2);
       var s1style = better===1 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
       var s2style = better===2 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
-      var bg = i%2===1 ? 'background:#f7f7f7' : '';
-      return '<tr style="' + bg + (!hasAny?';color:#ccc':'') + '">'
+      var bg = i%2===1 ? 'background:#f0f0f0' : 'background:#fff';
+      var bt = i>0 ? 'border-top:1px solid #bbb;' : '';
+      return '<tr style="' + bg + bt + (!hasAny?';color:#ccc':'') + '">'
         + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (i+1) + '</td>'
         + '<td style="font-weight:600">' + a.name + '</td>'
         + '<td style="font-size:10px;color:#555;width:120px">' + team + '</td>'
@@ -4517,8 +4518,9 @@ function printKResults(ev) {
       var better = tv1 && tv2 ? (tv1 <= tv2 ? 1 : 2) : (tv1 ? 1 : (tv2 ? 2 : 0));
       var s1b = better === 1 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
       var s2b = better === 2 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
-      var bg = i % 2 === 1 ? 'background:#f7f7f7' : '';
-      return '<tr style="' + bg + (hasAny ? '' : ';color:#ccc') + '">'
+      var bg = i % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
+      var bt = i > 0 ? 'border-top:1px solid #bbb;' : '';
+      return '<tr style="' + bg + bt + (hasAny ? '' : ';color:#ccc') + '">'
         + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (i+1) + '</td>'
         + '<td style="font-weight:600">' + a.name + '</td>'
         + '<td style="font-size:10px;color:#555;width:120px">' + (team ? team.name : '') + '</td>'
@@ -4606,8 +4608,9 @@ function printK4Results() {
         var team = STATE.teams.find(function(t) { return t.id == a.teamId; });
         var tStr = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '-');
         var hasr = a.k4time || a.k4dnf;
-        var bg   = ai % 2 === 1 ? 'background:#f7f7f7' : '';
-        return '<tr style="' + bg + (!hasr ? ';color:#ccc' : '') + '">'
+        var bg   = ai % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
+        var bt   = ai > 0 ? 'border-top:1px solid #bbb;' : '';
+        return '<tr style="' + bg + bt + (!hasr ? ';color:#ccc' : '') + '">'
           + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (ai+1) + '</td>'
           + '<td style="font-weight:600">' + a.name + '</td>'
           + '<td style="font-size:10px;color:#555;width:120px">' + (team ? team.name : '') + '</td>'
@@ -4663,7 +4666,8 @@ function printResultsAll() {
 
   var teamRows = teams.map(function(t, i) {
     var rk = i+1;
-    var bg = i % 2 === 1 ? 'background:#f7f7f7' : '';
+    var bg = i % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
+    var bt = i > 0 ? 'border-top:1px solid #bbb;' : '';
     var medal = rk===1 ? '🥇 ' : rk===2 ? '🥈 ' : rk===3 ? '🥉 ' : '';
     return '<tr style="' + bg + '">'
       + '<td style="text-align:center;font-weight:bold;font-size:14px;width:28px">' + rk + '</td>'
@@ -4711,9 +4715,11 @@ function printResultsAll() {
       if (!a.pk) rank++;
       var team = STATE.teams.find(function(t) { return t.id == a.teamId; });
       var rk   = a.pk ? 'PK' : rank;
-      var bg   = (a.pk ? 0 : rank) % 2 === 1 ? '' : 'background:#f7f7f7';
+      var rn   = a.pk ? 0 : rank;
+      var bg   = rn % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
+      var bt   = (rank > 1 || a.pk) ? 'border-top:1px solid #bbb;' : '';
       var medal = !a.pk && rank===1 ? '🥇 ' : !a.pk && rank===2 ? '🥈 ' : !a.pk && rank===3 ? '🥉 ' : '';
-      return '<tr style="' + bg + (a.pk?';color:#aaa':'') + '">'
+      return '<tr style="' + bg + bt + (a.pk?';color:#aaa':'') + '">'
         + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + rk + '</td>'
         + '<td style="font-weight:600">' + medal + a.name + '</td>'
         + '<td style="font-size:10px;color:#555;width:110px">' + (team ? team.name : '') + '</td>'
