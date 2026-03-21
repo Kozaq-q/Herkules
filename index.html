@@ -1323,6 +1323,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <div class="flex" style="gap:4px">
       <button class="btn btn-sm btn-success" onclick="printK3PDF()">🖨 Drukuj pary do Serii 1</button>
       <button class="btn btn-sm btn-success" onclick="printK3JudgeList()">🖨 Listy sędziowskie</button>
+      <button class="btn btn-sm btn-success" onclick="printK3Results()">🖨 Wyniki</button>
       <button class="btn btn-sm" onclick="renderK3()">⟳</button>
     </div>
   </div>
@@ -4178,6 +4179,197 @@ function renderCompetitionProgress() {
       </div>`;
     }).join('')}
   </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// PDF — K3 PAIRS
+// ════════════════════════════════════════════════════════════
+function printK3PDF() {
+  var cats = ['K36','K35','M36','M35'];
+  var body = '';
+
+  cats.forEach(function(cat) {
+    var pairs = buildK3PairsS1(cat);
+    if (!pairs.length) return;
+
+    var catColors = {M35:'#4a8ac4',M36:'#6a5fc1',K35:'#c24a8a',K36:'#c4744a'};
+    var rows = pairs.map(function(pair, i) {
+      var a1    = pair[0];
+      var a2    = pair[1];
+      var team1 = (STATE.teams.find(function(t){return t.id==a1.teamId;})||{}).name||'';
+      var team2 = a2 ? (STATE.teams.find(function(t){return t.id==a2.teamId;})||{}).name||'' : '';
+      var p1    = getAthletePoints(a1.id);
+      var pts1  = p1.k1 + p1.k2;
+      var pts2  = a2 ? (function(){ var p=getAthletePoints(a2.id); return p.k1+p.k2; })() : '';
+      var bg    = i === pairs.length-1 ? 'background:#eee' : (i%2===1?'background:#f7f7f7':'');
+      return '<tr style="' + bg + '">'
+        + '<td style="text-align:center;font-weight:bold;font-size:16px;width:36px">' + (i+1) + '</td>'
+        + '<td style="font-weight:600"><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:3px;font-weight:bold;font-size:11px;margin-right:5px;background:#1a6bb5;color:#fff;vertical-align:middle">L</span>' + a1.name + '<br><span style="font-size:10px;color:#555">' + team1 + '</span></td>'
+        + '<td style="text-align:center;font-family:monospace;font-weight:bold;width:70px">' + pts1 + '</td>'
+        + '<td style="font-weight:600">' + (a2 ? '<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:3px;font-weight:bold;font-size:11px;margin-right:5px;background:#c0392b;color:#fff;vertical-align:middle">P</span>' + a2.name + '<br><span style="font-size:10px;color:#555">' + team2 + '</span>' : '<span style="color:#999;font-style:italic">- BYE -</span>') + '</td>'
+        + '<td style="text-align:center;font-family:monospace;font-weight:bold;width:70px">' + pts2 + '</td>'
+        + '</tr>';
+    }).join('');
+
+    body += '<div style="page-break-inside:avoid;margin-bottom:16px">'
+      + '<div style="border-bottom:2px solid #000;padding-bottom:3px;margin:14px 0 6px;display:flex;align-items:center;gap:8px">'
+      + '<span style="display:inline-block;padding:2px 10px;border-radius:2px;font-size:11px;font-weight:700;color:#fff;background:' + catColors[cat] + '">' + cat + '</span>'
+      + '<span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Bieg 15x15m - Pary startowe (Seria 1)</span>'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse">'
+      + '<thead><tr style="background:#111;color:#fff">'
+      + '<th style="padding:5px 8px;font-size:11px;text-align:center;width:36px">Para</th>'
+      + '<th style="padding:5px 8px;font-size:11px">Tor L - Zawodnik</th>'
+      + '<th style="padding:5px 8px;font-size:11px;text-align:center;width:70px">Pkt K1+K2</th>'
+      + '<th style="padding:5px 8px;font-size:11px">Tor P - Zawodnik</th>'
+      + '<th style="padding:5px 8px;font-size:11px;text-align:center;width:70px">Pkt K1+K2</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  });
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Pary 15x15m - Seria 1</title>'
+    + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:14px}'
+    + '@media print{body{padding:0}@page{size:A4;margin:10mm}}</style></head><body>'
+    + '<div style="border-bottom:3px solid #000;padding-bottom:8px;margin-bottom:12px">'
+    + '<div style="font-size:20px;font-weight:800;text-transform:uppercase">Bieg 15x15m - Seria 1 - Pary startowe</div>'
+    + '<div style="font-size:10px;color:#555;margin-top:2px">' + (STATE.setup.name||'') + ' &middot; ' + (STATE.setup.place||'') + ' &middot; ' + (STATE.setup.date||'') + '</div>'
+    + '</div>' + body
+    + '<script>window.print();<\/script></body></html>');
+  win.document.close();
+}
+
+function printK3JudgeList() {
+  var cats = ['K36','K35','M36','M35'];
+  var body = '';
+
+  cats.forEach(function(cat) {
+    var pairs = buildK3PairsS1(cat);
+    if (!pairs.length) return;
+
+    var catColors = {M35:'#4a8ac4',M36:'#6a5fc1',K35:'#c24a8a',K36:'#c4744a'};
+    var rows = '';
+    var rowNum = 0;
+    pairs.forEach(function(pair, pairIdx) {
+      [[pair[0],'L'],[pair[1],'P']].forEach(function(item) {
+        var a = item[0]; var tor = item[1];
+        if (!a) return;
+        rowNum++;
+        var team = (STATE.teams.find(function(t){return t.id==a.teamId;})||{}).name||'';
+        var p    = getAthletePoints(a.id);
+        var pts  = p.k1 + p.k2;
+        var bg   = rowNum % 2 === 1 ? '' : 'background:#f7f7f7';
+        var torBg = tor==='L' ? '#1a6bb5' : '#c0392b';
+        rows += '<tr style="' + bg + '">'
+          + '<td style="text-align:center;color:#888;font-size:10px;width:24px">' + rowNum + '</td>'
+          + '<td style="text-align:center;font-weight:bold;width:28px">' + (pairIdx+1) + '</td>'
+          + '<td style="text-align:center;width:24px"><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:3px;font-weight:bold;font-size:11px;background:' + torBg + ';color:#fff">' + tor + '</span></td>'
+          + '<td style="font-weight:600;font-size:12px">' + a.name + '</td>'
+          + '<td style="border:1.5px solid #000 !important;background:#fff;width:75px"></td>'
+          + '<td style="font-size:10px;color:#444;width:90px">' + team + '</td>'
+          + '<td style="text-align:center;width:60px">' + pts + '</td>'
+          + '</tr>';
+      });
+    });
+
+    body += '<div style="page-break-inside:avoid;margin-bottom:16px">'
+      + '<div style="border-bottom:2px solid #000;padding-bottom:3px;margin:14px 0 6px;display:flex;align-items:center;gap:8px">'
+      + '<span style="display:inline-block;padding:2px 10px;border-radius:2px;font-size:11px;font-weight:700;color:#fff;background:' + catColors[cat] + '">' + cat + '</span>'
+      + '<span style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Lista sedziowska</span>'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse">'
+      + '<thead><tr style="background:#111;color:#fff">'
+      + '<th style="padding:5px 6px;font-size:10px;text-align:center;width:24px">#</th>'
+      + '<th style="padding:5px 6px;font-size:10px;text-align:center;width:28px">Para</th>'
+      + '<th style="padding:5px 6px;font-size:10px;text-align:center;width:24px">Tor</th>'
+      + '<th style="padding:5px 6px;font-size:10px">Zawodnik</th>'
+      + '<th style="padding:5px 6px;font-size:10px;text-align:center;width:75px">Czas (ss.s)</th>'
+      + '<th style="padding:5px 6px;font-size:10px;width:90px">Druzyna</th>'
+      + '<th style="padding:5px 6px;font-size:10px;text-align:center;width:60px">Pkt K1+K2</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  });
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lista sedziowska 15x15m</title>'
+    + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:14px}'
+    + 'td{padding:4px 6px;border:1px solid #ccc;vertical-align:middle}'
+    + '@media print{body{padding:0}@page{size:A4;margin:10mm}}</style></head><body>'
+    + '<div style="border-bottom:3px solid #000;padding-bottom:8px;margin-bottom:12px">'
+    + '<div style="font-size:20px;font-weight:800;text-transform:uppercase">Bieg 15x15m - Lista sedziowska</div>'
+    + '<div style="font-size:10px;color:#555;margin-top:2px">' + (STATE.setup.name||'') + ' &middot; ' + (STATE.setup.place||'') + ' &middot; ' + (STATE.setup.date||'') + '</div>'
+    + '</div>' + body
+    + '<script>window.print();<\/script></body></html>');
+  win.document.close();
+}
+
+function printK3Results() {
+  var cats      = ['K36','K35','M36','M35'];
+  var catNames  = {M35:'Mezczyzni 35+',M36:'Mezczyzni 36+',K35:'Kobiety 35+',K36:'Kobiety 36+'};
+  var catColors = {M35:'#4a8ac4',M36:'#6a5fc1',K35:'#c24a8a',K36:'#c4744a'};
+  var body = '';
+
+  cats.forEach(function(cat) {
+    var athletes = STATE.athletes.filter(function(a){ return a.cat === cat; });
+    if (!athletes.length) return;
+
+    var withPts = athletes.map(function(a) {
+      var r    = (STATE.results[a.id]||{}).k3   || [];
+      var r2   = (STATE.results[a.id]||{}).k3s2 || [];
+      var disq = (STATE.disq[a.id]  ||{}).k3    || [];
+      var disq2= (STATE.disq[a.id]  ||{}).k3s2  || [];
+      var dnf  = (STATE.dnf[a.id]   ||{}).k3    || [];
+      var dnf2 = (STATE.dnf[a.id]   ||{}).k3s2  || [];
+      var t1 = getBestValidTime(r,  disq,  dnf);
+      var t2 = getBestValidTime(r2, disq2, dnf2);
+      var bestT = t1 && t2 ? Math.min(t1,t2) : (t1||t2);
+      var pts = bestT ? getPoints(a.cat,'k3',bestT) : 0;
+      var s1str = t1 ? fmtSec1(t1)+'s' : (dnf[0]?'NKL':(disq[0]?'DSQ':'-'));
+      var s2str = t2 ? fmtSec1(t2)+'s' : (dnf2[0]?'NKL':(disq2[0]?'DSQ':'-'));
+      return Object.assign({}, a, {t1:t1, t2:t2, bestT:bestT, pts:pts, s1str:s1str, s2str:s2str});
+    }).sort(function(a,b){ return b.pts - a.pts; });
+
+    var rows = withPts.map(function(a, i) {
+      var team = (STATE.teams.find(function(t){return t.id==a.teamId;})||{}).name||'';
+      var hasAny = a.t1 || a.t2;
+      var better = a.t1 && a.t2 ? (a.t1 <= a.t2 ? 1 : 2) : (a.t1 ? 1 : 2);
+      var s1style = better===1 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
+      var s2style = better===2 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
+      var bg = i%2===1 ? 'background:#f7f7f7' : '';
+      return '<tr style="' + bg + (!hasAny?';color:#ccc':'') + '">'
+        + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (i+1) + '</td>'
+        + '<td style="font-weight:600">' + a.name + '</td>'
+        + '<td style="font-size:10px;color:#555;width:120px">' + team + '</td>'
+        + '<td style="' + s1style + ';width:70px;text-align:center">' + a.s1str + '</td>'
+        + '<td style="' + s2style + ';width:70px;text-align:center">' + a.s2str + '</td>'
+        + '<td style="text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny?a.pts:'-') + '</td>'
+        + '</tr>';
+    }).join('');
+
+    body += '<div style="margin-bottom:20px;page-break-inside:avoid">'
+      + '<div style="border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px;display:flex;align-items:center;gap:8px">'
+      + '<span style="display:inline-block;padding:2px 10px;border-radius:2px;font-size:11px;font-weight:700;color:#fff;background:' + catColors[cat] + '">' + cat + '</span>'
+      + '<span style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px">' + (catNames[cat]||cat) + '</span>'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse">'
+      + '<thead><tr style="background:#111;color:#fff">'
+      + '<th style="padding:6px 8px;text-align:center;font-size:10px;width:28px">#</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px">ZAWODNIK</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;width:120px">DRUZYNA</th>'
+      + '<th style="padding:6px 8px;text-align:center;font-size:10px;width:70px">SERIA 1</th>'
+      + '<th style="padding:6px 8px;text-align:center;font-size:10px;width:70px">SERIA 2</th>'
+      + '<th style="padding:6px 8px;text-align:center;font-size:10px;width:54px">PKT</th>'
+      + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  });
+
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Wyniki - Bieg 15x15m</title>'
+    + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:16px}'
+    + '@media print{body{padding:8px}@page{size:A4;margin:10mm}}</style></head><body>'
+    + '<div style="border-bottom:3px solid #000;padding-bottom:10px;margin-bottom:16px">'
+    + '<div style="font-size:20px;font-weight:800;text-transform:uppercase">Wyniki - Bieg 15x15m</div>'
+    + '<div style="font-size:10px;color:#555;margin-top:3px">' + (STATE.setup.name||'') + ' &middot; ' + (STATE.setup.place||'') + ' &middot; ' + (STATE.setup.date||'') + '</div>'
+    + '</div>' + body
+    + '<script>window.print();<\/script></body></html>');
+  win.document.close();
 }
 
 // ════════════════════════════════════════════════════════════
