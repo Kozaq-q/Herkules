@@ -4349,9 +4349,9 @@ function printK3Results() {
     }).join('');
 
     body += '<div style="margin-bottom:20px;page-break-inside:avoid">'
-      + '<div style="border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px;display:flex;align-items:center;gap:8px">'
-      + '<span style="display:inline-block;padding:2px 10px;border-radius:2px;font-size:11px;font-weight:700;color:#fff;background:' + catColors[cat] + '">' + cat + '</span>'
-      + '<span style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px">' + (catNames[cat]||cat) + '</span>'
+      + '<div style="background:#000;color:#fff;padding:6px 12px;display:flex;align-items:center;gap:10px">'
+      + '<span style="font-size:20px;font-weight:900;letter-spacing:2px">' + cat + '</span>'
+      + '<span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;opacity:0.85">' + (catNames[cat]||cat) + '</span>'
       + '</div>'
       + '<table style="width:100%;border-collapse:collapse">'
       + '<thead><tr style="background:#111;color:#fff">'
@@ -4373,6 +4373,136 @@ function printK3Results() {
     + '<div style="font-size:10px;color:#555;margin-top:3px">' + (STATE.setup.name||'') + ' &middot; ' + (STATE.setup.place||'') + ' &middot; ' + (STATE.setup.date||'') + '</div>'
     + '</div>' + body
     + '<script>window.print();<\/script></body></html>');
+  win.document.close();
+}
+
+// ════════════════════════════════════════════════════════════
+// PDF — K4 START LISTS
+// ════════════════════════════════════════════════════════════
+function printK4CleanStartList() {
+  var cats       = ['K36','K35','M36','M35'];
+  var catColors  = {M35:'#4a8ac4',M36:'#6a5fc1',K35:'#c24a8a',K36:'#c4744a'};
+  var startTimeStr = (document.getElementById('k4-start-time')||{}).value || '09:00';
+  var breakMin   = parseInt((document.getElementById('k4-break-min')||{}).value) || 10;
+  var startTime  = parseK4StartTime(startTimeStr);
+  var seriesCount= 0;
+  var body = '';
+
+  cats.forEach(function(cat) {
+    var ath = STATE.athletes.filter(function(a){ return a.cat===cat; });
+    if (!ath.length) return;
+    var withPts = ath.map(function(a){
+      var p = getAthletePoints(a.id);
+      return Object.assign({},a,{ptsK123: p.k1+p.k2+p.k3});
+    }).sort(function(a,b){ return a.ptsK123-b.ptsK123; });
+
+    var rem=withPts.length%10, idx=0, si=0, allSeries=[];
+    if (rem>0){allSeries.push(withPts.slice(0,rem));idx=rem;}
+    while(idx<withPts.length){allSeries.push(withPts.slice(idx,idx+10));idx+=10;}
+
+    allSeries.forEach(function(serie){
+      var stStr = startTime ? addMinutesToTime(startTime, seriesCount*breakMin) : null;
+      var isLast= si===allSeries.length-1;
+      seriesCount++;si++;
+      var rows = serie.map(function(a,ai){
+        var team=(STATE.teams.find(function(t){return t.id==a.teamId;})||{}).name||'';
+        var bg = ai%2===1?'#ebebeb':'#ffffff';
+        var td = 'padding:5px 8px;border:1px solid #ccc;background:'+bg+';';
+        return '<tr>'
+          +'<td style="'+td+'text-align:center;width:28px;font-weight:bold">'+(ai+1)+'</td>'
+          +'<td style="'+td+'font-weight:600">'+a.name+'</td>'
+          +'<td style="'+td+'font-size:10px;color:#555;width:120px">'+team+'</td>'
+          +'<td style="'+td+'text-align:center;font-family:monospace;width:70px">'+a.ptsK123+'</td>'
+          +'</tr>';
+      }).join('');
+      body += '<div style="page-break-inside:avoid;margin-bottom:14px">'
+        +'<div style="background:#000;color:#fff;padding:5px 10px;margin-bottom:0;display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:16px;font-weight:900;letter-spacing:2px">'+cat+'</span>'
+        +'<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Seria '+si+(isLast?' (FINALOWA)':'')+(stStr?' &mdash; Start: '+stStr:'')+'</span>'
+        +'</div>'
+        +'<table style="width:100%;border-collapse:collapse">'
+        +'<thead><tr style="background:#444;color:#fff">'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:center;width:28px">#</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:left">ZAWODNIK</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:left;width:120px">DRUZYNA</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:center;width:70px">PKT K1+K2+K3</th>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    });
+  });
+
+  var win=window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Listy startowe 1000m</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:14px}'
+    +'@media print{body{padding:0}@page{size:A4;margin:10mm}}</style></head><body>'
+    +'<div style="border-bottom:3px solid #000;padding-bottom:8px;margin-bottom:14px">'
+    +'<div style="font-size:20px;font-weight:800;text-transform:uppercase">Listy startowe &mdash; Bieg 1000m</div>'
+    +'<div style="font-size:10px;color:#555;margin-top:2px">'+(STATE.setup.name||'')+' &middot; '+(STATE.setup.place||'')+' &middot; '+(STATE.setup.date||'')+' &middot; Przerwa: '+breakMin+' min</div>'
+    +'</div>'+body
+    +'<script>window.print();<\/script></body></html>');
+  win.document.close();
+}
+
+function printK4StartLists() {
+  var cats       = ['K36','K35','M36','M35'];
+  var startTimeStr = (document.getElementById('k4-start-time')||{}).value || '09:00';
+  var breakMin   = parseInt((document.getElementById('k4-break-min')||{}).value) || 10;
+  var startTime  = parseK4StartTime(startTimeStr);
+  var seriesCount= 0;
+  var body = '';
+
+  cats.forEach(function(cat) {
+    var ath = STATE.athletes.filter(function(a){ return a.cat===cat; });
+    if (!ath.length) return;
+    var withPts = ath.map(function(a){
+      var p = getAthletePoints(a.id);
+      return Object.assign({},a,{ptsK123: p.k1+p.k2+p.k3});
+    }).sort(function(a,b){ return a.ptsK123-b.ptsK123; });
+
+    var rem=withPts.length%10, idx=0, si=0, allSeries=[];
+    if (rem>0){allSeries.push(withPts.slice(0,rem));idx=rem;}
+    while(idx<withPts.length){allSeries.push(withPts.slice(idx,idx+10));idx+=10;}
+
+    allSeries.forEach(function(serie){
+      var stStr = startTime ? addMinutesToTime(startTime, seriesCount*breakMin) : null;
+      var isLast= si===allSeries.length-1;
+      seriesCount++;si++;
+      var rows = serie.map(function(a,ai){
+        var team=(STATE.teams.find(function(t){return t.id==a.teamId;})||{}).name||'';
+        var bg = ai%2===1?'#ebebeb':'#ffffff';
+        var td = 'padding:5px 8px;border:1px solid #ccc;background:'+bg+';';
+        return '<tr>'
+          +'<td style="'+td+'text-align:center;width:28px;font-weight:bold">'+(ai+1)+'</td>'
+          +'<td style="'+td+'font-weight:600">'+a.name+'</td>'
+          +'<td style="'+td+'border:1.5px solid #000 !important;background:#fff;width:90px"></td>'
+          +'<td style="'+td+'font-size:10px;color:#555;width:120px">'+team+'</td>'
+          +'<td style="'+td+'text-align:center;font-family:monospace;width:70px">'+a.ptsK123+'</td>'
+          +'</tr>';
+      }).join('');
+      body += '<div style="page-break-inside:avoid;margin-bottom:14px">'
+        +'<div style="background:#000;color:#fff;padding:5px 10px;margin-bottom:0;display:flex;align-items:center;gap:10px">'
+        +'<span style="font-size:16px;font-weight:900;letter-spacing:2px">'+cat+'</span>'
+        +'<span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px">Seria '+si+(isLast?' (FINALOWA)':'')+(stStr?' &mdash; Start: '+stStr:'')+'</span>'
+        +'</div>'
+        +'<table style="width:100%;border-collapse:collapse">'
+        +'<thead><tr style="background:#444;color:#fff">'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:center;width:28px">#</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:left">ZAWODNIK</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:center;width:90px">CZAS (m:ss)</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:left;width:120px">DRUZYNA</th>'
+        +'<th style="padding:5px 8px;font-size:10px;text-align:center;width:70px">PKT K1+K2+K3</th>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    });
+  });
+
+  var win=window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Lista sedziowska 1000m</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:14px}'
+    +'@media print{body{padding:0}@page{size:A4;margin:10mm}}</style></head><body>'
+    +'<div style="border-bottom:3px solid #000;padding-bottom:8px;margin-bottom:14px">'
+    +'<div style="font-size:20px;font-weight:800;text-transform:uppercase">Lista sedziowska &mdash; Bieg 1000m</div>'
+    +'<div style="font-size:10px;color:#555;margin-top:2px">'+(STATE.setup.name||'')+' &middot; '+(STATE.setup.place||'')+' &middot; '+(STATE.setup.date||'')+' &middot; Przerwa: '+breakMin+' min</div>'
+    +'</div>'+body
+    +'<script>window.print();<\/script></body></html>');
   win.document.close();
 }
 
@@ -4641,10 +4771,10 @@ function printK4Results() {
 
       var serieLabel = cat + ' - Seria ' + si + (isLast ? ' (FINALOWA)' : '') + (stStr ? ' - Start: ' + stStr : '');
       body += '<div style="margin-bottom:20px;page-break-inside:avoid">'
-        + '<div style="border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px;display:flex;align-items:center;gap:8px">'
-        + '<span style="display:inline-block;padding:2px 10px;border-radius:2px;font-size:11px;font-weight:700;color:#fff;background:' + catColors[cat] + '">' + cat + '</span>'
-        + '<span style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">' + (catNames[cat]||cat) + '</span>'
-        + '<span style="font-size:11px;color:#555;margin-left:4px">Seria ' + si + (isLast?' - FINALOWA':'') + (stStr?' - Start: '+stStr:'') + '</span>'
+        + '<div style="background:#000;color:#fff;padding:6px 12px;display:flex;align-items:center;gap:10px">'
+        + '<span style="font-size:20px;font-weight:900;letter-spacing:2px">' + cat + '</span>'
+        + '<span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;opacity:0.85">' + (catNames[cat]||cat) + '</span>'
+        + '<span style="font-size:11px;opacity:0.75;margin-left:4px">Seria ' + si + (isLast?' — FINALOWA':'') + (stStr?' — Start: '+stStr:'') + '</span>'
         + '</div>'
         + '<table style="width:100%;border-collapse:collapse">'
         + '<thead><tr style="background:#111;color:#fff">'
@@ -4686,23 +4816,32 @@ function printResultsAll() {
   var teamRows = teams.map(function(t, i) {
     var rk = i+1;
     var bg   = i % 2 === 1 ? '#ebebeb' : '#ffffff';
-    var tdT  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg + ';';
+    var tdT  = 'padding:7px 10px;border:1px solid #ccc;background:' + bg + ';';
     var medal = rk===1 ? '🥇 ' : rk===2 ? '🥈 ' : rk===3 ? '🥉 ' : '';
+    var barW  = Math.round(t.total / maxPts * 100);
+    var barHTML = '<div style="display:flex;align-items:center;gap:6px">'
+      + '<div style="flex:1;height:10px;background:#ddd;border-radius:2px">'
+      + '<div style="width:' + barW + '%;height:10px;background:#111;border-radius:2px"></div>'
+      + '</div></div>';
     return '<tr>'
-      + '<td style="' + tdT + 'text-align:center;font-weight:bold;font-size:14px;width:28px">' + rk + '</td>'
-      + '<td style="' + tdT + 'font-weight:600">' + medal + t.name + '</td>'
-      + '<td style="padding:6px 8px;border:1px solid #ccc;text-align:center;font-weight:800;font-size:13px;background:#111;color:#fff;width:70px">' + t.total + '</td>'
+      + '<td style="' + tdT + 'text-align:center;font-weight:900;font-size:16px;width:36px">' + rk + '</td>'
+      + '<td style="' + tdT + 'font-weight:600;font-size:13px">' + medal + t.name + '</td>'
+      + '<td style="' + tdT + 'width:200px">' + barHTML + '</td>'
+      + '<td style="padding:7px 10px;border:1px solid #ccc;text-align:center;font-weight:900;font-size:14px;background:#111;color:#fff;width:70px">' + t.total + '</td>'
       + '</tr>';
   }).join('');
 
-  body += '<div style="margin-bottom:20px;page-break-inside:avoid">'
-    + '<div style="border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px">'
-    + '<span style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Klasyfikacja druzyn</span></div>'
+  var maxPts = teams.length ? teams[0].total : 1;
+  body += '<div style="margin-bottom:24px;page-break-inside:avoid">'
+    + '<div style="background:#000;color:#fff;padding:8px 14px;margin-bottom:0">'
+    + '<span style="font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px">Klasyfikacja druzyn</span>'
+    + '</div>'
     + '<table style="width:100%;border-collapse:collapse">'
-    + '<thead><tr style="background:#111;color:#fff">'
-    + '<th style="padding:6px 8px;text-align:center;font-size:10px;width:28px">#</th>'
-    + '<th style="padding:6px 8px;text-align:left;font-size:10px">DRUZYNA</th>'
-    + '<th style="padding:6px 8px;text-align:center;font-size:10px;width:70px">PKT</th>'
+    + '<thead><tr style="background:#444;color:#fff">'
+    + '<th style="padding:6px 10px;text-align:center;font-size:10px;width:36px">#</th>'
+    + '<th style="padding:6px 10px;text-align:left;font-size:10px">DRUZYNA</th>'
+    + '<th style="padding:6px 10px;text-align:right;font-size:10px;width:200px">WYNIK</th>'
+    + '<th style="padding:6px 10px;text-align:center;font-size:10px;width:70px">PKT</th>'
     + '</tr></thead><tbody>' + teamRows + '</tbody></table></div>';
 
   function bestTime(aid, ev, isK4) {
@@ -4752,9 +4891,9 @@ function printResultsAll() {
     }).join('');
 
     body += '<div style="margin-bottom:20px;page-break-inside:avoid">'
-      + '<div style="border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px;display:flex;align-items:center;gap:8px">'
-      + '<span style="display:inline-block;padding:2px 10px;border-radius:2px;font-size:11px;font-weight:700;color:#fff;background:' + catColors[cat] + '">' + cat + '</span>'
-      + '<span style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px">' + (catNames[cat]||cat) + '</span>'
+      + '<div style="background:#000;color:#fff;padding:6px 12px;display:flex;align-items:center;gap:10px">'
+      + '<span style="font-size:20px;font-weight:900;letter-spacing:2px">' + cat + '</span>'
+      + '<span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;opacity:0.85">' + (catNames[cat]||cat) + '</span>'
       + '</div>'
       + '<table style="width:100%;border-collapse:collapse">'
       + '<thead><tr style="background:#111;color:#fff">'
