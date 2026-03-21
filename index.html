@@ -4201,8 +4201,9 @@ function printK3PDF() {
       var p1    = getAthletePoints(a1.id);
       var pts1  = p1.k1 + p1.k2;
       var pts2  = a2 ? (function(){ var p=getAthletePoints(a2.id); return p.k1+p.k2; })() : '';
-      var bg    = i === pairs.length-1 ? 'background:#eee' : (i%2===1?'background:#f7f7f7':'');
-      return '<tr style="' + bg + bt + '">'
+      var pairBg = i === pairs.length-1 ? '#e8e8e8' : (i%2===0 ? '#ffffff' : '#eef4fb');
+      var borderTop = i===0 ? '' : 'border-top:2px solid #999;';
+      return '<tr style="background:' + pairBg + ';' + borderTop + '">'
         + '<td style="text-align:center;font-weight:bold;font-size:16px;width:36px">' + (i+1) + '</td>'
         + '<td style="font-weight:600"><span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:3px;font-weight:bold;font-size:11px;margin-right:5px;background:#1a6bb5;color:#fff;vertical-align:middle">L</span>' + a1.name + '<br><span style="font-size:10px;color:#555">' + team1 + '</span></td>'
         + '<td style="text-align:center;font-family:monospace;font-weight:bold;width:70px">' + pts1 + '</td>'
