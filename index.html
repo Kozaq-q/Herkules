@@ -4336,8 +4336,7 @@ function printK3Results() {
       var s1style = better===1 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
       var s2style = better===2 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
       var bg3  = i%2===1 ? '#ebebeb' : '#ffffff';
-      var sep3 = i>0 ? 'border-top:2px solid #888;' : '';
-      var td3  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg3 + ';' + sep3;
+      var td3  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg3 + ';';
       var dim3 = !hasAny ? ';color:#ccc' : '';
       return '<tr>'
         + '<td style="' + td3 + 'text-align:center;font-weight:bold;font-size:13px;width:28px' + dim3 + '">' + (i+1) + '</td>'
@@ -4345,7 +4344,7 @@ function printK3Results() {
         + '<td style="' + td3 + 'font-size:10px;color:#777;width:120px' + dim3 + '">' + team + '</td>'
         + '<td style="' + td3 + s1style + ';width:70px;text-align:center' + dim3 + '">' + a.s1str + '</td>'
         + '<td style="' + td3 + s2style + ';width:70px;text-align:center' + dim3 + '">' + a.s2str + '</td>'
-        + '<td style="padding:6px 8px;border:1px solid #ccc;' + sep3 + 'text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny?a.pts:'-') + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #ccc;background:' + bg3 + ';text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny?a.pts:'-') + '</td>'
         + '</tr>';
     }).join('');
 
@@ -4536,15 +4535,16 @@ function printKResults(ev) {
       var better = tv1 && tv2 ? (tv1 <= tv2 ? 1 : 2) : (tv1 ? 1 : (tv2 ? 2 : 0));
       var s1b = better === 1 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
       var s2b = better === 2 ? 'font-family:monospace;font-weight:bold;font-size:13px' : 'font-family:monospace;color:#999;font-size:11px';
-      var bg = i % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
-      var bt = i > 0 ? 'border-top:1px solid #bbb;' : '';
-      return '<tr style="' + bg + bt + (hasAny ? '' : ';color:#ccc') + '">'
-        + '<td style="text-align:center;font-weight:bold;font-size:13px;width:28px">' + (i+1) + '</td>'
-        + '<td style="font-weight:600">' + a.name + '</td>'
-        + '<td style="font-size:10px;color:#555;width:120px">' + (team ? team.name : '') + '</td>'
-        + '<td style="' + s1b + ';width:70px;text-align:center">' + t1 + '</td>'
-        + '<td style="' + s2b + ';width:70px;text-align:center">' + t2 + '</td>'
-        + '<td style="text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny ? pts : '-') + '</td>'
+      var bg  = i % 2 === 1 ? '#ebebeb' : '#ffffff';
+      var tdS = 'padding:6px 8px;border:1px solid #ccc;background:' + bg + ';';
+      var dim = hasAny ? '' : ';color:#ccc';
+      return '<tr>'
+        + '<td style="' + tdS + 'text-align:center;font-weight:bold;font-size:13px;width:28px' + dim + '">' + (i+1) + '</td>'
+        + '<td style="' + tdS + 'font-weight:600' + dim + '">' + a.name + '</td>'
+        + '<td style="' + tdS + 'font-size:10px;color:#777;width:120px' + dim + '">' + (team ? team.name : '') + '</td>'
+        + '<td style="' + tdS + s1b + ';width:70px;text-align:center' + dim + '">' + t1 + '</td>'
+        + '<td style="' + tdS + s2b + ';width:70px;text-align:center' + dim + '">' + t2 + '</td>'
+        + '<td style="padding:6px 8px;border:1px solid #ccc;text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (hasAny ? pts : '-') + '</td>'
         + '</tr>';
     }).join('');
 
@@ -4627,8 +4627,7 @@ function printK4Results() {
         var tStr = a.k4dnf ? 'NKL' : (a.k4time ? secToTimeK4(a.k4time) : '-');
         var hasr = a.k4time || a.k4dnf;
         var bg2  = ai % 2 === 1 ? '#ebebeb' : '#ffffff';
-        var sep2 = ai > 0 ? 'border-top:2px solid #888;' : '';
-        var td2  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg2 + ';' + sep2;
+        var td2  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg2 + ';';
         var dim2 = !hasr ? ';color:#ccc' : '';
         return '<tr>'
           + '<td style="' + td2 + 'text-align:center;font-weight:bold;font-size:13px;width:28px' + dim2 + '">' + (ai+1) + '</td>'
@@ -4636,7 +4635,7 @@ function printK4Results() {
           + '<td style="' + td2 + 'font-size:10px;color:#777;width:120px' + dim2 + '">' + (team ? team.name : '') + '</td>'
           + '<td style="' + td2 + 'font-family:monospace;font-weight:bold;font-size:13px;text-align:center;width:80px' + dim2 + '">' + tStr + '</td>'
           + '<td style="' + td2 + 'text-align:center;font-weight:700;font-size:12px;width:54px' + dim2 + '">' + (hasr ? a.pts.k4 : '-') + '</td>'
-          + '<td style="padding:6px 8px;border:1px solid #ccc;' + sep2 + 'text-align:center;font-weight:800;font-size:13px;width:60px;background:#111;color:#fff">' + (hasr ? a.pts.total : '-') + '</td>'
+          + '<td style="padding:6px 8px;border:1px solid #ccc;background:' + bg2 + ';text-align:center;font-weight:800;font-size:13px;width:60px;background:#111;color:#fff">' + (hasr ? a.pts.total : '-') + '</td>'
           + '</tr>';
       }).join('');
 
@@ -4686,13 +4685,13 @@ function printResultsAll() {
 
   var teamRows = teams.map(function(t, i) {
     var rk = i+1;
-    var bg = i % 2 === 1 ? 'background:#f0f0f0' : 'background:#fff';
-    var bt = i > 0 ? 'border-top:1px solid #bbb;' : '';
+    var bg   = i % 2 === 1 ? '#ebebeb' : '#ffffff';
+    var tdT  = 'padding:6px 8px;border:1px solid #ccc;background:' + bg + ';';
     var medal = rk===1 ? '🥇 ' : rk===2 ? '🥈 ' : rk===3 ? '🥉 ' : '';
-    return '<tr style="' + bg + '">'
-      + '<td style="text-align:center;font-weight:bold;font-size:14px;width:28px">' + rk + '</td>'
-      + '<td style="font-weight:600">' + medal + t.name + '</td>'
-      + '<td style="text-align:center;font-weight:800;font-size:13px;background:#111;color:#fff;width:70px">' + t.total + '</td>'
+    return '<tr>'
+      + '<td style="' + tdT + 'text-align:center;font-weight:bold;font-size:14px;width:28px">' + rk + '</td>'
+      + '<td style="' + tdT + 'font-weight:600">' + medal + t.name + '</td>'
+      + '<td style="padding:6px 8px;border:1px solid #ccc;text-align:center;font-weight:800;font-size:13px;background:#111;color:#fff;width:70px">' + t.total + '</td>'
       + '</tr>';
   }).join('');
 
@@ -4737,8 +4736,7 @@ function printResultsAll() {
       var rk   = a.pk ? 'PK' : rank;
       var rowNum = a.pk ? rank+1000 : rank;
       var bgI   = rowNum % 2 === 1 ? '#ebebeb' : '#ffffff';
-      var sepI  = rank > 1 || a.pk ? 'border-top:2px solid #888;' : '';
-      var tdI   = 'padding:5px 8px;border:1px solid #ccc;background:' + bgI + ';' + sepI;
+      var tdI   = 'padding:5px 8px;border:1px solid #ccc;background:' + bgI + ';';
       var dimI  = a.pk ? ';color:#aaa' : '';
       var medal = !a.pk && rank===1 ? '🥇 ' : !a.pk && rank===2 ? '🥈 ' : !a.pk && rank===3 ? '🥉 ' : '';
       return '<tr>'
@@ -4749,7 +4747,7 @@ function printResultsAll() {
         + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:58px' + dimI + '">' + bestTime(a.id,'k2',false) + '</td>'
         + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:58px' + dimI + '">' + bestTimeK3(a.id) + '</td>'
         + '<td style="' + tdI + 'font-family:monospace;text-align:center;font-size:11px;width:62px' + dimI + '">' + bestTime(a.id,'k4',true) + '</td>'
-        + '<td style="padding:5px 8px;border:1px solid #ccc;' + sepI + 'text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (a.pts.total||0) + '</td>'
+        + '<td style="padding:5px 8px;border:1px solid #ccc;background:' + bgI + ';text-align:center;font-weight:800;font-size:13px;width:54px;background:#111;color:#fff">' + (a.pts.total||0) + '</td>'
         + '</tr>';
     }).join('');
 
