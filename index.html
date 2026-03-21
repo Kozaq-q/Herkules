@@ -4244,9 +4244,9 @@ function printKJudgeList(ev) {
         <td>${offset+i+1}</td>
         <td>${catBadge(a)}</td>
         <td>${a.name}</td>
+        <td class="time-cell"></td>
+        <td class="time-cell"></td>
         <td style="font-size:11px">${team?.name||''}</td>
-        <td class="time-cell"></td>
-        <td class="time-cell"></td>
       </tr>`;
     }).join('');
   }
@@ -4274,9 +4274,9 @@ function printKJudgeList(ev) {
         <th style="width:28px">#</th>
         <th style="width:46px">Kat.</th>
         <th>Zawodnik</th>
-        <th>Drużyna</th>
         <th style="width:72px">S1 (ss.s)</th>
         <th style="width:72px">S2 (ss.s)</th>
+        <th>Drużyna</th>
       </tr></thead>
       <tbody>
         ${women.length ? `<tr><td colspan="6" class="gender-header">— KOBIETY —</td></tr>${rows(women, 0)}` : ''}
@@ -4460,9 +4460,9 @@ function printK3JudgeList() {
           <th style="width:28px">Para</th>
           <th style="width:28px">Tor</th>
           <th>Zawodnik</th>
+          <th style="width:75px">Czas (ss.s)</th>
           <th style="width:80px">Drużyna</th>
           <th style="width:65px">Pkt K1+K2</th>
-          <th style="width:75px">Czas (ss.s)</th>
         </tr></thead>
         <tbody>
           ${pairs.map((pair,pairIdx) => {
@@ -4477,9 +4477,9 @@ function printK3JudgeList() {
                 <td style="text-align:center;font-weight:bold">${pairIdx+1}</td>
                 <td style="text-align:center"><span class="tor-badge ${tor==='L'?'tor-l':'tor-p'}">${tor}</span></td>
                 <td style="font-weight:bold;font-size:12px">${a.name}</td>
+                <td class="time-cell"></td>
                 <td style="font-size:10px;color:#444">${team}</td>
                 <td style="text-align:center">${pts}</td>
-                <td class="time-cell"></td>
               </tr>`);
             });
             return rows.join('');
@@ -4607,11 +4607,11 @@ function printK4StartLists() {
       body += `<div class="serie-block">
         <h3>${cat} — Seria ${si}${isLast?' (FINAŁOWA)':''} ${stStr?'— Start: <strong>'+stStr+'</strong>':''}</h3>
         <table>
-          <thead><tr><th style="width:28px">#</th><th>Zawodnik</th><th>Drużyna</th><th style="width:70px">Pkt K1+K2+K3</th><th style="width:90px">Czas (m:ss)</th></tr></thead>
+          <thead><tr><th style="width:28px">#</th><th>Zawodnik</th><th style="width:90px">Czas (m:ss)</th><th>Drużyna</th><th style="width:70px">Pkt K1+K2+K3</th></tr></thead>
           <tbody>
             ${serie.map((a,ai) => {
               const team = STATE.teams.find(t=>t.id==a.teamId);
-              return `<tr><td>${ai+1}</td><td>${a.name}</td><td style="font-size:11px">${team?.name||''}</td><td style="text-align:center">${a.ptsK123}</td><td class="time-cell"></td></tr>`;
+              return `<tr><td>${ai+1}</td><td>${a.name}</td><td class="time-cell"></td><td style="font-size:11px">${team?.name||''}</td><td style="text-align:center">${a.ptsK123}</td></tr>`;
             }).join('')}
           </tbody>
         </table>
