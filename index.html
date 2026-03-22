@@ -4814,36 +4814,42 @@ function printResultsAll() {
     return Object.assign({}, team, {total: total});
   }).sort(function(a,b) { return b.total - a.total; });
 
+  var maxPts = teams.length ? teams[0].total : 1;
+
   var teamRows = teams.map(function(t, i) {
-    var rk = i+1;
-    var bg   = i % 2 === 1 ? '#ebebeb' : '#ffffff';
-    var tdT  = 'padding:7px 10px;border:1px solid #ccc;background:' + bg + ';';
-    var medal = rk===1 ? '🥇 ' : rk===2 ? '🥈 ' : rk===3 ? '🥉 ' : '';
-    var barW  = Math.round(t.total / maxPts * 100);
-    var barHTML = '<div style="display:flex;align-items:center;gap:6px">'
-      + '<div style="flex:1;height:10px;background:#ddd;border-radius:2px">'
-      + '<div style="width:' + barW + '%;height:10px;background:#111;border-radius:2px"></div>'
-      + '</div></div>';
-    return '<tr>'
-      + '<td style="' + tdT + 'text-align:center;font-weight:900;font-size:16px;width:36px">' + rk + '</td>'
-      + '<td style="' + tdT + 'font-weight:600;font-size:13px">' + medal + t.name + '</td>'
-      + '<td style="' + tdT + 'width:200px">' + barHTML + '</td>'
-      + '<td style="padding:7px 10px;border:1px solid #ccc;text-align:center;font-weight:900;font-size:14px;background:#111;color:#fff;width:70px">' + t.total + '</td>'
+    var rk  = i + 1;
+    var bg  = i % 2 === 1 ? '#f0f0f0' : '#ffffff';
+    var barW = Math.round(t.total / maxPts * 100);
+    // Trzy czcionki rangi: 1 = największa, 2-3 = duże, reszta = normalne
+    var rkSize = rk===1 ? '28px' : rk<=3 ? '20px' : '15px';
+    var rkW    = rk===1 ? '900' : '700';
+    // Grubość paska — proporcjonalna, minimalna widoczna
+    var barPct = Math.max(barW, 3);
+    return '<tr style="background:' + bg + '">'
+      + '<td style="padding:10px 12px;border-bottom:1px solid #ccc;text-align:center;font-weight:' + rkW + ';font-size:' + rkSize + ';width:44px;vertical-align:middle">' + rk + '</td>'
+      + '<td style="padding:10px 12px;border-bottom:1px solid #ccc;vertical-align:middle">'
+      +   '<div style="font-weight:700;font-size:' + (rk===1?'15px':'13px') + '">' + t.name + '</div>'
+      +   '<div style="margin-top:5px;height:8px;background:#ddd">'
+      +     '<div style="width:' + barPct + '%;height:8px;background:#000"></div>'
+      +   '</div>'
+      + '</td>'
+      + '<td style="padding:10px 14px;border-bottom:1px solid #ccc;text-align:right;font-family:monospace;font-weight:900;font-size:' + (rk===1?'22px':'16px') + ';width:80px;vertical-align:middle;border-left:3px solid #000">' + t.total + '</td>'
       + '</tr>';
   }).join('');
 
-  var maxPts = teams.length ? teams[0].total : 1;
-  body += '<div style="margin-bottom:24px;page-break-inside:avoid">'
-    + '<div style="background:#000;color:#fff;padding:8px 14px;margin-bottom:0">'
-    + '<span style="font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px">Klasyfikacja druzyn</span>'
+  body += '<div style="page-break-after:always">'
+    + '<div style="text-align:center;padding:30px 0 18px">'
+    +   '<div style="font-size:11px;text-transform:uppercase;letter-spacing:3px;color:#555;margin-bottom:6px">' + (STATE.setup.org||'') + '</div>'
+    +   '<div style="font-size:28px;font-weight:900;text-transform:uppercase;letter-spacing:2px;line-height:1.1">' + (STATE.setup.name||'Wieloboj Zolnierski') + '</div>'
+    +   '<div style="font-size:12px;color:#555;margin-top:8px;letter-spacing:1px">' + (STATE.setup.place||'') + (STATE.setup.date?' &nbsp;&middot;&nbsp; '+STATE.setup.date:'') + '</div>'
+    + '</div>'
+    + '<div style="border-top:4px solid #000;border-bottom:4px solid #000;padding:10px 0;margin-bottom:20px;text-align:center">'
+    +   '<span style="font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:4px">Klasyfikacja druzyn</span>'
     + '</div>'
     + '<table style="width:100%;border-collapse:collapse">'
-    + '<thead><tr style="background:#444;color:#fff">'
-    + '<th style="padding:6px 10px;text-align:center;font-size:10px;width:36px">#</th>'
-    + '<th style="padding:6px 10px;text-align:left;font-size:10px">DRUZYNA</th>'
-    + '<th style="padding:6px 10px;text-align:right;font-size:10px;width:200px">WYNIK</th>'
-    + '<th style="padding:6px 10px;text-align:center;font-size:10px;width:70px">PKT</th>'
-    + '</tr></thead><tbody>' + teamRows + '</tbody></table></div>';
+    + '<tbody>' + teamRows + '</tbody>'
+    + '</table>'
+    + '</div>';
 
   function bestTime(aid, ev, isK4) {
     var r   = ((STATE.results[aid]||{})[ev]) || [];
