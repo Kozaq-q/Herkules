@@ -4808,10 +4808,19 @@ function printResultsAll() {
   var catColors = {M35:'#4a8ac4',M36:'#6a5fc1',K35:'#c24a8a',K36:'#c4744a'};
   var body = '';
 
+  var _limitM = (STATE.setup.teamLimitM != null && STATE.setup.teamLimitM !== '') ? parseInt(STATE.setup.teamLimitM) : Infinity;
+  var _limitK = (STATE.setup.teamLimitK != null && STATE.setup.teamLimitK !== '') ? parseInt(STATE.setup.teamLimitK) : Infinity;
+
   var teams = STATE.teams.map(function(team) {
-    var ath = STATE.athletes.filter(function(a) { return a.teamId == team.id && !a.pk; });
-    var total = ath.reduce(function(s,a) { return s + getAthletePoints(a.id).total; }, 0);
-    return Object.assign({}, team, {total: total});
+    var all = STATE.athletes
+      .filter(function(a) { return a.teamId == team.id && !a.pk; })
+      .map(function(a) { return { a: a, pts: getAthletePoints(a.id).total }; });
+    var men   = all.filter(function(x){ return x.a.gender === 'M'; }).sort(function(a,b){ return b.pts-a.pts; });
+    var women = all.filter(function(x){ return x.a.gender === 'K'; }).sort(function(a,b){ return b.pts-a.pts; });
+    var menUsed   = isFinite(_limitM) ? men.slice(0, _limitM)   : men;
+    var womenUsed = isFinite(_limitK) ? women.slice(0, _limitK) : women;
+    var total = menUsed.concat(womenUsed).reduce(function(s,x){ return s+x.pts; }, 0);
+    return Object.assign({}, team, {total: total, menUsed: menUsed, womenUsed: womenUsed});
   }).sort(function(a,b) { return b.total - a.total; });
 
   var maxPts = teams.length ? teams[0].total : 1;
