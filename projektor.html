@@ -587,10 +587,19 @@ function hasAnyResult(aid, event) {
 }
 
 function getTeamScore(teamId) {
-  const limitM = (STATE.setup.teamLimitM != null) ? STATE.setup.teamLimitM : Infinity;
-  const limitK = (STATE.setup.teamLimitK != null) ? STATE.setup.teamLimitK : Infinity;
   const all = STATE.athletes.filter(a => a.teamId == teamId && !a.pk)
     .map(a => ({ a, pts: getAthletePoints(a.id).total }));
+
+  if (STATE.setup.teamLimitOpen) {
+    const limitN = (STATE.setup.teamLimitOpenN != null) ? STATE.setup.teamLimitOpenN : Infinity;
+    const sorted = [...all].sort((a,b) => b.pts - a.pts);
+    const used   = sorted.slice(0, limitN);
+    const total  = used.reduce((s,x) => s + x.pts, 0);
+    return { total, menUsed: used.filter(x=>x.a.gender==='M'), womenUsed: used.filter(x=>x.a.gender==='K') };
+  }
+
+  const limitM = (STATE.setup.teamLimitM != null) ? STATE.setup.teamLimitM : Infinity;
+  const limitK = (STATE.setup.teamLimitK != null) ? STATE.setup.teamLimitK : Infinity;
   const menAll   = all.filter(x => x.a.gender === 'M').sort((a,b) => b.pts - a.pts);
   const womenAll = all.filter(x => x.a.gender === 'K').sort((a,b) => b.pts - a.pts);
   const menUsed   = menAll.slice(0, limitM);
