@@ -1083,7 +1083,13 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
           Ustaw ilu <strong>najlepszych</strong> zawodników z każdej płci jest uwzględnianych w klasyfikacji drużynowej.
           Jeśli drużyna wystawia więcej zawodników — liczy się tylko N najlepszych wyników.
         </div>
-        <div class="grid-2">
+        <div style="margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
+            <input type="checkbox" id="setup-limit-open" onchange="saveTeamLimits()">
+            <span>Bez podziału na płeć (np. 8 najlepszych łącznie)</span>
+          </label>
+        </div>
+        <div id="team-limit-split" class="grid-2">
           <div class="form-group">
             <label>♂ Mężczyźni (max do klasyfikacji)</label>
             <input id="setup-limit-m" type="number" min="1" max="20" placeholder="np. 5"
@@ -1093,6 +1099,13 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
             <label>♀ Kobiety (max do klasyfikacji)</label>
             <input id="setup-limit-k" type="number" min="1" max="20" placeholder="np. 3"
               oninput="saveTeamLimits()" style="font-family:var(--font-m);font-size:22px;font-weight:700;color:var(--k35)">
+          </div>
+        </div>
+        <div id="team-limit-open-wrap" style="display:none">
+          <div class="form-group">
+            <label>👥 Najlepszych łącznie (bez podziału na płeć)</label>
+            <input id="setup-limit-open-n" type="number" min="1" max="30" placeholder="np. 8"
+              oninput="saveTeamLimits()" style="font-family:var(--font-m);font-size:22px;font-weight:700;color:var(--accent)">
           </div>
         </div>
         <div id="team-limit-preview" class="text-muted text-sm mono" style="margin-top:4px"></div>
@@ -2102,6 +2115,7 @@ function ensureStateDefaults() {
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
   if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (STATE.setup.teamLimitOpen === undefined) STATE.setup.teamLimitOpen = false;
   if (!STATE.disq) STATE.disq = {};
   if (!STATE.dnf) STATE.dnf = {};
   if (!STATE.series2) STATE.series2 = {};
@@ -2356,10 +2370,26 @@ function toggleDateEnd() {
 }
 
 function saveTeamLimits() {
-  const m = parseInt(document.getElementById('setup-limit-m').value);
-  const k = parseInt(document.getElementById('setup-limit-k').value);
-  STATE.setup.teamLimitM = (m > 0) ? m : null;
-  STATE.setup.teamLimitK = (k > 0) ? k : null;
+  const openMode = document.getElementById('setup-limit-open')?.checked || false;
+  STATE.setup.teamLimitOpen = openMode;
+
+  const splitWrap = document.getElementById('team-limit-split');
+  const openWrap  = document.getElementById('team-limit-open-wrap');
+  if (splitWrap) splitWrap.style.display = openMode ? 'none' : '';
+  if (openWrap)  openWrap.style.display  = openMode ? '' : 'none';
+
+  if (openMode) {
+    const n = parseInt(document.getElementById('setup-limit-open-n')?.value);
+    STATE.setup.teamLimitOpenN = (n > 0) ? n : null;
+    STATE.setup.teamLimitM = null;
+    STATE.setup.teamLimitK = null;
+  } else {
+    const m = parseInt(document.getElementById('setup-limit-m').value);
+    const k = parseInt(document.getElementById('setup-limit-k').value);
+    STATE.setup.teamLimitM = (m > 0) ? m : null;
+    STATE.setup.teamLimitK = (k > 0) ? k : null;
+    STATE.setup.teamLimitOpenN = null;
+  }
   save();
   renderTeamLimitPreview();
   renderTeamRanking();
@@ -2368,6 +2398,11 @@ function saveTeamLimits() {
 function renderTeamLimitPreview() {
   const el = document.getElementById('team-limit-preview');
   if (!el) return;
+  if (STATE.setup.teamLimitOpen) {
+    const n = STATE.setup.teamLimitOpenN;
+    el.textContent = n ? '→ Do klasyfikacji: ' + n + ' najlepszych zawodników łącznie (bez podziału na płeć)' : '→ Do klasyfikacji: wszyscy zawodnicy (bez podziału na płeć)';
+    return;
+  }
   const lm = STATE.setup.teamLimitM;
   const lk = STATE.setup.teamLimitK;
   if (lm == null && lk == null) {
@@ -2404,6 +2439,15 @@ function renderSetup() {
   const lkEl = document.getElementById('setup-limit-k');
   if (lmEl) lmEl.value = STATE.setup.teamLimitM != null ? STATE.setup.teamLimitM : '';
   if (lkEl) lkEl.value = STATE.setup.teamLimitK != null ? STATE.setup.teamLimitK : '';
+  const openCb   = document.getElementById('setup-limit-open');
+  const openNEl  = document.getElementById('setup-limit-open-n');
+  const splitWrap= document.getElementById('team-limit-split');
+  const openWrap = document.getElementById('team-limit-open-wrap');
+  const isOpen   = !!STATE.setup.teamLimitOpen;
+  if (openCb)    openCb.checked = isOpen;
+  if (openNEl)   openNEl.value  = STATE.setup.teamLimitOpenN != null ? STATE.setup.teamLimitOpenN : '';
+  if (splitWrap) splitWrap.style.display = isOpen ? 'none' : '';
+  if (openWrap)  openWrap.style.display  = isOpen ? '' : 'none';
   renderTeamLimitPreview();
   renderTeamsList();
   renderScoreTablesEditor();
@@ -4065,10 +4109,22 @@ function renderIndivRankingHighlight(cat, highlightId) {
 }
 
 function getTeamScore(teamId) {
-  const limitM = (STATE.setup.teamLimitM != null) ? STATE.setup.teamLimitM : Infinity;
-  const limitK = (STATE.setup.teamLimitK != null) ? STATE.setup.teamLimitK : Infinity;
   const all = STATE.athletes.filter(a => a.teamId == teamId && !a.pk)
     .map(a => ({ a, pts: getAthletePoints(a.id).total }));
+
+  if (STATE.setup.teamLimitOpen) {
+    // Tryb: N najlepszych łącznie bez podziału na płeć
+    const limitN = (STATE.setup.teamLimitOpenN != null) ? STATE.setup.teamLimitOpenN : Infinity;
+    const sorted = [...all].sort((a,b) => b.pts - a.pts);
+    const used   = sorted.slice(0, limitN);
+    const total  = used.reduce((s,x) => s + x.pts, 0);
+    const menUsed   = used.filter(x => x.a.gender === 'M');
+    const womenUsed = used.filter(x => x.a.gender === 'K');
+    return { total, menAll: all.filter(x=>x.a.gender==='M'), womenAll: all.filter(x=>x.a.gender==='K'), menUsed, womenUsed };
+  }
+
+  const limitM = (STATE.setup.teamLimitM != null) ? STATE.setup.teamLimitM : Infinity;
+  const limitK = (STATE.setup.teamLimitK != null) ? STATE.setup.teamLimitK : Infinity;
   const menAll   = all.filter(x => x.a.gender === 'M').sort((a,b) => b.pts - a.pts);
   const womenAll = all.filter(x => x.a.gender === 'K').sort((a,b) => b.pts - a.pts);
   const menUsed   = menAll.slice(0, limitM);
@@ -4091,10 +4147,17 @@ function renderTeamRanking() {
 
   const maxPts = teams[0]?.total || 1;
 
-  const mTxt = limitM ? limitM + ' najl. M' : 'wszyscy M';
-  const kTxt = limitK ? limitK + ' najl. K' : 'wszystkie K';
+  let ruleTxt;
+  if (STATE.setup.teamLimitOpen) {
+    const n = STATE.setup.teamLimitOpenN;
+    ruleTxt = n ? n + ' najlepszych łącznie' : 'wszyscy (bez podziału na płeć)';
+  } else {
+    const mTxt = limitM ? limitM + ' najl. M' : 'wszyscy M';
+    const kTxt = limitK ? limitK + ' najl. K' : 'wszystkie K';
+    ruleTxt = mTxt + ' + ' + kTxt;
+  }
   const ruleBadge = `<div class="alert alert-info" style="margin-bottom:12px;font-size:12px">
-    ⚙ Regulamin: <strong>${mTxt} + ${kTxt}</strong> z drużyny
+    ⚙ Regulamin: <strong>${ruleTxt}</strong> z drużyny
   </div>`;
 
   el.innerHTML = ruleBadge + teams.map((t,i) => {
@@ -4808,19 +4871,9 @@ function printResultsAll() {
   var catColors = {M35:'#4a8ac4',M36:'#6a5fc1',K35:'#c24a8a',K36:'#c4744a'};
   var body = '';
 
-  var _limitM = (STATE.setup.teamLimitM != null && STATE.setup.teamLimitM !== '') ? parseInt(STATE.setup.teamLimitM) : Infinity;
-  var _limitK = (STATE.setup.teamLimitK != null && STATE.setup.teamLimitK !== '') ? parseInt(STATE.setup.teamLimitK) : Infinity;
-
   var teams = STATE.teams.map(function(team) {
-    var all = STATE.athletes
-      .filter(function(a) { return a.teamId == team.id && !a.pk; })
-      .map(function(a) { return { a: a, pts: getAthletePoints(a.id).total }; });
-    var men   = all.filter(function(x){ return x.a.gender === 'M'; }).sort(function(a,b){ return b.pts-a.pts; });
-    var women = all.filter(function(x){ return x.a.gender === 'K'; }).sort(function(a,b){ return b.pts-a.pts; });
-    var menUsed   = isFinite(_limitM) ? men.slice(0, _limitM)   : men;
-    var womenUsed = isFinite(_limitK) ? women.slice(0, _limitK) : women;
-    var total = menUsed.concat(womenUsed).reduce(function(s,x){ return s+x.pts; }, 0);
-    return Object.assign({}, team, {total: total, menUsed: menUsed, womenUsed: womenUsed});
+    var score = getTeamScore(team.id);
+    return Object.assign({}, team, {total: score.total, menUsed: score.menUsed, womenUsed: score.womenUsed});
   }).sort(function(a,b) { return b.total - a.total; });
 
   var maxPts = teams.length ? teams[0].total : 1;
@@ -5374,6 +5427,7 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
   if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (STATE.setup.teamLimitOpen === undefined) STATE.setup.teamLimitOpen = false;
   if (!STATE.k3s2) STATE.k3s2 = {};
   let k3injected = 0;
   for (const [aid, times] of Object.entries(K3_FROM_EXCEL)) {
@@ -5577,6 +5631,7 @@ function confirmGender(athleteId) {
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
   if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (STATE.setup.teamLimitOpen === undefined) STATE.setup.teamLimitOpen = false;
   STATE.genderConfirmed[athleteId] = true;
   save();
   renderAthletesList();
@@ -5677,6 +5732,7 @@ function getSeries2Participants(ev) {
 
 function toggleSeries2Participant(ev, aid) {
   if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (STATE.setup.teamLimitOpen === undefined) STATE.setup.teamLimitOpen = false;
   if (!STATE.series2Participants[ev]) STATE.series2Participants[ev] = {};
   const cur = STATE.series2Participants[ev][aid];
   // default true → toggle
@@ -6013,6 +6069,7 @@ function ks2SelectAll(val) {
 
 function setAllSeries2(ev, val) {
   if (!STATE.series2Participants) STATE.series2Participants = { k1:{}, k2:{} };
+  if (STATE.setup.teamLimitOpen === undefined) STATE.setup.teamLimitOpen = false;
   if (!STATE.series2Participants[ev]) STATE.series2Participants[ev] = {};
   STATE.athletes.filter(a => !a.pk).forEach(a => {
     STATE.series2Participants[ev][a.id] = val;
