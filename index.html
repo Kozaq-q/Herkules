@@ -4922,10 +4922,15 @@ function printResultsAll() {
     return isK4 ? secToTimeK4(t) : fmtSec1(t)+'s';
   }
   function bestTimeK3(aid) {
-    var r   = ((STATE.results[aid]||{}).k3) || [];
-    var disq= ((STATE.disq[aid]  ||{}).k3) || [];
-    var dnf = ((STATE.dnf[aid]   ||{}).k3) || [];
-    var t = getBestValidTime(r, disq, dnf);
+    var r1   = ((STATE.results[aid]||{}).k3)   || [];
+    var r2   = ((STATE.results[aid]||{}).k3s2) || [];
+    var disq1= ((STATE.disq[aid]  ||{}).k3)    || [];
+    var disq2= ((STATE.disq[aid]  ||{}).k3s2)  || [];
+    var dnf1 = ((STATE.dnf[aid]   ||{}).k3)    || [];
+    var dnf2 = ((STATE.dnf[aid]   ||{}).k3s2)  || [];
+    var t1 = getBestValidTime(r1, disq1, dnf1);
+    var t2 = getBestValidTime(r2, disq2, dnf2);
+    var t  = t1 && t2 ? Math.min(t1, t2) : (t1 || t2);
     return t ? fmtSec1(t)+'s' : '-';
   }
 
