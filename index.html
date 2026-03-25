@@ -4069,8 +4069,8 @@ function renderIndivRankingHighlight(cat, highlightId) {
   let athletes = STATE.athletes.filter(a => a.cat===cat)
     .map(a => ({ ...a, pts: getAthletePoints(a.id) }));
 
-  const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total);
-  const pk     = athletes.filter(a => a.pk).sort((a,b) => b.pts.total - a.pts.total);
+  const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total || b.pts.k2 - a.pts.k2);
+  const pk     = athletes.filter(a => a.pk).sort((a,b) => b.pts.total - a.pts.total || b.pts.k2 - a.pts.k2);
   athletes = [...normal, ...pk];
   if (!athletes.length) { el.innerHTML = '<div class="empty-state">Brak zawodników w kategorii</div>'; return; }
 
@@ -4184,8 +4184,8 @@ function renderIndivRanking(cat) {
   let athletes = STATE.athletes.filter(a => a.cat===cat)
     .map(a => ({ ...a, pts: getAthletePoints(a.id) }));
 
-  const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total);
-  const pk     = athletes.filter(a => a.pk).sort((a,b) => b.pts.total - a.pts.total);
+  const normal = athletes.filter(a => !a.pk).sort((a,b) => b.pts.total - a.pts.total || b.pts.k2 - a.pts.k2);
+  const pk     = athletes.filter(a => a.pk).sort((a,b) => b.pts.total - a.pts.total || b.pts.k2 - a.pts.k2);
   athletes = [...normal, ...pk];
 
   if (!athletes.length) { el.innerHTML = '<div class="empty-state">Brak zawodników w kategorii</div>'; return; }
@@ -4937,8 +4937,8 @@ function printResultsAll() {
   ['M35','M36','K35','K36'].forEach(function(cat) {
     var athletes = STATE.athletes.filter(function(a) { return a.cat === cat; })
       .map(function(a) { return Object.assign({}, a, {pts: getAthletePoints(a.id)}); });
-    var normal = athletes.filter(function(a) { return !a.pk; }).sort(function(a,b) { return b.pts.total - a.pts.total; });
-    var pk     = athletes.filter(function(a) { return a.pk; }).sort(function(a,b) { return b.pts.total - a.pts.total; });
+    var normal = athletes.filter(function(a) { return !a.pk; }).sort(function(a,b) { return b.pts.total - a.pts.total || b.pts.k2 - a.pts.k2; });
+    var pk     = athletes.filter(function(a) { return a.pk; }).sort(function(a,b) { return b.pts.total - a.pts.total || b.pts.k2 - a.pts.k2; });
     athletes = normal.concat(pk);
     if (!athletes.length) return;
     var rank = 0;
