@@ -224,6 +224,7 @@ tr:last-child > td { border-bottom: none; }
   <div class="header-right">
     <span class="header-contest-name" id="header-contest-name"></span>
     <span class="header-autosave" id="header-autosave">● zapisano</span>
+    <button class="btn btn-sm" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
     <button class="btn btn-sm btn-danger" onclick="resetContest()">Reset</button>
   </div>
 </header>
@@ -513,7 +514,8 @@ tr:last-child > td { border-bottom: none; }
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
-const STORAGE_KEY = 'osf_zawody_v1';
+const SLOT_ID = new URLSearchParams(window.location.search).get('slot') || '0';
+const STORAGE_KEY = 'osf_slot_' + SLOT_ID;
 
 let state = {
   contest: { name: '', city: '', date: '' },
@@ -1362,10 +1364,30 @@ function applyImportRows(rows) {
 // BOOT
 // ═══════════════════════════════════════════════════
 (function() {
-  // set today's date as default
   document.getElementById('ws-date').valueAsDate = new Date();
   load();
-  if (state.contest && state.contest.city) {
+
+  // jeśli przyszliśmy z panelu startowego (?slot=N) — pobierz dane slotu
+  if (SLOT_ID !== '0') {
+    const slotMeta = (() => {
+      try { return JSON.parse(localStorage.getItem('herkules_slot_' + SLOT_ID)); } catch(e) { return null; }
+    })();
+    if (slotMeta && !state.contest.city) {
+      // pierwszy raz — wypełnij dane z panelu
+      state.contest = { name: slotMeta.name || '', city: slotMeta.city || '', date: slotMeta.date || '' };
+      save();
+    }
+    if (state.contest.city) {
+      launchApp();
+      return;
+    }
+    // wypełnij ekran powitalny danymi z panelu
+    if (slotMeta) {
+      document.getElementById('ws-name').value = slotMeta.name || '';
+      document.getElementById('ws-city').value = slotMeta.city || '';
+      if (slotMeta.date) document.getElementById('ws-date').value = slotMeta.date;
+    }
+  } else if (state.contest && state.contest.city) {
     launchApp();
   }
 })();

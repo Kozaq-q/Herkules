@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Herkules — Panel Startowy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0d0f0f;
+  --bg2:     #141717;
+  --bg3:     #1c2020;
+  --bg4:     #232828;
+  --border:  #2e3535;
+  --border2: #3d4646;
+  --text1:   #f0f2f2;
+  --text2:   #c8cfcf;
+  --text3:   #8a9898;
+  --accent:  #e8d44d;
+  --accent2: #b5a33a;
+  --green:   #4caf82;
+  --red:     #e05555;
+  --blue:    #5b9bd5;
+  --orange:  #e8944d;
+  --font-h:  'Barlow Condensed', sans-serif;
+  --font-b:  'Barlow', sans-serif;
+  --font-m:  'JetBrains Mono', monospace;
+  --radius:  4px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ─── HEADER ─── */
+.header {
+  background: var(--bg2);
+  border-bottom: 2px solid var(--accent);
+  padding: 0 32px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo {
+  display: flex; align-items: baseline; gap: 12px;
+}
+.logo-name {
+  font-family: var(--font-h); font-size: 24px; font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--accent);
+}
+.logo-sub {
+  font-family: var(--font-m); font-size: 10px; color: var(--text3);
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.header-date {
+  font-family: var(--font-m); font-size: 12px; color: var(--text3);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 4px 12px;
+}
+
+/* ─── MAIN ─── */
+.main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+/* ─── SECTION HEADER ─── */
+.section-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--font-h); font-size: 12px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--text3);
+}
+.count-chip {
+  font-family: var(--font-m); font-size: 11px; color: var(--accent);
+  background: rgba(232,212,77,.1); border: 1px solid rgba(232,212,77,.2);
+  padding: 2px 9px; border-radius: 3px;
+}
+
+/* ─── SLOT GRID ─── */
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+/* ─── SLOT CARD ─── */
+.slot-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 18px 20px;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: border-color .15s, background .15s, transform .1s;
+  display: flex; flex-direction: column; gap: 0;
+}
+.slot-card:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-1px); }
+.slot-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+}
+.slot-card.type-czworboj::before { background: var(--blue); }
+.slot-card.type-osf::before { background: var(--orange); }
+
+.slot-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+
+.type-badge {
+  font-family: var(--font-h); font-size: 10px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 3px; border: 1px solid;
+}
+.badge-czworboj { color: var(--blue); border-color: rgba(91,155,213,.3); background: rgba(91,155,213,.08); }
+.badge-osf { color: var(--orange); border-color: rgba(232,148,77,.3); background: rgba(232,148,77,.08); }
+
+.slot-status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); font-family: var(--font-m); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+.status-dot.idle { background: var(--text3); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.slot-city {
+  font-family: var(--font-h); font-size: 26px; font-weight: 800;
+  color: var(--text1); line-height: 1; margin-bottom: 3px;
+}
+.slot-name { font-size: 12px; color: var(--text3); margin-bottom: 14px; min-height: 18px; }
+
+.slot-meta { display: flex; gap: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.meta-item { display: flex; flex-direction: column; gap: 1px; }
+.meta-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+.meta-val { font-family: var(--font-m); font-size: 13px; color: var(--text2); }
+.meta-val.hi { color: var(--accent); font-weight: 600; }
+
+.slot-actions {
+  display: flex; gap: 6px; margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── ADD CARD ─── */
+.add-card {
+  background: transparent; border: 1px dashed var(--border2);
+  border-radius: 6px; padding: 18px 20px;
+  cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  min-height: 160px; transition: border-color .15s, background .15s; color: var(--text3);
+}
+.add-card:hover { border-color: var(--accent); background: rgba(232,212,77,.03); color: var(--accent); }
+.add-icon { font-size: 32px; line-height: 1; font-weight: 300; }
+.add-label { font-family: var(--font-h); font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* ─── BUTTONS ─── */
+.btn { font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 5px 12px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); border-radius: var(--radius); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
+.btn:hover { background: var(--bg4); color: var(--text1); border-color: var(--text3); }
+.btn-primary { background: var(--accent); color: #111; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn-danger { background: transparent; color: var(--red); border-color: rgba(224,85,85,.4); }
+.btn-danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.btn-open-czworboj { background: rgba(91,155,213,.12); color: var(--blue); border-color: rgba(91,155,213,.3); }
+.btn-open-czworboj:hover { background: rgba(91,155,213,.22); border-color: var(--blue); }
+.btn-open-osf { background: rgba(232,148,77,.12); color: var(--orange); border-color: rgba(232,148,77,.3); }
+.btn-open-osf:hover { background: rgba(232,148,77,.22); border-color: var(--orange); }
+
+/* ─── HISTORY ─── */
+.history-item {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; opacity: .55;
+}
+.history-name { font-family: var(--font-h); font-size: 15px; font-weight: 700; color: var(--text1); }
+.history-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.history-badge { font-family: var(--font-m); font-size: 10px; color: var(--text3); border: 1px solid var(--border2); padding: 2px 7px; border-radius: 3px; }
+
+/* ─── MODAL ─── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 28px; width: 500px; max-width: 95vw; }
+.modal-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text1); margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 4px; letter-spacing: .5px; text-transform: uppercase; font-family: var(--font-h); }
+input[type="text"], input[type="date"], select { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 8px 10px; font-family: var(--font-b); font-size: 14px; transition: border-color .12s; }
+input:focus, select:focus { outline: none; border-color: var(--accent); background: var(--bg4); }
+select option { background: var(--bg3); }
+
+/* ─── TYPE SELECTOR ─── */
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.type-opt { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: border-color .15s, background .15s; }
+.type-opt:hover { background: var(--bg4); }
+.type-opt.selected { border-color: var(--accent); background: rgba(232,212,77,.05); }
+.type-opt-name { font-family: var(--font-h); font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+.type-opt-desc { font-size: 11px; color: var(--text3); }
+.type-czworboj .type-opt-name { color: var(--blue); }
+.type-osf .type-opt-name { color: var(--orange); }
+
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* ─── EMPTY ─── */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text3); }
+.empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .25; line-height: 1; }
+.empty-text { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <span class="logo-name">⬡ Herkules</span>
+    <span class="logo-sub">Platforma Zawodów Wojskowych</span>
+  </div>
+  <div class="header-date" id="header-date"></div>
+</header>
+
+<div class="main">
+
+  <!-- AKTYWNE ZAWODY -->
+  <div class="section-hdr">
+    <span class="section-title">Aktywne zawody</span>
+    <span class="count-chip" id="active-count">0 zawodów</span>
+  </div>
+
+  <div class="slots-grid" id="slots-grid"></div>
+
+  <!-- HISTORIA -->
+  <div class="section-hdr" style="margin-top: 8px;">
+    <span class="section-title">Historia</span>
+  </div>
+  <div id="history-list">
+    <div class="history-item">
+      <div>
+        <div class="history-name">Gdańsk — Czwórbój Żołnierski</div>
+        <div class="history-meta">15 marca 2025 · 87 zawodników · 11 drużyn</div>
+      </div>
+      <span class="history-badge">ZAKOŃCZONE</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: NOWE ZAWODY -->
+<div class="modal-overlay" id="modal-new">
+  <div class="modal">
+    <div class="modal-title">Nowe zawody</div>
+
+    <div class="form-group">
+      <label>Typ zawodów</label>
+      <div class="type-grid">
+        <div class="type-opt type-czworboj selected" id="type-czworboj" onclick="selectType('czworboj')">
+          <div class="type-opt-name">Czwórbój</div>
+          <div class="type-opt-desc">4 konkurencje · K/M 35/36</div>
+        </div>
+        <div class="type-opt type-osf" id="type-osf" onclick="selectType('osf')">
+          <div class="type-opt-name">OSF</div>
+          <div class="type-opt-desc">Tor przeszkód · 2 serie</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Miasto / lokalizacja</label>
+      <input type="text" id="new-city" placeholder="np. Warszawa" />
+    </div>
+
+    <div class="form-group">
+      <label>Nazwa / jednostka (opcjonalnie)</label>
+      <input type="text" id="new-name" placeholder="np. 18. Dywizja Zmechanizowana" />
+    </div>
+
+    <div class="form-group">
+      <label>Data</label>
+      <input type="date" id="new-date" />
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Anuluj</button>
+      <button class="btn btn-primary" onclick="createSlot()">Utwórz zawody →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STORAGE KEYS
+// Każdy slot: herkules_slot_{id} = { id, type, city, name, date, created }
+// Lista slotów: herkules_slots = [id1, id2, ...]
+// ═══════════════════════════════════════════════════
+
+const SLOTS_KEY = 'herkules_slots';
+
+function getSlotIds() {
+  try { return JSON.parse(localStorage.getItem(SLOTS_KEY)) || []; } catch(e) { return []; }
+}
+
+function saveSlotIds(ids) {
+  localStorage.setItem(SLOTS_KEY, JSON.stringify(ids));
+}
+
+function getSlot(id) {
+  try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; }
+}
+
+function saveSlot(slot) {
+  localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot));
+}
+
+function deleteSlot(id) {
+  localStorage.removeItem('herkules_slot_' + id);
+  // też wyczyść dane zawodów dla tego slotu
+  localStorage.removeItem('zawody_slot_' + id);   // Czwórbój
+  localStorage.removeItem('osf_slot_' + id);       // OSF
+  const ids = getSlotIds().filter(x => x !== id);
+  saveSlotIds(ids);
+}
+
+// ═══════════════════════════════════════════════════
+// SLOT STATS — odczyt z danych zawodów
+// ═══════════════════════════════════════════════════
+function getSlotStats(slot) {
+  let athletes = 0, teams = 0;
+  try {
+    if (slot.type === 'czworboj') {
+      const raw = localStorage.getItem('zawody_slot_' + slot.id);
+      if (raw) {
+        const data = JSON.parse(raw);
+        athletes = (data.athletes || []).length;
+        teams = (data.teams || []).length;
+      }
+    } else if (slot.type === 'osf') {
+      const raw = localStorage.getItem('osf_slot_' + slot.id);
+      if (raw) {
+        const data = JSON.parse(raw);
+        athletes = (data.athletes || []).length;
+        const teamSet = new Set((data.athletes || []).map(a => a.team).filter(Boolean));
+        teams = teamSet.size;
+      }
+    }
+  } catch(e) {}
+  return { athletes, teams };
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+function render() {
+  const ids = getSlotIds();
+  const grid = document.getElementById('slots-grid');
+  const countEl = document.getElementById('active-count');
+
+  const n = ids.length;
+  countEl.textContent = n === 0 ? 'brak' : n === 1 ? '1 zawody' : n + ' zawodów';
+
+  let html = '';
+  ids.forEach(id => {
+    const slot = getSlot(id);
+    if (!slot) return;
+    const stats = getSlotStats(slot);
+    const typeCls = slot.type === 'czworboj' ? 'czworboj' : 'osf';
+    const typeLabel = slot.type === 'czworboj' ? 'Czwórbój Żołnierski' : 'OSF';
+    const openBtnCls = slot.type === 'czworboj' ? 'btn-open-czworboj' : 'btn-open-osf';
+    const hasData = stats.athletes > 0;
+
+    html += `
+    <div class="slot-card type-${typeCls}">
+      <div class="slot-top">
+        <span class="type-badge badge-${typeCls}">${typeLabel}</span>
+        <span class="slot-status">
+          <span class="status-dot${hasData ? '' : ' idle'}"></span>
+          ${hasData ? 'AKTYWNE' : 'PUSTE'}
+        </span>
+      </div>
+      <div class="slot-city">${esc(slot.city)}</div>
+      <div class="slot-name">${esc(slot.name || '')}</div>
+      <div class="slot-meta">
+        <div class="meta-item">
+          <span class="meta-label">Zawodnicy</span>
+          <span class="meta-val hi">${stats.athletes}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Drużyny</span>
+          <span class="meta-val">${stats.teams}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Data</span>
+          <span class="meta-val">${slot.date || '—'}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Slot</span>
+          <span class="meta-val">#${slot.id}</span>
+        </div>
+      </div>
+      <div class="slot-actions">
+        <button class="btn ${openBtnCls}" style="flex:1;" onclick="openSlot(${slot.id})">→ Otwórz</button>
+        <button class="btn btn-danger" onclick="removeSlot(${slot.id}, event)">✕</button>
+      </div>
+    </div>`;
+  });
+
+  html += `
+  <div class="add-card" onclick="openModal()">
+    <div class="add-icon">+</div>
+    <div class="add-label">Nowe zawody</div>
+  </div>`;
+
+  grid.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════
+let selectedType = 'czworboj';
+
+function selectType(t) {
+  selectedType = t;
+  document.getElementById('type-czworboj').classList.toggle('selected', t === 'czworboj');
+  document.getElementById('type-osf').classList.toggle('selected', t === 'osf');
+}
+
+function openModal() {
+  document.getElementById('new-city').value = '';
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-date').valueAsDate = new Date();
+  selectType('czworboj');
+  document.getElementById('modal-new').classList.add('open');
+  setTimeout(() => document.getElementById('new-city').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modal-new').classList.remove('open');
+}
+
+function createSlot() {
+  const city = document.getElementById('new-city').value.trim();
+  const name = document.getElementById('new-name').value.trim();
+  const date = document.getElementById('new-date').value;
+  if (!city) { document.getElementById('new-city').focus(); return; }
+
+  const ids = getSlotIds();
+  const newId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
+  const slot = { id: newId, type: selectedType, city, name, date, created: new Date().toISOString() };
+
+  saveSlot(slot);
+  saveSlotIds([...ids, newId]);
+
+  closeModal();
+  render();
+
+  // od razu otwórz
+  openSlot(newId);
+}
+
+function openSlot(id) {
+  const slot = getSlot(id);
+  if (!slot) return;
+
+  if (slot.type === 'czworboj') {
+    // Czwórbój ma własny system slotów — znajdź lub utwórz slot w jego indeksie
+    const czworSlotId = ensureCzworSlot(id, slot);
+    localStorage.setItem('zawody_active_slot', czworSlotId);
+    window.location.href = 'index.html';
+  } else if (slot.type === 'osf') {
+    window.location.href = 'osf.html?slot=' + id;
+  }
+}
+
+function ensureCzworSlot(panelId, slot) {
+  // Sprawdź czy już mamy mapowanie panelId → czworSlotId
+  const mapKey = 'herkules_czwor_map_' + panelId;
+  let czworId = localStorage.getItem(mapKey);
+  if (czworId) return czworId;
+
+  // Utwórz nowy slot w systemie Czwórboju
+  try {
+    const idx = JSON.parse(localStorage.getItem('zawody_slots_index') || '[]');
+    czworId = 'panel_' + panelId;
+    // Sprawdź czy już istnieje
+    if (!idx.find(s => s.id === czworId)) {
+      idx.push({ id: czworId, createdAt: new Date().toISOString(), passwordHash: '' });
+      localStorage.setItem('zawody_slots_index', JSON.stringify(idx));
+      // Utwórz pusty stan
+      const emptyState = {
+        setup: { name: slot.name || '', date: slot.date || '', place: slot.city || '', org: '', days: 2, teamLimitM: 5, teamLimitK: 3 },
+        teams: [], athletes: [], results: {}, disq: {}, dnf: {}, series2: {}, k3s2: {},
+        scoreTablesByCat: {}, scoreTables: {}
+      };
+      localStorage.setItem('zawody_slot_' + czworId, JSON.stringify(emptyState));
+    }
+    localStorage.setItem(mapKey, czworId);
+    return czworId;
+  } catch(e) {
+    return 'panel_' + panelId;
+  }
+}
+
+function removeSlot(id, e) {
+  e.stopPropagation();
+  const slot = getSlot(id);
+  if (!slot) return;
+  const label = (slot.type === 'czworboj' ? 'Czwórbój' : 'OSF') + ' — ' + slot.city;
+  if (!confirm('Usunąć zawody "' + label + '"?\n\nWszystkie dane zostaną utracone.')) return;
+  deleteSlot(id);
+  render();
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate() {
+  const d = new Date();
+  const days = ['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+  const months = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// ═══════════════════════════════════════════════════
+// MODAL CLOSE ON OUTSIDE CLICK / ESC
+// ═══════════════════════════════════════════════════
+document.getElementById('modal-new').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ═══════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════
+document.getElementById('header-date').textContent = formatDate();
+render();
+</script>
+</body>
+</html>
