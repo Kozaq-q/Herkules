@@ -196,19 +196,55 @@ select option { background: var(--bg3); }
 .empty-state { text-align: center; padding: 48px 20px; color: var(--text3); }
 .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .25; line-height: 1; }
 .empty-text { font-size: 13px; }
+
+/* ─── LOGIN SCREEN ─── */
+#login-screen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 999; padding: 24px;
+}
+.login-logo { font-family: var(--font-h); font-size: 56px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); line-height: 1; margin-bottom: 6px; }
+.login-sub { font-family: var(--font-m); font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
+.login-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; padding: 32px; width: 100%; max-width: 380px; }
+.login-box-title { font-family: var(--font-h); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); margin-bottom: 16px; }
+.login-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 12px 14px; font-family: var(--font-m); font-size: 18px; letter-spacing: 4px; transition: border-color .12s; text-align: center; }
+.login-input:focus { outline: none; border-color: var(--accent); background: var(--bg4); }
+.login-input.error { border-color: var(--red) !important; animation: shake .3s; }
+.login-btn { width: 100%; margin-top: 12px; padding: 11px; font-family: var(--font-h); font-size: 14px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; background: var(--accent); color: #111; border: none; border-radius: var(--radius); cursor: pointer; transition: background .12s; }
+.login-btn:hover { background: var(--accent2); }
+.login-error { font-size: 12px; color: var(--red); margin-top: 10px; text-align: center; min-height: 16px; font-family: var(--font-m); }
+.login-footer { margin-top: 28px; font-size: 11px; color: var(--text3); text-align: center; font-family: var(--font-m); letter-spacing: .5px; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-7px)} 75%{transform:translateX(7px)} }
 </style>
 </head>
 <body>
 
-<header class="header">
+<!-- ═══════════════════ LOGIN SCREEN ═══════════════════ -->
+<div id="login-screen">
+  <div class="login-logo">⬡ Herkules</div>
+  <div class="login-sub">Platforma Zawodów Wojskowych</div>
+  <div class="login-box">
+    <div class="login-box-title">Hasło dostępu</div>
+    <input class="login-input" type="password" id="login-input" placeholder="••••••••" autocomplete="current-password" />
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" onclick="doLogin()">Zaloguj →</button>
+  </div>
+  <div class="login-footer">Herkules · Zawody Wojskowe</div>
+</div>
+
+<header class="header" id="main-header" style="display:none;">
   <div class="logo">
     <span class="logo-name">⬡ Herkules</span>
     <span class="logo-sub">Platforma Zawodów Wojskowych</span>
   </div>
-  <div class="header-date" id="header-date"></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="header-date" id="header-date"></div>
+    <button onclick="openChangePassword()" style="background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--text3);font-family:var(--font-m);font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:.5px;" title="Zmień hasło">⚙ Hasło</button>
+    <button onclick="doLogout()" style="background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--text3);font-family:var(--font-m);font-size:10px;padding:4px 10px;cursor:pointer;letter-spacing:.5px;">⏻ Wyloguj</button>
+  </div>
 </header>
 
-<div class="main">
+<div class="main" id="main-content" style="display:none;">
 
   <!-- AKTYWNE ZAWODY -->
   <div class="section-hdr">
@@ -275,9 +311,130 @@ select option { background: var(--bg3); }
   </div>
 </div>
 
+<!-- MODAL: ZMIEŃ HASŁO -->
+<div class="modal-overlay" id="modal-password">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title">Zmień hasło</div>
+    <div class="form-group">
+      <label>Aktualne hasło</label>
+      <input type="password" id="pw-current" placeholder="••••••••" />
+    </div>
+    <div class="form-group">
+      <label>Nowe hasło</label>
+      <input type="password" id="pw-new" placeholder="min. 4 znaki" />
+    </div>
+    <div class="form-group">
+      <label>Powtórz nowe hasło</label>
+      <input type="password" id="pw-confirm" placeholder="••••••••" />
+    </div>
+    <div id="pw-error" style="font-size:12px;color:var(--red);min-height:16px;font-family:var(--font-m);"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closePasswordModal()">Anuluj</button>
+      <button class="btn btn-primary" onclick="savePassword()">Zapisz hasło</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════
-// STORAGE KEYS
+// AUTH
+// ═══════════════════════════════════════════════════
+const AUTH_KEY   = 'herkules_pw_hash';
+const SESSION_KEY = 'herkules_session';
+const DEFAULT_PW = 'herkules2025';
+
+function hashPw(pw) {
+  // prosta deterministyczna funkcja hash (nie kryptograficzna, ale wystarczająca dla tej aplikacji)
+  let h = 0x811c9dc5;
+  for (let i = 0; i < pw.length; i++) {
+    h ^= pw.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16);
+}
+
+function getStoredHash() {
+  return localStorage.getItem(AUTH_KEY) || hashPw(DEFAULT_PW);
+}
+
+function isLoggedIn() {
+  return sessionStorage.getItem(SESSION_KEY) === 'ok';
+}
+
+function doLogin() {
+  const val = document.getElementById('login-input').value;
+  const input = document.getElementById('login-input');
+  const err = document.getElementById('login-error');
+
+  if (hashPw(val) === getStoredHash()) {
+    sessionStorage.setItem(SESSION_KEY, 'ok');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-header').style.display = '';
+    document.getElementById('main-content').style.display = '';
+    document.getElementById('header-date').textContent = formatDate();
+    render();
+  } else {
+    err.textContent = 'Nieprawidłowe hasło';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => { input.classList.remove('error'); err.textContent = ''; }, 1800);
+    input.focus();
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('main-header').style.display = 'none';
+  document.getElementById('main-content').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-input').value = '';
+  document.getElementById('login-input').focus();
+}
+
+function openChangePassword() {
+  document.getElementById('pw-current').value = '';
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('modal-password').classList.add('open');
+  setTimeout(() => document.getElementById('pw-current').focus(), 50);
+}
+
+function closePasswordModal() {
+  document.getElementById('modal-password').classList.remove('open');
+}
+
+function savePassword() {
+  const cur = document.getElementById('pw-current').value;
+  const nw  = document.getElementById('pw-new').value;
+  const con = document.getElementById('pw-confirm').value;
+  const err = document.getElementById('pw-error');
+
+  if (hashPw(cur) !== getStoredHash()) { err.textContent = 'Aktualne hasło jest nieprawidłowe'; return; }
+  if (nw.length < 4) { err.textContent = 'Nowe hasło musi mieć min. 4 znaki'; return; }
+  if (nw !== con) { err.textContent = 'Hasła nie są identyczne'; return; }
+
+  localStorage.setItem(AUTH_KEY, hashPw(nw));
+  closePasswordModal();
+  alert('Hasło zostało zmienione.');
+}
+
+document.getElementById('login-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('modal-password').addEventListener('click', function(e) { if (e.target === this) closePasswordModal(); });
+
+// ═══════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════
+if (isLoggedIn()) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-header').style.display = '';
+  document.getElementById('main-content').style.display = '';
+  document.getElementById('header-date').textContent = formatDate();
+  render();
+} else {
+  setTimeout(() => document.getElementById('login-input').focus(), 100);
+}
+</script>
 // Każdy slot: herkules_slot_{id} = { id, type, city, name, date, created }
 // Lista slotów: herkules_slots = [id1, id2, ...]
 // ═══════════════════════════════════════════════════
@@ -520,12 +677,6 @@ document.getElementById('modal-new').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-// ═══════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════
-document.getElementById('header-date').textContent = formatDate();
-render();
 </script>
 </body>
 </html>

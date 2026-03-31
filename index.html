@@ -1538,6 +1538,13 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 <script>
 
+// ─── HERKULES SESSION GUARD ───
+(function() {
+  if (sessionStorage.getItem('herkules_session') !== 'ok') {
+    window.location.replace('start.html');
+  }
+})();
+
 // ════════════════════════════════════════════════════════════
 // GLOBAL AUTH — Bramka logowania
 // Hasła przechowywane w Supabase (tabela: auth_config)

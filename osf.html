@@ -511,6 +511,12 @@ tr:last-child > td { border-bottom: none; }
 </div>
 
 <script>
+// ─── SESSION GUARD ───
+(function() {
+  if (sessionStorage.getItem('herkules_session') !== 'ok') {
+    window.location.replace('start.html');
+  }
+})();
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
