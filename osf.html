@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSF — Herkules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:      #0d0f0f;
+  --bg2:     #141717;
+  --bg3:     #1c2020;
+  --bg4:     #232828;
+  --border:  #2e3535;
+  --border2: #3d4646;
+  --text1:   #f0f2f2;
+  --text2:   #c8cfcf;
+  --text3:   #8a9898;
+  --accent:  #e8d44d;
+  --accent2: #b5a33a;
+  --green:   #4caf82;
+  --red:     #e05555;
+  --blue:    #5b9bd5;
+  --orange:  #e8944d;
+  --lane-L:  #5b9bd5;
+  --lane-P:  #4caf82;
+  --male:    #5b9bd5;
+  --female:  #d45b9b;
+  --font-h:  'Barlow Condensed', sans-serif;
+  --font-b:  'Barlow', sans-serif;
+  --font-m:  'JetBrains Mono', monospace;
+  --radius:  4px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ─── HEADER ─── */
+.app-header {
+  background: var(--bg2);
+  border-bottom: 2px solid var(--orange);
+  padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 52px; position: sticky; top: 0; z-index: 100; gap: 8px;
+}
+.app-brand { display: flex; align-items: baseline; gap: 8px; }
+.app-brand-name { font-family: var(--font-h); font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); }
+.app-brand-sub { font-size: 9px; color: var(--text3); letter-spacing: 1px; font-family: var(--font-m); }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.header-contest-name { font-family: var(--font-h); font-size: 13px; color: var(--text2); letter-spacing: 1px; }
+.header-autosave { font-size: 10px; color: var(--green); font-family: var(--font-m); opacity: 0.7; }
+
+/* ─── NAV ─── */
+.nav-bar { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; padding: 0 12px; overflow-x: auto; gap: 2px; }
+.nav-tab { font-family: var(--font-h); font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 10px 14px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: color .15s, border-color .15s; }
+.nav-tab:hover { color: var(--text1); }
+.nav-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+
+/* ─── MAIN ─── */
+.main-content { padding: 16px; max-width: 1400px; margin: 0 auto; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ─── CARDS ─── */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+.card-title { font-family: var(--font-h); font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+/* ─── GRID ─── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+@media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+/* ─── BUTTONS ─── */
+.btn { font-family: var(--font-h); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 14px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); border-radius: var(--radius); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
+.btn:hover { background: var(--bg4); color: var(--text1); border-color: var(--text3); }
+.btn-primary { background: var(--orange); color: #111; border-color: var(--orange); }
+.btn-primary:hover { background: #d07c35; border-color: #d07c35; }
+.btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+.btn-success:hover { background: #3d9a6f; border-color: #3d9a6f; }
+.btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-xs { padding: 2px 7px; font-size: 10px; letter-spacing: 0.5px; }
+
+/* ─── FORM ─── */
+.form-group { margin-bottom: 10px; }
+.form-group label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 3px; letter-spacing: 0.5px; text-transform: uppercase; font-family: var(--font-h); }
+input[type="text"], input[type="number"], input[type="date"], select, textarea { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 7px 10px; font-family: var(--font-b); font-size: 14px; transition: border-color .12s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--orange); background: var(--bg4); }
+input[type="number"] { font-family: var(--font-m); }
+select option { background: var(--bg3); color: var(--text1); }
+
+/* ─── TYPOGRAPHY ─── */
+.mono { font-family: var(--font-m); }
+.text-muted { color: var(--text3); }
+.text-accent { color: var(--orange); }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.flex { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+
+/* ─── TABLE ─── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { background: var(--bg3); font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 8px 10px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:hover > td { background: rgba(255,255,255,.025); }
+tr:last-child > td { border-bottom: none; }
+
+/* ─── ALERTS ─── */
+.alert { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 10px; }
+.alert-info { background: rgba(91,155,213,.1); border: 1px solid rgba(91,155,213,.3); color: #8ebfe0; }
+.alert-warning { background: rgba(232,148,77,.1); border: 1px solid rgba(232,148,77,.3); color: #e8a86d; }
+.alert-success { background: rgba(76,175,130,.1); border: 1px solid rgba(76,175,130,.3); color: #6dc9a0; }
+
+/* ─── STAT BOX ─── */
+.stat-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; }
+.stat-val { font-family: var(--font-h); font-size: 36px; font-weight: 800; color: var(--orange); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--text3); margin-top: 4px; letter-spacing: 0.5px; }
+
+/* ─── RANK ─── */
+.rank-1 { color: #FFD700; font-weight: 800; }
+.rank-2 { color: #C0C0C0; font-weight: 800; }
+.rank-3 { color: #CD7F32; font-weight: 800; }
+
+/* ─── GENDER BADGE ─── */
+.gender-M { background: rgba(91,155,213,.15); color: var(--male); border: 1px solid rgba(91,155,213,.35); padding: 2px 8px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display: inline-block; }
+.gender-K { background: rgba(212,91,155,.15); color: var(--female); border: 1px solid rgba(212,91,155,.35); padding: 2px 8px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display: inline-block; }
+
+/* ─── LANE BADGE ─── */
+.lane-badge { font-family: var(--font-h); font-size: 12px; font-weight: 800; letter-spacing: 1px; padding: 2px 9px; border-radius: 2px; display: inline-block; }
+.lane-L { background: rgba(91,155,213,.2); color: var(--lane-L); border: 1px solid rgba(91,155,213,.4); }
+.lane-P { background: rgba(76,175,130,.2); color: var(--lane-P); border: 1px solid rgba(76,175,130,.4); }
+.lane-none { background: var(--bg3); color: var(--text3); border: 1px solid var(--border2); }
+
+/* ─── PAIR CARD ─── */
+.pair-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; }
+.pair-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pair-num { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--text3); min-width: 36px; }
+.pair-label { font-family: var(--font-h); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); }
+.pair-card.last-pair { border-color: var(--orange); }
+.pair-card.solo-runner { border-color: var(--accent); border-style: dashed; }
+.pair-athletes { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 8px; align-items: center; }
+.pair-athlete { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; }
+.pair-athlete-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+.pair-athlete-meta { font-size: 11px; color: var(--text3); font-family: var(--font-m); }
+.pair-vs { text-align: center; font-family: var(--font-h); font-size: 16px; font-weight: 800; color: var(--text3); }
+
+/* ─── QE TABLE ─── */
+.qe-scroll { overflow-x: auto; max-height: calc(100vh - 220px); overflow-y: auto; }
+.qe-table { width: 100%; border-collapse: collapse; }
+.qe-table th { background: var(--bg3); font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 8px 8px; text-align: left; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+.qe-table td { padding: 4px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.qe-row:hover td { background: rgba(255,255,255,.02); }
+.qe-group-header td { background: var(--bg3); font-family: var(--font-h); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); padding: 6px 8px; font-weight: 700; }
+.qe-num { font-family: var(--font-m); color: var(--text3); font-size: 12px; }
+.qe-name { font-weight: 600; font-size: 13px; }
+.qe-team { color: var(--text2); font-size: 12px; font-weight: 600; }
+.qe-best { font-family: var(--font-m); font-weight: 600; color: var(--green); font-size: 13px; white-space: nowrap; }
+.qe-time { width: 100px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 5px 8px; font-family: var(--font-m); font-size: 13px; font-weight: 600; transition: border-color .1s; }
+.qe-time:focus { outline: none; border-color: var(--orange); background: var(--bg4); }
+.qe-time.is-best { border-color: var(--green); color: var(--green); }
+
+/* ─── MODAL ─── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 24px; width: 480px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text1); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* ─── WELCOME ─── */
+#welcome-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 52px); padding: 32px; text-align: center; }
+.welcome-logo { font-family: var(--font-h); font-size: 64px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; color: var(--orange); line-height: 1; margin-bottom: 8px; }
+.welcome-sub { font-size: 14px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
+.welcome-form { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 32px; width: 100%; max-width: 440px; text-align: left; }
+.welcome-form-title { font-family: var(--font-h); font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ WELCOME SCREEN ═══════════════════ -->
+<div id="welcome-screen">
+  <div class="welcome-logo">OSF</div>
+  <div class="welcome-sub">Ośrodek Sprawności Fizycznej · Herkules</div>
+  <div class="welcome-form">
+    <div class="welcome-form-title">Nowe zawody</div>
+    <div class="form-group">
+      <label>Nazwa / Jednostka</label>
+      <input type="text" id="ws-name" placeholder="np. 18. Dywizja Zmechanizowana" />
+    </div>
+    <div class="form-group">
+      <label>Miasto</label>
+      <input type="text" id="ws-city" placeholder="np. Warszawa" />
+    </div>
+    <div class="form-group">
+      <label>Data</label>
+      <input type="date" id="ws-date" />
+    </div>
+    <div class="mt-16">
+      <button class="btn btn-primary" style="width:100%;padding:10px;" onclick="startContest()">Rozpocznij zawody →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div id="main-app" style="display:none;">
+
+<header class="app-header">
+  <div class="app-brand">
+    <span class="app-brand-name">OSF</span>
+    <span class="app-brand-sub">OŚRODEK SPRAWNOŚCI FIZYCZNEJ</span>
+  </div>
+  <div class="header-right">
+    <span class="header-contest-name" id="header-contest-name"></span>
+    <span class="header-autosave" id="header-autosave">● zapisano</span>
+    <button class="btn btn-sm btn-danger" onclick="resetContest()">Reset</button>
+  </div>
+</header>
+
+<nav class="nav-bar">
+  <button class="nav-tab active" onclick="showTab('zawodnicy')" id="tab-zawodnicy">Zawodnicy</button>
+  <button class="nav-tab" onclick="showTab('seria1')" id="tab-seria1">Seria 1</button>
+  <button class="nav-tab" onclick="showTab('seria2')" id="tab-seria2">Seria 2</button>
+  <button class="nav-tab" onclick="showTab('wyniki')" id="tab-wyniki">Wyniki</button>
+</nav>
+
+<div class="main-content">
+
+<!-- ═══ TAB: ZAWODNICY ═══ -->
+<div class="page active" id="page-zawodnicy">
+  <div class="grid-4 mb-12">
+    <div class="stat-box"><div class="stat-val" id="stat-total">0</div><div class="stat-label">Zawodnicy</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-m" style="color:var(--male)">0</div><div class="stat-label">Mężczyźni</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-k" style="color:var(--female)">0</div><div class="stat-label">Kobiety</div></div>
+    <div class="stat-box"><div class="stat-val" id="stat-teams">0</div><div class="stat-label">Drużyny</div></div>
+  </div>
+
+  <div class="card">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0">Lista zawodników</div>
+      <div class="flex">
+        <button class="btn btn-sm" onclick="openImportModal()">↑ Import CSV/XLSX</button>
+        <button class="btn btn-sm btn-primary" onclick="openAddModal()">+ Dodaj</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="athletes-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Płeć</th>
+            <th>Nazwisko i imię</th>
+            <th>Drużyna</th>
+            <th>Nr startowy</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="athletes-tbody"></tbody>
+      </table>
+    </div>
+    <div id="athletes-empty" class="alert alert-info mt-12" style="display:none;">Brak zawodników. Dodaj ręcznie lub zaimportuj z CSV.</div>
+  </div>
+</div>
+
+<!-- ═══ TAB: SERIA 1 ═══ -->
+<div class="page" id="page-seria1">
+  <div class="flex-between mb-12">
+    <div>
+      <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 1 — Losowanie par</div>
+      <div class="text-muted mt-4" style="font-size:12px;">Pary losowane losowo · każda para ma tory L i P</div>
+    </div>
+    <div class="flex">
+      <button class="btn btn-sm" onclick="printS1StartList()">🖨 Lista startowa</button>
+      <button class="btn btn-sm" onclick="printS1JudgeList()">🖨 Lista sędziowska</button>
+      <button class="btn btn-sm btn-primary" onclick="drawSeries1()">🎲 Losuj pary</button>
+    </div>
+  </div>
+
+  <div id="s1-alert-no-athletes" class="alert alert-warning" style="display:none;">Brak zawodników. Przejdź do zakładki Zawodnicy i dodaj uczestników.</div>
+  <div id="s1-alert-drawn" class="alert alert-success" style="display:none;"></div>
+
+  <!-- Pary M -->
+  <div id="s1-section-M" style="display:none;">
+    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--male);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      Mężczyźni
+    </div>
+    <div id="s1-pairs-M"></div>
+  </div>
+
+  <!-- Pary K -->
+  <div id="s1-section-K" style="display:none;margin-top:20px;">
+    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--female);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      Kobiety
+    </div>
+    <div id="s1-pairs-K"></div>
+  </div>
+
+  <!-- Wyniki S1 -->
+  <div id="s1-results-section" class="card mt-16" style="display:none;">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0">Wprowadź czasy — Seria 1</div>
+      <button class="btn btn-sm btn-success" onclick="showTab('seria2')">Przejdź do Serii 2 →</button>
+    </div>
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--male);margin-bottom:8px;">MĘŻCZYŹNI</div>
+        <div class="qe-scroll" style="max-height:500px;">
+          <table class="qe-table">
+            <thead><tr>
+              <th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas S1</th>
+            </tr></thead>
+            <tbody id="s1-qe-M"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--female);margin-bottom:8px;">KOBIETY</div>
+        <div class="qe-scroll" style="max-height:500px;">
+          <table class="qe-table">
+            <thead><tr>
+              <th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas S1</th>
+            </tr></thead>
+            <tbody id="s1-qe-K"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: SERIA 2 ═══ -->
+<div class="page" id="page-seria2">
+  <div class="flex-between mb-12">
+    <div>
+      <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 2 — Dobór wg wyników</div>
+      <div class="text-muted mt-4" style="font-size:12px;">Najlepsi biegną ostatni · zmiana torów obowiązkowa</div>
+    </div>
+    <div class="flex">
+      <button class="btn btn-sm" onclick="printS2StartList()">🖨 Lista startowa</button>
+      <button class="btn btn-sm" onclick="printS2JudgeList()">🖨 Lista sędziowska</button>
+      <button class="btn btn-sm btn-primary" onclick="buildSeries2()">⚙ Generuj pary S2</button>
+    </div>
+  </div>
+
+  <div id="s2-alert" class="alert alert-warning" style="display:none;"></div>
+
+  <div id="s2-section-M" style="display:none;">
+    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--male);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      Mężczyźni
+    </div>
+    <div id="s2-pairs-M"></div>
+  </div>
+  <div id="s2-section-K" style="display:none;margin-top:20px;">
+    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--female);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">
+      Kobiety
+    </div>
+    <div id="s2-pairs-K"></div>
+  </div>
+
+  <div id="s2-results-section" class="card mt-16" style="display:none;">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0">Wprowadź czasy — Seria 2</div>
+      <button class="btn btn-sm btn-success" onclick="showTab('wyniki')">Zobacz wyniki →</button>
+    </div>
+    <div class="grid-2" style="gap:24px;">
+      <div>
+        <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--male);margin-bottom:8px;">MĘŻCZYŹNI</div>
+        <div class="qe-scroll" style="max-height:500px;">
+          <table class="qe-table">
+            <thead><tr>
+              <th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas S2</th>
+            </tr></thead>
+            <tbody id="s2-qe-M"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--female);margin-bottom:8px;">KOBIETY</div>
+        <div class="qe-scroll" style="max-height:500px;">
+          <table class="qe-table">
+            <thead><tr>
+              <th>#</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas S2</th>
+            </tr></thead>
+            <tbody id="s2-qe-K"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB: WYNIKI ═══ -->
+<div class="page" id="page-wyniki">
+  <div class="flex-between mb-12">
+    <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Wyniki indywidualne</div>
+    <div class="flex">
+      <button class="btn btn-sm" onclick="printResultsPDF()">🖨 Drukuj PDF</button>
+    </div>
+  </div>
+
+  <div class="grid-2" style="gap:20px;">
+    <div>
+      <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--male);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--male);">
+        Mężczyźni
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>S1</th><th>S2</th><th>Wynik</th>
+          </tr></thead>
+          <tbody id="results-M"></tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--female);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--female);">
+        Kobiety
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>S1</th><th>S2</th><th>Wynik</th>
+          </tr></thead>
+          <tbody id="results-K"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main-content -->
+</div><!-- /main-app -->
+
+<!-- ═══ MODAL: DODAJ ZAWODNIKA ═══ -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-title">Dodaj zawodnika</div>
+    <div class="form-group">
+      <label>Nazwisko i imię</label>
+      <input type="text" id="add-name" placeholder="KOWALSKI Jan" />
+    </div>
+    <div class="form-group">
+      <label>Płeć</label>
+      <select id="add-gender">
+        <option value="M">M — Mężczyzna</option>
+        <option value="K">K — Kobieta</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Drużyna</label>
+      <input type="text" id="add-team" placeholder="np. 1 Batalion" />
+    </div>
+    <div class="form-group">
+      <label>Nr startowy (opcjonalnie)</label>
+      <input type="number" id="add-bib" placeholder="auto" min="1" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-add')">Anuluj</button>
+      <button class="btn btn-primary" onclick="addAthlete()">Dodaj</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: IMPORT CSV ═══ -->
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-title">Import zawodników</div>
+
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Pobierz szablon</div>
+      <div class="flex">
+        <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">↓ Excel (.xlsx)</button>
+        <button class="btn btn-sm btn-success" onclick="downloadTemplateODS()">↓ LibreOffice (.ods)</button>
+        <button class="btn btn-sm" onclick="downloadTemplateCSV()">↓ CSV</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;">
+        Kolumny: <span class="mono">Nazwisko Imię · M/K · Drużyna · Nr startowy</span> (nr opcjonalny)
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Wgraj plik</div>
+      <button class="btn btn-sm btn-primary" onclick="document.getElementById('import-file-input').click()">↑ Wybierz plik (.xlsx / .csv)</button>
+      <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromFile(event)" />
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Lub wklej CSV</div>
+      <textarea id="import-csv" rows="7" placeholder="KOWALSKI Jan;M;1 Batalion;1&#10;NOWAK Anna;K;2 Batalion;2"></textarea>
+      <div id="import-preview" class="text-muted" style="font-size:12px;margin-top:4px;"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-import')">Anuluj</button>
+      <button class="btn btn-primary" onclick="importCSV()">Importuj z pola tekstowego</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+const STORAGE_KEY = 'osf_zawody_v1';
+
+let state = {
+  contest: { name: '', city: '', date: '' },
+  athletes: [],       // { id, name, gender, team, bib }
+  s1pairs: [],        // { pairNum, gender, aId, aLane, bId, bLane } bId=null if solo
+  s2pairs: [],        // same structure
+  times: {}           // { [athleteId]: { s1: '1:23.4', s2: '1:20.1' } }
+};
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  document.getElementById('header-autosave').textContent = '● zapisano';
+}
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    try { state = JSON.parse(raw); } catch(e) {}
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// WELCOME / INIT
+// ═══════════════════════════════════════════════════
+function startContest() {
+  const name = document.getElementById('ws-name').value.trim();
+  const city = document.getElementById('ws-city').value.trim();
+  const date = document.getElementById('ws-date').value;
+  if (!city) { alert('Podaj miasto.'); return; }
+  state.contest = { name, city, date };
+  save();
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  const c = state.contest;
+  document.getElementById('header-contest-name').textContent =
+    (c.name ? c.name + ' · ' : '') + c.city + (c.date ? ' · ' + c.date : '');
+  document.title = 'OSF · ' + c.city;
+  renderAthletes();
+  updateStats();
+}
+
+function resetContest() {
+  if (!confirm('Usunąć wszystkie dane i wrócić do ekranu startowego?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'seria1') renderSeries1View();
+  if (name === 'seria2') renderSeries2View();
+  if (name === 'wyniki') renderResults();
+}
+
+// ═══════════════════════════════════════════════════
+// ATHLETES
+// ═══════════════════════════════════════════════════
+function nextId() {
+  return state.athletes.length > 0 ? Math.max(...state.athletes.map(a => a.id)) + 1 : 1;
+}
+
+function nextBib(gender) {
+  const same = state.athletes.filter(a => a.gender === gender && a.bib);
+  return same.length > 0 ? Math.max(...same.map(a => a.bib)) + 1 : 1;
+}
+
+function openAddModal() {
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-team').value = '';
+  document.getElementById('add-bib').value = '';
+  document.getElementById('modal-add').classList.add('open');
+  document.getElementById('add-name').focus();
+}
+
+function addAthlete() {
+  const name = document.getElementById('add-name').value.trim();
+  const gender = document.getElementById('add-gender').value;
+  const team = document.getElementById('add-team').value.trim();
+  const bibRaw = document.getElementById('add-bib').value;
+  if (!name) { alert('Podaj nazwisko i imię.'); return; }
+  const bib = bibRaw ? parseInt(bibRaw) : nextBib(gender);
+  state.athletes.push({ id: nextId(), name, gender, team, bib });
+  save();
+  renderAthletes();
+  updateStats();
+  closeModal('modal-add');
+}
+
+function removeAthlete(id) {
+  if (!confirm('Usunąć zawodnika?')) return;
+  state.athletes = state.athletes.filter(a => a.id !== id);
+  delete state.times[id];
+  save();
+  renderAthletes();
+  updateStats();
+}
+
+function renderAthletes() {
+  const tbody = document.getElementById('athletes-tbody');
+  const empty = document.getElementById('athletes-empty');
+  const males = state.athletes.filter(a => a.gender === 'M').sort((a,b) => a.bib - b.bib);
+  const females = state.athletes.filter(a => a.gender === 'K').sort((a,b) => a.bib - b.bib);
+  const all = [...males, ...females];
+  if (all.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  let html = '';
+  let lastGender = null;
+  all.forEach((a, i) => {
+    if (a.gender !== lastGender) {
+      lastGender = a.gender;
+      const label = a.gender === 'M' ? 'Mężczyźni' : 'Kobiety';
+      html += '<tr><td colspan="6" style="background:var(--bg3);font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:' + (a.gender==='M'?'var(--male)':'var(--female)') + ';padding:6px 10px;font-weight:700;">' + label + '</td></tr>';
+    }
+    html += '<tr><td class="mono text-muted" style="font-size:12px;">' + (i+1) + '</td>';
+    html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
+    html += '<td style="font-weight:600;">' + esc(a.name) + '</td>';
+    html += '<td style="color:var(--text2);font-size:12px;">' + esc(a.team) + '</td>';
+    html += '<td class="mono" style="color:var(--orange);">' + a.bib + '</td>';
+    html += '<td><button class="btn btn-xs btn-danger" onclick="removeAthlete(' + a.id + ')">✕</button></td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function updateStats() {
+  const m = state.athletes.filter(a => a.gender === 'M').length;
+  const k = state.athletes.filter(a => a.gender === 'K').length;
+  const teams = new Set(state.athletes.map(a => a.team).filter(Boolean)).size;
+  document.getElementById('stat-total').textContent = state.athletes.length;
+  document.getElementById('stat-m').textContent = m;
+  document.getElementById('stat-k').textContent = k;
+  document.getElementById('stat-teams').textContent = teams;
+}
+
+// ═══════════════════════════════════════════════════
+// IMPORT CSV
+// ═══════════════════════════════════════════════════
+function openImportModal() {
+  document.getElementById('import-csv').value = '';
+  document.getElementById('import-preview').textContent = '';
+  document.getElementById('modal-import').classList.add('open');
+}
+
+document.getElementById('import-csv').addEventListener('input', function() {
+  const lines = this.value.trim().split('\n').filter(l => l.trim());
+  document.getElementById('import-preview').textContent = 'Wykryto ' + lines.length + ' wierszy';
+});
+
+function importCSV() {
+  const raw = document.getElementById('import-csv').value.trim();
+  if (!raw) return;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  let added = 0;
+  lines.forEach(line => {
+    const parts = line.split(';').map(p => p.trim());
+    if (parts.length < 2) return;
+    const name = parts[0];
+    const gender = parts[1].toUpperCase() === 'K' ? 'K' : 'M';
+    const team = parts[2] || '';
+    const bib = parts[3] ? parseInt(parts[3]) : nextBib(gender);
+    if (!name || name.toLowerCase() === 'nazwisko' || name.toLowerCase() === 'lp') return;
+    state.athletes.push({ id: nextId(), name, gender, team, bib });
+    added++;
+  });
+  save();
+  renderAthletes();
+  updateStats();
+  closeModal('modal-import');
+  if (added > 0) alert('Zaimportowano ' + added + ' zawodników.');
+}
+
+// ═══════════════════════════════════════════════════
+// SERIES 1 — RANDOM DRAW
+// ═══════════════════════════════════════════════════
+function drawSeries1() {
+  const athletes = state.athletes;
+  if (athletes.length === 0) { alert('Brak zawodników.'); return; }
+
+  function drawForGender(gender) {
+    let pool = athletes.filter(a => a.gender === gender).slice();
+    // shuffle
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const pairs = [];
+    let pairNum = 1;
+    for (let i = 0; i < pool.length; i += 2) {
+      const a = pool[i];
+      const b = pool[i + 1] || null;
+      // randomly assign lanes
+      const aLane = Math.random() < 0.5 ? 'L' : 'P';
+      const bLane = b ? (aLane === 'L' ? 'P' : 'L') : null;
+      pairs.push({ pairNum: pairNum++, gender, aId: a.id, aLane, bId: b ? b.id : null, bLane });
+    }
+    return pairs;
+  }
+
+  const mPairs = drawForGender('M');
+  const kPairs = drawForGender('K');
+  state.s1pairs = [...mPairs, ...kPairs];
+  // clear S2 pairs since S1 changed
+  state.s2pairs = [];
+  save();
+  renderSeries1View();
+  showTab('seria1');
+}
+
+function renderSeries1View() {
+  const mPairs = state.s1pairs.filter(p => p.gender === 'M');
+  const kPairs = state.s1pairs.filter(p => p.gender === 'K');
+  const noAthletes = state.athletes.length === 0;
+
+  document.getElementById('s1-alert-no-athletes').style.display = noAthletes ? 'block' : 'none';
+
+  const hasPairs = state.s1pairs.length > 0;
+  document.getElementById('s1-section-M').style.display = mPairs.length > 0 ? 'block' : 'none';
+  document.getElementById('s1-section-K').style.display = kPairs.length > 0 ? 'block' : 'none';
+  document.getElementById('s1-results-section').style.display = hasPairs ? 'block' : 'none';
+
+  if (hasPairs) {
+    const m = state.athletes.filter(a => a.gender === 'M').length;
+    const k = state.athletes.filter(a => a.gender === 'K').length;
+    const alert = document.getElementById('s1-alert-drawn');
+    alert.style.display = 'block';
+    alert.textContent = 'Pary wylosowane: ' + mPairs.length + ' par M (' + m + ' zawodników) + ' + kPairs.length + ' par K (' + k + ' zawodniczek)';
+  } else {
+    document.getElementById('s1-alert-drawn').style.display = 'none';
+  }
+
+  renderPairsHTML('s1-pairs-M', mPairs, false);
+  renderPairsHTML('s1-pairs-K', kPairs, false);
+  renderQETable('s1-qe-M', 'M', 's1');
+  renderQETable('s1-qe-K', 'K', 's1');
+}
+
+function renderPairsHTML(containerId, pairs, isS2) {
+  const container = document.getElementById(containerId);
+  if (!pairs.length) { container.innerHTML = ''; return; }
+  let html = '';
+  const total = pairs.length;
+  pairs.forEach((p, idx) => {
+    const isLast = idx === total - 1;
+    const isSolo = p.bId === null;
+    const a = state.athletes.find(x => x.id === p.aId);
+    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+    const aTime = getTime(p.aId, isS2 ? 's2' : 's1');
+    const bTime = b ? getTime(p.bId, isS2 ? 's2' : 's1') : null;
+
+    let cls = 'pair-card';
+    if (isLast && !isSolo) cls += ' last-pair';
+    if (isSolo) cls += ' solo-runner';
+
+    html += '<div class="' + cls + '">';
+    html += '<div class="pair-header">';
+    html += '<span class="pair-num">' + p.pairNum + '</span>';
+    if (isLast && !isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA PARA</span>';
+    if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
+    html += '</div>';
+
+    if (isSolo) {
+      html += '<div style="display:flex;align-items:center;gap:10px;">';
+      html += athleteCardHTML(a, p.aLane, aTime);
+      html += '</div>';
+    } else {
+      html += '<div class="pair-athletes">';
+      html += athleteCardHTML(a, p.aLane, aTime);
+      html += '<div class="pair-vs">VS</div>';
+      html += athleteCardHTML(b, p.bLane, bTime);
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function athleteCardHTML(a, lane, time) {
+  if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name text-muted">—</div></div>';
+  return '<div class="pair-athlete" style="flex:1;">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
+    '<span class="pair-athlete-name">' + esc(a.name) + '</span>' +
+    '<span class="lane-badge lane-' + lane + '">' + lane + '</span>' +
+    '</div>' +
+    '<div class="pair-athlete-meta">' + esc(a.team) + (time ? ' · <span style="color:var(--green);">' + time + '</span>' : '') + '</div>' +
+    '</div>';
+}
+
+// ═══════════════════════════════════════════════════
+// QE TIME INPUT TABLES
+// ═══════════════════════════════════════════════════
+function renderQETable(tbodyId, gender, series) {
+  const tbody = document.getElementById(tbodyId);
+  const pairs = series === 's1' ? state.s1pairs : state.s2pairs;
+  const gPairs = pairs.filter(p => p.gender === gender);
+  if (!gPairs.length) { tbody.innerHTML = ''; return; }
+
+  let rows = [];
+  gPairs.forEach(p => {
+    const a = state.athletes.find(x => x.id === p.aId);
+    if (a) rows.push({ athlete: a, lane: p.aLane, pairNum: p.pairNum });
+    if (p.bId) {
+      const b = state.athletes.find(x => x.id === p.bId);
+      if (b) rows.push({ athlete: b, lane: p.bLane, pairNum: p.pairNum });
+    }
+  });
+  // sort by bib
+  rows.sort((a, b) => a.athlete.bib - b.athlete.bib);
+
+  let html = '';
+  rows.forEach((r, i) => {
+    const id = r.athlete.id;
+    const t = getTime(id, series);
+    const isBest = t && isPersonalBest(id, series, t);
+    html += '<tr class="qe-row">';
+    html += '<td class="qe-num">' + r.athlete.bib + '</td>';
+    html += '<td class="qe-name">' + esc(r.athlete.name) + '</td>';
+    html += '<td class="qe-team">' + esc(r.athlete.team) + '</td>';
+    html += '<td><span class="lane-badge lane-' + r.lane + '">' + r.lane + '</span></td>';
+    html += '<td class="mono text-muted" style="font-size:12px;">' + r.pairNum + '</td>';
+    html += '<td><input class="qe-time' + (isBest ? ' is-best' : '') + '" type="text" value="' + (t||'') + '" placeholder="0:00.0" data-id="' + id + '" data-series="' + series + '" onchange="saveTime(this)" oninput="saveTime(this)" /></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function saveTime(input) {
+  const id = parseInt(input.dataset.id);
+  const series = input.dataset.series;
+  const val = input.value.trim();
+  if (!state.times[id]) state.times[id] = {};
+  state.times[id][series] = val;
+  save();
+  // update best highlight
+  input.classList.toggle('is-best', !!val && isPersonalBest(id, series, val));
+}
+
+function getTime(id, series) {
+  return state.times[id] && state.times[id][series] ? state.times[id][series] : '';
+}
+
+function parseTime(t) {
+  if (!t) return Infinity;
+  // formats: 1:23.4  or  83.4  or  1:23
+  const m = t.match(/^(?:(\d+):)?(\d+)(?:\.(\d+))?$/);
+  if (!m) return Infinity;
+  const mins = parseInt(m[1]||0);
+  const secs = parseInt(m[2]||0);
+  const frac = parseFloat('0.' + (m[3]||'0'));
+  return mins * 60 + secs + frac;
+}
+
+function isPersonalBest(id, series, val) {
+  const other = series === 's1' ? 's2' : 's1';
+  const otherVal = getTime(id, other);
+  if (!otherVal) return true;
+  return parseTime(val) <= parseTime(otherVal);
+}
+
+function bestTime(id) {
+  const s1 = getTime(id, 's1');
+  const s2 = getTime(id, 's2');
+  if (!s1 && !s2) return '';
+  if (!s1) return s2;
+  if (!s2) return s1;
+  return parseTime(s1) <= parseTime(s2) ? s1 : s2;
+}
+
+// ═══════════════════════════════════════════════════
+// SERIES 2 — SMART PAIRING
+// ═══════════════════════════════════════════════════
+function buildSeries2() {
+  if (state.s1pairs.length === 0) { alert('Najpierw wylosuj pary Serii 1.'); return; }
+
+  function buildForGender(gender) {
+    const gPairs = state.s1pairs.filter(p => p.gender === gender);
+    // collect athletes with their S1 lane and time
+    let pool = [];
+    gPairs.forEach(p => {
+      const a = state.athletes.find(x => x.id === p.aId);
+      if (a) pool.push({ athlete: a, s1lane: p.aLane, s1time: parseTime(getTime(p.aId, 's1')) });
+      if (p.bId) {
+        const b = state.athletes.find(x => x.id === p.bId);
+        if (b) pool.push({ athlete: b, s1lane: p.bLane, s1time: parseTime(getTime(p.bId, 's1')) });
+      }
+    });
+
+    // Sort: slowest first (highest time first), DNF/no time last
+    pool.sort((a, b) => {
+      if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+      if (a.s1time === Infinity) return 1;
+      if (b.s1time === Infinity) return -1;
+      return b.s1time - a.s1time; // slowest first
+    });
+
+    // Required lane in S2 = opposite of S1
+    pool.forEach(p => { p.s2lane = p.s1lane === 'L' ? 'P' : 'L'; });
+
+    const pairs = [];
+    const assigned = new Set();
+    let pairNum = 1;
+
+    for (let i = 0; i < pool.length; i++) {
+      if (assigned.has(i)) continue;
+      const a = pool[i];
+      assigned.add(i);
+
+      // Find nearest unassigned athlete with OPPOSITE required lane
+      let partnerId = -1;
+      for (let j = i + 1; j < pool.length; j++) {
+        if (assigned.has(j)) continue;
+        if (pool[j].s2lane !== a.s2lane) { // different required lanes = they can form a pair (one L, one P)
+          partnerId = j;
+          break;
+        }
+      }
+
+      if (partnerId === -1) {
+        // solo runner
+        const lane = a.s2lane;
+        pairs.push({ pairNum: pairNum++, gender, aId: a.athlete.id, aLane: lane, bId: null, bLane: null });
+      } else {
+        assigned.add(partnerId);
+        const b = pool[partnerId];
+        // a needs lane a.s2lane, b needs lane b.s2lane (they're opposite by selection)
+        pairs.push({ pairNum: pairNum++, gender, aId: a.athlete.id, aLane: a.s2lane, bId: b.athlete.id, bLane: b.s2lane });
+      }
+    }
+    return pairs;
+  }
+
+  const mPairs = buildForGender('M');
+  const kPairs = buildForGender('K');
+  state.s2pairs = [...mPairs, ...kPairs];
+  save();
+  renderSeries2View();
+}
+
+function renderSeries2View() {
+  const mPairs = state.s2pairs.filter(p => p.gender === 'M');
+  const kPairs = state.s2pairs.filter(p => p.gender === 'K');
+  const hasPairs = state.s2pairs.length > 0;
+
+  const alert = document.getElementById('s2-alert');
+  if (state.s1pairs.length === 0) {
+    alert.style.display = 'block';
+    alert.textContent = 'Najpierw wylosuj i uzupełnij wyniki Serii 1.';
+  } else if (!hasPairs) {
+    alert.style.display = 'block';
+    alert.textContent = 'Kliknij "Generuj pary S2" aby dobrać pary na podstawie wyników Serii 1.';
+  } else {
+    alert.style.display = 'none';
+  }
+
+  document.getElementById('s2-section-M').style.display = mPairs.length > 0 ? 'block' : 'none';
+  document.getElementById('s2-section-K').style.display = kPairs.length > 0 ? 'block' : 'none';
+  document.getElementById('s2-results-section').style.display = hasPairs ? 'block' : 'none';
+
+  renderPairsHTML('s2-pairs-M', mPairs, true);
+  renderPairsHTML('s2-pairs-K', kPairs, true);
+  renderQETable('s2-qe-M', 'M', 's2');
+  renderQETable('s2-qe-K', 'K', 's2');
+}
+
+// ═══════════════════════════════════════════════════
+// WYNIKI
+// ═══════════════════════════════════════════════════
+function renderResults() {
+  renderResultsForGender('M', 'results-M');
+  renderResultsForGender('K', 'results-K');
+}
+
+function renderResultsForGender(gender, tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  const athletes = state.athletes.filter(a => a.gender === gender);
+  if (!athletes.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="font-size:12px;padding:12px;">Brak zawodników.</td></tr>'; return; }
+
+  const ranked = athletes.map(a => ({
+    athlete: a,
+    s1: getTime(a.id, 's1'),
+    s2: getTime(a.id, 's2'),
+    best: bestTime(a.id),
+    bestSec: parseTime(bestTime(a.id))
+  })).sort((a, b) => a.bestSec - b.bestSec);
+
+  let html = '';
+  let rank = 1;
+  ranked.forEach((r, i) => {
+    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const noBest = r.bestSec === Infinity;
+    html += '<tr>';
+    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + (noBest ? '—' : rank) + '</td>';
+    html += '<td style="font-weight:600;">' + esc(r.athlete.name) + '</td>';
+    html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
+    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + (r.s1||'—') + '</td>';
+    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + (r.s2||'—') + '</td>';
+    html += '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest ? 'var(--text3)' : 'var(--green)') + ';">' + (r.best||'—') + '</td>';
+    html += '</tr>';
+    if (!noBest) rank++;
+  });
+  tbody.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// PDF PRINT
+// ═══════════════════════════════════════════════════
+const PDF_CSS = `
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }
+  h1 { font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+  h2 { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px; }
+  .sub { font-size: 11px; color: #555; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { background: #222; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; text-align: left; }
+  td { padding: 5px 8px; border-bottom: 1px solid #ddd; font-size: 11px; }
+  tr:nth-child(even) td { background: #f5f5f5; }
+  .lane-L { background: #dce8f5; color: #1a5276; font-weight: bold; padding: 1px 5px; border-radius: 2px; }
+  .lane-P { background: #d5f5e3; color: #1a7245; font-weight: bold; padding: 1px 5px; border-radius: 2px; }
+  .pair-section { page-break-inside: avoid; margin-bottom: 12px; }
+  .pair-header { font-weight: bold; font-size: 11px; background: #f0f0f0; padding: 4px 8px; }
+  @media print { body { margin: 10mm; } }
+`;
+
+function pdfHeader() {
+  const c = state.contest;
+  return '<h1>OSF — ' + esc(c.city) + '</h1><div class="sub">' + (c.name ? esc(c.name) + ' · ' : '') + (c.date||'') + '</div>';
+}
+
+// ── helpers for pair rows ──
+function pairTableRowsStartList(pairs) {
+  let html = '';
+  pairs.forEach((p, idx) => {
+    const a = state.athletes.find(x => x.id === p.aId);
+    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+    const isLast = idx === pairs.length - 1;
+    const rowBg = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
+    html += '<tr style="' + rowBg + '">';
+    html += '<td style="text-align:center;font-weight:bold;">' + p.pairNum + (isLast && !p.bId ? '' : '') + '</td>';
+    html += '<td>' + (a ? esc(a.name) + (a.bib ? ' <span style="color:#888;font-size:10px;">('+a.bib+')</span>' : '') : '—') + '</td>';
+    html += '<td><span class="lane-' + p.aLane + '">' + p.aLane + '</span></td>';
+    if (b) {
+      html += '<td>' + esc(b.name) + (b.bib ? ' <span style="color:#888;font-size:10px;">('+b.bib+')</span>' : '') + '</td>';
+      html += '<td><span class="lane-' + p.bLane + '">' + p.bLane + '</span></td>';
+    } else {
+      html += '<td><i style="color:#999;">SOLO</i></td><td>—</td>';
+    }
+    html += '<td style="font-size:11px;color:#555;">' + esc(a ? a.team : '') + '</td>';
+    html += '</tr>';
+  });
+  return html;
+}
+
+function pairTableRowsJudge(pairs, showS1) {
+  let html = '';
+  pairs.forEach((p, idx) => {
+    const a = state.athletes.find(x => x.id === p.aId);
+    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+    const rowBg = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
+    // row for athlete A
+    html += '<tr style="' + rowBg + '">';
+    html += '<td rowspan="' + (b ? '2' : '1') + '" style="text-align:center;font-weight:bold;vertical-align:middle;">' + p.pairNum + '</td>';
+    html += '<td>' + (a ? esc(a.name) : '—') + '</td>';
+    html += '<td style="text-align:center;"><span class="lane-' + p.aLane + '">' + p.aLane + '</span></td>';
+    if (showS1) html += '<td style="text-align:center;font-family:monospace;">' + (a ? getTime(a.id,'s1') || '' : '') + '</td>';
+    html += '<td class="time-cell"></td>';
+    html += '<td style="font-size:11px;color:#555;">' + esc(a ? a.team : '') + '</td>';
+    html += '</tr>';
+    // row for athlete B
+    if (b) {
+      html += '<tr style="' + rowBg + '">';
+      html += '<td>' + esc(b.name) + '</td>';
+      html += '<td style="text-align:center;"><span class="lane-' + p.bLane + '">' + p.bLane + '</span></td>';
+      if (showS1) html += '<td style="text-align:center;font-family:monospace;">' + getTime(b.id,'s1') + '</td>';
+      html += '<td class="time-cell"></td>';
+      html += '<td style="font-size:11px;color:#555;">' + esc(b.team) + '</td>';
+      html += '</tr>';
+    }
+  });
+  return html;
+}
+
+const PAIRS_PDF_CSS = `
+  body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:14px}
+  h1{font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px}
+  h2{font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:16px 0 6px;padding-bottom:4px;border-bottom:2px solid #000}
+  .sub{font-size:10px;color:#555;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px}
+  th{background:#000;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:5px 7px;text-align:left}
+  td{padding:5px 7px;vertical-align:middle}
+  .lane-L{display:inline-block;background:#dce8f5;color:#1a5276;font-weight:bold;padding:1px 6px;border-radius:2px;font-size:11px;}
+  .lane-P{display:inline-block;background:#d5f5e3;color:#1a7245;font-weight:bold;padding:1px 6px;border-radius:2px;font-size:11px;}
+  .gender-header{background:#333;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;letter-spacing:1px;}
+  .time-cell{width:80px;height:22px;border:1.5px solid #000!important;background:#fff;}
+  @media print{@page{size:A4;margin:10mm}body{margin:0}}
+`;
+
+function printS1StartList() {
+  if (!state.s1pairs.length) { alert('Brak par — najpierw wylosuj pary Serii 1.'); return; }
+  let html = '<h1>OSF — Lista startowa · Seria 1</h1><div class="sub">' + esc(state.contest.name||'') + (state.contest.name ? ' · ' : '') + esc(state.contest.city) + (state.contest.date ? ' · ' + state.contest.date : '') + '</div>';
+  ['M','K'].forEach(g => {
+    const pairs = state.s1pairs.filter(p => p.gender === g);
+    if (!pairs.length) return;
+    const label = g === 'M' ? '— Mężczyźni —' : '— Kobiety —';
+    html += '<h2>' + label + '</h2>';
+    html += '<table><thead><tr><th style="width:40px">Para</th><th>Zawodnik A</th><th style="width:44px">Tor</th><th>Zawodnik B</th><th style="width:44px">Tor</th><th>Drużyna</th></tr></thead><tbody>';
+    html += pairTableRowsStartList(pairs);
+    html += '</tbody></table>';
+  });
+  openPrint(html, PAIRS_PDF_CSS);
+}
+
+function printS1JudgeList() {
+  if (!state.s1pairs.length) { alert('Brak par — najpierw wylosuj pary Serii 1.'); return; }
+  ['M','K'].forEach((g, gi) => {
+    const pairs = state.s1pairs.filter(p => p.gender === g);
+    if (!pairs.length) return;
+    const label = g === 'M' ? 'Mężczyźni' : 'Kobiety';
+    const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
+    const html = '<h1>OSF — Lista sędziowska · Seria 1</h1>' +
+      '<div class="sub">' + sub + '</div>' +
+      '<h2>' + label + '</h2>' +
+      '<table><thead><tr><th style="width:40px">Para</th><th>Zawodnik</th><th style="width:44px">Tor</th><th style="width:80px">Czas (s.ds)</th><th>Drużyna</th></tr></thead><tbody>' +
+      pairTableRowsJudge(pairs, false) +
+      '</tbody></table>';
+    openPrint(html, PAIRS_PDF_CSS);
+  });
+}
+
+function printS2StartList() {
+  if (!state.s2pairs.length) { alert('Brak par — najpierw wygeneruj pary Serii 2.'); return; }
+  let html = '<h1>OSF — Lista startowa · Seria 2</h1><div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
+  ['M','K'].forEach(g => {
+    const pairs = state.s2pairs.filter(p => p.gender === g);
+    if (!pairs.length) return;
+    html += '<h2>' + (g==='M'?'— Mężczyźni —':'— Kobiety —') + '</h2>';
+    html += '<table><thead><tr><th style="width:40px">Para</th><th>Zawodnik A</th><th style="width:44px">Tor</th><th>Zawodnik B</th><th style="width:44px">Tor</th><th>Drużyna</th></tr></thead><tbody>';
+    html += pairTableRowsStartList(pairs);
+    html += '</tbody></table>';
+  });
+  openPrint(html, PAIRS_PDF_CSS);
+}
+
+function printS2JudgeList() {
+  if (!state.s2pairs.length) { alert('Brak par — najpierw wygeneruj pary Serii 2.'); return; }
+  ['M','K'].forEach(g => {
+    const pairs = state.s2pairs.filter(p => p.gender === g);
+    if (!pairs.length) return;
+    const label = g === 'M' ? 'Mężczyźni' : 'Kobiety';
+    const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
+    const html = '<h1>OSF — Lista sędziowska · Seria 2</h1>' +
+      '<div class="sub">' + sub + '</div>' +
+      '<h2>' + label + '</h2>' +
+      '<table><thead><tr><th style="width:40px">Para</th><th>Zawodnik</th><th style="width:44px">Tor</th><th style="width:80px">Wynik S1</th><th style="width:80px">Czas S2 (s.ds)</th><th>Drużyna</th></tr></thead><tbody>' +
+      pairTableRowsJudge(pairs, true) +
+      '</tbody></table>';
+    openPrint(html, PAIRS_PDF_CSS);
+  });
+}
+
+function printResultsPDF() {
+  let html = pdfHeader() + '<h2>Wyniki indywidualne</h2>';
+  ['M','K'].forEach(g => {
+    const athletes = state.athletes.filter(a => a.gender === g);
+    if (!athletes.length) return;
+    const ranked = athletes.map(a => ({
+      athlete: a, s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+      best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+    })).sort((a,b) => a.bestSec - b.bestSec);
+    html += '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>';
+    html += '<table><thead><tr><th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>Seria 1</th><th>Seria 2</th><th>Wynik</th></tr></thead><tbody>';
+    let rank = 1;
+    ranked.forEach(r => {
+      const noBest = r.bestSec === Infinity;
+      html += '<tr><td>' + (noBest ? '—' : rank) + '</td><td>' + esc(r.athlete.name) + '</td><td>' + esc(r.athlete.team) + '</td><td>' + (r.s1||'—') + '</td><td>' + (r.s2||'—') + '</td><td><b>' + (r.best||'—') + '</b></td></tr>';
+      if (!noBest) rank++;
+    });
+    html += '</tbody></table>';
+  });
+  openPrint(html);
+}
+
+function openPrint(bodyContent, css) {
+  const useCss = css || PDF_CSS;
+  const w = window.open('', '_blank');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>OSF — Wydruk</title><style>' + useCss + '</style></head><body>' + bodyContent + '</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+});
+
+// ═══════════════════════════════════════════════════
+// TEMPLATE DOWNLOAD
+// ═══════════════════════════════════════════════════
+const TEMPLATE_HEADERS = ['Lp', 'Nazwisko Imię', 'Płeć (M/K)', 'Drużyna', 'Nr startowy'];
+const TEMPLATE_EXAMPLE = [
+  [1, 'sierż. KOWALSKI Jan',       'M', 'JW 1234', 1],
+  [2, 'kpr. NOWAK Anna',           'K', 'JW 1234', 2],
+  [3, 'st.szer. WIŚNIEWSKI Piotr', 'M', 'JW 5678', 3],
+];
+
+function downloadTemplateCSV() {
+  const lines = [TEMPLATE_HEADERS.join(';'), ...TEMPLATE_EXAMPLE.map(r => r.join(';'))];
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  triggerDownload(URL.createObjectURL(blob), 'osf_lista_startowa_template.csv');
+}
+
+function downloadTemplateXLSX() {
+  if (typeof XLSX === 'undefined') { alert('Biblioteka Excel nie jest załadowana — spróbuj za chwilę.'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
+  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
+  XLSX.writeFile(wb, 'osf_lista_startowa_template.xlsx');
+}
+
+function downloadTemplateODS() {
+  if (typeof XLSX === 'undefined') { alert('Biblioteka nie jest załadowana — spróbuj za chwilę.'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
+  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
+  XLSX.writeFile(wb, 'osf_lista_startowa_template.ods', { bookType: 'ods' });
+}
+
+function triggerDownload(url, filename) {
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════
+// IMPORT FROM FILE
+// ═══════════════════════════════════════════════════
+function importFromFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'xlsx' || ext === 'xls') {
+    if (typeof XLSX === 'undefined') { alert('Biblioteka Excel nie jest załadowana.'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const rows = parseImportRows(raw);
+        applyImportRows(rows);
+      } catch(err) { alert('Błąd odczytu pliku: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const lines = ev.target.result.split(/\r?\n/).filter(l => l.trim());
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const raw = lines.map(l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, '')));
+      const rows = parseImportRows(raw);
+      applyImportRows(rows);
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    alert('Nieobsługiwany format. Użyj .xlsx lub .csv.');
+  }
+}
+
+function parseImportRows(raw) {
+  if (!raw.length) return [];
+  // Znajdź wiersz nagłówkowy
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(4, raw.length); i++) {
+    const row = raw[i].map(c => String(c).toLowerCase());
+    if (row.some(c => c.includes('nazwisko') || c.includes('płeć') || c.includes('plec') || c.includes('m/k'))) {
+      headerIdx = i; break;
+    }
+  }
+  const headers = raw[headerIdx].map(c => String(c).toLowerCase().trim());
+  const col = {
+    name:   headers.findIndex(h => h.includes('nazwisko') || h.includes('imię') || h.includes('imi')),
+    gender: headers.findIndex(h => h.includes('płeć') || h.includes('plec') || h.includes('m/k') || h.includes('k/m')),
+    team:   headers.findIndex(h => h.includes('drużyna') || h.includes('druzyna') || h.includes('jednostka')),
+    bib:    headers.findIndex(h => h.includes('nr') || h.includes('numer') || h.includes('startowy')),
+  };
+  if (col.name   < 0) col.name   = 1;
+  if (col.gender < 0) col.gender = 2;
+  if (col.team   < 0) col.team   = 3;
+  if (col.bib    < 0) col.bib    = 4;
+  const result = [];
+  for (let i = headerIdx + 1; i < raw.length; i++) {
+    const row = raw[i];
+    if (!row || !row.length) continue;
+    const name   = String(row[col.name]   || '').trim();
+    const gender = String(row[col.gender] || '').trim().toUpperCase();
+    const team   = String(row[col.team]   || '').trim();
+    const bibRaw = row[col.bib];
+    if (!name) continue;
+    if (gender !== 'M' && gender !== 'K') continue;
+    result.push({ name, gender, team, bib: bibRaw ? parseInt(bibRaw) : null });
+  }
+  return result;
+}
+
+function applyImportRows(rows) {
+  if (!rows.length) { alert('Brak danych do importu — sprawdź format pliku.'); return; }
+  rows.forEach(r => {
+    const bib = r.bib || nextBib(r.gender);
+    state.athletes.push({ id: nextId(), name: r.name, gender: r.gender, team: r.team, bib });
+  });
+  save();
+  renderAthletes();
+  updateStats();
+  closeModal('modal-import');
+  alert('Zaimportowano ' + rows.length + ' zawodników.');
+}
+
+// ═══════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════
+(function() {
+  // set today's date as default
+  document.getElementById('ws-date').valueAsDate = new Date();
+  load();
+  if (state.contest && state.contest.city) {
+    launchApp();
+  }
+})();
+</script>
+</body>
+</html>
