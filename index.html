@@ -1541,7 +1541,11 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 // ─── HERKULES SESSION GUARD ───
 (function() {
-  if (sessionStorage.getItem('herkules_session') !== 'ok') {
+  const ok  = sessionStorage.getItem('herkules_session') === 'ok';
+  const exp = parseInt(sessionStorage.getItem('herkules_session_exp') || '0');
+  if (!ok || Date.now() > exp) {
+    sessionStorage.removeItem('herkules_session');
+    sessionStorage.removeItem('herkules_session_exp');
     window.location.replace('start.html');
   }
 })();
