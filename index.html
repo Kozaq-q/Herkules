@@ -1792,6 +1792,13 @@ async function authSavePasswords() {
 
 // ── Init auth (wywoływany na starcie) ──
 function authInit() {
+  // Jeśli zalogowano przez panel Herkules — auto-login jako admin
+  const herkOk  = sessionStorage.getItem('herkules_session') === 'ok';
+  const herkExp = parseInt(sessionStorage.getItem('herkules_session_exp') || '0');
+  if (herkOk && Date.now() < herkExp) {
+    authSaveSession('admin');
+  }
+
   if (authCheckSession()) {
     // Sesja aktywna — ukryj overlay
     const overlay = document.getElementById('auth-overlay');
