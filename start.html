@@ -62,111 +62,166 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 }
 
 /* ─── MAIN ─── */
-.main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+.main { max-width: 780px; margin: 0 auto; padding: 36px 24px 60px; }
 
-/* ─── SECTION HEADER ─── */
-.section-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px;
-}
-.section-title {
-  font-family: var(--font-h); font-size: 12px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--text3);
-}
-.count-chip {
-  font-family: var(--font-m); font-size: 11px; color: var(--accent);
-  background: rgba(232,212,77,.1); border: 1px solid rgba(232,212,77,.2);
-  padding: 2px 9px; border-radius: 3px;
-}
+/* ─── TYPE SECTION ─── */
+.type-section { margin-bottom: 40px; }
 
-/* ─── SLOT GRID ─── */
-.slots-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  margin-bottom: 40px;
+.type-section-header {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
+.type-section-icon {
+  width: 36px; height: 36px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-h); font-size: 13px; font-weight: 800;
+  letter-spacing: 1px; flex-shrink: 0;
+}
+.icon-czworboj { background: rgba(91,155,213,.15); color: var(--blue); border: 1px solid rgba(91,155,213,.3); }
+.icon-osf { background: rgba(232,148,77,.15); color: var(--orange); border: 1px solid rgba(232,148,77,.3); }
+.type-section-label { flex: 1; }
+.type-section-name {
+  font-family: var(--font-h); font-size: 20px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase; line-height: 1;
+}
+.type-czworboj .type-section-name { color: var(--blue); }
+.type-osf .type-section-name { color: var(--orange); }
+.type-section-desc { font-size: 11px; color: var(--text3); margin-top: 2px; letter-spacing: .3px; }
+.type-section-count {
+  font-family: var(--font-m); font-size: 11px; padding: 3px 10px;
+  border-radius: 3px; border: 1px solid; flex-shrink: 0;
+}
+.type-czworboj .type-section-count { color: var(--blue); border-color: rgba(91,155,213,.3); background: rgba(91,155,213,.06); }
+.type-osf .type-section-count { color: var(--orange); border-color: rgba(232,148,77,.3); background: rgba(232,148,77,.06); }
 
-/* ─── SLOT CARD ─── */
+/* ─── SLOT CARD — horizontal ─── */
 .slot-card {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 6px; padding: 18px 20px;
-  cursor: pointer; position: relative; overflow: hidden;
-  transition: border-color .15s, background .15s, transform .1s;
-  display: flex; flex-direction: column; gap: 0;
+  border-radius: 6px; margin-bottom: 8px;
+  cursor: default; position: relative; overflow: hidden;
+  transition: border-color .15s, background .12s;
+  display: flex; align-items: stretch;
 }
-.slot-card:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-1px); }
-.slot-card::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+.slot-card:hover { border-color: var(--border2); }
+
+/* colored left bar */
+.slot-bar {
+  width: 4px; flex-shrink: 0;
+  border-radius: 6px 0 0 6px;
 }
-.slot-card.type-czworboj::before { background: var(--blue); }
-.slot-card.type-osf::before { background: var(--orange); }
+.bar-czworboj { background: var(--blue); }
+.bar-osf { background: var(--orange); }
+.bar-done { background: var(--border2); }
 
-.slot-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
-
-.type-badge {
-  font-family: var(--font-h); font-size: 10px; font-weight: 700;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 3px; border: 1px solid;
+.slot-body {
+  flex: 1; padding: 16px 20px;
+  display: flex; align-items: center; gap: 20px;
+  min-width: 0;
 }
-.badge-czworboj { color: var(--blue); border-color: rgba(91,155,213,.3); background: rgba(91,155,213,.08); }
-.badge-osf { color: var(--orange); border-color: rgba(232,148,77,.3); background: rgba(232,148,77,.08); }
 
-.slot-status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); font-family: var(--font-m); }
+/* city + name block */
+.slot-identity { min-width: 0; flex: 0 0 220px; }
+.slot-city {
+  font-family: var(--font-h); font-size: 22px; font-weight: 800;
+  color: var(--text1); line-height: 1; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.slot-name {
+  font-size: 11px; color: var(--text3); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* divider */
+.slot-divider { width: 1px; background: var(--border); align-self: stretch; flex-shrink: 0; }
+
+/* stats block */
+.slot-stats { display: flex; gap: 28px; flex-shrink: 0; }
+.stat-block { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.stat-val {
+  font-family: var(--font-h); font-size: 26px; font-weight: 800;
+  line-height: 1; color: var(--text1);
+}
+.stat-val.accent { color: var(--accent); }
+.stat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .8px; }
+
+/* date block */
+.slot-date {
+  flex-shrink: 0; text-align: right;
+  font-family: var(--font-m); font-size: 11px; color: var(--text3);
+}
+.slot-date-val { font-size: 12px; color: var(--text2); display: block; margin-bottom: 2px; }
+
+/* status */
+.slot-status {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--font-m); font-size: 10px; color: var(--text3);
+  flex-shrink: 0;
+}
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
 .status-dot.idle { background: var(--text3); animation: none; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-.slot-city {
-  font-family: var(--font-h); font-size: 26px; font-weight: 800;
-  color: var(--text1); line-height: 1; margin-bottom: 3px;
-}
-.slot-name { font-size: 12px; color: var(--text3); margin-bottom: 14px; min-height: 18px; }
-
-.slot-meta { display: flex; gap: 18px; padding-top: 12px; border-top: 1px solid var(--border); }
-.meta-item { display: flex; flex-direction: column; gap: 1px; }
-.meta-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
-.meta-val { font-family: var(--font-m); font-size: 13px; color: var(--text2); }
-.meta-val.hi { color: var(--accent); font-weight: 600; }
-
+/* actions */
 .slot-actions {
-  display: flex; gap: 6px; margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px 12px 0; justify-content: center; flex-shrink: 0;
 }
 
-/* ─── ADD CARD ─── */
-.add-card {
+/* ─── ADD BUTTON ─── */
+.add-btn {
+  display: flex; align-items: center; gap: 12px;
   background: transparent; border: 1px dashed var(--border2);
-  border-radius: 6px; padding: 18px 20px;
-  cursor: pointer; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-  min-height: 160px; transition: border-color .15s, background .15s; color: var(--text3);
+  border-radius: 6px; padding: 14px 20px; width: 100%;
+  cursor: pointer; color: var(--text3);
+  font-family: var(--font-h); font-size: 13px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  transition: border-color .15s, color .15s, background .15s;
+  margin-top: 4px;
 }
-.add-card:hover { border-color: var(--accent); background: rgba(232,212,77,.03); color: var(--accent); }
-.add-icon { font-size: 32px; line-height: 1; font-weight: 300; }
-.add-label { font-family: var(--font-h); font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,212,77,.03); }
+.add-btn-icon { font-size: 20px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--bg3); border-radius: 4px; flex-shrink: 0; }
 
 /* ─── BUTTONS ─── */
 .btn { font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 5px 12px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); border-radius: var(--radius); cursor: pointer; transition: background .12s, color .12s, border-color .12s; white-space: nowrap; }
 .btn:hover { background: var(--bg4); color: var(--text1); border-color: var(--text3); }
 .btn-primary { background: var(--accent); color: #111; border-color: var(--accent); }
 .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
-.btn-danger { background: transparent; color: var(--red); border-color: rgba(224,85,85,.4); }
+.btn-danger { background: transparent; color: var(--red); border-color: rgba(224,85,85,.35); font-size: 10px; padding: 4px 9px; }
 .btn-danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
-.btn-open-czworboj { background: rgba(91,155,213,.12); color: var(--blue); border-color: rgba(91,155,213,.3); }
-.btn-open-czworboj:hover { background: rgba(91,155,213,.22); border-color: var(--blue); }
-.btn-open-osf { background: rgba(232,148,77,.12); color: var(--orange); border-color: rgba(232,148,77,.3); }
-.btn-open-osf:hover { background: rgba(232,148,77,.22); border-color: var(--orange); }
+.btn-open-czworboj { background: rgba(91,155,213,.1); color: var(--blue); border-color: rgba(91,155,213,.3); }
+.btn-open-czworboj:hover { background: rgba(91,155,213,.2); border-color: var(--blue); }
+.btn-open-osf { background: rgba(232,148,77,.1); color: var(--orange); border-color: rgba(232,148,77,.3); }
+.btn-open-osf:hover { background: rgba(232,148,77,.2); border-color: var(--orange); }
 
-/* ─── HISTORY ─── */
-.history-item {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; opacity: .55;
+/* ─── HISTORY DIVIDER ─── */
+.history-divider {
+  display: flex; align-items: center; gap: 14px;
+  margin: 40px 0 20px;
 }
-.history-name { font-family: var(--font-h); font-size: 15px; font-weight: 700; color: var(--text1); }
-.history-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.history-badge { font-family: var(--font-m); font-size: 10px; color: var(--text3); border: 1px solid var(--border2); padding: 2px 7px; border-radius: 3px; }
+.history-divider-line { flex: 1; height: 1px; background: var(--border); }
+.history-divider-label {
+  font-family: var(--font-h); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--text3);
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 3px;
+  background: var(--bg2);
+}
+
+/* ─── DONE SLOT ─── */
+.slot-card.done { opacity: .5; filter: grayscale(.4); }
+.slot-card.done:hover { opacity: .7; filter: grayscale(.2); border-color: var(--border2); }
+.done-badge {
+  font-family: var(--font-m); font-size: 9px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text3); border: 1px solid var(--border2);
+  padding: 2px 7px; border-radius: 2px; flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .slot-stats { gap: 16px; }
+  .slot-identity { flex: 0 0 150px; }
+  .slot-date { display: none; }
+}
 
 /* ─── MODAL ─── */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; }
@@ -246,26 +301,48 @@ select option { background: var(--bg3); }
 
 <div class="main" id="main-content" style="display:none;">
 
-  <!-- AKTYWNE ZAWODY -->
-  <div class="section-hdr">
-    <span class="section-title">Aktywne zawody</span>
-    <span class="count-chip" id="active-count">0 zawodów</span>
-  </div>
-
-  <div class="slots-grid" id="slots-grid"></div>
-
-  <!-- HISTORIA -->
-  <div class="section-hdr" style="margin-top: 8px;">
-    <span class="section-title">Historia</span>
-  </div>
-  <div id="history-list">
-    <div class="history-item">
-      <div>
-        <div class="history-name">Gdańsk — Czwórbój Żołnierski</div>
-        <div class="history-meta">15 marca 2025 · 87 zawodników · 11 drużyn</div>
+  <!-- CZWÓRBÓJ -->
+  <div class="type-section type-czworboj" id="section-czworboj">
+    <div class="type-section-header">
+      <div class="type-section-icon icon-czworboj">4×</div>
+      <div class="type-section-label">
+        <div class="type-section-name">Czwórbój Żołnierski</div>
+        <div class="type-section-desc">K1 Lina · K2 BTS · K3 Wahadło · K4 Bieg 1000m · kategorie M35/M36/K35/K36</div>
       </div>
-      <span class="history-badge">ZAKOŃCZONE</span>
+      <span class="type-section-count" id="count-czworboj">0</span>
     </div>
+    <div id="slots-czworboj"></div>
+    <button class="add-btn" onclick="openModal('czworboj')">
+      <span class="add-btn-icon">+</span>
+      Dodaj zawody Czwórbój
+    </button>
+  </div>
+
+  <!-- OSF -->
+  <div class="type-section type-osf" id="section-osf">
+    <div class="type-section-header">
+      <div class="type-section-icon icon-osf">OSF</div>
+      <div class="type-section-label">
+        <div class="type-section-name">OSF — Tor Przeszkód</div>
+        <div class="type-section-desc">Ośrodek Sprawności Fizycznej · 2 serie · tory L/P · kategorie M/K</div>
+      </div>
+      <span class="type-section-count" id="count-osf">0</span>
+    </div>
+    <div id="slots-osf"></div>
+    <button class="add-btn" onclick="openModal('osf')">
+      <span class="add-btn-icon">+</span>
+      Dodaj zawody OSF
+    </button>
+  </div>
+
+  <!-- ZAKOŃCZONE -->
+  <div id="section-done" style="display:none;">
+    <div class="history-divider">
+      <div class="history-divider-line"></div>
+      <div class="history-divider-label">Zakończone</div>
+      <div class="history-divider-line"></div>
+    </div>
+    <div id="slots-done"></div>
   </div>
 
 </div>
@@ -495,67 +572,72 @@ function getSlotStats(slot) {
 // ═══════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════
+function slotCardHTML(slot, done) {
+  const stats = getSlotStats(slot);
+  const isCzworboj = slot.type === 'czworboj';
+  const barCls = done ? 'bar-done' : (isCzworboj ? 'bar-czworboj' : 'bar-osf');
+  const openBtnCls = isCzworboj ? 'btn-open-czworboj' : 'btn-open-osf';
+  const hasData = stats.athletes > 0;
+
+  return '<div class="slot-card' + (done ? ' done' : '') + '">' +
+    '<div class="slot-bar ' + barCls + '"></div>' +
+    '<div class="slot-body">' +
+      '<div class="slot-identity">' +
+        '<div class="slot-city">' + esc(slot.city) + '</div>' +
+        '<div class="slot-name">' + esc(slot.name || '—') + '</div>' +
+      '</div>' +
+      '<div class="slot-divider"></div>' +
+      '<div class="slot-stats">' +
+        '<div class="stat-block">' +
+          '<div class="stat-val accent">' + stats.athletes + '</div>' +
+          '<div class="stat-label">Zawodnicy</div>' +
+        '</div>' +
+        '<div class="stat-block">' +
+          '<div class="stat-val">' + stats.teams + '</div>' +
+          '<div class="stat-label">Drużyny</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="slot-divider"></div>' +
+      '<div class="slot-date">' +
+        '<span class="slot-date-val">' + (slot.date || '—') + '</span>' +
+        '<span class="slot-status">' +
+          '<span class="status-dot' + (hasData ? '' : ' idle') + '"></span>' +
+          (done ? ('ZAKOŃCZONE' + (slot.doneAt ? ' · ' + new Date(slot.doneAt).toLocaleDateString('pl-PL') : '')) : (hasData ? 'AKTYWNE' : 'PUSTE')) +
+        '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="slot-actions">' +
+      '<button class="btn ' + openBtnCls + '" onclick="openSlot(' + slot.id + ')">→ Otwórz</button>' +
+      (done ? '<button class="btn" onclick="reactivateSlot(' + slot.id + ', event)" style="font-size:10px;padding:4px 9px;color:var(--green);border-color:rgba(76,175,130,.35);">↺ Wznów</button>' : '') +
+      '<button class="btn btn-danger" onclick="removeSlot(' + slot.id + ', event)">✕ Usuń</button>' +
+    '</div>' +
+  '</div>';
+}
+
 function render() {
   const ids = getSlotIds();
-  const grid = document.getElementById('slots-grid');
-  const countEl = document.getElementById('active-count');
+  const all = ids.map(id => getSlot(id)).filter(Boolean);
 
-  const n = ids.length;
-  countEl.textContent = n === 0 ? 'brak' : n === 1 ? '1 zawody' : n + ' zawodów';
+  const czworboj = all.filter(s => s.type === 'czworboj' && !s.done);
+  const osf      = all.filter(s => s.type === 'osf'      && !s.done);
+  const done     = all.filter(s => s.done);
 
-  let html = '';
-  ids.forEach(id => {
-    const slot = getSlot(id);
-    if (!slot) return;
-    const stats = getSlotStats(slot);
-    const typeCls = slot.type === 'czworboj' ? 'czworboj' : 'osf';
-    const typeLabel = slot.type === 'czworboj' ? 'Czwórbój Żołnierski' : 'OSF';
-    const openBtnCls = slot.type === 'czworboj' ? 'btn-open-czworboj' : 'btn-open-osf';
-    const hasData = stats.athletes > 0;
+  // Czwórbój
+  document.getElementById('count-czworboj').textContent = czworboj.length;
+  document.getElementById('slots-czworboj').innerHTML = czworboj.map(s => slotCardHTML(s, false)).join('');
 
-    html += `
-    <div class="slot-card type-${typeCls}">
-      <div class="slot-top">
-        <span class="type-badge badge-${typeCls}">${typeLabel}</span>
-        <span class="slot-status">
-          <span class="status-dot${hasData ? '' : ' idle'}"></span>
-          ${hasData ? 'AKTYWNE' : 'PUSTE'}
-        </span>
-      </div>
-      <div class="slot-city">${esc(slot.city)}</div>
-      <div class="slot-name">${esc(slot.name || '')}</div>
-      <div class="slot-meta">
-        <div class="meta-item">
-          <span class="meta-label">Zawodnicy</span>
-          <span class="meta-val hi">${stats.athletes}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Drużyny</span>
-          <span class="meta-val">${stats.teams}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Data</span>
-          <span class="meta-val">${slot.date || '—'}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Slot</span>
-          <span class="meta-val">#${slot.id}</span>
-        </div>
-      </div>
-      <div class="slot-actions">
-        <button class="btn ${openBtnCls}" style="flex:1;" onclick="openSlot(${slot.id})">→ Otwórz</button>
-        <button class="btn btn-danger" onclick="removeSlot(${slot.id}, event)">✕</button>
-      </div>
-    </div>`;
-  });
+  // OSF
+  document.getElementById('count-osf').textContent = osf.length;
+  document.getElementById('slots-osf').innerHTML = osf.map(s => slotCardHTML(s, false)).join('');
 
-  html += `
-  <div class="add-card" onclick="openModal()">
-    <div class="add-icon">+</div>
-    <div class="add-label">Nowe zawody</div>
-  </div>`;
-
-  grid.innerHTML = html;
+  // Zakończone
+  const doneSec = document.getElementById('section-done');
+  if (done.length > 0) {
+    doneSec.style.display = 'block';
+    document.getElementById('slots-done').innerHTML = done.map(s => slotCardHTML(s, true)).join('');
+  } else {
+    doneSec.style.display = 'none';
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -569,11 +651,11 @@ function selectType(t) {
   document.getElementById('type-osf').classList.toggle('selected', t === 'osf');
 }
 
-function openModal() {
+function openModal(presetType) {
   document.getElementById('new-city').value = '';
   document.getElementById('new-name').value = '';
   document.getElementById('new-date').valueAsDate = new Date();
-  selectType('czworboj');
+  selectType(presetType || 'czworboj');
   document.getElementById('modal-new').classList.add('open');
   setTimeout(() => document.getElementById('new-city').focus(), 50);
 }
@@ -643,6 +725,25 @@ function ensureCzworSlot(panelId, slot) {
   } catch(e) {
     return 'panel_' + panelId;
   }
+}
+
+function markSlotDone(id) {
+  const slot = getSlot(id);
+  if (!slot) return;
+  slot.done = true;
+  slot.doneAt = new Date().toISOString();
+  saveSlot(slot);
+  render();
+}
+
+function reactivateSlot(id, e) {
+  e.stopPropagation();
+  const slot = getSlot(id);
+  if (!slot) return;
+  slot.done = false;
+  delete slot.doneAt;
+  saveSlot(slot);
+  render();
 }
 
 function removeSlot(id, e) {

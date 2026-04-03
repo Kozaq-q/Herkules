@@ -896,6 +896,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <span class="header-autosave" id="header-autosave">● SYNC</span>
     <span id="auth-role-badge" style="display:none;flex-shrink:0"></span>
     <button class="btn btn-sm btn-xs" onclick="window.location.href='start.html'" title="Panel startowy" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--text3);border-color:var(--border)">← Panel</button>
+    <button class="btn btn-sm btn-xs" onclick="finishContest()" title="Zakończ zawody" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--green);border-color:rgba(76,175,130,.4);">✓ Zakończ</button>
     <button class="btn btn-sm btn-xs" onclick="authLogout()" title="Wyloguj" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--text3);border-color:var(--border)">⏻ Wyloguj</button>
     <!-- przycisk Menu zawodów ukryty -->
     <button class="btn btn-sm" onclick="exportData()" style="white-space:nowrap;flex-shrink:0">💾 <span class="btn-label-long">Eksport</span></button>
@@ -1597,6 +1598,35 @@ function authLogout() {
   sessionStorage.removeItem(AUTH_ROLE_KEY);
   _sessionRole = null;
   location.reload();
+}
+
+// ── Zakończ zawody i wróć do panelu ──
+function finishContest() {
+  if (!confirm('Oznaczyć te zawody jako zakończone i wrócić do panelu?\n\nDane pozostają zapisane i dostępne.')) return;
+  try {
+    // Znajdź slot panelu na podstawie aktywnego slotu Czwórboju
+    const czworId = ACTIVE_SLOT_ID;
+    if (czworId) {
+      // szukaj mapowania panel_N → czworId
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('herkules_czwor_map_')) {
+          if (localStorage.getItem(key) === czworId) {
+            const panelId = parseInt(key.replace('herkules_czwor_map_', ''));
+            const slotRaw = localStorage.getItem('herkules_slot_' + panelId);
+            if (slotRaw) {
+              const slot = JSON.parse(slotRaw);
+              slot.done = true;
+              slot.doneAt = new Date().toISOString();
+              localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
+            }
+            break;
+          }
+        }
+      }
+    }
+  } catch(e) {}
+  window.location.href = 'start.html';
 }
 
 // ── Selekcja roli w UI ──

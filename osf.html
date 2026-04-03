@@ -225,6 +225,7 @@ tr:last-child > td { border-bottom: none; }
     <span class="header-contest-name" id="header-contest-name"></span>
     <span class="header-autosave" id="header-autosave">● zapisano</span>
     <button class="btn btn-sm" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
+    <button class="btn btn-sm" onclick="finishContest()" style="flex-shrink:0;color:var(--green);border-color:rgba(76,175,130,.4);background:rgba(76,175,130,.08);">✓ Zakończ</button>
     <button class="btn btn-sm btn-danger" onclick="resetContest()">Reset</button>
   </div>
 </header>
@@ -570,7 +571,24 @@ function launchApp() {
 function resetContest() {
   if (!confirm('Usunąć wszystkie dane i wrócić do ekranu startowego?')) return;
   localStorage.removeItem(STORAGE_KEY);
-  location.reload();
+  window.location.href = 'start.html';
+}
+
+function finishContest() {
+  if (!confirm('Oznaczyć te zawody jako zakończone i wrócić do panelu?\n\nDane pozostają zapisane i dostępne.')) return;
+  try {
+    const panelId = SLOT_ID;
+    if (panelId && panelId !== '0') {
+      const slotRaw = localStorage.getItem('herkules_slot_' + panelId);
+      if (slotRaw) {
+        const slot = JSON.parse(slotRaw);
+        slot.done = true;
+        slot.doneAt = new Date().toISOString();
+        localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
+      }
+    }
+  } catch(e) {}
+  window.location.href = 'start.html';
 }
 
 // ═══════════════════════════════════════════════════
