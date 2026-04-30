@@ -232,9 +232,10 @@ tr:last-child > td { border-bottom: none; }
 
 <nav class="nav-bar">
   <button class="nav-tab active" onclick="showTab('zawodnicy')" id="tab-zawodnicy">Zawodnicy</button>
-  <button class="nav-tab" onclick="showTab('seria1')" id="tab-seria1">Seria 1</button>
-  <button class="nav-tab" onclick="showTab('seria2')" id="tab-seria2">Seria 2</button>
-  <button class="nav-tab" onclick="showTab('wyniki')" id="tab-wyniki">Wyniki</button>
+  <button class="nav-tab" onclick="showTab('seria1')" id="tab-seria1">Ind. Seria 1</button>
+  <button class="nav-tab" onclick="showTab('seria2')" id="tab-seria2">Ind. Seria 2</button>
+  <button class="nav-tab" onclick="showTab('wyniki')" id="tab-wyniki">Ind. Wyniki</button>
+  <button class="nav-tab" onclick="showTab('druzynowy')" id="tab-druzynowy">Drużynowy</button>
 </nav>
 
 <div class="main-content">
@@ -252,6 +253,11 @@ tr:last-child > td { border-bottom: none; }
     <div class="flex-between mb-12">
       <div class="card-title" style="margin-bottom:0">Lista zawodników</div>
       <div class="flex">
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;" title="Schemat numeracji startowej">
+          <button id="bib-btn-team-alpha" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team-alpha')">X/Y A–Z</button>
+          <button id="bib-btn-team" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team')">X/Y lista</button>
+          <button id="bib-btn-sequential" class="btn btn-sm" style="border:none;border-radius:0;padding:4px 9px;" onclick="setBibScheme('sequential')">1,2,3…</button>
+        </div>
         <button class="btn btn-sm" onclick="openImportModal()">↑ Import CSV/XLSX</button>
         <button class="btn btn-sm btn-primary" onclick="openAddModal()">+ Dodaj</button>
       </div>
@@ -442,6 +448,83 @@ tr:last-child > td { border-bottom: none; }
   </div>
 </div>
 
+<!-- ═══ TAB: DRUŻYNOWY ═══ -->
+<div class="page" id="page-druzynowy">
+  <div class="flex-between mb-12">
+    <div>
+      <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Bieg Drużynowy</div>
+      <div class="text-muted mt-4" style="font-size:12px;">9 zawodników (min. 8) · liczy się czas 8. zawodnika · 2 serie</div>
+    </div>
+  </div>
+
+  <div id="dr-alert-no-times" class="alert alert-warning" style="display:none;">
+    Brak czasów z biegu indywidualnego. Najpierw uzupełnij wyniki Serii 1 i 2 w zakładkach indywidualnych.
+  </div>
+
+  <!-- SERIA 1 DRUŻYNOWA -->
+  <div class="card mb-12">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0;">Seria 1 — kolejność startów</div>
+      <div class="flex">
+        <button class="btn btn-sm" onclick="printTeamS1StartList()">🖨 Lista startowa</button>
+        <button class="btn btn-sm" onclick="printTeamS1JudgeList()">🖨 Lista sędziowska</button>
+        <button class="btn btn-sm btn-primary" onclick="buildTeamSeries1()">⚙ Generuj kolejność S1</button>
+      </div>
+    </div>
+    <div id="dr-alert-s1" class="alert alert-info" style="display:none;"></div>
+    <div id="dr-s1-teams"></div>
+    <!-- Wprowadzanie czasów S1 -->
+    <div id="dr-s1-times-section" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;">Czasy — Seria 1</div>
+      <div class="qe-scroll" style="max-height:300px;">
+        <table class="qe-table">
+          <thead><tr><th>#</th><th>Drużyna</th><th>Tor</th><th>Skład (8+)</th><th>Min. zawodników</th><th>Czas S1</th></tr></thead>
+          <tbody id="dr-s1-qe"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERIA 2 DRUŻYNOWA -->
+  <div class="card mb-12">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0;">Seria 2 — kolejność startów</div>
+      <div class="flex">
+        <button class="btn btn-sm" onclick="printTeamS2StartList()">🖨 Lista startowa</button>
+        <button class="btn btn-sm" onclick="printTeamS2JudgeList()">🖨 Lista sędziowska</button>
+        <button class="btn btn-sm btn-primary" onclick="buildTeamSeries2()">⚙ Generuj kolejność S2</button>
+      </div>
+    </div>
+    <div id="dr-alert-s2" class="alert alert-info" style="display:none;"></div>
+    <div id="dr-s2-teams"></div>
+    <div id="dr-s2-times-section" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:10px;">Czasy — Seria 2</div>
+      <div class="qe-scroll" style="max-height:300px;">
+        <table class="qe-table">
+          <thead><tr><th>#</th><th>Drużyna</th><th>Tor</th><th>Czas S1</th><th>Czas S2</th></tr></thead>
+          <tbody id="dr-s2-qe"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- WYNIKI DRUŻYNOWE -->
+  <div class="card">
+    <div class="flex-between mb-12">
+      <div class="card-title" style="margin-bottom:0;">Wyniki drużynowe</div>
+      <button class="btn btn-sm" onclick="printTeamResults()">🖨 Drukuj wyniki</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Msc</th><th>Drużyna</th><th>Zawodnicy</th><th>Suma ind. (8 najl.)</th><th>S1</th><th>S2</th><th>Wynik</th>
+        </tr></thead>
+        <tbody id="dr-results"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </div><!-- /main-content -->
 </div><!-- /main-app -->
 
@@ -533,7 +616,13 @@ let state = {
   athletes: [],       // { id, name, gender, team, bib }
   s1pairs: [],        // { pairNum, gender, aId, aLane, bId, bLane } bId=null if solo
   s2pairs: [],        // same structure
-  times: {}           // { [athleteId]: { s1: '1:23.4', s2: '1:20.1' } }
+  times: {},          // { [athleteId]: { s1: '1:23.4', s2: '1:20.1' } }
+  bibScheme: 'team',  // 'team' = X/Y format, 'sequential' = 1,2,3...
+  teamOrder: {        // kolejność drużyn w seriach drużynowych
+    s1: [],           // [ { team, lane, startNum } ]
+    s2: []
+  },
+  teamTimes: {}       // { [teamName]: { s1: '2:34.5', s2: '2:30.1' } }
 };
 
 function save() {
@@ -570,6 +659,7 @@ function launchApp() {
   document.title = 'OSF · ' + c.city;
   renderAthletes();
   updateStats();
+  updateBibButtons();
 }
 
 function resetContest() {
@@ -606,18 +696,417 @@ function showTab(name) {
   if (name === 'seria1') renderSeries1View();
   if (name === 'seria2') renderSeries2View();
   if (name === 'wyniki') renderResults();
+  if (name === 'druzynowy') renderTeamView();
+}
+
+// ═══════════════════════════════════════════════════
+// BIEG DRUŻYNOWY — helpers
+// ═══════════════════════════════════════════════════
+const TEAM_MIN = 8; // minimalna liczba zawodników do startu
+const TEAM_COUNT = 8; // liczba liczonych zawodników (8. na mecie)
+
+function getTeams() {
+  // zwraca listę unikalnych drużyn ze wszystkich zawodników
+  const names = [...new Set(state.athletes.map(a => a.team).filter(Boolean))];
+  return names.sort();
+}
+
+function getTeamAthletes(team) {
+  return state.athletes.filter(a => a.team === team);
+}
+
+function getTeamIndividualSum(team) {
+  // suma 8 najlepszych czasów indywidualnych zawodników drużyny
+  const athletes = getTeamAthletes(team);
+  const times = athletes
+    .map(a => parseTime(bestTime(a.id)))
+    .filter(t => t < Infinity)
+    .sort((a, b) => a - b); // rosnąco — najlepsze (najkrótsze) pierwsze
+  if (times.length < TEAM_COUNT) return Infinity; // za mało czasów
+  return times.slice(0, TEAM_COUNT).reduce((s, t) => s + t, 0);
+}
+
+function formatSum(sec) {
+  if (sec === Infinity || isNaN(sec)) return '—';
+  const m = Math.floor(sec / 60);
+  const s = (sec % 60).toFixed(2);
+  return m > 0 ? m + ':' + s.padStart(5, '0') : s;
+}
+
+function getTeamTime(team, series) {
+  return state.teamTimes[team] && state.teamTimes[team][series] ? state.teamTimes[team][series] : '';
+}
+
+function teamBestTime(team) {
+  const s1 = getTeamTime(team, 's1');
+  const s2 = getTeamTime(team, 's2');
+  if (!s1 && !s2) return '';
+  if (!s1) return s2;
+  if (!s2) return s1;
+  return parseTime(s1) <= parseTime(s2) ? s1 : s2;
+}
+
+function saveTeamTime(input) {
+  const team   = input.dataset.team;
+  const series = input.dataset.series;
+  const val    = input.value.trim();
+  if (!state.teamTimes[team]) state.teamTimes[team] = {};
+  state.teamTimes[team][series] = val;
+  save();
+}
+
+// ═══════════════════════════════════════════════════
+// BIEG DRUŻYNOWY — generowanie serii
+// ═══════════════════════════════════════════════════
+function buildTeamSeries1() {
+  const teams = getTeams();
+  if (teams.length === 0) { alert('Brak drużyn na liście zawodników.'); return; }
+
+  // sprawdź czy są jakieś czasy indywidualne
+  const hasAnyTime = state.athletes.some(a => bestTime(a.id));
+  if (!hasAnyTime) {
+    if (!confirm('Brak czasów z biegu indywidualnego.\nKolejność zostanie ustalona losowo.\nKontynuować?')) return;
+  }
+
+  // sortuj drużyny wg sumy 8 najlepszych (malejąco = najsłabsze pierwsze)
+  const sorted = teams.map(team => ({
+    team,
+    sum: getTeamIndividualSum(team),
+    count: getTeamAthletes(team).length
+  })).sort((a, b) => {
+    if (a.sum === Infinity && b.sum === Infinity) return 0;
+    if (a.sum === Infinity) return -1; // brak czasów → na początku (startuje pierwsza)
+    if (b.sum === Infinity) return 1;
+    return b.sum - a.sum; // najsłabsze (największa suma) pierwsze
+  });
+
+  // przydziel tory: L, P, L, P...
+  state.teamOrder.s1 = sorted.map((item, idx) => ({
+    team:     item.team,
+    lane:     idx % 2 === 0 ? 'L' : 'P',
+    startNum: idx + 1,
+    sum:      item.sum,
+    count:    item.count
+  }));
+  state.teamOrder.s2 = [];
+  save();
+  renderTeamView();
+}
+
+function buildTeamSeries2() {
+  if (!state.teamOrder.s1.length) { alert('Najpierw wygeneruj kolejność Serii 1.'); return; }
+
+  // sortuj wg czasów S1 (malejąco = najsłabsze pierwsze), zmień tory
+  const withTimes = state.teamOrder.s1.map(item => ({
+    ...item,
+    s1time: parseTime(getTeamTime(item.team, 's1'))
+  })).sort((a, b) => {
+    if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+    if (a.s1time === Infinity) return -1;
+    if (b.s1time === Infinity) return 1;
+    return b.s1time - a.s1time; // najsłabsze pierwsze
+  });
+
+  state.teamOrder.s2 = withTimes.map((item, idx) => ({
+    team:     item.team,
+    lane:     item.lane === 'L' ? 'P' : 'L', // zmiana toru!
+    startNum: idx + 1,
+    sum:      item.sum,
+    count:    item.count
+  }));
+  save();
+  renderTeamView();
+}
+
+// ═══════════════════════════════════════════════════
+// BIEG DRUŻYNOWY — render
+// ═══════════════════════════════════════════════════
+function renderTeamView() {
+  const hasAnyTime = state.athletes.some(a => bestTime(a.id));
+  document.getElementById('dr-alert-no-times').style.display = hasAnyTime ? 'none' : 'block';
+
+  renderTeamOrderSection('s1');
+  renderTeamOrderSection('s2');
+  renderTeamResults();
+}
+
+function renderTeamOrderSection(series) {
+  const order   = state.teamOrder[series];
+  const alertEl = document.getElementById('dr-alert-' + series);
+  const teamsEl = document.getElementById('dr-s' + (series === 's1' ? '1' : '2') + '-teams');
+  const timesEl = document.getElementById('dr-s' + (series === 's1' ? '1' : '2') + '-times-section');
+  const qeEl    = document.getElementById('dr-s' + (series === 's1' ? '1' : '2') + '-qe');
+
+  if (!order.length) {
+    alertEl.style.display = 'block';
+    alertEl.textContent   = series === 's1'
+      ? 'Kliknij "Generuj kolejność S1" aby ustalić kolejność startów na podstawie wyników indywidualnych.'
+      : 'Najpierw wygeneruj Serię 1 i uzupełnij czasy.';
+    teamsEl.innerHTML = '';
+    timesEl.style.display = 'none';
+    return;
+  }
+  alertEl.style.display = 'none';
+
+  // karty drużyn
+  let html = '';
+  order.forEach(item => {
+    const athletes = getTeamAthletes(item.team);
+    const ok       = athletes.length >= TEAM_MIN;
+    const t        = getTeamTime(item.team, series);
+    html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border:1px solid ' + (ok ? 'var(--border)' : 'rgba(224,85,85,.4)') + ';border-radius:4px;margin-bottom:6px;">';
+    html += '<span style="font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--text3);min-width:32px;">' + item.startNum + '</span>';
+    html += '<span class="lane-badge lane-' + item.lane + '">' + item.lane + '</span>';
+    html += '<div style="flex:1;">';
+    html += '<div style="font-family:var(--font-h);font-size:16px;font-weight:700;">' + esc(item.team) + '</div>';
+    html += '<div style="font-size:11px;color:' + (ok ? 'var(--text3)' : 'var(--red)') + ';">';
+    html += ok ? (athletes.length + ' zawodników') : ('⚠ Tylko ' + athletes.length + ' zawodników — min. ' + TEAM_MIN + ' wymagane · DYSKWALIFIKACJA');
+    html += '</div></div>';
+    if (t) html += '<span style="font-family:var(--font-m);font-size:14px;font-weight:700;color:var(--green);">' + t + '</span>';
+    if (series === 's1') html += '<span style="font-size:11px;color:var(--text3);font-family:var(--font-m);">Σ ' + formatSum(item.sum) + '</span>';
+    html += '</div>';
+  });
+  teamsEl.innerHTML = html;
+  timesEl.style.display = 'block';
+
+  // tabela QE
+  let qeHtml = '';
+  order.forEach(item => {
+    const athletes = getTeamAthletes(item.team);
+    const ok       = athletes.length >= TEAM_MIN;
+    const s1t      = getTeamTime(item.team, 's1');
+    qeHtml += '<tr class="qe-row">';
+    qeHtml += '<td class="qe-num">' + item.startNum + '</td>';
+    qeHtml += '<td class="qe-name">' + esc(item.team) + (ok ? '' : ' <span style="color:var(--red);font-size:10px;">DSQ</span>') + '</td>';
+    qeHtml += '<td><span class="lane-badge lane-' + item.lane + '">' + item.lane + '</span></td>';
+    if (series === 's2') {
+      qeHtml += '<td class="mono" style="color:var(--text3);font-size:12px;">' + (s1t || '—') + '</td>';
+    } else {
+      qeHtml += '<td style="font-size:11px;color:var(--text3);">' + athletes.length + ' os.</td>';
+    }
+    qeHtml += '<td><input class="qe-time" type="text" value="' + (getTeamTime(item.team, series) || '') + '" placeholder="0:00.00" data-team="' + esc(item.team) + '" data-series="' + series + '" onchange="saveTeamTime(this)" oninput="saveTeamTime(this)" /></td>';
+    qeHtml += '</tr>';
+  });
+  qeEl.innerHTML = qeHtml;
+}
+
+function renderTeamResults() {
+  const teams = getTeams();
+  const tbody = document.getElementById('dr-results');
+  if (!teams.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="padding:12px;">Brak drużyn.</td></tr>'; return; }
+
+  const rows = teams.map(team => {
+    const athletes = getTeamAthletes(team);
+    const ok       = athletes.length >= TEAM_MIN;
+    const s1       = getTeamTime(team, 's1');
+    const s2       = getTeamTime(team, 's2');
+    const best     = teamBestTime(team);
+    const bestSec  = parseTime(best);
+    const sum      = getTeamIndividualSum(team);
+    return { team, athletes, ok, s1, s2, best, bestSec, sum };
+  }).sort((a, b) => {
+    if (!a.ok && b.ok) return 1;
+    if (a.ok && !b.ok) return -1;
+    return a.bestSec - b.bestSec;
+  });
+
+  let rank = 1;
+  let html = '';
+  rows.forEach(r => {
+    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const noBest  = r.bestSec === Infinity;
+    const dsq     = !r.ok;
+    html += '<tr>';
+    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + (dsq ? '' : rankCls) + '">' + (dsq ? 'DSQ' : (noBest ? '—' : rank)) + '</td>';
+    html += '<td style="font-weight:700;">' + esc(r.team) + '</td>';
+    html += '<td style="font-size:11px;color:' + (r.ok ? 'var(--text3)' : 'var(--red)') + ';">' + r.athletes.length + (r.ok ? '' : ' ⚠') + '</td>';
+    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + formatSum(r.sum) + '</td>';
+    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + (r.s1 || '—') + '</td>';
+    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + (r.s2 || '—') + '</td>';
+    html += '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest || dsq ? 'var(--text3)' : 'var(--green)') + ';">' + (r.best || '—') + '</td>';
+    html += '</tr>';
+    if (!noBest && !dsq) rank++;
+  });
+  tbody.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════
+// BIEG DRUŻYNOWY — druki PDF
+// ═══════════════════════════════════════════════════
+function teamStartListHTML(series) {
+  const order = state.teamOrder[series];
+  if (!order.length) return null;
+  const seriesLabel = series === 's1' ? 'Seria 1' : 'Seria 2';
+  let html = '<h1>OSF — Bieg Drużynowy · ' + seriesLabel + '</h1>';
+  html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
+  html += '<table><thead><tr><th style="width:40px">Start</th><th>Drużyna</th><th style="width:44px">Tor</th><th>Zawodnicy</th>';
+  if (series === 's2') html += '<th style="width:80px">Czas S1</th>';
+  html += '</tr></thead><tbody>';
+  order.forEach((item, idx) => {
+    const athletes = getTeamAthletes(item.team);
+    const ok       = athletes.length >= TEAM_MIN;
+    const rowBg    = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
+    html += '<tr style="' + rowBg + '">';
+    html += '<td style="text-align:center;font-weight:bold;">' + item.startNum + '</td>';
+    html += '<td style="font-weight:bold;">' + esc(item.team) + (ok ? '' : ' <span style="color:red;font-size:10px;">[DSQ — za mało zawodników]</span>') + '</td>';
+    html += '<td><span class="lane-' + item.lane + '">' + item.lane + '</span></td>';
+    html += '<td style="font-size:10px;">' + athletes.map(a => esc(a.name)).join(', ') + '</td>';
+    if (series === 's2') html += '<td style="font-family:monospace;">' + (getTeamTime(item.team,'s1')||'—') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function teamJudgeListHTML(series) {
+  const order = state.teamOrder[series];
+  if (!order.length) return null;
+  const seriesLabel = series === 's1' ? 'Seria 1' : 'Seria 2';
+  let html = '<h1>OSF — Lista Sędziowska Drużynowy · ' + seriesLabel + '</h1>';
+  html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
+  html += '<p style="font-size:11px;color:#555;margin-bottom:10px;">Liczy się czas ' + TEAM_COUNT + '. zawodnika przekraczającego linię mety.</p>';
+  html += '<table><thead><tr><th style="width:40px">Start</th><th>Drużyna</th><th style="width:44px">Tor</th>';
+  if (series === 's2') html += '<th style="width:80px">Czas S1</th>';
+  html += '<th style="width:100px">Czas (s.ds)</th></tr></thead><tbody>';
+  order.forEach((item, idx) => {
+    const ok    = getTeamAthletes(item.team).length >= TEAM_MIN;
+    const rowBg = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
+    html += '<tr style="' + rowBg + '">';
+    html += '<td style="text-align:center;font-weight:bold;">' + item.startNum + '</td>';
+    html += '<td style="font-weight:bold;">' + esc(item.team) + (ok ? '' : ' <span style="color:red;font-size:10px;">[DSQ]</span>') + '</td>';
+    html += '<td><span class="lane-' + item.lane + '">' + item.lane + '</span></td>';
+    if (series === 's2') html += '<td style="font-family:monospace;">' + (getTeamTime(item.team,'s1')||'—') + '</td>';
+    html += '<td class="time-cell"></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function printTeamS1StartList() {
+  const html = teamStartListHTML('s1');
+  if (!html) { alert('Brak kolejności S1 — najpierw wygeneruj.'); return; }
+  openPrint(html, PAIRS_PDF_CSS);
+}
+function printTeamS1JudgeList() {
+  const html = teamJudgeListHTML('s1');
+  if (!html) { alert('Brak kolejności S1 — najpierw wygeneruj.'); return; }
+  openPrint(html, PAIRS_PDF_CSS);
+}
+function printTeamS2StartList() {
+  const html = teamStartListHTML('s2');
+  if (!html) { alert('Brak kolejności S2 — najpierw wygeneruj.'); return; }
+  openPrint(html, PAIRS_PDF_CSS);
+}
+function printTeamS2JudgeList() {
+  const html = teamJudgeListHTML('s2');
+  if (!html) { alert('Brak kolejności S2 — najpierw wygeneruj.'); return; }
+  openPrint(html, PAIRS_PDF_CSS);
+}
+
+function printTeamResults() {
+  const teams = getTeams();
+  if (!teams.length) { alert('Brak drużyn.'); return; }
+  const rows = teams.map(team => {
+    const athletes = getTeamAthletes(team);
+    const ok = athletes.length >= TEAM_MIN;
+    const s1 = getTeamTime(team, 's1');
+    const s2 = getTeamTime(team, 's2');
+    const best = teamBestTime(team);
+    return { team, ok, athletes, s1, s2, best, bestSec: parseTime(best), sum: getTeamIndividualSum(team) };
+  }).sort((a, b) => { if (!a.ok && b.ok) return 1; if (a.ok && !b.ok) return -1; return a.bestSec - b.bestSec; });
+
+  let html = '<h1>OSF — Wyniki Drużynowe</h1>';
+  html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
+  html += '<table><thead><tr><th>Msc</th><th>Drużyna</th><th>Zaw.</th><th>Σ ind. (8 najl.)</th><th>Seria 1</th><th>Seria 2</th><th>Wynik</th></tr></thead><tbody>';
+  let rank = 1;
+  rows.forEach(r => {
+    const dsq = !r.ok;
+    const noBest = r.bestSec === Infinity;
+    html += '<tr><td>' + (dsq ? 'DSQ' : (noBest ? '—' : rank)) + '</td>';
+    html += '<td><b>' + esc(r.team) + '</b></td>';
+    html += '<td>' + r.athletes.length + (r.ok ? '' : ' ⚠') + '</td>';
+    html += '<td>' + formatSum(r.sum) + '</td>';
+    html += '<td>' + (r.s1||'—') + '</td>';
+    html += '<td>' + (r.s2||'—') + '</td>';
+    html += '<td><b>' + (r.best||'—') + '</b></td></tr>';
+    if (!noBest && !dsq) rank++;
+  });
+  html += '</tbody></table>';
+  openPrint(html, PAIRS_PDF_CSS);
 }
 
 // ═══════════════════════════════════════════════════
 // ATHLETES
 // ═══════════════════════════════════════════════════
+function setBibScheme(scheme) {
+  state.bibScheme = scheme;
+  assignBibs();
+  save();
+  renderAthletes();
+  updateStats();
+  updateBibButtons();
+}
+
+function updateBibButtons() {
+  const scheme = state.bibScheme || 'team';
+  ['team-alpha','team','sequential'].forEach(s => {
+    const btn = document.getElementById('bib-btn-' + s);
+    if (!btn) return;
+    if (s === scheme) {
+      btn.style.background = 'var(--orange)';
+      btn.style.color = '#111';
+    } else {
+      btn.style.background = 'var(--bg3)';
+      btn.style.color = 'var(--text2)';
+    }
+  });
+}
+
 function nextId() {
   return state.athletes.length > 0 ? Math.max(...state.athletes.map(a => a.id)) + 1 : 1;
 }
 
+// Zwraca posortowane drużyny wg wybranego schematu
+function getSortedTeams(scheme) {
+  const teams = [...new Set(state.athletes.map(a => a.team).filter(Boolean))];
+  return scheme === 'alpha'
+    ? teams.sort()
+    : teams.sort((a, b) => {
+        // kolejność pierwszego pojawienia się na liście
+        const ia = state.athletes.findIndex(x => x.team === a);
+        const ib = state.athletes.findIndex(x => x.team === b);
+        return ia - ib;
+      });
+}
+
+// Przelicza numery startowe wszystkich zawodników wg aktualnego schematu
+function assignBibs() {
+  const scheme    = state.bibScheme || 'team';
+  const teamOrder = getSortedTeams(scheme === 'team-alpha' ? 'alpha' : 'appearance');
+
+  if (scheme === 'sequential') {
+    // 1,2,3... osobno dla M i K
+    let mIdx = 1, kIdx = 1;
+    state.athletes.forEach(a => {
+      a.bib = a.gender === 'M' ? mIdx++ : kIdx++;
+    });
+  } else {
+    // X/Y — X=numer drużyny, Y=kolejny zawodnik w drużynie
+    const counters = {};
+    state.athletes.forEach(a => {
+      const teamIdx = teamOrder.indexOf(a.team) + 1;
+      if (!counters[a.team]) counters[a.team] = 0;
+      counters[a.team]++;
+      a.bib = teamIdx + '/' + counters[a.team];
+    });
+  }
+}
+
 function nextBib(gender) {
-  const same = state.athletes.filter(a => a.gender === gender && a.bib);
-  return same.length > 0 ? Math.max(...same.map(a => a.bib)) + 1 : 1;
+  // fallback przy ręcznym dodawaniu — auto sequential
+  const same = state.athletes.filter(a => a.gender === gender);
+  return same.length + 1;
 }
 
 function openAddModal() {
@@ -629,16 +1118,16 @@ function openAddModal() {
 }
 
 function addAthlete() {
-  const name = document.getElementById('add-name').value.trim();
+  const name   = document.getElementById('add-name').value.trim();
   const gender = document.getElementById('add-gender').value;
-  const team = document.getElementById('add-team').value.trim();
-  const bibRaw = document.getElementById('add-bib').value;
+  const team   = document.getElementById('add-team').value.trim();
   if (!name) { alert('Podaj nazwisko i imię.'); return; }
-  const bib = bibRaw ? parseInt(bibRaw) : nextBib(gender);
-  state.athletes.push({ id: nextId(), name, gender, team, bib });
+  state.athletes.push({ id: nextId(), name, gender, team, bib: '' });
+  assignBibs();
   save();
   renderAthletes();
   updateStats();
+  updateBibButtons();
   closeModal('modal-add');
 }
 
@@ -646,16 +1135,27 @@ function removeAthlete(id) {
   if (!confirm('Usunąć zawodnika?')) return;
   state.athletes = state.athletes.filter(a => a.id !== id);
   delete state.times[id];
+  assignBibs();
   save();
   renderAthletes();
   updateStats();
 }
 
+function parseBibForSort(bib) {
+  if (!bib && bib !== 0) return 99999;
+  const s = String(bib);
+  if (s.includes('/')) {
+    const [team, num] = s.split('/').map(Number);
+    return team * 1000 + num;
+  }
+  return parseInt(s) || 99999;
+}
+
 function renderAthletes() {
   const tbody = document.getElementById('athletes-tbody');
   const empty = document.getElementById('athletes-empty');
-  const males = state.athletes.filter(a => a.gender === 'M').sort((a,b) => a.bib - b.bib);
-  const females = state.athletes.filter(a => a.gender === 'K').sort((a,b) => a.bib - b.bib);
+  const males   = state.athletes.filter(a => a.gender === 'M').sort((a,b) => parseBibForSort(a.bib) - parseBibForSort(b.bib));
+  const females = state.athletes.filter(a => a.gender === 'K').sort((a,b) => parseBibForSort(a.bib) - parseBibForSort(b.bib));
   const all = [...males, ...females];
   if (all.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
@@ -709,14 +1209,14 @@ function importCSV() {
   lines.forEach(line => {
     const parts = line.split(';').map(p => p.trim());
     if (parts.length < 2) return;
-    const name = parts[0];
+    const name   = parts[0];
     const gender = parts[1].toUpperCase() === 'K' ? 'K' : 'M';
-    const team = parts[2] || '';
-    const bib = parts[3] ? parseInt(parts[3]) : nextBib(gender);
+    const team   = parts[2] || '';
     if (!name || name.toLowerCase() === 'nazwisko' || name.toLowerCase() === 'lp') return;
-    state.athletes.push({ id: nextId(), name, gender, team, bib });
+    state.athletes.push({ id: nextId(), name, gender, team, bib: '' });
     added++;
   });
+  assignBibs();
   save();
   renderAthletes();
   updateStats();
@@ -733,17 +1233,38 @@ function drawSeries1() {
 
   function drawForGender(gender) {
     let pool = athletes.filter(a => a.gender === gender).slice();
+
     // shuffle
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
+
     const pairs = [];
+    const assigned = new Set();
     let pairNum = 1;
-    for (let i = 0; i < pool.length; i += 2) {
+
+    for (let i = 0; i < pool.length; i++) {
+      if (assigned.has(i)) continue;
+      assigned.add(i);
       const a = pool[i];
-      const b = pool[i + 1] || null;
-      // randomly assign lanes
+
+      // Szukaj partnera z INNEJ drużyny (najbliższy nieprzypisany)
+      let partnerId = -1;
+      for (let j = i + 1; j < pool.length; j++) {
+        if (assigned.has(j)) continue;
+        if (pool[j].team !== a.team) { partnerId = j; break; }
+      }
+      // Fallback: jeśli wszyscy pozostali z tej samej drużyny — weź pierwszego dostępnego
+      if (partnerId === -1) {
+        for (let j = i + 1; j < pool.length; j++) {
+          if (!assigned.has(j)) { partnerId = j; break; }
+        }
+      }
+
+      const b = partnerId !== -1 ? pool[partnerId] : null;
+      if (b) assigned.add(partnerId);
+
       const aLane = Math.random() < 0.5 ? 'L' : 'P';
       const bLane = b ? (aLane === 'L' ? 'P' : 'L') : null;
       pairs.push({ pairNum: pairNum++, gender, aId: a.id, aLane, bId: b ? b.id : null, bLane });
@@ -1378,9 +1899,9 @@ function parseImportRows(raw) {
 function applyImportRows(rows) {
   if (!rows.length) { alert('Brak danych do importu — sprawdź format pliku.'); return; }
   rows.forEach(r => {
-    const bib = r.bib || nextBib(r.gender);
-    state.athletes.push({ id: nextId(), name: r.name, gender: r.gender, team: r.team, bib });
+    state.athletes.push({ id: nextId(), name: r.name, gender: r.gender, team: r.team, bib: '' });
   });
+  assignBibs();
   save();
   renderAthletes();
   updateStats();
