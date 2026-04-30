@@ -1856,26 +1856,41 @@ function pdfHeader() {
 function pairTableRowsStartList(pairs) {
   let html = '';
   pairs.forEach((p, idx) => {
-    const a = state.athletes.find(x => x.id === p.aId);
-    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
-    const rowBg = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
+    const aIsL = p.aLane === 'L';
+    const athL = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
+    const athP = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
+    const isSolo = !p.bId;
+    const rowBg = idx % 2 === 0 ? '' : 'background:#f7f7f7;';
+    const isLast = idx === pairs.length - 1;
 
-    // wiersz zawodnika A
-    html += '<tr style="' + rowBg + '">';
-    html += '<td rowspan="' + (b ? '2' : '1') + '" style="text-align:center;font-weight:bold;vertical-align:middle;">' + p.pairNum + '</td>';
-    html += '<td>' + (a ? esc(a.name) + (a.bib ? ' <span style="color:#888;font-size:10px;">('+a.bib+')</span>' : '') : '—') + '</td>';
-    html += '<td style="font-size:10px;color:#555;">' + esc(a ? a.team : '') + '</td>';
-    html += '<td><span class="lane-' + p.aLane + '">' + p.aLane + '</span></td>';
-    html += '</tr>';
-
-    // wiersz zawodnika B
-    if (b) {
-      html += '<tr style="' + rowBg + '">';
-      html += '<td>' + esc(b.name) + (b.bib ? ' <span style="color:#888;font-size:10px;">('+b.bib+')</span>' : '') + '</td>';
-      html += '<td style="font-size:10px;color:#555;">' + esc(b.team) + '</td>';
-      html += '<td><span class="lane-' + p.bLane + '">' + p.bLane + '</span></td>';
-      html += '</tr>';
+    html += '<tr class="pair-row' + (isLast ? ' last' : '') + '" style="' + rowBg + '">';
+    // Nr pary
+    html += '<td class="pair-num">' + p.pairNum + (isLast ? '<br><span class="last-badge">★</span>' : '') + '</td>';
+    // Tor L
+    html += '<td class="lane-cell lane-L-cell">';
+    if (athL) {
+      html += '<span class="lane-L">L</span> ';
+      html += '<strong>' + esc(athL.name) + '</strong>';
+      if (athL.bib) html += ' <span class="bib">' + athL.bib + '</span>';
+      html += '<br><span class="team">' + esc(athL.team) + '</span>';
+    } else {
+      html += '<span class="solo">SOLO</span>';
     }
+    html += '</td>';
+    // Środek VS
+    html += '<td class="vs-cell">' + (isSolo ? '—' : 'VS') + '</td>';
+    // Tor P
+    html += '<td class="lane-cell lane-P-cell">';
+    if (athP) {
+      html += '<span class="lane-P">P</span> ';
+      html += '<strong>' + esc(athP.name) + '</strong>';
+      if (athP.bib) html += ' <span class="bib">' + athP.bib + '</span>';
+      html += '<br><span class="team">' + esc(athP.team) + '</span>';
+    } else {
+      html += '<span class="solo">—</span>';
+    }
+    html += '</td>';
+    html += '</tr>';
   });
   return html;
 }
@@ -1907,14 +1922,11 @@ function pairTableRowsJudge(pairs, showS1) {
     }
     html += '</td>';
     // Komórka czasu (środek)
-    html += '<td style="text-align:center;width:90px;">';
+    html += '<td class="time-wrap">';
     if (isSolo) {
-      html += '<div class="time-cell" style="margin:0 auto;"></div>';
+      html += '<div class="time-cell"></div>';
     } else {
-      html += '<div style="display:flex;gap:4px;justify-content:center;">';
-      html += '<div class="time-cell"></div>';
-      html += '<div class="time-cell"></div>';
-      html += '</div>';
+      html += '<div class="time-pair"><div class="time-cell"></div><div class="time-cell"></div></div>';
     }
     html += '</td>';
     // Tor P — zawodnik + drużyna (wyrównane do lewej)
@@ -1934,19 +1946,47 @@ function pairTableRowsJudge(pairs, showS1) {
 }
 
 const PAIRS_PDF_CSS = `
-  body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:14px}
-  h1{font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px}
-  h2{font-size:13px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:16px 0 6px;padding-bottom:4px;border-bottom:2px solid #000}
-  .sub{font-size:10px;color:#555;margin-bottom:14px}
-  table{width:100%;border-collapse:collapse;margin-bottom:12px}
-  th{background:#000;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:5px 7px;text-align:left}
-  td{padding:5px 7px;vertical-align:middle}
-  .lane-L{display:inline-block;background:#dce8f5;color:#1a5276;font-weight:bold;padding:1px 6px;border-radius:2px;font-size:11px;}
-  .lane-P{display:inline-block;background:#d5f5e3;color:#1a7245;font-weight:bold;padding:1px 6px;border-radius:2px;font-size:11px;}
-  .gender-header{background:#333;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;letter-spacing:1px;}
-  .time-cell{width:80px;height:24px;border:1.5px solid #000!important;background:#fff;display:inline-block;vertical-align:middle;}
-  .time-cell-wrap{display:flex;gap:4px;justify-content:center;}
-  @media print{@page{size:A4 landscape;margin:10mm}body{margin:0}}
+  body{font-family:Arial,sans-serif;font-size:11px;color:#000;margin:0;padding:12px;}
+  h1{font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;}
+  h2{font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;margin:14px 0 4px;padding:4px 8px;background:#000;color:#fff;}
+  .sub{font-size:9px;color:#666;margin-bottom:10px;}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  th{font-size:9px;text-transform:uppercase;letter-spacing:1px;padding:5px 8px;border-bottom:2px solid #000;text-align:left;font-weight:bold;}
+  th.pair-num{width:28px;text-align:center;}
+  th.vs-cell{width:24px;}
+
+  td{padding:0;vertical-align:middle;}
+  .pair-row td{border-bottom:1px solid #e0e0e0;}
+  .pair-row.last td{border-bottom:2px solid #000;}
+  .pair-row:nth-child(odd) td{background:#fff;}
+  .pair-row:nth-child(even) td{background:#f5f5f5;}
+
+  td.pair-num{
+    text-align:center;font-weight:bold;font-size:13px;
+    width:28px;border-right:1px solid #ccc;padding:6px 4px;
+    color:#333;
+  }
+  td.pair-num .last-badge{font-size:8px;color:#c8a000;display:block;}
+
+  td.lane-cell{padding:6px 10px;width:44%;}
+  td.lane-L-cell{border-right:1px solid #d0e8f0;background-clip:padding-box;}
+  td.lane-P-cell{border-left:1px solid #d0e8f0;}
+  td.vs-cell{text-align:center;font-size:9px;color:#aaa;width:24px;padding:0 2px;}
+
+  .lane-L{display:inline-block;background:#1a5276;color:#fff;font-weight:bold;padding:1px 5px;border-radius:2px;font-size:9px;vertical-align:middle;}
+  .lane-P{display:inline-block;background:#1a7245;color:#fff;font-weight:bold;padding:1px 5px;border-radius:2px;font-size:9px;vertical-align:middle;}
+  strong{font-size:11px;}
+  .bib{font-size:9px;color:#888;font-style:italic;}
+  .team{font-size:9px;color:#555;margin-left:20px;display:inline-block;}
+  .solo{color:#aaa;font-style:italic;font-size:10px;}
+
+  /* lista sędziowska */
+  td.time-wrap{text-align:center;width:130px;padding:4px 6px;border-left:1px solid #ddd;border-right:1px solid #ddd;}
+  .time-cell{width:56px;height:22px;border:1.5px solid #000;background:#fff;display:inline-block;vertical-align:middle;}
+  .time-pair{display:flex;gap:3px;justify-content:center;align-items:center;}
+
+  @media print{@page{size:A4;margin:8mm}body{margin:0;padding:8px;}}
 `;
 
 function printS1StartList() {
@@ -1957,7 +1997,7 @@ function printS1StartList() {
     if (!pairs.length) return;
     const label = g === 'M' ? '— Mężczyźni —' : '— Kobiety —';
     html += '<h2>' + label + '</h2>';
-    html += '<table><thead><tr><th style="width:40px">Para</th><th>Zawodnik</th><th>Drużyna</th><th style="width:44px">Tor</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th class="pair-num">#</th><th>Tor L — Zawodnik / Drużyna</th><th class="vs-cell"></th><th>Tor P — Zawodnik / Drużyna</th></tr></thead><tbody>';
     html += pairTableRowsStartList(pairs);
     html += '</tbody></table>';
   });
@@ -1974,7 +2014,7 @@ function printS1JudgeList() {
     const html = '<h1>OSF — Lista sędziowska · Seria 1</h1>' +
       '<div class="sub">' + sub + '</div>' +
       '<h2>' + label + '</h2>' +
-      '<table><thead><tr><th style="width:32px">#</th><th style="text-align:right">Tor L — Zawodnik / Drużyna</th><th style="width:110px;text-align:center">Czas (s.ds)</th><th style="text-align:left">Drużyna / Zawodnik — Tor P</th></tr></thead><tbody>' +
+      '<table><thead><tr><th class="pair-num">#</th><th style="text-align:right">Tor L — Zawodnik / Drużyna</th><th class="time-wrap">Czas (s.ds)</th><th>Drużyna / Zawodnik — Tor P</th></tr></thead><tbody>' +
       pairTableRowsJudge(pairs, false) +
       '</tbody></table>';
     openPrint(html, PAIRS_PDF_CSS);
@@ -1988,7 +2028,7 @@ function printS2StartList() {
     const pairs = state.s2pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
     html += '<h2>' + (g==='M'?'— Mężczyźni —':'— Kobiety —') + '</h2>';
-    html += '<table><thead><tr><th style="width:40px">Para</th><th>Zawodnik</th><th>Drużyna</th><th style="width:44px">Tor</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th class="pair-num">#</th><th>Tor L — Zawodnik / Drużyna</th><th class="vs-cell"></th><th>Tor P — Zawodnik / Drużyna</th></tr></thead><tbody>';
     html += pairTableRowsStartList(pairs);
     html += '</tbody></table>';
   });
@@ -2005,7 +2045,7 @@ function printS2JudgeList() {
     const html = '<h1>OSF — Lista sędziowska · Seria 2</h1>' +
       '<div class="sub">' + sub + '</div>' +
       '<h2>' + label + '</h2>' +
-      '<table><thead><tr><th style="width:32px">#</th><th style="text-align:right">Tor L — Zawodnik / Drużyna (S1)</th><th style="width:110px;text-align:center">Czas S2 (s.ds)</th><th style="text-align:left">Drużyna / Zawodnik — Tor P (S1)</th></tr></thead><tbody>' +
+      '<table><thead><tr><th class="pair-num">#</th><th style="text-align:right">Tor L — Zawodnik / Drużyna (S1)</th><th class="time-wrap">Czas S2 (s.ds)</th><th>Drużyna / Zawodnik — Tor P (S1)</th></tr></thead><tbody>' +
       pairTableRowsJudge(pairs, true) +
       '</tbody></table>';
     openPrint(html, PAIRS_PDF_CSS);
