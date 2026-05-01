@@ -380,10 +380,22 @@ tr:last-child > td { border-bottom: none; }
       <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 1 — Losowanie par</div>
       <div class="text-muted mt-4" style="font-size:12px;">Pary losowane losowo · każda para ma tory L i P</div>
     </div>
-    <div class="flex">
-      <button class="btn btn-sm" onclick="printS1StartList()">🖨 Lista startowa</button>
-      <button class="btn btn-sm" onclick="printS1JudgeList()">🖨 Lista sędziowska</button>
-      <button class="btn btn-sm btn-primary" onclick="confirmDrawSeries1()">🎲 Losuj pary</button>
+    <div class="flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <!-- Lista startowa osobno -->
+      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS1StartList('M')" title="Lista startowa — Mężczyźni">🖨 Lista M</button>
+        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS1StartList('K')" title="Lista startowa — Kobiety">🖨 Lista K</button>
+      </div>
+      <!-- Lista sędziowska osobno -->
+      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS1JudgeList('M')" title="Lista sędziowska — Mężczyźni">📋 Sędz. M</button>
+        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS1JudgeList('K')" title="Lista sędziowska — Kobiety">📋 Sędz. K</button>
+      </div>
+      <!-- Losowanie osobno -->
+      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmDrawSeries1('M')" title="Losuj pary — Mężczyźni">🎲 Losuj M</button>
+        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmDrawSeries1('K')" title="Losuj pary — Kobiety">🎲 Losuj K</button>
+      </div>
     </div>
   </div>
 
@@ -417,10 +429,19 @@ tr:last-child > td { border-bottom: none; }
       <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 2 — Dobór wg wyników</div>
       <div class="text-muted mt-4" style="font-size:12px;">Najlepsi biegną ostatni · zmiana torów obowiązkowa</div>
     </div>
-    <div class="flex">
-      <button class="btn btn-sm" onclick="printS2StartList()">🖨 Lista startowa</button>
-      <button class="btn btn-sm" onclick="printS2JudgeList()">🖨 Lista sędziowska</button>
-      <button class="btn btn-sm btn-primary" onclick="confirmBuildSeries2()">⚙ Generuj pary S2</button>
+    <div class="flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2StartList('M')">🖨 Lista M</button>
+        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2StartList('K')">🖨 Lista K</button>
+      </div>
+      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2JudgeList('M')">📋 Sędz. M</button>
+        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2JudgeList('K')">📋 Sędz. K</button>
+      </div>
+      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmBuildSeries2('M')">⚙ Generuj M</button>
+        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmBuildSeries2('K')">⚙ Generuj K</button>
+      </div>
     </div>
   </div>
 
@@ -451,6 +472,12 @@ tr:last-child > td { border-bottom: none; }
   <div class="flex-between mb-12">
     <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Wyniki indywidualne</div>
     <div class="flex">
+      <input type="text" id="results-search" placeholder="🔍 Szukaj zawodnika..." oninput="filterResults()"
+        style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 12px;font-family:var(--font-b);font-size:13px;width:220px;" />
+      <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+        <button id="sort-btn-rank" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="setResultsSort('rank')" title="Sortuj wg miejsca">🏅 Miejsce</button>
+        <button id="sort-btn-team" class="btn btn-sm" style="border:none;border-radius:0;" onclick="setResultsSort('team')" title="Sortuj wg drużyny">🏴 Drużyna</button>
+      </div>
       <button class="btn btn-sm" onclick="printResultsPDF()">🖨 Drukuj PDF</button>
     </div>
   </div>
@@ -602,7 +629,7 @@ tr:last-child > td { border-bottom: none; }
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>Msc</th><th>Drużyna</th><th>Zawodnicy M</th><th>Suma ind. (8 najl.)</th><th>S1</th><th>S2</th><th>Wynik</th>
+          <th>Msc</th><th>Drużyna</th><th>Zawodnicy M</th><th id="dr-sum-header">Suma ind. (N najl.)</th><th>S1</th><th>S2</th><th>Wynik</th>
         </tr></thead>
         <tbody id="dr-results"></tbody>
       </table>
@@ -2078,10 +2105,11 @@ function _importRawCSV(raw) {
 // ═══════════════════════════════════════════════════
 // SERIES 1 — RANDOM DRAW
 // ═══════════════════════════════════════════════════
-function drawSeries1() {
+function drawSeries1(gender) {
+  // gender: 'M', 'K', lub undefined = oba
   const athletes = state.athletes;
   if (athletes.length === 0) { alert('Brak zawodników.'); return; }
-
+  const genders = gender ? [gender] : ['M', 'K'];
   function getBibNum(a) {
     // Wyciąga numer zawodnika w drużynie z bib (X/Y → Y, lub liczba całkowita)
     const s = String(a.bib || '');
@@ -2218,31 +2246,34 @@ function drawSeries1() {
     return allPairs;
   }
 
-  const mPairs = drawForGender('M');
-  const kPairs = drawForGender('K');
-  const newPairs = [...mPairs, ...kPairs];
+  // Losuj tylko dla wybranych płci
+  const newPairs = [];
+  genders.forEach(g => newPairs.push(...drawForGender(g)));
+
+  // Zachowaj pary drugiej płci (gdy losujemy tylko jedną)
+  const keptPairs = state.s1pairs.filter(p => !genders.includes(p.gender));
 
   if (lockedPairsOld.length > 0) {
-    // Nowym parom przydziel numery po zablokowanych
     const usedNums = new Set(lockedPairsOld.map(p => p.pairNum));
     let nextM = 1, nextK = 1;
-    // Nadaj numery nowym parom bez konfliktu
     newPairs.forEach(p => {
       if (p.gender === 'M') {
         while (usedNums.has(nextM)) nextM++;
         p.pairNum = nextM++; usedNums.add(p.pairNum);
       } else {
         while (usedNums.has(nextK + 1000)) nextK++;
-        // K numeruj od nowa osobno — użyj offsetu 1000 do śledzenia
         p.pairNum = nextK++; usedNums.add(p.pairNum + 1000);
       }
     });
-    state.s1pairs = [...lockedPairsOld, ...newPairs];
+    state.s1pairs = [...lockedPairsOld, ...newPairs, ...keptPairs];
   } else {
-    state.s1pairs = newPairs;
+    // Renumeruj zachowane pary żeby nie kolidowały
+    const allNew = [...newPairs, ...keptPairs];
+    state.s1pairs = allNew;
   }
 
-  state.s2pairs = [];
+  // Wyczyść S2 tylko dla losowanych płci
+  state.s2pairs = state.s2pairs.filter(p => !genders.includes(p.gender));
   save();
   renderSeries1View();
   showTab('seria1');
@@ -2557,9 +2588,9 @@ function teamBestTimeEffective(team) {
 // ═══════════════════════════════════════════════════
 // SERIES 2 — SMART PAIRING
 // ═══════════════════════════════════════════════════
-function buildSeries2() {
+function buildSeries2(gender) {
   if (state.s1pairs.length === 0) { alert('Najpierw wylosuj pary Serii 1.'); return; }
-
+  const genders = gender ? [gender] : ['M', 'K'];
   function buildForGender(gender) {
     const gPairs = state.s1pairs.filter(p => p.gender === gender);
     // collect athletes with their S1 lane and time
@@ -2629,9 +2660,11 @@ function buildSeries2() {
     return ordered;
   }
 
-  const mPairs = buildForGender('M');
-  const kPairs = buildForGender('K');
-  state.s2pairs = [...mPairs, ...kPairs];
+  const newPairs = [];
+  genders.forEach(g => newPairs.push(...buildForGender(g)));
+  // Zachowaj pary drugiej płci
+  const keptPairs = state.s2pairs.filter(p => !genders.includes(p.gender));
+  state.s2pairs = [...newPairs, ...keptPairs];
   save();
   renderSeries2View();
 }
@@ -2664,9 +2697,47 @@ function renderSeries2View() {
 // ═══════════════════════════════════════════════════
 // WYNIKI
 // ═══════════════════════════════════════════════════
+let _resultsSort = 'rank'; // 'rank' | 'team'
+
+function setResultsSort(mode) {
+  _resultsSort = mode;
+  ['rank','team'].forEach(s => {
+    const btn = document.getElementById('sort-btn-' + s);
+    if (!btn) return;
+    btn.style.background = s === mode ? 'var(--accent)' : 'var(--bg3)';
+    btn.style.color      = s === mode ? '#111' : 'var(--text2)';
+  });
+  renderResults();
+}
+
+function filterResults() {
+  const q = (document.getElementById('results-search').value || '').toLowerCase().trim();
+  ['M','K'].forEach(g => {
+    const tbody = document.getElementById('results-' + g);
+    if (!tbody) return;
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+      if (!q) { tr.style.display = ''; return; }
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+}
+
 function renderResults() {
+  // Zaktualizuj nagłówek sumy drużynowej
+  const sumHeader = document.getElementById('dr-sum-header');
+  if (sumHeader) sumHeader.textContent = 'Suma ind. (' + TEAM_COUNT() + ' najl.)';
+
   renderResultsForGender('M', 'results-M');
   renderResultsForGender('K', 'results-K');
+  // Przywróć filtr jeśli aktywny
+  filterResults();
+  // Zaktualizuj wygląd przycisków sortowania
+  ['rank','team'].forEach(s => {
+    const btn = document.getElementById('sort-btn-' + s);
+    if (!btn) return;
+    btn.style.background = s === _resultsSort ? 'var(--accent)' : 'var(--bg3)';
+    btn.style.color      = s === _resultsSort ? '#111' : 'var(--text2)';
+  });
 }
 
 function renderResultsForGender(gender, tbodyId) {
@@ -2687,19 +2758,38 @@ function renderResultsForGender(gender, tbodyId) {
     };
   }
 
-  const ranked = normalAthletes.map(toRow).sort((a,b) => a.bestSec - b.bestSec);
+  const ranked   = normalAthletes.map(toRow).sort((a,b) => a.bestSec - b.bestSec);
   const pkRanked = pkAthletes.map(toRow).sort((a,b) => a.bestSec - b.bestSec);
 
+  // Sortowanie po drużynach — zachowaj oryginalne miejsca w rankMap
+  const rankMap = new Map();
+  let ri = 1;
+  ranked.forEach(r => { if (r.bestSec < Infinity) rankMap.set(r.athlete.id, ri++); });
+
+  const displayRanked = _resultsSort === 'team'
+    ? [...ranked].sort((a,b) => (a.athlete.team||'').localeCompare(b.athlete.team||'', 'pl') || a.bestSec - b.bestSec)
+    : ranked;
+  const displayPkRanked = _resultsSort === 'team'
+    ? [...pkRanked].sort((a,b) => (a.athlete.team||'').localeCompare(b.athlete.team||'', 'pl'))
+    : pkRanked;
+
   let html = '';
-  let rank = 1;
 
   function renderRow(r, isPK) {
-    const noBest  = r.bestSec === Infinity;
-    const rankCls = (!isPK && rank===1)?'rank-1':(!isPK && rank===2)?'rank-2':(!isPK && rank===3)?'rank-3':'';
-    const pts     = (gender==='M' && !isPK && !noBest) ? calcIndividualPoints(rank, N) : null;
-    const s1disp  = r.s1dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s1 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s1||'—');
-    const s2disp  = r.s2dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s2 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s2||'—');
-    let rankDisp  = isPK ? '<span class="pk-badge" style="font-size:10px;">PK</span>' : (noBest ? '—' : rank);
+    const noBest   = r.bestSec === Infinity;
+    const myRank   = isPK ? null : (rankMap.get(r.athlete.id) || null);
+    const rankCls  = (!isPK && myRank===1)?'rank-1':(!isPK && myRank===2)?'rank-2':(!isPK && myRank===3)?'rank-3':'';
+    const pts      = (gender==='M' && !isPK && myRank) ? calcIndividualPoints(myRank, N) : null;
+    const s1disp   = r.s1dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s1 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s1||'—');
+    const s2disp   = r.s2dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s2 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s2||'—');
+    const rankDisp = isPK ? '<span class="pk-badge" style="font-size:10px;">PK</span>' : (noBest ? '—' : myRank);
+    // Separator między drużynami w trybie team
+    if (_resultsSort === 'team' && !isPK) {
+      const idx = displayRanked.indexOf(r);
+      if (idx > 0 && displayRanked[idx-1].athlete.team !== r.athlete.team) {
+        html += '<tr><td colspan="7" style="height:3px;background:var(--border);padding:0;"></td></tr>';
+      }
+    }
     html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
     html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + rankDisp + '</td>';
     html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + '</td>';
@@ -2709,11 +2799,10 @@ function renderResultsForGender(gender, tbodyId) {
     html += '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest?'var(--text3)':'var(--green)') + ';">' + (r.best||'—') + '</td>';
     html += '<td style="font-family:var(--font-m);font-weight:700;text-align:right;color:' + (pts!==null?'var(--blue)':'var(--text3)') + ';">' + (pts!==null ? pts : '—') + '</td>';
     html += '</tr>';
-    if (!isPK && !noBest) rank++;
   }
 
-  ranked.forEach(r => renderRow(r, false));
-  pkRanked.forEach(r => renderRow(r, true));
+  displayRanked.forEach(r => renderRow(r, false));
+  displayPkRanked.forEach(r => renderRow(r, true));
   tbody.innerHTML = html;
 
   if (document.getElementById('page-klasyfikacja') &&
@@ -2895,14 +2984,15 @@ const PAIRS_PDF_CSS = `
   @media print{@page{size:A4;margin:8mm}body{margin:0;padding:8px;}}
 `;
 
-function printS1StartList() {
+function printS1StartList(gender) {
   if (!state.s1pairs.length) { alert('Brak par — najpierw wylosuj pary Serii 1.'); return; }
-  let html = '<h1>OSF — Lista startowa · Seria 1</h1><div class="sub">' + esc(state.contest.name||'') + (state.contest.name ? ' · ' : '') + esc(state.contest.city) + (state.contest.date ? ' · ' + state.contest.date : '') + '</div>';
-  ['M','K'].forEach(g => {
+  const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
+  const genders = gender ? [gender] : ['M','K'];
+  let html = '<h1>OSF — Lista startowa · Seria 1</h1><div class="sub">' + sub + '</div>';
+  genders.forEach(g => {
     const pairs = state.s1pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
-    const label = g === 'M' ? '— Mężczyźni —' : '— Kobiety —';
-    html += '<h2>' + label + '</h2>';
+    html += '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>';
     html += '<table><thead><tr><th class="pair-num">#</th><th>Tor L — Zawodnik / Drużyna</th><th class="vs-cell"></th><th>Tor P — Zawodnik / Drużyna</th></tr></thead><tbody>';
     html += pairTableRowsStartList(pairs);
     html += '</tbody></table>';
@@ -2910,30 +3000,31 @@ function printS1StartList() {
   openPrint(html, PAIRS_PDF_CSS);
 }
 
-function printS1JudgeList() {
+function printS1JudgeList(gender) {
   if (!state.s1pairs.length) { alert('Brak par — najpierw wylosuj pary Serii 1.'); return; }
-  ['M','K'].forEach((g, gi) => {
+  const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
+  const genders = gender ? [gender] : ['M','K'];
+  genders.forEach(g => {
     const pairs = state.s1pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
-    const label = g === 'M' ? 'Mężczyźni' : 'Kobiety';
-    const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
     const html = '<h1>OSF — Lista sędziowska · Seria 1</h1>' +
       '<div class="sub">' + sub + '</div>' +
-      '<h2>' + label + '</h2>' +
+      '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>' +
       '<table><thead><tr><th class="pair-num">#</th><th style="text-align:right">Tor L — Zawodnik / Drużyna</th><th class="time-wrap">Czas (s.ds)</th><th>Drużyna / Zawodnik — Tor P</th></tr></thead><tbody>' +
-      pairTableRowsJudge(pairs, false) +
-      '</tbody></table>';
+      pairTableRowsJudge(pairs, false) + '</tbody></table>';
     openPrint(html, PAIRS_PDF_CSS);
   });
 }
 
-function printS2StartList() {
+function printS2StartList(gender) {
   if (!state.s2pairs.length) { alert('Brak par — najpierw wygeneruj pary Serii 2.'); return; }
-  let html = '<h1>OSF — Lista startowa · Seria 2</h1><div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
-  ['M','K'].forEach(g => {
+  const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
+  const genders = gender ? [gender] : ['M','K'];
+  let html = '<h1>OSF — Lista startowa · Seria 2</h1><div class="sub">' + sub + '</div>';
+  genders.forEach(g => {
     const pairs = state.s2pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
-    html += '<h2>' + (g==='M'?'— Mężczyźni —':'— Kobiety —') + '</h2>';
+    html += '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>';
     html += '<table><thead><tr><th class="pair-num">#</th><th>Tor L — Zawodnik / Drużyna</th><th class="vs-cell"></th><th>Tor P — Zawodnik / Drużyna</th></tr></thead><tbody>';
     html += pairTableRowsStartList(pairs);
     html += '</tbody></table>';
@@ -2941,19 +3032,18 @@ function printS2StartList() {
   openPrint(html, PAIRS_PDF_CSS);
 }
 
-function printS2JudgeList() {
+function printS2JudgeList(gender) {
   if (!state.s2pairs.length) { alert('Brak par — najpierw wygeneruj pary Serii 2.'); return; }
-  ['M','K'].forEach(g => {
+  const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
+  const genders = gender ? [gender] : ['M','K'];
+  genders.forEach(g => {
     const pairs = state.s2pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
-    const label = g === 'M' ? 'Mężczyźni' : 'Kobiety';
-    const sub = esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'');
     const html = '<h1>OSF — Lista sędziowska · Seria 2</h1>' +
       '<div class="sub">' + sub + '</div>' +
-      '<h2>' + label + '</h2>' +
+      '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>' +
       '<table><thead><tr><th class="pair-num">#</th><th style="text-align:right">Tor L — Zawodnik / Drużyna (S1)</th><th class="time-wrap">Czas S2 (s.ds)</th><th>Drużyna / Zawodnik — Tor P (S1)</th></tr></thead><tbody>' +
-      pairTableRowsJudge(pairs, true) +
-      '</tbody></table>';
+      pairTableRowsJudge(pairs, true) + '</tbody></table>';
     openPrint(html, PAIRS_PDF_CSS);
   });
 }
@@ -3596,14 +3686,16 @@ function getPairsWithTimes(series) {
   });
 }
 
-function confirmDrawSeries1() {
-  const withTimes = getPairsWithTimes('s1');
-  const locked    = (state.lockedPairs && state.lockedPairs.s1) || [];
+function confirmDrawSeries1(gender) {
+  const gLabel    = gender === 'M' ? 'Mężczyźni' : gender === 'K' ? 'Kobiety' : 'M+K';
+  const withTimes = getPairsWithTimes('s1').filter(p => !gender || p.gender === gender);
+  const locked    = (state.lockedPairs && state.lockedPairs.s1 || [])
+    .filter(k => !gender || k.includes('_' + gender + '_'));
   if (withTimes.length === 0 && locked.length === 0) {
-    drawSeries1();
+    drawSeries1(gender);
     return;
   }
-  let msg = 'Uwaga! Ponowne losowanie zmieni układ par.\n\n';
+  let msg = 'Ponowne losowanie [' + gLabel + '] zmieni układ par.\n\n';
   if (withTimes.length > 0) {
     msg += '⚠ ' + withTimes.length + ' par ma już wpisane czasy:\n';
     withTimes.forEach(p => {
@@ -3613,32 +3705,24 @@ function confirmDrawSeries1() {
     });
     msg += '\n';
   }
-  if (locked.length > 0) {
-    msg += '🔒 ' + locked.length + ' par jest zablokowanych — zostaną zignorowane przy ponownym losowaniu.\n\n';
-  }
-  msg += 'Czasy NIE zostaną usunięte, ale pary mogą się zmienić.\nCzy kontynuować?';
-  if (confirm(msg)) drawSeries1();
+  if (locked.length > 0) msg += '🔒 ' + locked.length + ' par jest zablokowanych.\n\n';
+  msg += 'Czasy NIE zostaną usunięte. Kontynuować?';
+  if (confirm(msg)) drawSeries1(gender);
 }
 
-function confirmBuildSeries2() {
-  const withTimes = getPairsWithTimes('s2');
-  const locked    = (state.lockedPairs && state.lockedPairs.s2) || [];
-  if (withTimes.length === 0 && locked.length === 0) {
-    buildSeries2();
-    return;
-  }
-  let msg = 'Uwaga! Ponowne generowanie zmieni układ par Serii 2.\n\n';
-  if (withTimes.length > 0) {
-    msg += '⚠ ' + withTimes.length + ' par ma już wpisane czasy:\n';
-    withTimes.forEach(p => {
-      const a = state.athletes.find(x => x.id === p.aId);
-      const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
-      msg += '  Para ' + p.pairNum + ': ' + (a ? a.name : '?') + (b ? ' / ' + b.name : '') + '\n';
-    });
-    msg += '\n';
-  }
-  msg += 'Czy kontynuować?';
-  if (confirm(msg)) buildSeries2();
+function confirmBuildSeries2(gender) {
+  const gLabel    = gender === 'M' ? 'Mężczyźni' : gender === 'K' ? 'Kobiety' : 'M+K';
+  const withTimes = getPairsWithTimes('s2').filter(p => !gender || p.gender === gender);
+  if (withTimes.length === 0) { buildSeries2(gender); return; }
+  let msg = 'Ponowne generowanie [' + gLabel + '] zmieni układ par Serii 2.\n\n';
+  msg += '⚠ ' + withTimes.length + ' par ma już wpisane czasy:\n';
+  withTimes.forEach(p => {
+    const a = state.athletes.find(x => x.id === p.aId);
+    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+    msg += '  Para ' + p.pairNum + ': ' + (a ? a.name : '?') + (b ? ' / ' + b.name : '') + '\n';
+  });
+  msg += '\nCzy kontynuować?';
+  if (confirm(msg)) buildSeries2(gender);
 }
 
 // ═══════════════════════════════════════════════════
