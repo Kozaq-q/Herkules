@@ -185,6 +185,9 @@ tr:last-child > td { border-bottom: none; }
 .welcome-sub { font-size: 14px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
 .welcome-form { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 32px; width: 100%; max-width: 440px; text-align: left; }
 .welcome-form-title { font-family: var(--font-h); font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 20px; }
+.osf-swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: border-color .15s, transform .1s; padding: 0; }
+.osf-swatch:hover { transform: scale(1.15); }
+.osf-swatch.active { border-color: var(--text1); transform: scale(1.1); }
 </style>
 </head>
 <body>
@@ -236,6 +239,7 @@ tr:last-child > td { border-bottom: none; }
   <button class="nav-tab" onclick="showTab('seria2')" id="tab-seria2">Ind. Seria 2</button>
   <button class="nav-tab" onclick="showTab('wyniki')" id="tab-wyniki">Ind. Wyniki</button>
   <button class="nav-tab" onclick="showTab('druzynowy')" id="tab-druzynowy">Drużynowy</button>
+  <button class="nav-tab" onclick="showTab('setup')" id="tab-setup">⚙ Konfiguracja</button>
 </nav>
 
 <div class="main-content">
@@ -441,6 +445,116 @@ tr:last-child > td { border-bottom: none; }
   </div>
 </div>
 
+<!-- ═══ TAB: KONFIGURACJA ═══ -->
+<div class="page" id="page-setup">
+  <div class="grid-2" style="gap:16px;">
+
+    <div>
+      <!-- Personalizacja -->
+      <div class="card mb-12">
+        <div class="card-title">🎨 Personalizacja</div>
+        <div class="form-group">
+          <label>Kolor akcentu zawodów</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="osf-accent-picker">
+            <button class="osf-swatch" data-color="#e8944d" style="background:#e8944d;" title="Pomarańczowy (domyślny OSF)"></button>
+            <button class="osf-swatch" data-color="#e8d44d" style="background:#e8d44d;" title="Złoty"></button>
+            <button class="osf-swatch" data-color="#4caf82" style="background:#4caf82;" title="Zielony"></button>
+            <button class="osf-swatch" data-color="#5b9bd5" style="background:#5b9bd5;" title="Niebieski"></button>
+            <button class="osf-swatch" data-color="#e05555" style="background:#e05555;" title="Czerwony"></button>
+            <button class="osf-swatch" data-color="#c084fc" style="background:#c084fc;" title="Fioletowy"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Informacje ogólne -->
+      <div class="card mb-12">
+        <div class="card-title">📋 Informacje ogólne</div>
+        <div class="form-group">
+          <label>Nazwa zawodów</label>
+          <input type="text" id="osf-setup-name" placeholder="np. OSF 18. Dywizji Zmechanizowanej" oninput="saveSetup()" />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Miasto / lokalizacja</label>
+            <input type="text" id="osf-setup-city" placeholder="np. Warszawa" oninput="saveSetup()" />
+          </div>
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="osf-setup-date" oninput="saveSetup()" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Organizator</label>
+          <input type="text" id="osf-setup-org" placeholder="np. 18. DZ" oninput="saveSetup()" />
+        </div>
+        <div class="form-group">
+          <label>Notatki / uwagi dla sędziów</label>
+          <textarea id="osf-setup-notes" rows="3" placeholder="np. Tor mokry, czas od komendy START..." oninput="saveSetup()" style="resize:vertical;font-size:13px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-family:var(--font-b);"></textarea>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-sm btn-primary" onclick="syncSetupToPanel()">↑ Synchronizuj z panelem głównym</button>
+          <span id="sync-status" style="font-size:11px;color:var(--green);margin-left:10px;font-family:var(--font-m);display:none;">✓ Zsynchronizowano</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <!-- Bieg drużynowy -->
+      <div class="card mb-12">
+        <div class="card-title">🏃 Bieg drużynowy — regulamin</div>
+        <div class="alert alert-info mb-12" style="font-size:12px;">
+          Ustaw ilu zawodników liczy się do wyników biegu drużynowego (czas N-tego zawodnika na mecie) oraz ile najlepszych wyników z biegu indywidualnego decyduje o kolejności startu w Serii 1.
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Zawodnicy liczący się do wyniku (N-ty na mecie)</label>
+            <input type="number" id="osf-team-count" min="1" max="20" value="8"
+              oninput="saveSetup()"
+              style="font-family:var(--font-m);font-size:28px;font-weight:800;color:var(--orange);text-align:center;" />
+            <div class="text-muted" style="font-size:11px;margin-top:4px;">Domyślnie: 8</div>
+          </div>
+          <div class="form-group">
+            <label>Min. zawodników M do startu (próg DSQ)</label>
+            <input type="number" id="osf-team-min" min="1" max="20" value="8"
+              oninput="saveSetup()"
+              style="font-family:var(--font-m);font-size:28px;font-weight:800;color:var(--blue);text-align:center;" />
+            <div class="text-muted" style="font-size:11px;margin-top:4px;">Domyślnie: 8</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parowanie S1 -->
+      <div class="card mb-12">
+        <div class="card-title">🎲 Parowanie — Seria 1</div>
+        <div class="alert alert-warning mb-12" style="font-size:12px;">
+          Jeżeli po podstawowym parowaniu pozostaną zawodnicy bez pary, możesz zezwolić na parowanie ich ze sobą nawet jeśli są z tej samej drużyny lub mają ten sam wymagany tor.
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);margin-bottom:10px;">
+          <input type="checkbox" id="osf-allow-same-team-pair" onchange="saveSetup()" style="margin-top:2px;flex-shrink:0;" />
+          <span>Zezwól na parowanie zawodników z tej samej drużyny (gdy brak innych opcji)</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
+          <input type="checkbox" id="osf-allow-solo-pair" onchange="saveSetup()" style="margin-top:2px;flex-shrink:0;" />
+          <span>Jeżeli zostanie kilku zawodników solo — sparuj ich ze sobą ignorując wymóg toru (nikt nie biega sam)</span>
+        </label>
+        <div class="alert alert-info mt-12" style="font-size:11px;">
+          Obie opcje domyślnie <strong>wyłączone</strong>. Algorytm S2 zawsze respektuje zmianę toru — opcja "nikt nie biega sam" dotyczy tylko S1.
+        </div>
+      </div>
+
+      <!-- Eksport / reset -->
+      <div class="card">
+        <div class="card-title">🔧 Zarządzanie danymi</div>
+        <div class="flex" style="flex-direction:column;gap:8px;align-items:flex-start;">
+          <button class="btn btn-sm" onclick="exportData()">↓ Eksportuj dane (JSON)</button>
+          <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);" onclick="openResetModal()">⚠ Reset zawodów</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 </div><!-- /main-content -->
 </div><!-- /main-app -->
 
@@ -572,19 +686,28 @@ const STORAGE_KEY = 'osf_slot_' + SLOT_ID;
 
 let state = {
   contest: { name: '', city: '', date: '' },
-  athletes: [],       // { id, name, gender, team, bib }
-  s1pairs: [],        // { pairNum, gender, aId, aLane, bId, bLane } bId=null if solo
-  s2pairs: [],        // same structure
-  times: {},          // { [athleteId]: { s1: '1:23.4', s2: '1:20.1' } }
-  disq: {},           // { [athleteId]: { s1: true, s2: true } }
-  bibScheme: 'team',  // 'team' = X/Y format, 'sequential' = 1,2,3...
-  teamOrder: {        // kolejność drużyn w seriach drużynowych
-    s1: [],           // [ { team, lane, startNum } ]
-    s2: []
-  },
-  teamTimes: {},      // { [teamName]: { s1: '2:34.5', s2: '2:30.1' } }
-  teamDisq: {}        // { [teamName]: { s1: true, s2: true } }
+  athletes: [],
+  s1pairs: [],
+  s2pairs: [],
+  times: {},
+  disq: {},
+  bibScheme: 'team',
+  teamOrder: { s1: [], s2: [] },
+  teamTimes: {},
+  teamDisq: {},
+  setup: {
+    accentColor: '#e8944d',
+    name: '', city: '', date: '', org: '', notes: '',
+    teamCount: 8,    // N-ty zawodnik liczący się do wyniku drużynowego
+    teamMin: 8,      // min. zawodników M do startu
+    allowSameTeamPair: false,
+    allowSoloPair: false
+  }
 };
+
+// Dynamiczne stałe drużynowe — czytają z setup
+function TEAM_COUNT() { return state.setup && state.setup.teamCount ? state.setup.teamCount : 8; }
+function TEAM_MIN_VAL() { return state.setup && state.setup.teamMin ? state.setup.teamMin : 8; }
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -615,6 +738,16 @@ function launchApp() {
   document.getElementById('welcome-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   const c = state.contest;
+  // Uzupełnij contest z setup jeśli setup ma dane
+  if (state.setup) {
+    if (state.setup.name && !c.name) c.name = state.setup.name;
+    if (state.setup.city && !c.city) c.city = state.setup.city;
+    if (state.setup.date && !c.date) c.date = state.setup.date;
+    // Zastosuj kolor akcentu
+    if (state.setup.accentColor) {
+      document.documentElement.style.setProperty('--orange', state.setup.accentColor);
+    }
+  }
   document.getElementById('header-contest-name').textContent =
     (c.name ? c.name + ' · ' : '') + c.city + (c.date ? ' · ' + c.date : '');
   document.title = 'OSF · ' + c.city;
@@ -658,13 +791,13 @@ function showTab(name) {
   if (name === 'seria2') renderSeries2View();
   if (name === 'wyniki') renderResults();
   if (name === 'druzynowy') renderTeamView();
+  if (name === 'setup') renderSetupPage();
 }
 
 // ═══════════════════════════════════════════════════
 // BIEG DRUŻYNOWY — helpers
 // ═══════════════════════════════════════════════════
-const TEAM_MIN = 8; // minimalna liczba zawodników M do startu
-const TEAM_COUNT = 8; // liczba liczonych zawodników (8. na mecie)
+// TEAM_MIN_VAL() i TEAM_COUNT() są teraz dynamiczne — patrz funkcje TEAM_MIN_VAL() i TEAM_COUNT()() powyżej
 
 function getTeams() {
   // zwraca listę unikalnych drużyn ze wszystkich zawodników
@@ -689,8 +822,8 @@ function getTeamIndividualSum(team) {
     .map(a => parseTime(bestTime(a.id)))
     .filter(t => t < Infinity)
     .sort((a, b) => a - b); // rosnąco — najlepsze (najkrótsze) pierwsze
-  if (times.length < TEAM_COUNT) return Infinity; // za mało czasów
-  return times.slice(0, TEAM_COUNT).reduce((s, t) => s + t, 0);
+  if (times.length < TEAM_COUNT()) return Infinity; // za mało czasów
+  return times.slice(0, TEAM_COUNT()).reduce((s, t) => s + t, 0);
 }
 
 function formatSum(sec) {
@@ -831,7 +964,7 @@ function renderTeamOrderSection(series) {
   const total = order.length;
   order.forEach((item, idx) => {
     const athletes = getTeamAthletes(item.team);
-    const ok       = athletes.length >= TEAM_MIN;
+    const ok       = athletes.length >= TEAM_MIN_VAL();
     const t        = getTeamTime(item.team, series);
     const s1t      = series === 's2' ? getTeamTime(item.team, 's1') : '';
     const isLast   = idx === total - 1;
@@ -851,7 +984,7 @@ function renderTeamOrderSection(series) {
     if (!ok) html += '<span style="font-family:var(--font-h);font-size:10px;color:var(--red);font-weight:700;">⚠ DSQ brak składu</span>';
     html += '</div>';
     html += '<div class="pair-athlete-meta" style="margin-bottom:6px;">';
-    html += ok ? (athletes.length + ' mężczyzn') : ('Tylko ' + athletes.length + ' M — min. ' + TEAM_MIN + ' wymagane');
+    html += ok ? (athletes.length + ' mężczyzn') : ('Tylko ' + athletes.length + ' M — min. ' + TEAM_MIN_VAL() + ' wymagane');
     if (series === 's1') html += ' <span style="color:var(--text3);font-family:var(--font-m);font-size:11px;">· Σ ' + formatSum(item.sum) + '</span>';
     if (series === 's2' && s1t) html += ' <span style="color:' + (isTeamDisq(item.team,'s1') ? 'var(--red)' : 'var(--text3)') + ';font-family:var(--font-m);font-size:11px;">· S1: ' + (isTeamDisq(item.team,'s1') ? 'DSQ' : s1t) + '</span>';
     html += '</div>';
@@ -878,7 +1011,7 @@ function renderTeamResults() {
 
   const rows = teams.map(team => {
     const athletes  = getTeamAthletes(team);
-    const ok        = athletes.length >= TEAM_MIN;
+    const ok        = athletes.length >= TEAM_MIN_VAL();
     const s1        = getTeamTime(team, 's1');
     const s2        = getTeamTime(team, 's2');
     const s1dsq     = isTeamDisq(team, 's1');
@@ -929,7 +1062,7 @@ function teamStartListHTML(series) {
   html += '</tr></thead><tbody>';
   order.forEach((item, idx) => {
     const athletes = getTeamAthletes(item.team);
-    const ok       = athletes.length >= TEAM_MIN;
+    const ok       = athletes.length >= TEAM_MIN_VAL();
     const rowBg    = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
     html += '<tr style="' + rowBg + '">';
     html += '<td style="text-align:center;font-weight:bold;">' + item.startNum + '</td>';
@@ -949,12 +1082,12 @@ function teamJudgeListHTML(series) {
   const seriesLabel = series === 's1' ? 'Seria 1' : 'Seria 2';
   let html = '<h1>OSF — Lista Sędziowska Drużynowy · ' + seriesLabel + '</h1>';
   html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
-  html += '<p style="font-size:11px;color:#555;margin-bottom:10px;">Liczy się czas ' + TEAM_COUNT + '. zawodnika przekraczającego linię mety.</p>';
+  html += '<p style="font-size:11px;color:#555;margin-bottom:10px;">Liczy się czas ' + TEAM_COUNT() + '. zawodnika przekraczającego linię mety.</p>';
   html += '<table><thead><tr><th style="width:40px">Start</th><th>Drużyna</th><th style="width:44px">Tor</th>';
   if (series === 's2') html += '<th style="width:80px">Czas S1</th>';
   html += '<th style="width:100px">Czas (s.ds)</th></tr></thead><tbody>';
   order.forEach((item, idx) => {
-    const ok    = getTeamAthletes(item.team).length >= TEAM_MIN;
+    const ok    = getTeamAthletes(item.team).length >= TEAM_MIN_VAL();
     const rowBg = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
     html += '<tr style="' + rowBg + '">';
     html += '<td style="text-align:center;font-weight:bold;">' + item.startNum + '</td>';
@@ -994,7 +1127,7 @@ function printTeamResults() {
   if (!teams.length) { alert('Brak drużyn.'); return; }
   const rows = teams.map(team => {
     const athletes = getTeamAthletes(team);
-    const ok = athletes.length >= TEAM_MIN;
+    const ok = athletes.length >= TEAM_MIN_VAL();
     const s1 = getTeamTime(team, 's1');
     const s2 = getTeamTime(team, 's2');
     const best = teamBestTime(team);
@@ -1174,8 +1307,8 @@ function getAthleteWarnings(athlete) {
   // 3. Drużyna ma za mało mężczyzn do biegu drużynowego
   if (athlete.gender === 'M') {
     const mCount = state.athletes.filter(a => a.team === athlete.team && a.gender === 'M').length;
-    if (mCount < TEAM_MIN) {
-      warnings.push({ code: 'team_m', msg: 'Drużyna ma tylko ' + mCount + ' M — potrzeba min. ' + TEAM_MIN + ' do biegu drużynowego' });
+    if (mCount < TEAM_MIN_VAL()) {
+      warnings.push({ code: 'team_m', msg: 'Drużyna ma tylko ' + mCount + ' M — potrzeba min. ' + TEAM_MIN_VAL() + ' do biegu drużynowego' });
     }
   }
 
@@ -1359,51 +1492,143 @@ function drawSeries1() {
   const athletes = state.athletes;
   if (athletes.length === 0) { alert('Brak zawodników.'); return; }
 
-  function drawForGender(gender) {
-    let pool = athletes.filter(a => a.gender === gender).slice();
+  function getBibNum(a) {
+    // Wyciąga numer zawodnika w drużynie z bib (X/Y → Y, lub liczba całkowita)
+    const s = String(a.bib || '');
+    if (s.includes('/')) return parseInt(s.split('/')[1]) || 1;
+    return parseInt(s) || 1;
+  }
 
-    // shuffle
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
+  function getLaneFromBib(a) {
+    // Nieparzysty numer w drużynie → L, parzysty → P
+    return getBibNum(a) % 2 === 1 ? 'L' : 'P';
+  }
+
+  function drawForGender(gender) {
+    let pool = athletes.filter(a => a.gender === gender).map(a => ({
+      athlete: a,
+      lane: getLaneFromBib(a),
+      team: a.team
+    }));
+
+    // Podziel na dwie grupy wg toru
+    let laneL = pool.filter(p => p.lane === 'L');
+    let laneP = pool.filter(p => p.lane === 'P');
+
+    // Tasuj każdą grupę oddzielnie, ale z uwzględnieniem rozrzutu drużyn
+    // Algorytm: round-robin po drużynach — dobiera naprzemiennie z różnych drużyn
+    function spreadByTeam(list) {
+      // pogrupuj po drużynach
+      const byTeam = {};
+      list.forEach(p => {
+        if (!byTeam[p.team]) byTeam[p.team] = [];
+        byTeam[p.team].push(p);
+      });
+      // przetasuj wewnątrz każdej drużyny
+      Object.values(byTeam).forEach(arr => {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+      });
+      // round-robin: bierz po jednym z każdej drużyny naprzemiennie
+      const teamQueues = Object.values(byTeam);
+      // przetasuj kolejność drużyn
+      for (let i = teamQueues.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [teamQueues[i], teamQueues[j]] = [teamQueues[j], teamQueues[i]];
+      }
+      const result = [];
+      let round = 0;
+      while (result.length < list.length) {
+        for (const q of teamQueues) {
+          if (round < q.length) result.push(q[round]);
+        }
+        round++;
+      }
+      return result;
     }
 
+    laneL = spreadByTeam(laneL);
+    laneP = spreadByTeam(laneP);
+
+    // Paruj zawodników L z zawodnikami P
+    // Warunek: nie można sparować dwóch z tej samej drużyny (jeśli możliwe)
     const pairs = [];
-    const assigned = new Set();
+    const assignedP = new Set();
     let pairNum = 1;
 
-    for (let i = 0; i < pool.length; i++) {
-      if (assigned.has(i)) continue;
-      assigned.add(i);
-      const a = pool[i];
+    const allowSameTeam = state.setup && state.setup.allowSameTeamPair;
+    const allowSoloPair = state.setup && state.setup.allowSoloPair;
 
-      // Szukaj partnera z INNEJ drużyny (najbliższy nieprzypisany)
+    for (let i = 0; i < laneL.length; i++) {
+      const a = laneL[i];
+      // Szukaj partnera P z innej drużyny
       let partnerId = -1;
-      for (let j = i + 1; j < pool.length; j++) {
-        if (assigned.has(j)) continue;
-        if (pool[j].team !== a.team) { partnerId = j; break; }
+      for (let j = 0; j < laneP.length; j++) {
+        if (assignedP.has(j)) continue;
+        if (laneP[j].team !== a.team) { partnerId = j; break; }
       }
-      // Fallback: jeśli wszyscy pozostali z tej samej drużyny — weź pierwszego dostępnego
-      if (partnerId === -1) {
-        for (let j = i + 1; j < pool.length; j++) {
-          if (!assigned.has(j)) { partnerId = j; break; }
+      // Fallback — ta sama drużyna (jeśli opcja włączona)
+      if (partnerId === -1 && allowSameTeam) {
+        for (let j = 0; j < laneP.length; j++) {
+          if (!assignedP.has(j)) { partnerId = j; break; }
         }
       }
 
-      const b = partnerId !== -1 ? pool[partnerId] : null;
-      if (b) assigned.add(partnerId);
-
-      const aLane = Math.random() < 0.5 ? 'L' : 'P';
-      const bLane = b ? (aLane === 'L' ? 'P' : 'L') : null;
-      pairs.push({ pairNum: pairNum++, gender, aId: a.id, aLane, bId: b ? b.id : null, bLane });
+      if (partnerId !== -1) {
+        assignedP.add(partnerId);
+        const b = laneP[partnerId];
+        pairs.push({ pairNum: pairNum++, gender, aId: a.athlete.id, aLane: 'L', bId: b.athlete.id, bLane: 'P' });
+      } else {
+        pairs.push({ pairNum: pairNum++, gender, aId: a.athlete.id, aLane: 'L', bId: null, bLane: null, _solo: true });
+      }
     }
+
+    // Pozostałe P bez pary
+    let soloP = [];
+    for (let j = 0; j < laneP.length; j++) {
+      if (!assignedP.has(j)) soloP.push(laneP[j]);
+    }
+
+    // Opcja: sparuj solo ze sobą (ignorując tor)
+    if (allowSoloPair && soloP.length > 0) {
+      const soloL = pairs.filter(p => p._solo);
+      // Paruj soloL z soloP
+      const usedSoloP = new Set();
+      soloL.forEach(p => {
+        if (usedSoloP.size >= soloP.length) return;
+        for (let k = 0; k < soloP.length; k++) {
+          if (usedSoloP.has(k)) continue;
+          // Dopasuj — zmień solo parę na normalną (L biega na L, P biega na P — wyjątek)
+          p.bId   = soloP[k].athlete.id;
+          p.bLane = 'P';
+          delete p._solo;
+          usedSoloP.add(k);
+          break;
+        }
+      });
+      // Pozostałe soloP których nie udało się sparować
+      soloP.forEach((sp, k) => {
+        if (!usedSoloP.has(k)) {
+          pairs.push({ pairNum: pairNum++, gender, aId: sp.athlete.id, aLane: 'P', bId: null, bLane: null });
+        }
+      });
+    } else {
+      soloP.forEach(sp => {
+        pairs.push({ pairNum: pairNum++, gender, aId: sp.athlete.id, aLane: 'P', bId: null, bLane: null });
+      });
+    }
+
+    // Usuń flagę _solo z pozostałych
+    pairs.forEach(p => delete p._solo);
+
     return pairs;
   }
 
   const mPairs = drawForGender('M');
   const kPairs = drawForGender('K');
   state.s1pairs = [...mPairs, ...kPairs];
-  // clear S2 pairs since S1 changed
   state.s2pairs = [];
   save();
   renderSeries1View();
@@ -2086,6 +2311,104 @@ function openPrint(bodyContent, css) {
 // ═══════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// KONFIGURACJA
+// ═══════════════════════════════════════════════════
+function renderSetupPage() {
+  const s = state.setup || {};
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+  const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+  setVal('osf-setup-name',  s.name  || state.contest.name  || '');
+  setVal('osf-setup-city',  s.city  || state.contest.city  || '');
+  setVal('osf-setup-date',  s.date  || state.contest.date  || '');
+  setVal('osf-setup-org',   s.org   || '');
+  setVal('osf-setup-notes', s.notes || '');
+  setVal('osf-team-count',  s.teamCount || 8);
+  setVal('osf-team-min',    s.teamMin   || 8);
+  setChk('osf-allow-same-team-pair', s.allowSameTeamPair);
+  setChk('osf-allow-solo-pair',      s.allowSoloPair);
+
+  // swatche koloru
+  const color = s.accentColor || '#e8944d';
+  document.querySelectorAll('.osf-swatch').forEach(sw => {
+    sw.classList.toggle('active', sw.dataset.color === color);
+  });
+}
+
+function saveSetup() {
+  if (!state.setup) state.setup = {};
+  const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const getChk = id => { const el = document.getElementById(id); return el ? el.checked : false; };
+  const getNum = (id, def) => { const el = document.getElementById(id); const v = el ? parseInt(el.value) : NaN; return isNaN(v) ? def : v; };
+
+  state.setup.name  = getVal('osf-setup-name');
+  state.setup.city  = getVal('osf-setup-city');
+  state.setup.date  = getVal('osf-setup-date');
+  state.setup.org   = getVal('osf-setup-org');
+  state.setup.notes = getVal('osf-setup-notes');
+  state.setup.teamCount = getNum('osf-team-count', 8);
+  state.setup.teamMin   = getNum('osf-team-min', 8);
+  state.setup.allowSameTeamPair = getChk('osf-allow-same-team-pair');
+  state.setup.allowSoloPair     = getChk('osf-allow-solo-pair');
+
+  // Synchronizuj contest z setup
+  if (state.setup.name) state.contest.name = state.setup.name;
+  if (state.setup.city) state.contest.city = state.setup.city;
+  if (state.setup.date) state.contest.date = state.setup.date;
+
+  // Zaktualizuj header
+  const c = state.contest;
+  const headerEl = document.getElementById('header-contest-name');
+  if (headerEl) headerEl.textContent = (c.name ? c.name + ' · ' : '') + c.city + (c.date ? ' · ' + c.date : '');
+
+  save();
+}
+
+function setAccentColor(color) {
+  if (!state.setup) state.setup = {};
+  state.setup.accentColor = color;
+  document.documentElement.style.setProperty('--orange', color);
+  document.querySelectorAll('.osf-swatch').forEach(sw => {
+    sw.classList.toggle('active', sw.dataset.color === color);
+  });
+  save();
+}
+
+function syncSetupToPanel() {
+  // Zaktualizuj slot w panelu głównym
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+    if (slotRaw) {
+      const slot = JSON.parse(slotRaw);
+      if (state.setup.name) slot.name = state.setup.name;
+      if (state.setup.city) slot.city = state.setup.city;
+      if (state.setup.date) slot.date = state.setup.date;
+      localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+    }
+  } catch(e) {}
+  const el = document.getElementById('sync-status');
+  if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2000); }
+}
+
+function exportData() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'osf_' + (state.contest.city || 'export') + '_' + (state.contest.date || new Date().toISOString().slice(0,10)) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Inicjalizacja swatchy koloru
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.osf-swatch').forEach(sw => {
+    sw.addEventListener('click', () => setAccentColor(sw.dataset.color));
+  });
+});
+
 function esc(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
