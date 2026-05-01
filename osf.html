@@ -187,6 +187,17 @@ tr:last-child > td { border-bottom: none; }
 .welcome-sub { font-size: 14px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 48px; }
 .welcome-form { background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px; padding: 32px; width: 100%; max-width: 440px; text-align: left; }
 .welcome-form-title { font-family: var(--font-h); font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 20px; }
+/* ─── PK — POZA KONKURENCJĄ ─── */
+.pk-badge { background: rgba(224,85,85,.15); color: var(--red); border: 1px solid rgba(224,85,85,.4); padding: 1px 6px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display:inline-block; }
+.pk-row td { opacity: 0.55; }
+.pk-row td:first-child, .pk-row td:nth-child(2) { opacity: 1; }
+
+#toast-container { position:fixed; bottom:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast { font-family:var(--font-b); font-size:13px; padding:10px 18px; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.5); opacity:0; transform:translateY(12px); transition:opacity .25s, transform .25s; pointer-events:none; max-width:320px; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { background:var(--green); color:#fff; }
+.toast.error   { background:var(--red); color:#fff; }
+.toast.info    { background:var(--bg2); color:var(--text1); border:1px solid var(--border2); }
 .osf-swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: border-color .15s, transform .1s; padding: 0; }
 .osf-swatch:hover { transform: scale(1.15); }
 .osf-swatch.active { border-color: var(--text1); transform: scale(1.1); }
@@ -348,7 +359,8 @@ tr:last-child > td { border-bottom: none; }
             <th>#</th>
             <th>⚠</th>
             <th>Płeć</th>
-            <th>Nazwisko i imię</th>
+            <th>Stopień</th>
+            <th>Imię i nazwisko</th>
             <th>Drużyna</th>
             <th>Nr startowy</th>
             <th></th>
@@ -602,6 +614,7 @@ tr:last-child > td { border-bottom: none; }
 <div class="page" id="page-setup">
   <div class="grid-2" style="gap:16px;">
 
+    <!-- LEWA KOLUMNA: Personalizacja + Informacje + Bieg drużynowy + Parowanie -->
     <div>
       <!-- Personalizacja -->
       <div class="card mb-12">
@@ -649,9 +662,7 @@ tr:last-child > td { border-bottom: none; }
           <span id="sync-status" style="font-size:11px;color:var(--green);margin-left:10px;font-family:var(--font-m);display:none;">✓ Zsynchronizowano</span>
         </div>
       </div>
-    </div>
 
-    <div>
       <!-- Bieg drużynowy -->
       <div class="card mb-12">
         <div class="card-title">🏃 Bieg drużynowy — regulamin</div>
@@ -688,46 +699,42 @@ tr:last-child > td { border-bottom: none; }
       </div>
 
       <!-- Parowanie S1 -->
-      <div class="card mb-12">
+      <div class="card">
         <div class="card-title">🎲 Reguły parowania — Seria 1</div>
         <div class="alert alert-warning mb-12" style="font-size:12px;">
           Domyślnie algorytm stara się zawsze sparować zawodników z <strong>różnych drużyn</strong> i respektuje wymóg toru (L/P z numeru bib). Poniższe opcje aktywuj tylko gdy struktura startujących to wymusza.
         </div>
-
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;">
-          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;">
-            Tryb fallback — ta sama drużyna
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">
-            Gdy na danym torze pozostaną tylko zawodnicy z jednej drużyny i nie ma partnera z innej — zezwól na parowanie wewnątrzdrużynowe.
-          </div>
+          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;">Tryb fallback — ta sama drużyna</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Gdy na danym torze pozostaną tylko zawodnicy z jednej drużyny i nie ma partnera z innej — zezwól na parowanie wewnątrzdrużynowe.</div>
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
             <input type="checkbox" id="osf-allow-same-team-pair" onchange="saveSetup()" />
             <span>Zezwól na parowanie wewnątrz tej samej drużyny</span>
           </label>
         </div>
-
         <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">
-          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;">
-            Tryb "nikt nie biega sam" — sparuj pozostałych
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">
-            Gdy po sparowaniu zostanie kilku zawodników bez pary (np. nadwyżka toru L lub P) — dobierz ich ze sobą nawet jeśli obaj mają ten sam wymagany tor. Żaden zawodnik nie startuje solo.
-          </div>
+          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;">Tryb "nikt nie biega sam" — sparuj pozostałych</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Gdy po sparowaniu zostanie kilku zawodników bez pary — dobierz ich ze sobą nawet jeśli mają ten sam wymagany tor.</div>
           <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
             <input type="checkbox" id="osf-allow-solo-pair" onchange="saveSetup()" />
             <span>Sparuj zawodników bez pary ignorując wymóg toru</span>
           </label>
         </div>
-
         <div class="alert alert-info mt-12" style="font-size:11px;">
           💡 Algorytm Serii 2 zawsze respektuje obowiązkową zmianę toru — powyższe opcje dotyczą wyłącznie Serii 1.
         </div>
       </div>
+    </div>
 
-      <!-- Import / Zarządzanie -->
-      <div class="card">
+    <!-- PRAWA KOLUMNA: Import + Zarządzanie -->
+    <div>
+      <!-- Import listy startowej -->
+      <div class="card mb-12">
         <div class="card-title">📥 Import listy startowej</div>
+
+        <!-- Status importu -->
+        <div id="import-status-box" style="display:none;padding:10px 14px;border-radius:var(--radius);margin-bottom:14px;font-size:12px;"></div>
+
         <div style="margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Pobierz szablon</div>
           <div class="flex">
@@ -735,24 +742,27 @@ tr:last-child > td { border-bottom: none; }
             <button class="btn btn-sm" onclick="downloadTemplateODS()">↓ LibreOffice (.ods)</button>
             <button class="btn btn-sm" onclick="downloadTemplateCSV()">↓ CSV</button>
           </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:6px;">Kolumny: <span class="mono">Nazwisko Imię · M/K · Drużyna · Nr startowy</span> (nr opcjonalny)</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px;">Kolumny: <span class="mono">Stopień · Imię i Nazwisko · M/K · Drużyna · Nr startowy</span></div>
         </div>
+
         <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Wgraj plik (.xlsx / .ods / .csv)</div>
           <button class="btn btn-sm btn-primary" onclick="document.getElementById('import-file-config').click()">↑ Wybierz plik</button>
           <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
           <span id="import-file-name" style="font-size:11px;color:var(--text3);margin-left:10px;font-family:var(--font-m);"></span>
         </div>
+
         <div style="border-top:1px solid var(--border);padding-top:14px;">
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Lub wklej CSV</div>
-          <textarea id="import-csv-config" rows="5" placeholder="KOWALSKI Jan;M;1 Batalion;1&#10;NOWAK Anna;K;2 Batalion;2" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px;font-family:var(--font-m);font-size:12px;resize:vertical;"></textarea>
+          <textarea id="import-csv-config" rows="5" placeholder="st. szer.;Jan KOWALSKI;M;1 Batalion&#10;kpr.;Anna NOWAK;K;2 Batalion" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px;font-family:var(--font-m);font-size:12px;resize:vertical;"></textarea>
           <div style="margin-top:8px;">
             <button class="btn btn-sm btn-primary" onclick="importCSVFromConfig()">↑ Importuj z pola</button>
           </div>
         </div>
       </div>
 
-      <div class="card mt-12">
+      <!-- Zarządzanie zawodami -->
+      <div class="card">
         <div class="card-title">🔧 Zarządzanie zawodami</div>
         <div class="flex" style="flex-direction:column;gap:10px;align-items:flex-start;">
           <button class="btn btn-sm" onclick="exportData()">↓ Eksportuj dane (JSON)</button>
@@ -773,8 +783,12 @@ tr:last-child > td { border-bottom: none; }
   <div class="modal">
     <div class="modal-title">Dodaj zawodnika</div>
     <div class="form-group">
-      <label>Nazwisko i imię</label>
-      <input type="text" id="add-name" placeholder="KOWALSKI Jan" />
+      <label>Stopień wojskowy</label>
+      <input type="text" id="add-rank" placeholder="np. st. szer., kpr., ppor." />
+    </div>
+    <div class="form-group">
+      <label>Imię i nazwisko</label>
+      <input type="text" id="add-name" placeholder="Jan KOWALSKI" />
     </div>
     <div class="form-group">
       <label>Płeć</label>
@@ -856,8 +870,12 @@ tr:last-child > td { border-bottom: none; }
     <div class="modal-title">Edytuj zawodnika</div>
     <input type="hidden" id="edit-id" />
     <div class="form-group">
-      <label>Nazwisko i imię</label>
-      <input type="text" id="edit-name" placeholder="KOWALSKI Jan" />
+      <label>Stopień wojskowy</label>
+      <input type="text" id="edit-rank" placeholder="np. st. szer., kpr., ppor." />
+    </div>
+    <div class="form-group">
+      <label>Imię i nazwisko</label>
+      <input type="text" id="edit-name" placeholder="Jan KOWALSKI" />
     </div>
     <div class="form-group">
       <label>Płeć</label>
@@ -907,6 +925,8 @@ tr:last-child > td { border-bottom: none; }
     </div>
   </div>
 </div>
+
+<div id="toast-container"></div>
 
 <script>
 // ─── SESSION GUARD ───
@@ -1212,8 +1232,8 @@ function getTeams() {
 }
 
 function getTeamAthletes(team) {
-  // w druzynówce startują tylko mężczyźni
-  return state.athletes.filter(a => a.team === team && a.gender === 'M');
+  // w druzynówce startują tylko mężczyźni — bez PK
+  return state.athletes.filter(a => a.team === team && a.gender === 'M' && !a.pk);
 }
 
 function getTeamAllAthletes(team) {
@@ -1627,6 +1647,14 @@ function printTeamResults() {
 // ═══════════════════════════════════════════════════
 // ATHLETES
 // ═══════════════════════════════════════════════════
+// Formatuje pełną nazwę zawodnika: stopień imię NAZWISKO
+function displayName(a) {
+  const parts = [];
+  if (a.rank && a.rank.trim()) parts.push(a.rank.trim());
+  if (a.name && a.name.trim()) parts.push(a.name.trim());
+  return parts.join(' ');
+}
+
 function setBibScheme(scheme) {
   state.bibScheme = scheme;
   assignBibs();
@@ -1698,7 +1726,8 @@ function nextBib(gender) {
 }
 
 function openAddModal() {
-  document.getElementById('add-name').value = '';
+  document.getElementById('add-rank').value   = '';
+  document.getElementById('add-name').value   = '';
   document.getElementById('add-team').value = '';
   document.getElementById('add-bib').value = '';
   document.getElementById('modal-add').classList.add('open');
@@ -1706,11 +1735,12 @@ function openAddModal() {
 }
 
 function addAthlete() {
+  const rank   = document.getElementById('add-rank').value.trim();
   const name   = document.getElementById('add-name').value.trim();
   const gender = document.getElementById('add-gender').value;
   const team   = document.getElementById('add-team').value.trim();
-  if (!name) { alert('Podaj nazwisko i imię.'); return; }
-  state.athletes.push({ id: nextId(), name, gender, team, bib: '' });
+  if (!name) { alert('Podaj imię i nazwisko.'); return; }
+  state.athletes.push({ id: nextId(), rank, name, gender, team, bib: '', pk: false });
   assignBibs();
   save();
   renderAthletes();
@@ -1756,16 +1786,37 @@ const FEMALE_NAMES = new Set([
   'małgorzata','danuta','bożena','grażyna','urszula','lidia','edyta','alicja','iwona','jolanta'
 ]);
 
+function getFirstName(athlete) {
+  // Imię to pierwsze słowo które nie jest stopniem wojskowym ani nazwiskiem (wielkie litery)
+  const name = (athlete.name || '').trim();
+  const words = name.split(/\s+/);
+  // Szukaj pierwszego słowa które nie jest CAPS (czyli nie jest nazwiskiem)
+  for (const w of words) {
+    const lower = w.toLowerCase();
+    // Pomiń jeśli to całe CAPS (nazwisko) lub skrót stopnia
+    if (w === w.toUpperCase() && w.length > 1) continue;
+    // Pomiń inicjały i skróty (kończące się kropką)
+    if (w.endsWith('.')) continue;
+    return lower;
+  }
+  // Fallback — weź pierwsze słowo
+  return words[0] ? words[0].toLowerCase() : '';
+}
+
 function getAthleteWarnings(athlete) {
   const warnings = [];
-  const firstName = (athlete.name || '').split(' ').pop().toLowerCase().trim();
+  const firstName = getFirstName(athlete);
 
-  // 1. Podejrzana płeć na podstawie imienia
-  if (athlete.gender === 'M' && FEMALE_NAMES.has(firstName)) {
-    warnings.push({ code: 'gender', msg: 'Imię sugeruje kobietę, ale płeć ustawiona jako M' });
+  // 1. Podejrzana płeć na podstawie imienia (tylko gdy imię jest rozpoznawalne)
+  if (firstName && FEMALE_NAMES.has(firstName)) {
+    if (athlete.gender === 'M') {
+      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje kobietę, ale płeć ustawiona jako M' });
+    }
   }
-  if (athlete.gender === 'K' && MALE_NAMES.has(firstName)) {
-    warnings.push({ code: 'gender', msg: 'Imię sugeruje mężczyznę, ale płeć ustawiona jako K' });
+  if (firstName && MALE_NAMES.has(firstName)) {
+    if (athlete.gender === 'K') {
+      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje mężczyznę, ale płeć ustawiona jako K' });
+    }
   }
 
   // 2. Jedyny zawodnik w drużynie
@@ -1841,14 +1892,16 @@ function renderAthletes() {
     }
     const warnings = getAthleteWarnings(a);
     const hasWarn  = warnings.length > 0;
-    html += '<tr style="' + (hasWarn ? 'background:rgba(232,148,77,.04);' : '') + '">';
+    html += '<tr class="' + (hasWarn ? '' : '') + (a.pk ? 'pk-row' : '') + '" style="' + (hasWarn ? 'background:rgba(232,148,77,.04);' : '') + '">';
     html += '<td class="mono text-muted" style="font-size:12px;">' + (i+1) + '</td>';
     html += warningBadge(warnings);
     html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
-    html += '<td style="font-weight:600;">' + esc(a.name) + '</td>';
+    html += '<td style="font-size:11px;color:var(--text3);">' + esc(a.rank || '') + '</td>';
+    html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(a.team) + '</td>';
     html += '<td class="mono" style="color:var(--orange);">' + a.bib + '</td>';
     html += '<td style="display:flex;gap:4px;padding:4px 6px;">';
+    html += '<button class="btn btn-xs' + (a.pk ? ' btn-danger' : '') + '" onclick="togglePK(' + a.id + ')" title="' + (a.pk ? 'Usuń PK' : 'Oznacz jako Poza Konkurencją') + '" style="' + (a.pk ? 'opacity:1;' : 'opacity:.5;') + '">' + (a.pk ? 'PK ✓' : 'PK') + '</button>';
     html += '<button class="btn btn-xs" onclick="openEditModal(' + a.id + ')" title="Edytuj">✎</button>';
     html += '<button class="btn btn-xs btn-danger" onclick="removeAthlete(' + a.id + ')" title="Usuń">✕</button>';
     html += '</td></tr>';
@@ -1863,42 +1916,40 @@ function openEditModal(id) {
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
   document.getElementById('edit-id').value     = id;
+  document.getElementById('edit-rank').value   = a.rank || '';
   document.getElementById('edit-name').value   = a.name;
   document.getElementById('edit-gender').value = a.gender;
   document.getElementById('edit-team').value   = a.team;
   document.getElementById('edit-bib').value    = a.bib || '';
   document.getElementById('modal-edit').classList.add('open');
-  setTimeout(() => document.getElementById('edit-name').focus(), 50);
+  setTimeout(() => document.getElementById('edit-rank').focus(), 50);
 }
 
 function saveEditAthlete() {
   const id     = parseInt(document.getElementById('edit-id').value);
+  const rank   = document.getElementById('edit-rank').value.trim();
   const name   = document.getElementById('edit-name').value.trim();
   const gender = document.getElementById('edit-gender').value;
   const team   = document.getElementById('edit-team').value.trim();
   const newBib = document.getElementById('edit-bib').value.trim();
-  if (!name) { alert('Podaj nazwisko i imię.'); return; }
+  if (!name) { alert('Podaj imię i nazwisko.'); return; }
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
+  a.rank   = rank;
   a.name   = name;
   a.gender = gender;
   a.team   = team;
-  // Obsługa zmiany numeru — jeśli ktoś inny ma taki numer, zamień
   if (newBib && String(newBib) !== String(a.bib)) {
     const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));
-    if (conflict) {
-      const tmp    = a.bib;
-      a.bib        = newBib;
-      conflict.bib = tmp;
-    } else {
-      a.bib = newBib;
-    }
+    if (conflict) { const tmp = a.bib; a.bib = newBib; conflict.bib = tmp; }
+    else a.bib = newBib;
   }
   save();
   renderAthletes();
   updateStats();
   updateBibButtons();
   closeModal('modal-edit');
+  showToast('✓ Dane zawodnika zapisane', 'success', 1800);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1917,8 +1968,32 @@ function confirmReset() {
     setTimeout(() => document.getElementById('reset-confirm-input').style.borderColor = '', 1000);
     return;
   }
+  // Usuń dane zawodów i hash importu
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY + '_import_hash');
   window.location.href = 'start.html';
+}
+
+// ═══════════════════════════════════════════════════
+// OCHRONA PRZED DUPLIKOWANYM IMPORTEM
+// ═══════════════════════════════════════════════════
+function hashRows(rows) {
+  // Prosty hash — konkatenacja name+gender+team
+  return rows.map(r => (r.rank||'') + '|' + r.name + '|' + r.gender + '|' + r.team).sort().join(';;');
+}
+
+function checkImportDuplicate(rows) {
+  const hash     = hashRows(rows);
+  const prevHash = localStorage.getItem(STORAGE_KEY + '_import_hash');
+  if (prevHash && prevHash === hash) {
+    return confirm(
+      '⚠ Ta lista startowa wygląda identycznie jak poprzednio wgrana.\n\n' +
+      'Czy na pewno chcesz wgrać ją ponownie? Zawodnicy zostaną dodani drugi raz.\n\n' +
+      'Jeśli chcesz zastąpić listę — najpierw wykonaj Reset zawodów.'
+    );
+  }
+  localStorage.setItem(STORAGE_KEY + '_import_hash', hash);
+  return true;
 }
 
 function updateStats() {
@@ -1957,6 +2032,7 @@ function importCSVFromConfig() {
   if (!raw) return;
   _importRawCSV(raw);
   document.getElementById('import-csv-config').value = '';
+  showToast('✓ Import zakończony', 'success');
 }
 
 function _importRawCSV(raw) {
@@ -1969,14 +2045,15 @@ function _importRawCSV(raw) {
     const gender = parts[1].toUpperCase() === 'K' ? 'K' : 'M';
     const team   = parts[2] || '';
     if (!name || name.toLowerCase() === 'nazwisko' || name.toLowerCase() === 'lp') return;
-    state.athletes.push({ id: nextId(), name, gender, team, bib: '' });
+    state.athletes.push({ id: nextId(), rank: '', name, gender, team, bib: '' });
     added++;
   });
   assignBibs();
   save();
   renderAthletes();
   updateStats();
-  if (added > 0) alert('Zaimportowano ' + added + ' zawodników.');
+  if (added > 0) showToast('✓ Zaimportowano ' + added + ' zawodników', 'success');
+  else showToast('Brak danych do importu', 'error');
 }
 
 // ═══════════════════════════════════════════════════
@@ -2011,127 +2088,115 @@ function drawSeries1() {
   });
 
   function drawForGender(gender) {
-    let pool = athletes.filter(a => a.gender === gender && !lockedAthleteIds.has(a.id)).map(a => ({
-      athlete: a,
-      lane: getLaneFromBib(a),
-      team: a.team
+    const allGender = athletes.filter(a => a.gender === gender && !lockedAthleteIds.has(a.id));
+    const pkAthletes = allGender.filter(a => a.pk);
+    const normPool   = allGender.filter(a => !a.pk).map(a => ({
+      athlete: a, lane: getLaneFromBib(a), team: a.team
     }));
 
-    // Podziel na dwie grupy wg toru
-    let laneL = pool.filter(p => p.lane === 'L');
-    let laneP = pool.filter(p => p.lane === 'P');
+    // Funkcja parowania dla puli zawodników
+    function pairPool(pool, allowSameTeam, allowSoloPair) {
+      let laneL = pool.filter(p => p.lane === 'L');
+      let laneP = pool.filter(p => p.lane === 'P');
 
-    // Tasuj każdą grupę oddzielnie, ale z uwzględnieniem rozrzutu drużyn
-    // Algorytm: round-robin po drużynach — dobiera naprzemiennie z różnych drużyn
-    function spreadByTeam(list) {
-      // pogrupuj po drużynach
-      const byTeam = {};
-      list.forEach(p => {
-        if (!byTeam[p.team]) byTeam[p.team] = [];
-        byTeam[p.team].push(p);
-      });
-      // przetasuj wewnątrz każdej drużyny
-      Object.values(byTeam).forEach(arr => {
-        for (let i = arr.length - 1; i > 0; i--) {
+      function spreadByTeam(list) {
+        const byTeam = {};
+        list.forEach(p => {
+          if (!byTeam[p.team]) byTeam[p.team] = [];
+          byTeam[p.team].push(p);
+        });
+        Object.values(byTeam).forEach(arr => {
+          for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+          }
+        });
+        const teamQueues = Object.values(byTeam);
+        for (let i = teamQueues.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
-          [arr[i], arr[j]] = [arr[j], arr[i]];
+          [teamQueues[i], teamQueues[j]] = [teamQueues[j], teamQueues[i]];
         }
-      });
-      // round-robin: bierz po jednym z każdej drużyny naprzemiennie
-      const teamQueues = Object.values(byTeam);
-      // przetasuj kolejność drużyn
-      for (let i = teamQueues.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [teamQueues[i], teamQueues[j]] = [teamQueues[j], teamQueues[i]];
-      }
-      const result = [];
-      let round = 0;
-      while (result.length < list.length) {
-        for (const q of teamQueues) {
-          if (round < q.length) result.push(q[round]);
+        const result = [];
+        let round = 0;
+        while (result.length < list.length) {
+          for (const q of teamQueues) { if (round < q.length) result.push(q[round]); }
+          round++;
         }
-        round++;
+        return result;
       }
-      return result;
+
+      laneL = spreadByTeam(laneL);
+      laneP = spreadByTeam(laneP);
+
+      const pairs = [];
+      const assignedP = new Set();
+
+      for (let i = 0; i < laneL.length; i++) {
+        const a = laneL[i];
+        let partnerId = -1;
+        for (let j = 0; j < laneP.length; j++) {
+          if (assignedP.has(j)) continue;
+          if (laneP[j].team !== a.team) { partnerId = j; break; }
+        }
+        if (partnerId === -1 && allowSameTeam) {
+          for (let j = 0; j < laneP.length; j++) {
+            if (!assignedP.has(j)) { partnerId = j; break; }
+          }
+        }
+        if (partnerId !== -1) {
+          assignedP.add(partnerId);
+          const b = laneP[partnerId];
+          pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: 'L', bId: b.athlete.id, bLane: 'P' });
+        } else {
+          pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: 'L', bId: null, bLane: null, _solo: true });
+        }
+      }
+
+      let soloP = [];
+      for (let j = 0; j < laneP.length; j++) {
+        if (!assignedP.has(j)) soloP.push(laneP[j]);
+      }
+
+      if (allowSoloPair && soloP.length > 0) {
+        const soloL = pairs.filter(p => p._solo);
+        const usedSoloP = new Set();
+        soloL.forEach(p => {
+          if (usedSoloP.size >= soloP.length) return;
+          for (let k = 0; k < soloP.length; k++) {
+            if (usedSoloP.has(k)) continue;
+            p.bId = soloP[k].athlete.id; p.bLane = 'P'; delete p._solo; usedSoloP.add(k); break;
+          }
+        });
+        soloP.forEach((sp, k) => {
+          if (!usedSoloP.has(k)) pairs.push({ pairNum: 0, gender, aId: sp.athlete.id, aLane: 'P', bId: null, bLane: null, _solo: true });
+        });
+      } else {
+        soloP.forEach(sp => {
+          pairs.push({ pairNum: 0, gender, aId: sp.athlete.id, aLane: 'P', bId: null, bLane: null, _solo: true });
+        });
+      }
+
+      const normalPairs = pairs.filter(p => !p._solo);
+      const soloPairs   = pairs.filter(p => p._solo);
+      const ordered = [...normalPairs, ...soloPairs];
+      ordered.forEach((p, i) => { p.pairNum = i + 1; delete p._solo; });
+      return ordered;
     }
-
-    laneL = spreadByTeam(laneL);
-    laneP = spreadByTeam(laneP);
-
-    // Paruj zawodników L z zawodnikami P
-    // Warunek: nie można sparować dwóch z tej samej drużyny (jeśli możliwe)
-    const pairs = [];
-    const assignedP = new Set();
-    let pairNum = 1;
 
     const allowSameTeam = state.setup && state.setup.allowSameTeamPair;
     const allowSoloPair = state.setup && state.setup.allowSoloPair;
 
-    for (let i = 0; i < laneL.length; i++) {
-      const a = laneL[i];
-      // Szukaj partnera P z innej drużyny
-      let partnerId = -1;
-      for (let j = 0; j < laneP.length; j++) {
-        if (assignedP.has(j)) continue;
-        if (laneP[j].team !== a.team) { partnerId = j; break; }
-      }
-      // Fallback — ta sama drużyna (jeśli opcja włączona)
-      if (partnerId === -1 && allowSameTeam) {
-        for (let j = 0; j < laneP.length; j++) {
-          if (!assignedP.has(j)) { partnerId = j; break; }
-        }
-      }
+    // PK zawodnicy — paruj między sobą (bez reguły drużyn, losowo)
+    const pkPool = pkAthletes.map(a => ({ athlete: a, lane: getLaneFromBib(a), team: 'PK' }));
+    const pkPairs = pairPool(pkPool, true, true);
 
-      if (partnerId !== -1) {
-        assignedP.add(partnerId);
-        const b = laneP[partnerId];
-        pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: 'L', bId: b.athlete.id, bLane: 'P' });
-      } else {
-        pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: 'L', bId: null, bLane: null, _solo: true });
-      }
-    }
+    // Normalni zawodnicy
+    const normPairs = pairPool(normPool, allowSameTeam, allowSoloPair);
 
-    // Pozostałe P bez pary
-    let soloP = [];
-    for (let j = 0; j < laneP.length; j++) {
-      if (!assignedP.has(j)) soloP.push(laneP[j]);
-    }
-
-    // Opcja: sparuj solo ze sobą (ignorując tor)
-    if (allowSoloPair && soloP.length > 0) {
-      const soloL = pairs.filter(p => p._solo);
-      const usedSoloP = new Set();
-      soloL.forEach(p => {
-        if (usedSoloP.size >= soloP.length) return;
-        for (let k = 0; k < soloP.length; k++) {
-          if (usedSoloP.has(k)) continue;
-          p.bId   = soloP[k].athlete.id;
-          p.bLane = 'P';
-          delete p._solo;
-          usedSoloP.add(k);
-          break;
-        }
-      });
-      soloP.forEach((sp, k) => {
-        if (!usedSoloP.has(k)) {
-          pairs.push({ pairNum: 0, gender, aId: sp.athlete.id, aLane: 'P', bId: null, bLane: null, _solo: true });
-        }
-      });
-    } else {
-      soloP.forEach(sp => {
-        pairs.push({ pairNum: 0, gender, aId: sp.athlete.id, aLane: 'P', bId: null, bLane: null, _solo: true });
-      });
-    }
-
-    // SOLO ZAWSZE NA KOŃCU S1 — najpierw pary normalne, potem solo
-    const normalPairs = pairs.filter(p => !p._solo);
-    const soloPairs   = pairs.filter(p => p._solo);
-    const ordered = [...normalPairs, ...soloPairs];
-
-    // Numeruj pary
-    ordered.forEach((p, i) => { p.pairNum = i + 1; delete p._solo; });
-
-    return ordered;
+    // PK NA POCZĄTKU, normalni po nich — renumeruj
+    const allPairs = [...pkPairs, ...normPairs];
+    allPairs.forEach((p, i) => { p.pairNum = i + 1; });
+    return allPairs;
   }
 
   const mPairs = drawForGender('M');
@@ -2258,7 +2323,7 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   return '<div class="pair-athlete" style="flex:1;' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
     '<div style="display:flex;align-items:center;gap:6px;">' +
-    '<span class="pair-athlete-name">' + esc(a.name) + '</span>' +
+    '<span class="pair-athlete-name">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
     '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;" title="Zmień numer startowy" onclick="openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
     '</div>' +
     '<span class="lane-badge lane-' + lane + '">' + lane + '</span>' +
@@ -2316,7 +2381,7 @@ function renderQETable(tbodyId, gender, series) {
     const isBest = t && isPersonalBest(id, series, t);
     html += '<tr class="qe-row">';
     html += '<td class="qe-num">' + r.athlete.bib + '</td>';
-    html += '<td class="qe-name">' + esc(r.athlete.name) + '</td>';
+    html += '<td class="qe-name">' + esc(displayName(r.athlete)) + '</td>';
     html += '<td class="qe-team">' + esc(r.athlete.team) + '</td>';
     html += '<td><span class="lane-badge lane-' + r.lane + '">' + r.lane + '</span></td>';
     html += '<td class="mono text-muted" style="font-size:12px;">' + r.pairNum + '</td>';
@@ -2587,42 +2652,51 @@ function renderResults() {
 
 function renderResultsForGender(gender, tbodyId) {
   const tbody = document.getElementById(tbodyId);
-  const athletes = state.athletes.filter(a => a.gender === gender);
-  if (!athletes.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="font-size:12px;padding:12px;">Brak zawodników.</td></tr>'; return; }
+  const allAthletes = state.athletes.filter(a => a.gender === gender);
+  if (!allAthletes.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="font-size:12px;padding:12px;">Brak zawodników.</td></tr>'; return; }
 
-  const N = athletes.length;
-  const ranked = athletes.map(a => ({
-    athlete: a,
-    s1: getTime(a.id, 's1'),
-    s2: getTime(a.id, 's2'),
-    s1dsq: isDisq(a.id, 's1'),
-    s2dsq: isDisq(a.id, 's2'),
-    best: bestTime(a.id),
-    bestSec: parseTime(bestTime(a.id))
-  })).sort((a, b) => a.bestSec - b.bestSec);
+  const normalAthletes = allAthletes.filter(a => !a.pk);
+  const pkAthletes     = allAthletes.filter(a => a.pk);
+  const N = normalAthletes.length; // PK nie wchodzą do N
+
+  function toRow(a) {
+    return {
+      athlete: a,
+      s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+      s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+      best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+    };
+  }
+
+  const ranked = normalAthletes.map(toRow).sort((a,b) => a.bestSec - b.bestSec);
+  const pkRanked = pkAthletes.map(toRow).sort((a,b) => a.bestSec - b.bestSec);
 
   let html = '';
   let rank = 1;
-  ranked.forEach(r => {
-    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+
+  function renderRow(r, isPK) {
     const noBest  = r.bestSec === Infinity;
-    const pts     = (gender === 'M' && !noBest) ? calcIndividualPoints(rank, N) : null;
+    const rankCls = (!isPK && rank===1)?'rank-1':(!isPK && rank===2)?'rank-2':(!isPK && rank===3)?'rank-3':'';
+    const pts     = (gender==='M' && !isPK && !noBest) ? calcIndividualPoints(rank, N) : null;
     const s1disp  = r.s1dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s1 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s1||'—');
     const s2disp  = r.s2dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s2 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s2||'—');
-    html += '<tr>';
-    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + (noBest ? '—' : rank) + '</td>';
-    html += '<td style="font-weight:600;">' + esc(r.athlete.name) + '</td>';
+    let rankDisp  = isPK ? '<span class="pk-badge" style="font-size:10px;">PK</span>' : (noBest ? '—' : rank);
+    html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
+    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + rankDisp + '</td>';
+    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s1disp + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s2disp + '</td>';
-    html += '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest ? 'var(--text3)' : 'var(--green)') + ';">' + (r.best||'—') + '</td>';
-    html += '<td style="font-family:var(--font-m);font-weight:700;text-align:right;color:' + (pts !== null ? 'var(--blue)' : 'var(--text3)') + ';">' + (pts !== null ? pts : '—') + '</td>';
+    html += '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest?'var(--text3)':'var(--green)') + ';">' + (r.best||'—') + '</td>';
+    html += '<td style="font-family:var(--font-m);font-weight:700;text-align:right;color:' + (pts!==null?'var(--blue)':'var(--text3)') + ';">' + (pts!==null ? pts : '—') + '</td>';
     html += '</tr>';
-    if (!noBest) rank++;
-  });
+    if (!isPK && !noBest) rank++;
+  }
+
+  ranked.forEach(r => renderRow(r, false));
+  pkRanked.forEach(r => renderRow(r, true));
   tbody.innerHTML = html;
 
-  // Odśwież klasyfikację zespołową jeśli zakładka aktywna
   if (document.getElementById('page-klasyfikacja') &&
       document.getElementById('page-klasyfikacja').classList.contains('active')) {
     renderKlasyfikacja();
@@ -2671,7 +2745,7 @@ function pairTableRowsStartList(pairs) {
     html += '<td class="lane-cell lane-L-cell">';
     if (athL) {
       html += '<span class="lane-L">L</span> ';
-      html += '<strong>' + esc(athL.name) + '</strong>';
+      html += '<strong>' + esc(athL.name) + '</strong>' + (athL.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '');
       if (athL.bib) html += ' <span class="bib">' + athL.bib + '</span>';
       html += '<br><span class="team">' + esc(athL.team) + '</span>';
     } else {
@@ -2738,7 +2812,7 @@ function pairTableRowsJudge(pairs, showS1) {
     // Tor P — wyrównany do lewej, nazwa blisko środka
     html += '<td class="athlete-right">';
     if (athP) {
-      html += '<span class="athlete-name">' + esc(athP.name) + '<span class="lane-badge-P">P</span></span>';
+      html += '<span class="athlete-name">' + esc(athP.name) + (athP.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '') + '<span class="lane-badge-P">P</span></span>';
       html += '<span class="athlete-team">' + esc(athP.team) + '</span>';
       if (showS1 && s1P) html += '<span class="athlete-s1">S1: ' + s1P + '</span>';
     } else {
@@ -2918,7 +2992,7 @@ function printResultsGender(gender) {
     const s2d = r.s2dsq ? '<span class="dsq">' + (r.s2||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     html += '<tr class="' + topCls + '">';
     html += '<td class="rank-cell">' + (noBest ? '—' : rank) + '</td>';
-    html += '<td class="name-cell">' + esc(r.athlete.name) + ' <span style="font-size:9px;opacity:.6;">' + r.athlete.bib + '</span></td>';
+    html += '<td class="name-cell">' + esc(displayName(r.athlete)) + ' <span style="font-size:9px;opacity:.6;">' + r.athlete.bib + '</span></td>';
     html += '<td class="team-cell">' + esc(r.athlete.team) + '</td>';
     html += '<td class="time-cell">' + s1d + '</td>';
     html += '<td class="time-cell">' + s2d + '</td>';
@@ -3155,7 +3229,7 @@ function getMultiplier() {
 
 // Zwraca ranked listę zawodników M z punktami
 function getRankedMen() {
-  const men = state.athletes.filter(a => a.gender === 'M');
+  const men = state.athletes.filter(a => a.gender === 'M' && !a.pk);
   const N   = men.length;
   const ranked = men.map(a => ({
     athlete: a,
@@ -3281,7 +3355,7 @@ function renderKlasyfikacja() {
       const rankCls = r.rank === 1 ? 'rank-1' : r.rank === 2 ? 'rank-2' : r.rank === 3 ? 'rank-3' : '';
       return '<tr>' +
         '<td style="font-family:var(--font-h);font-size:14px;font-weight:700;" class="' + rankCls + '">' + (r.rank || '—') + '</td>' +
-        '<td>' + esc(r.athlete.name) + '</td>' +
+        '<td>' + esc(displayName(r.athlete)) + '</td>' +
         '<td style="font-size:11px;color:var(--text3);">' + esc(r.athlete.team) + '</td>' +
         '<td class="mono" style="font-size:12px;">' + (r.best || '—') + '</td>' +
         '<td style="text-align:right;font-family:var(--font-m);font-weight:700;color:var(--blue);">' + r.pts + '</td>' +
@@ -3323,7 +3397,7 @@ function printKlasyfikacjaPDF() {
   html += '<h2>Bieg indywidualny M (N=' + N_men + ')</h2>';
   html += '<table><thead><tr><th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>Czas</th><th>Pkt</th></tr></thead><tbody>';
   rankedMen.forEach((r, i) => {
-    html += '<tr' + (i%2?' style="background:#f5f5f5;"':'') + '><td>' + (r.rank||'—') + '</td><td>' + esc(r.athlete.name) + '</td><td>' + esc(r.athlete.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
+    html += '<tr' + (i%2?' style="background:#f5f5f5;"':'') + '><td>' + (r.rank||'—') + '</td><td>' + esc(displayName(r.athlete)) + '</td><td>' + esc(r.athlete.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
   });
   html += '</tbody></table>';
 
@@ -3367,7 +3441,7 @@ function openBibSwap(id) {
 
   document.getElementById('bib-swap-id').value = id;
   document.getElementById('bib-swap-info').innerHTML =
-    '<strong>' + esc(a.name) + '</strong> · ' + esc(a.team) +
+    '<strong>' + esc(displayName(a)) + '</strong> · ' + esc(a.team) +
     ' · aktualny nr: <span style="font-family:var(--font-m);color:var(--orange);">' + a.bib + '</span>';
   document.getElementById('bib-swap-manual').value = '';
 
@@ -3577,6 +3651,30 @@ function filterPairs(series) {
   });
 }
 
+function togglePK(id) {
+  const a = state.athletes.find(x => x.id === id);
+  if (!a) return;
+  a.pk = !a.pk;
+  save();
+  renderAthletes();
+  updateStats();
+}
+
+function showToast(msg, type, duration) {
+  type = type || 'info';
+  duration = duration || 2500;
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  container.appendChild(t);
+  requestAnimationFrame(() => { requestAnimationFrame(() => t.classList.add('show')); });
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
 function esc(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -3611,7 +3709,7 @@ document.addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════
 // TEMPLATE DOWNLOAD
 // ═══════════════════════════════════════════════════
-const TEMPLATE_HEADERS = ['Lp', 'Nazwisko Imię', 'Płeć (M/K)', 'Drużyna', 'Nr startowy'];
+const TEMPLATE_HEADERS = ['Lp', 'Stopień', 'Imię i Nazwisko', 'Płeć (M/K)', 'Drużyna', 'Nr startowy'];
 const TEMPLATE_EXAMPLE = [
   [1, 'sierż. KOWALSKI Jan',       'M', 'JW 1234', 1],
   [2, 'kpr. NOWAK Anna',           'K', 'JW 1234', 2],
@@ -3700,11 +3798,13 @@ function parseImportRows(raw) {
   }
   const headers = raw[headerIdx].map(c => String(c).toLowerCase().trim());
   const col = {
+    rank:   headers.findIndex(h => h.includes('stopień') || h.includes('stopien') || h.includes('rank') || h.includes('tytuł') || h.includes('tytul')),
     name:   headers.findIndex(h => h.includes('nazwisko') || h.includes('imię') || h.includes('imi')),
     gender: headers.findIndex(h => h.includes('płeć') || h.includes('plec') || h.includes('m/k') || h.includes('k/m')),
     team:   headers.findIndex(h => h.includes('drużyna') || h.includes('druzyna') || h.includes('jednostka')),
     bib:    headers.findIndex(h => h.includes('nr') || h.includes('numer') || h.includes('startowy')),
   };
+  if (col.rank   < 0) col.rank   = -1; // opcjonalna
   if (col.name   < 0) col.name   = 1;
   if (col.gender < 0) col.gender = 2;
   if (col.team   < 0) col.team   = 3;
@@ -3713,28 +3813,30 @@ function parseImportRows(raw) {
   for (let i = headerIdx + 1; i < raw.length; i++) {
     const row = raw[i];
     if (!row || !row.length) continue;
+    const rank   = col.rank >= 0 ? String(row[col.rank] || '').trim() : '';
     const name   = String(row[col.name]   || '').trim();
     const gender = String(row[col.gender] || '').trim().toUpperCase();
     const team   = String(row[col.team]   || '').trim();
     const bibRaw = row[col.bib];
     if (!name) continue;
     if (gender !== 'M' && gender !== 'K') continue;
-    result.push({ name, gender, team, bib: bibRaw ? parseInt(bibRaw) : null });
+    result.push({ rank, name, gender, team, bib: bibRaw ? parseInt(bibRaw) : null });
   }
   return result;
 }
 
 function applyImportRows(rows) {
-  if (!rows.length) { alert('Brak danych do importu — sprawdź format pliku.'); return; }
+  if (!rows.length) { showToast('Brak danych do importu — sprawdź format pliku.', 'error'); return; }
+  if (!checkImportDuplicate(rows)) return; // użytkownik anulował
   rows.forEach(r => {
-    state.athletes.push({ id: nextId(), name: r.name, gender: r.gender, team: r.team, bib: '' });
+    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: false });
   });
   assignBibs();
   save();
   renderAthletes();
   updateStats();
   closeModal('modal-import');
-  alert('Zaimportowano ' + rows.length + ' zawodników.');
+  showToast('✓ Zaimportowano ' + rows.length + ' zawodników', 'success');
 }
 
 // ═══════════════════════════════════════════════════
