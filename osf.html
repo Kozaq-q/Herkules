@@ -1999,9 +1999,12 @@ function drawSeries1() {
     return getBibNum(a) % 2 === 1 ? 'L' : 'P';
   }
 
-  // Zbierz zablokowane pary i zawodników w nich
-  const lockedNums   = (state.lockedPairs && state.lockedPairs.s1) || [];
-  const lockedPairsOld = state.s1pairs.filter(p => lockedNums.includes(p.pairNum));
+  // Zachowaj zablokowane pary (klucz: "s1_M_3" itp.)
+  const lockedKeys     = (state.lockedPairs && state.lockedPairs.s1) || [];
+  const lockedPairsOld = state.s1pairs.filter(p => {
+    const key = lockKey('s1', p.gender, p.pairNum);
+    return lockedKeys.includes(key);
+  });
   const lockedAthleteIds = new Set();
   lockedPairsOld.forEach(p => {
     lockedAthleteIds.add(p.aId);
@@ -2137,12 +2140,21 @@ function drawSeries1() {
   const newPairs = [...mPairs, ...kPairs];
 
   if (lockedPairsOld.length > 0) {
-    // Połącz: zablokowane pary zachowaj, nowe dodaj z kolejnymi numerami
-    const maxLockedNum = Math.max(...lockedNums);
-    let nextNum = maxLockedNum + 1;
-    newPairs.forEach(p => { p.pairNum = nextNum++; });
-    // Posortuj wszystkie razem wg numeru
-    state.s1pairs = [...lockedPairsOld, ...newPairs].sort((a,b) => a.pairNum - b.pairNum);
+    // Nowym parom przydziel numery po zablokowanych
+    const usedNums = new Set(lockedPairsOld.map(p => p.pairNum));
+    let nextM = 1, nextK = 1;
+    // Nadaj numery nowym parom bez konfliktu
+    newPairs.forEach(p => {
+      if (p.gender === 'M') {
+        while (usedNums.has(nextM)) nextM++;
+        p.pairNum = nextM++; usedNums.add(p.pairNum);
+      } else {
+        while (usedNums.has(nextK + 1000)) nextK++;
+        // K numeruj od nowa osobno — użyj offsetu 1000 do śledzenia
+        p.pairNum = nextK++; usedNums.add(p.pairNum + 1000);
+      }
+    });
+    state.s1pairs = [...lockedPairsOld, ...newPairs];
   } else {
     state.s1pairs = newPairs;
   }
@@ -2197,7 +2209,8 @@ function renderPairsHTML(containerId, pairs, isS2) {
   pairs.forEach((p, idx) => {
     const isLast  = idx === total - 1;
     const isSolo  = p.bId === null;
-    const locked  = isPairLocked(series, p.pairNum);
+    const gender  = p.gender;
+    const locked  = isPairLocked(series, gender, p.pairNum);
     const a = state.athletes.find(x => x.id === p.aId);
     const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
     const aTime = getTime(p.aId, series);
@@ -2209,26 +2222,25 @@ function renderPairsHTML(containerId, pairs, isS2) {
     if (isSolo) cls += ' solo-runner';
     if (locked) cls += ' pair-locked';
 
-    html += '<div class="' + cls + '" data-pair="' + p.pairNum + '" data-series="' + series + '">';
+    html += '<div class="' + cls + '" data-pair="' + p.pairNum + '" data-series="' + series + '" data-gender="' + gender + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
     if (isLast && !isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA PARA</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
-    if (hasTime) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
-    // Kłódka
-    html += '<button class="lock-btn" onclick="togglePairLock(\'' + series + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '"' +
+    if (hasTime) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
+    html += '<button class="lock-btn" onclick="togglePairLock(\'' + series + '\',\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '"' +
       ' style="margin-left:auto;background:' + (locked ? 'rgba(232,148,77,.12)' : 'transparent') + ';border:1px solid ' + (locked ? 'var(--orange)' : 'var(--border2)') + ';border-radius:var(--radius);color:' + (locked ? 'var(--orange)' : 'var(--text3)') + ';font-size:13px;padding:2px 7px;cursor:pointer;line-height:1;">' + (locked ? '🔒' : '🔓') + '</button>';
     html += '</div>';
 
     if (isSolo) {
       html += '<div style="display:flex;align-items:center;gap:10px;">';
-      html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum);
+      html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum, gender);
       html += '</div>';
     } else {
       html += '<div class="pair-athletes">';
-      html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum);
+      html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum, gender);
       html += '<div class="pair-vs">VS</div>';
-      html += athleteCardHTML(b, p.bLane, bTime, series, p.pairNum);
+      html += athleteCardHTML(b, p.bLane, bTime, series, p.pairNum, gender);
       html += '</div>';
     }
     html += '</div>';
@@ -2236,12 +2248,13 @@ function renderPairsHTML(containerId, pairs, isS2) {
   container.innerHTML = html;
 }
 
-function athleteCardHTML(a, lane, time, series, pairNum) {
+function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name text-muted">—</div></div>';
   const dsq    = isDisq(a.id, series);
   const isBest = !dsq && time && isPersonalBest(a.id, series, time);
   const s1time = series === 's2' ? getTime(a.id, 's1') : '';
   const s1dsq  = series === 's2' ? isDisq(a.id, 's1') : false;
+  const g      = gender || a.gender;
 
   return '<div class="pair-athlete" style="flex:1;' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
@@ -2256,10 +2269,10 @@ function athleteCardHTML(a, lane, time, series, pairNum) {
     '</div>' +
     '<div style="display:flex;gap:4px;align-items:center;">' +
     '<input class="qe-time' + (isBest ? ' is-best' : '') + '" type="text" value="' + (time||'') + '" placeholder="0:00.00"' +
-    ' data-id="' + a.id + '" data-series="' + series + '" data-pairnum="' + (pairNum||0) + '"' +
-    ' onchange="saveTime(this);rerenderPairTime(this);if(this.value.trim()&&this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,+this.dataset.pairnum)"' +
+    ' data-id="' + a.id + '" data-series="' + series + '" data-pairnum="' + (pairNum||0) + '" data-gender="' + g + '"' +
+    ' onchange="saveTime(this);rerenderPairTime(this);if(this.value.trim()&&+this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,this.dataset.gender,+this.dataset.pairnum)"' +
     ' oninput="saveTime(this);rerenderPairTime(this)"' +
-    ' onblur="normalizeTimeInput(this);if(this.value.trim()&&this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,+this.dataset.pairnum)"' +
+    ' onblur="normalizeTimeInput(this);if(this.value.trim()&&+this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,this.dataset.gender,+this.dataset.pairnum)"' +
     ' style="flex:1;' + (dsq ? 'text-decoration:line-through;color:var(--text3);' : '') + '"' +
     (dsq ? ' disabled' : '') + ' />' +
     '<button onclick="toggleDisq(' + a.id + ',\'' + series + '\')" ' +
@@ -3094,8 +3107,9 @@ function updateFontSizeButtons(active) {
 }
 
 function openProjektor() {
-  localStorage.setItem('osf_proj_slot', STORAGE_KEY);
-  window.open('osf-projektor.html', 'osf_projektor', 'width=1280,height=720');
+  const url = 'osf-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY);
+  localStorage.setItem('osf_proj_slot', STORAGE_KEY); // backup
+  window.open(url, 'osf_projektor', 'width=1280,height=720');
   document.getElementById('proj-settings-pop').style.display = 'none';
 }
 
@@ -3423,54 +3437,58 @@ function doBibSwap() {
 }
 
 // ═══════════════════════════════════════════════════
-// KŁÓDKA PAR
+// KŁÓDKA PAR — klucz: "gender_pairNum" np. "M_3", "K_1"
 // ═══════════════════════════════════════════════════
-function isPairLocked(series, pairNum) {
-  if (!state.lockedPairs) return false;
-  return (state.lockedPairs[series] || []).includes(pairNum);
+function lockKey(series, gender, pairNum) {
+  return series + '_' + gender + '_' + pairNum;
 }
 
-function togglePairLock(series, pairNum) {
+function isPairLocked(series, gender, pairNum) {
+  if (!state.lockedPairs) return false;
+  const keys = state.lockedPairs[series] || [];
+  return keys.includes(lockKey(series, gender, pairNum));
+}
+
+function togglePairLock(series, gender, pairNum) {
   if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
   if (!state.lockedPairs[series]) state.lockedPairs[series] = [];
   const arr = state.lockedPairs[series];
-  const idx = arr.indexOf(pairNum);
-  if (idx === -1) arr.push(pairNum);
+  const key = lockKey(series, gender, pairNum);
+  const idx = arr.indexOf(key);
+  if (idx === -1) arr.push(key);
   else arr.splice(idx, 1);
   save();
-  // Zaktualizuj wygląd konkretnej karty bez re-renderu całej listy
-  updatePairLockVisual(series, pairNum);
+  updatePairLockVisual(series, gender, pairNum);
 }
 
-function updatePairLockVisual(series, pairNum) {
-  const locked = isPairLocked(series, pairNum);
-  // Znajdź kartę po data-pair
-  const card = document.querySelector('[data-pair="' + pairNum + '"][data-series="' + series + '"]');
+function updatePairLockVisual(series, gender, pairNum) {
+  const locked = isPairLocked(series, gender, pairNum);
+  const card   = document.querySelector(
+    '[data-pair="' + pairNum + '"][data-series="' + series + '"][data-gender="' + gender + '"]'
+  );
   if (!card) return;
-  if (locked) {
-    card.classList.add('pair-locked');
-  } else {
-    card.classList.remove('pair-locked');
-  }
-  // Zaktualizuj przycisk kłódki
+  locked ? card.classList.add('pair-locked') : card.classList.remove('pair-locked');
   const btn = card.querySelector('.lock-btn');
   if (btn) {
-    btn.title   = locked ? 'Odblokuj parę' : 'Zablokuj parę';
-    btn.style.color       = locked ? 'var(--orange)' : 'var(--text3)';
+    btn.title          = locked ? 'Odblokuj parę' : 'Zablokuj parę';
+    btn.style.color    = locked ? 'var(--orange)' : 'var(--text3)';
     btn.style.borderColor = locked ? 'var(--orange)' : 'var(--border2)';
     btn.style.background  = locked ? 'rgba(232,148,77,.12)' : 'transparent';
-    btn.textContent = locked ? '🔒' : '🔓';
+    btn.textContent    = locked ? '🔒' : '🔓';
   }
 }
 
-function autoLockPairOnTime(series, pairNum) {
-  // Automatycznie zablokuj parę gdy wpisano czas
-  if (!isPairLocked(series, pairNum)) {
+function autoLockPairOnTime(series, gender, pairNum) {
+  if (pairNum <= 0) return;
+  if (!isPairLocked(series, gender, pairNum)) {
     if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
     if (!state.lockedPairs[series]) state.lockedPairs[series] = [];
-    state.lockedPairs[series].push(pairNum);
-    save();
-    updatePairLockVisual(series, pairNum);
+    const key = lockKey(series, gender, pairNum);
+    if (!state.lockedPairs[series].includes(key)) {
+      state.lockedPairs[series].push(key);
+      save();
+      updatePairLockVisual(series, gender, pairNum);
+    }
   }
 }
 
