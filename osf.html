@@ -870,6 +870,14 @@ tr:last-child > td { border-bottom: none; }
       <label>Drużyna</label>
       <input type="text" id="edit-team" placeholder="np. 1 Batalion" />
     </div>
+    <div class="form-group">
+      <label>Numer startowy</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="edit-bib" placeholder="np. 2/3" style="font-family:var(--font-m);font-size:16px;letter-spacing:1px;" />
+        <span style="font-size:11px;color:var(--text3);">Format X/Y lub liczba</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Jeśli numer istnieje u innego zawodnika — numery zostaną zamienione automatycznie.</div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-edit')">Anuluj</button>
       <button class="btn btn-primary" onclick="saveEditAthlete()">Zapisz zmiany</button>
@@ -1855,10 +1863,11 @@ function renderAthletes() {
 function openEditModal(id) {
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
-  document.getElementById('edit-id').value   = id;
-  document.getElementById('edit-name').value = a.name;
+  document.getElementById('edit-id').value     = id;
+  document.getElementById('edit-name').value   = a.name;
   document.getElementById('edit-gender').value = a.gender;
-  document.getElementById('edit-team').value = a.team;
+  document.getElementById('edit-team').value   = a.team;
+  document.getElementById('edit-bib').value    = a.bib || '';
   document.getElementById('modal-edit').classList.add('open');
   setTimeout(() => document.getElementById('edit-name').focus(), 50);
 }
@@ -1868,16 +1877,28 @@ function saveEditAthlete() {
   const name   = document.getElementById('edit-name').value.trim();
   const gender = document.getElementById('edit-gender').value;
   const team   = document.getElementById('edit-team').value.trim();
+  const newBib = document.getElementById('edit-bib').value.trim();
   if (!name) { alert('Podaj nazwisko i imię.'); return; }
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
   a.name   = name;
   a.gender = gender;
   a.team   = team;
-  assignBibs();
+  // Obsługa zmiany numeru — jeśli ktoś inny ma taki numer, zamień
+  if (newBib && String(newBib) !== String(a.bib)) {
+    const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));
+    if (conflict) {
+      const tmp    = a.bib;
+      a.bib        = newBib;
+      conflict.bib = tmp;
+    } else {
+      a.bib = newBib;
+    }
+  }
   save();
   renderAthletes();
   updateStats();
+  updateBibButtons();
   closeModal('modal-edit');
 }
 
@@ -1978,8 +1999,17 @@ function drawSeries1() {
     return getBibNum(a) % 2 === 1 ? 'L' : 'P';
   }
 
+  // Zbierz zablokowane pary i zawodników w nich
+  const lockedNums   = (state.lockedPairs && state.lockedPairs.s1) || [];
+  const lockedPairsOld = state.s1pairs.filter(p => lockedNums.includes(p.pairNum));
+  const lockedAthleteIds = new Set();
+  lockedPairsOld.forEach(p => {
+    lockedAthleteIds.add(p.aId);
+    if (p.bId) lockedAthleteIds.add(p.bId);
+  });
+
   function drawForGender(gender) {
-    let pool = athletes.filter(a => a.gender === gender).map(a => ({
+    let pool = athletes.filter(a => a.gender === gender && !lockedAthleteIds.has(a.id)).map(a => ({
       athlete: a,
       lane: getLaneFromBib(a),
       team: a.team
@@ -2104,7 +2134,19 @@ function drawSeries1() {
 
   const mPairs = drawForGender('M');
   const kPairs = drawForGender('K');
-  state.s1pairs = [...mPairs, ...kPairs];
+  const newPairs = [...mPairs, ...kPairs];
+
+  if (lockedPairsOld.length > 0) {
+    // Połącz: zablokowane pary zachowaj, nowe dodaj z kolejnymi numerami
+    const maxLockedNum = Math.max(...lockedNums);
+    let nextNum = maxLockedNum + 1;
+    newPairs.forEach(p => { p.pairNum = nextNum++; });
+    // Posortuj wszystkie razem wg numeru
+    state.s1pairs = [...lockedPairsOld, ...newPairs].sort((a,b) => a.pairNum - b.pairNum);
+  } else {
+    state.s1pairs = newPairs;
+  }
+
   state.s2pairs = [];
   save();
   renderSeries1View();
@@ -3052,8 +3094,8 @@ function updateFontSizeButtons(active) {
 }
 
 function openProjektor() {
-  const url = 'osf-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY);
-  window.open(url, 'osf_projektor', 'width=1280,height=720');
+  localStorage.setItem('osf_proj_slot', STORAGE_KEY);
+  window.open('osf-projektor.html', 'osf_projektor', 'width=1280,height=720');
   document.getElementById('proj-settings-pop').style.display = 'none';
 }
 

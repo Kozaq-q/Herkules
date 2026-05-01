@@ -178,18 +178,19 @@ function getDB() {
   return db;
 }
 
-// Pobierz slot z URL i połącz automatycznie
+// Pobierz slot z localStorage (przekazany przez osf.html) lub URL (fallback)
 (async function() {
-  const params = new URLSearchParams(window.location.search);
-  const s = params.get('slot');
+  const slotFromStorage = localStorage.getItem('osf_proj_slot');
+  const slotFromURL     = new URLSearchParams(window.location.search).get('slot');
+  const s = slotFromStorage || slotFromURL;
   if (!s) {
-    document.querySelector('.splash-sub').textContent = 'BŁĄD: Brak parametru ?slot= w URL';
+    document.querySelector('.splash-sub').textContent = 'BŁĄD: Otwórz projektor z aplikacji OSF (przycisk 📺 Projektor)';
     return;
   }
   slotId = s;
   const ok = await loadState();
   if (!ok) {
-    document.querySelector('.splash-sub').textContent = 'BŁĄD: Nie można załadować danych dla slotu: ' + s;
+    document.querySelector('.splash-sub').textContent = 'BŁĄD: Nie można załadować danych. Sprawdź połączenie.';
     return;
   }
   loadProjSettings();
