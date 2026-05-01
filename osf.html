@@ -979,7 +979,6 @@ async function saveToSupabase() {
     const db = getSupabase();
     const payload = {
       slot_id:    STORAGE_KEY,
-      session_id: SESSION_ID,
       state_json: JSON.stringify(state),
       updated_at: new Date().toISOString()
     };
@@ -1032,7 +1031,7 @@ function startRealtimeSync() {
       { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
       (payload) => {
         // Ignoruj własne zmiany
-        if (payload.new.session_id === SESSION_ID) return;
+        if (payload.new.updated_at && new Date(payload.new.updated_at) <= new Date(_lastSyncTime)) return;
         try {
           state = JSON.parse(payload.new.state_json);
           ensureStateDefaults();
@@ -1066,10 +1065,10 @@ function startPolling() {
       const db = getSupabase();
       const { data } = await db
         .from('osf_state')
-        .select('session_id, state_json')
+        .select('state_json')
         .eq('slot_id', STORAGE_KEY)
         .single();
-      if (data && data.session_id !== SESSION_ID) {
+      if (data) {
         state = JSON.parse(data.state_json);
         ensureStateDefaults();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
