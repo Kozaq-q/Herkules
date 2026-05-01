@@ -766,6 +766,7 @@ tr:last-child > td { border-bottom: none; }
         <div class="card-title">🔧 Zarządzanie zawodami</div>
         <div class="flex" style="flex-direction:column;gap:10px;align-items:flex-start;">
           <button class="btn btn-sm" onclick="exportData()">↓ Eksportuj dane (JSON)</button>
+          <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);" onclick="clearAthletes()">🗑 Wyczyść listę zawodników</button>
           <button class="btn btn-sm" style="color:var(--green);border-color:rgba(76,175,130,.4);background:rgba(76,175,130,.08);" onclick="finishContest()">✓ Zakończ zawody i wróć do panelu</button>
           <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
         </div>
@@ -1968,10 +1969,28 @@ function confirmReset() {
     setTimeout(() => document.getElementById('reset-confirm-input').style.borderColor = '', 1000);
     return;
   }
-  // Usuń dane zawodów i hash importu
+  // Wyczyść localStorage
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(STORAGE_KEY + '_import_hash');
+  // Wyczyść Supabase — usuń wiersz żeby przy ponownym otwarciu nie załadował starych danych
+  try {
+    getSupabase().from('osf_state').delete().eq('slot_id', STORAGE_KEY).then(() => {});
+  } catch(e) {}
   window.location.href = 'start.html';
+}
+
+function clearAthletes() {
+  if (!confirm('Usunąć całą listę zawodników?\n\nCzasy i wyniki zostaną zachowane (ale nie będą miały przypisanych zawodników).\n\nAby usunąć WSZYSTKO użyj "Reset wszystkich danych".')) return;
+  state.athletes = [];
+  state.s1pairs  = [];
+  state.s2pairs  = [];
+  state.lockedPairs = { s1: [], s2: [] };
+  if (!state.setup) state.setup = {};
+  localStorage.removeItem(STORAGE_KEY + '_import_hash');
+  save();
+  renderAthletes();
+  updateStats();
+  showToast('✓ Lista zawodników wyczyszczona', 'success');
 }
 
 // ═══════════════════════════════════════════════════
