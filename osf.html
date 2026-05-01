@@ -229,6 +229,78 @@ tr:last-child > td { border-bottom: none; }
   <div class="header-right">
     <span class="header-contest-name" id="header-contest-name"></span>
     <span class="header-autosave" id="header-autosave">● zapisano</span>
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);">📺 Projektor</button>
+      <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:18px 20px;min-width:300px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.8);">
+        <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px;">⚙ Ustawienia projektora</div>
+
+        <div class="form-group">
+          <label>Domyślna zakładka</label>
+          <select id="ps-default-tab" onchange="saveProjSettings()">
+            <option value="ind">Wyniki indywidualne</option>
+            <option value="team">Bieg drużynowy</option>
+            <option value="klas">🏆 Klasyfikacja</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Auto-scroll między zakładkami</label>
+          <select id="ps-auto-scroll" onchange="saveProjSettings()">
+            <option value="0">Wyłączony</option>
+            <option value="10">Co 10 sekund</option>
+            <option value="20">Co 20 sekund</option>
+            <option value="30">Co 30 sekund</option>
+            <option value="60">Co minutę</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Pokazuj top N zawodników (0 = wszyscy)</label>
+          <input type="number" id="ps-top-n" min="0" max="50" value="0" oninput="saveProjSettings()" style="font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
+        </div>
+
+        <div class="form-group">
+          <label>Rozmiar czcionki</label>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" onclick="setProjFontSize('small')">Mały</button>
+            <button class="btn btn-sm" onclick="setProjFontSize('normal')">Normalny</button>
+            <button class="btn btn-sm" onclick="setProjFontSize('large')">Duży</button>
+            <button class="btn btn-sm" onclick="setProjFontSize('xlarge')">Bardzo duży</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Własny nagłówek projektora</label>
+          <input type="text" id="ps-custom-title" placeholder="np. 18. Dywizja Zmechanizowana" oninput="saveProjSettings()" />
+        </div>
+
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="ps-show-pts" onchange="saveProjSettings()" checked />
+            <span>Pokazuj punkty</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="ps-show-klas" onchange="saveProjSettings()" checked />
+            <span>Pokaż zakładkę Klasyfikacja</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="ps-show-team" onchange="saveProjSettings()" checked />
+            <span>Pokaż zakładkę Drużynowy</span>
+          </label>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;display:flex;gap:8px;">
+          <button class="btn btn-sm btn-primary" onclick="openProjektor()" style="flex:1;">🚀 Otwórz projektor</button>
+          <button class="btn btn-sm" onclick="toggleProjSettings()">Zamknij</button>
+        </div>
+      </div>
+    </div>
     <button class="btn btn-sm" onclick="exportData()" title="Eksportuj dane do JSON" style="flex-shrink:0;font-size:10px;color:var(--text3);border-color:var(--border);">↓ JSON</button>
     <button class="btn btn-sm" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
   </div>
@@ -930,6 +1002,7 @@ async function loadFromSupabase() {
     }
     const parsed = JSON.parse(data.state_json);
     state = parsed;
+    ensureStateDefaults();
     // Zaktualizuj też localStorage jako cache
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     console.log('Stan wczytany z Supabase.');
@@ -954,6 +1027,7 @@ function startRealtimeSync() {
         if (payload.new.session_id === SESSION_ID) return;
         try {
           state = JSON.parse(payload.new.state_json);
+          ensureStateDefaults();
           localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
           // Odśwież aktywną zakładkę
           const activePage = document.querySelector('.page.active');
@@ -989,6 +1063,7 @@ function startPolling() {
         .single();
       if (data && data.session_id !== SESSION_ID) {
         state = JSON.parse(data.state_json);
+        ensureStateDefaults();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         const activePage = document.querySelector('.page.active');
         const id = activePage ? activePage.id : '';
@@ -1010,11 +1085,36 @@ function save() {
   scheduleSave(); // wyślij też do Supabase z debouncingiem
 }
 
+function ensureStateDefaults() {
+  if (!state) state = {};
+  if (!state.contest)    state.contest    = { name: '', city: '', date: '' };
+  if (!state.athletes)   state.athletes   = [];
+  if (!state.s1pairs)    state.s1pairs    = [];
+  if (!state.s2pairs)    state.s2pairs    = [];
+  if (!state.times)      state.times      = {};
+  if (!state.disq)       state.disq       = {};
+  if (!state.bibScheme)  state.bibScheme  = 'team';
+  if (!state.teamOrder)  state.teamOrder  = { s1: [], s2: [] };
+  if (!state.teamOrder.s1) state.teamOrder.s1 = [];
+  if (!state.teamOrder.s2) state.teamOrder.s2 = [];
+  if (!state.teamTimes)  state.teamTimes  = {};
+  if (!state.teamDisq)   state.teamDisq   = {};
+  if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
+  if (!state.lockedPairs.s1) state.lockedPairs.s1 = [];
+  if (!state.lockedPairs.s2) state.lockedPairs.s2 = [];
+  if (!state.setup)      state.setup      = {
+    accentColor: '#e8944d', name: '', city: '', date: '', org: '', notes: '',
+    teamCount: 8, teamMin: 8, teamMultiplier: 3,
+    allowSameTeamPair: false, allowSoloPair: false
+  };
+}
+
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw) {
     try { state = JSON.parse(raw); } catch(e) {}
   }
+  ensureStateDefaults();
 }
 
 // ═══════════════════════════════════════════════════
@@ -2878,6 +2978,88 @@ function syncSetupToPanel() {
   if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2000); }
 }
 
+function toggleProjSettings() {
+  const pop = document.getElementById('proj-settings-pop');
+  if (pop.style.display === 'none') {
+    // Wczytaj aktualne ustawienia do formularza
+    const s = getProjSettings();
+    document.getElementById('ps-default-tab').value   = s.defaultTab;
+    document.getElementById('ps-auto-scroll').value   = s.autoScroll;
+    document.getElementById('ps-top-n').value         = s.topN;
+    document.getElementById('ps-custom-title').value  = s.customTitle;
+    document.getElementById('ps-show-pts').checked    = s.showPts;
+    document.getElementById('ps-show-klas').checked   = s.showKlas;
+    document.getElementById('ps-show-team').checked   = s.showTeam;
+    updateFontSizeButtons(s.fontSize);
+    pop.style.display = 'block';
+  } else {
+    pop.style.display = 'none';
+  }
+}
+
+function getProjSettings() {
+  try {
+    const raw = localStorage.getItem('osf_proj_settings');
+    if (raw) return { ...defaultProjSettings(), ...JSON.parse(raw) };
+  } catch(e) {}
+  return defaultProjSettings();
+}
+
+function defaultProjSettings() {
+  return {
+    defaultTab:  'ind',
+    autoScroll:  0,
+    topN:        0,
+    fontSize:    'normal',
+    customTitle: '',
+    showPts:     true,
+    showKlas:    true,
+    showTeam:    true
+  };
+}
+
+function saveProjSettings() {
+  const s = {
+    defaultTab:  document.getElementById('ps-default-tab').value,
+    autoScroll:  parseInt(document.getElementById('ps-auto-scroll').value) || 0,
+    topN:        parseInt(document.getElementById('ps-top-n').value) || 0,
+    fontSize:    getProjSettings().fontSize, // przechowywany osobno przez setProjFontSize
+    customTitle: document.getElementById('ps-custom-title').value.trim(),
+    showPts:     document.getElementById('ps-show-pts').checked,
+    showKlas:    document.getElementById('ps-show-klas').checked,
+    showTeam:    document.getElementById('ps-show-team').checked
+  };
+  localStorage.setItem('osf_proj_settings', JSON.stringify(s));
+}
+
+function setProjFontSize(size) {
+  const s = getProjSettings();
+  s.fontSize = size;
+  localStorage.setItem('osf_proj_settings', JSON.stringify(s));
+  updateFontSizeButtons(size);
+}
+
+function updateFontSizeButtons(active) {
+  const sizes = ['small','normal','large','xlarge'];
+  const labels = ['Mały','Normalny','Duży','Bardzo duży'];
+  const wrap = document.getElementById('proj-settings-pop');
+  if (!wrap) return;
+  const btns = wrap.querySelectorAll('.form-group button');
+  btns.forEach((btn, i) => {
+    if (i < sizes.length) {
+      btn.style.background   = sizes[i] === active ? 'var(--accent)' : 'var(--bg3)';
+      btn.style.color        = sizes[i] === active ? '#111' : 'var(--text2)';
+      btn.style.borderColor  = sizes[i] === active ? 'var(--accent)' : 'var(--border2)';
+    }
+  });
+}
+
+function openProjektor() {
+  const url = 'osf-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY);
+  window.open(url, 'osf_projektor', 'width=1280,height=720');
+  document.getElementById('proj-settings-pop').style.display = 'none';
+}
+
 function exportData() {
   const json = JSON.stringify(state, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -3355,8 +3537,19 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    document.getElementById('proj-settings-pop').style.display = 'none';
+  }
   if (e.key === 'Enter' && document.getElementById('modal-reset').classList.contains('open')) confirmReset();
+});
+
+document.addEventListener('click', function(e) {
+  const pop = document.getElementById('proj-settings-pop');
+  if (pop && pop.style.display !== 'none') {
+    const wrap = pop.closest('div[style*="position:relative"]') || pop.parentElement;
+    if (!wrap.contains(e.target)) pop.style.display = 'none';
+  }
 });
 
 // ═══════════════════════════════════════════════════
