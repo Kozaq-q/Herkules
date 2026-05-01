@@ -2598,10 +2598,19 @@ function buildSeries2(gender) {
     let pool = [];
     gPairs.forEach(p => {
       const a = state.athletes.find(x => x.id === p.aId);
-      if (a) pool.push({ athlete: a, s1lane: p.aLane, s1time: parseTime(getTime(p.aId, 's1')) });
+      if (a) {
+        const rawTime = getTime(p.aId, 's1');
+        const dsq     = isDisq(p.aId, 's1');
+        // DSQ lub brak czasu = Infinity (traktowane jak brak wyniku)
+        pool.push({ athlete: a, s1lane: p.aLane, s1time: (dsq || !rawTime) ? Infinity : parseTime(rawTime) });
+      }
       if (p.bId) {
         const b = state.athletes.find(x => x.id === p.bId);
-        if (b) pool.push({ athlete: b, s1lane: p.bLane, s1time: parseTime(getTime(p.bId, 's1')) });
+        if (b) {
+          const rawTime = getTime(p.bId, 's1');
+          const dsq     = isDisq(p.bId, 's1');
+          pool.push({ athlete: b, s1lane: p.bLane, s1time: (dsq || !rawTime) ? Infinity : parseTime(rawTime) });
+        }
       }
     });
 
