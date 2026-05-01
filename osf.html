@@ -2194,8 +2194,6 @@ function renderPairsHTML(containerId, pairs, isS2) {
   container.innerHTML = html;
 }
 
-function athleteCardHTML(a, lane, time, series) {
-  if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name text-muted">—</div></div>';
 function athleteCardHTML(a, lane, time, series, pairNum) {
   if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name text-muted">—</div></div>';
   const dsq    = isDisq(a.id, series);
@@ -2234,7 +2232,6 @@ function athleteCardHTML(a, lane, time, series, pairNum) {
     '</button>' +
     '</div>' +
     '</div>';
-}
 }
 
 // ═══════════════════════════════════════════════════

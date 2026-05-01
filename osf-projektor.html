@@ -29,18 +29,13 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); height: 100vh; overflow: hidden; }
 
-/* ─── SPLASH (czekanie na slot) ─── */
+/* ─── ŁADOWANIE ─── */
 #splash {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100vh; gap: 20px;
+  height: 100vh; gap: 16px;
 }
 .splash-logo { font-family: var(--font-h); font-size: 80px; font-weight: 900; letter-spacing: 6px; color: var(--orange); }
-.splash-sub   { font-family: var(--font-m); font-size: 14px; color: var(--text3); letter-spacing: 2px; }
-.splash-input { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; color: var(--text1); font-family: var(--font-m); font-size: 18px; padding: 12px 20px; text-align: center; width: 320px; letter-spacing: 2px; margin-top: 20px; }
-.splash-input:focus { outline: none; border-color: var(--orange); }
-.splash-btn { background: var(--orange); color: #111; font-family: var(--font-h); font-size: 16px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; border: none; border-radius: 4px; padding: 12px 32px; cursor: pointer; margin-top: 8px; }
-.splash-btn:hover { background: #d07c35; }
-.splash-hint { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.splash-sub  { font-family: var(--font-m); font-size: 14px; color: var(--text3); letter-spacing: 2px; }
 
 /* ─── HEADER ─── */
 #proj-header {
@@ -123,13 +118,10 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 </head>
 <body>
 
-<!-- SPLASH — wpisz ID slotu -->
+<!-- ŁADOWANIE -->
 <div id="splash">
   <div class="splash-logo">⬡ OSF</div>
-  <div class="splash-sub">PROJEKTOR · TYLKO DO ODCZYTU</div>
-  <input class="splash-input" type="text" id="slot-input" placeholder="np. osf_slot_1" />
-  <button class="splash-btn" onclick="connectSlot()">Połącz →</button>
-  <div class="splash-hint">Wpisz identyfikator slotu z paska URL zawodów</div>
+  <div class="splash-sub">ŁĄCZENIE...</div>
 </div>
 
 <!-- PROJEKTOR -->
@@ -186,14 +178,28 @@ function getDB() {
   return db;
 }
 
-// Próba auto-połączenia z URL param ?slot=osf_slot_1
-(function() {
+// Pobierz slot z URL i połącz automatycznie
+(async function() {
   const params = new URLSearchParams(window.location.search);
   const s = params.get('slot');
-  if (s) {
-    document.getElementById('slot-input').value = s;
-    connectSlot();
+  if (!s) {
+    document.querySelector('.splash-sub').textContent = 'BŁĄD: Brak parametru ?slot= w URL';
+    return;
   }
+  slotId = s;
+  const ok = await loadState();
+  if (!ok) {
+    document.querySelector('.splash-sub').textContent = 'BŁĄD: Nie można załadować danych dla slotu: ' + s;
+    return;
+  }
+  loadProjSettings();
+  document.getElementById('splash').style.display   = 'none';
+  document.getElementById('proj-app').style.display = 'block';
+  applySettings();
+  renderAll();
+  startRealtime();
+  startClock();
+  setInterval(async () => { const ok = await loadState(); if (ok) renderAll(); }, 20000);
 })();
 
 // ═══════════════════════════════════════════════
@@ -250,26 +256,6 @@ function applySettings() {
       }, projSettings.autoScroll * 1000);
     }
   }
-}
-
-async function connectSlot() {
-  const val = document.getElementById('slot-input').value.trim();
-  if (!val) return;
-  slotId = val;
-  const ok = await loadState();
-  if (!ok) { alert('Nie można załadować danych dla slotu: ' + val); return; }
-  loadProjSettings();
-  document.getElementById('splash').style.display   = 'none';
-  document.getElementById('proj-app').style.display = 'block';
-  applySettings();
-  renderAll();
-  startRealtime();
-  startClock();
-  // Fallback polling co 20s
-  setInterval(async () => {
-    const loaded = await loadState();
-    if (loaded) { renderAll(); }
-  }, 20000);
 }
 
 async function loadState() {
