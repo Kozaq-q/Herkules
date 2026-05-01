@@ -1374,14 +1374,18 @@ function buildTeamSeries2() {
   if (!state.teamOrder.s1.length) { alert('Najpierw wygeneruj kolejność Serii 1.'); return; }
 
   // sortuj wg czasów S1 (malejąco = najsłabsze pierwsze), zmień tory
-  const withTimes = state.teamOrder.s1.map(item => ({
-    ...item,
-    s1time: parseTime(getTeamTime(item.team, 's1'))
-  })).sort((a, b) => {
+  const withTimes = state.teamOrder.s1.map(item => {
+    const rawTime = getTeamTime(item.team, 's1');
+    const dsq     = isTeamDisq(item.team, 's1');
+    return {
+      ...item,
+      s1time: (dsq || !rawTime) ? Infinity : parseTime(rawTime)
+    };
+  }).sort((a, b) => {
     if (a.s1time === Infinity && b.s1time === Infinity) return 0;
-    if (a.s1time === Infinity) return -1;
+    if (a.s1time === Infinity) return -1; // brak czasu / DSQ → pierwsze
     if (b.s1time === Infinity) return 1;
-    return b.s1time - a.s1time; // najsłabsze pierwsze
+    return b.s1time - a.s1time; // najwolniejsze pierwsze
   });
 
   state.teamOrder.s2 = withTimes.map((item, idx) => ({
@@ -3333,7 +3337,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 1. miejsce: N+1, 2. miejsce: N-1, 3. miejsce: N-2, ...k: N-k (k>=2)
 function calcIndividualPoints(rank, N) {
   if (rank === 1) return N + 1;
-  return Math.max(0, N - rank);
+  return Math.max(0, N - rank + 1);
 }
 
 // Punkty drużynowe: N = liczba drużyn, M = mnożnik
@@ -3341,7 +3345,7 @@ function calcIndividualPoints(rank, N) {
 function calcTeamPoints(rank, N, multiplier) {
   const base = N * multiplier;
   if (rank === 1) return base + 1;
-  return Math.max(0, base - rank);
+  return Math.max(0, base - rank + 1);
 }
 
 function getMultiplier() {
