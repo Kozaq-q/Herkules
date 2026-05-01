@@ -342,6 +342,8 @@ tr:last-child > td { border-bottom: none; }
     <div class="flex-between mb-12">
       <div class="card-title" style="margin-bottom:0">Lista zawodników</div>
       <div class="flex">
+        <input type="text" id="athletes-search" placeholder="🔍 Szukaj..." oninput="filterAthletes()"
+          style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 10px;font-family:var(--font-b);font-size:12px;width:160px;" />
         <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;" title="Schemat numeracji startowej">
           <button id="bib-btn-team-alpha" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team-alpha')">X/Y A–Z</button>
           <button id="bib-btn-team" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team')">X/Y lista</button>
@@ -2631,41 +2633,41 @@ function buildSeries2(gender) {
     });
 
     // Required lane in S2 = opposite of S1
+    // S2: zamiana torów obowiązkowa
+    // Zbuduj osobne kolejki dla każdego wymaganego toru w S2
+    // (s2lane = odwrotność s1lane)
     pool.forEach(p => { p.s2lane = p.s1lane === 'L' ? 'P' : 'L'; });
 
+    // Podziel na dwie kolejki: ci którzy potrzebują L w S2, ci którzy potrzebują P
+    // Każda kolejka posortowana: brak czasu/DSQ → najwolniejsi → najszybsi
+    const needL = pool.filter(p => p.s2lane === 'L'); // w S1 byli na P
+    const needP = pool.filter(p => p.s2lane === 'P'); // w S1 byli na L
+
+    // Paruj zachłannie: pierwszego z needL z pierwszym z needP
+    // Obaj startują jako pierwsi → najsłabsi na początku
     const pairs = [];
-    const assigned = new Set();
-    let pairNum = 1;
+    const minLen = Math.min(needL.length, needP.length);
 
-    for (let i = 0; i < pool.length; i++) {
-      if (assigned.has(i)) continue;
-      const a = pool[i];
-      assigned.add(i);
-
-      // Find nearest unassigned athlete with OPPOSITE required lane
-      let partnerId = -1;
-      for (let j = i + 1; j < pool.length; j++) {
-        if (assigned.has(j)) continue;
-        if (pool[j].s2lane !== a.s2lane) { // different required lanes = they can form a pair (one L, one P)
-          partnerId = j;
-          break;
-        }
-      }
-
-      if (partnerId === -1) {
-        // solo runner w S2
-        pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: a.s2lane, bId: null, bLane: null, _solo: true });
-      } else {
-        assigned.add(partnerId);
-        const b = pool[partnerId];
-        pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: a.s2lane, bId: b.athlete.id, bLane: b.s2lane });
-      }
+    for (let i = 0; i < minLen; i++) {
+      const a = needL[i]; // jedzie L w S2
+      const b = needP[i]; // jedzie P w S2
+      pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: 'L', bId: b.athlete.id, bLane: 'P' });
     }
 
-    // Solo w S2 na początku (są najsłabsi — brak czasu lub niedobrani)
-    const normalPairs = pairs.filter(p => !p._solo);
-    const soloPairs   = pairs.filter(p => p._solo);
-    const ordered = [...soloPairs, ...normalPairs];
+    // Pozostałe bez pary (nadwyżka jednej strony) — solo
+    const soloItems = needL.length > needP.length
+      ? needL.slice(minLen)
+      : needP.slice(minLen);
+
+    const soloPairs = soloItems.map(p => ({
+      pairNum: 0, gender,
+      aId: p.athlete.id, aLane: p.s2lane,
+      bId: null, bLane: null,
+      _solo: true
+    }));
+
+    // Solo na początku (najsłabsi), potem pary normalne
+    const ordered = [...soloPairs, ...pairs];
     ordered.forEach((p, i) => { p.pairNum = i + 1; delete p._solo; });
     return ordered;
   }
@@ -3761,6 +3763,15 @@ function filterPairs(series) {
     if (!sec || sec.style.display === 'none') return;
     const visible = Array.from(sec.querySelectorAll('.pair-card')).some(c => c.style.display !== 'none');
     sec.style.opacity = (!query || visible) ? '1' : '0.3';
+  });
+}
+
+function filterAthletes() {
+  const q = (document.getElementById('athletes-search').value || '').toLowerCase().trim();
+  const tbody = document.getElementById('athletes-tbody');
+  if (!tbody) return;
+  Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+    tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
   });
 }
 
