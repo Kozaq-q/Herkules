@@ -2687,6 +2687,19 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '<div class="' + cls + '" data-pair="' + p.pairNum + '" data-series="' + series + '" data-gender="' + gender + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
+    // Strzałki kolejności — tylko S1
+    if (series === 's1') {
+      const isFirstP = p.pairNum === 1;
+      const isLastP  = p.pairNum === pairs.length;
+      html += '<div style="display:flex;gap:1px;margin-right:4px;">';
+      html += '<button onclick="movePair(\'' + gender + '\',' + p.pairNum + ',-1)" title="Przesuń parę wyżej"' +
+        ' style="font-size:13px;padding:0 5px;line-height:1.6;background:transparent;border:1px solid var(--border2);border-radius:var(--radius) 0 0 var(--radius);color:var(--text2);cursor:pointer;opacity:' + (isFirstP ? '.2' : '1') + ';"' +
+        (isFirstP ? ' disabled' : '') + '>↑</button>';
+      html += '<button onclick="movePair(\'' + gender + '\',' + p.pairNum + ',+1)" title="Przesuń parę niżej"' +
+        ' style="font-size:13px;padding:0 5px;line-height:1.6;background:transparent;border:1px solid var(--border2);border-left:none;border-radius:0 var(--radius) var(--radius) 0;color:var(--text2);cursor:pointer;opacity:' + (isLastP ? '.2' : '1') + ';"' +
+        (isLastP ? ' disabled' : '') + '>↓</button>';
+      html += '</div>';
+    }
     if (isLast && !isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA PARA</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
     if (hasTime) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
@@ -4354,7 +4367,6 @@ function handleEmptySlotClick(el) {
   if (!pair) return;
 
   if (_swapSource) {
-    // Tryb pick — przenieś zaznaczonego zawodnika do tego pustego slotu
     if (_swapSource.gender !== gender) {
       showToast('Można zamieniać tylko zawodników tej samej płci', 'warning');
       return;
@@ -4362,17 +4374,24 @@ function handleEmptySlotClick(el) {
     const srcPair = state.s1pairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
     if (!srcPair) { cancelSwapMode(); return; }
     const srcSlot = srcPair.aId === _swapSource.athleteId ? 'a' : 'b';
-    const srcLane = srcSlot === 'a' ? srcPair.aLane : srcPair.bLane;
 
-    // Zawodnik ze źródłowej pary idzie do pustego slotu tej pary
-    // Pusty slot (bId===null) wypełniamy zawodnikiem źródłowym, źródłowy slot nullujemy
-    const tgtSlot = pair.aId === null ? 'a' : 'b'; // który slot jest pusty
-    if (tgtSlot === 'a') { pair.aId = _swapSource.athleteId; pair.aLane = lane; }
-    else                  { pair.bId = _swapSource.athleteId; pair.bLane = lane; }
+    // Tory zostają przy slotach — wstawiamy zawodnika do pustego slotu (aId lub bId który jest null)
+    const tgtSlot = pair.aId === null ? 'a' : 'b';
+    if (tgtSlot === 'a') pair.aId = _swapSource.athleteId;
+    else                 pair.bId = _swapSource.athleteId;
 
-    // Wyczyść ze źródłowej pary
-    if (srcSlot === 'a') { srcPair.aId = null; srcPair.aLane = null; }
-    else                  { srcPair.bId = null; srcPair.bLane = null; }
+    // Wyczyść ze źródłowej pary — slot staje się null (pusty, klikalny)
+    if (srcSlot === 'a') srcPair.aId = null;
+    else                 srcPair.bId = null;
+
+    // Jeśli para źródłowa jest teraz całkowicie pusta (oba null) — usuń ją
+    if (!srcPair.aId && !srcPair.bId) {
+      const idx = state.s1pairs.indexOf(srcPair);
+      if (idx >= 0) state.s1pairs.splice(idx, 1);
+      // Przenumeruj pary tej płci
+      state.s1pairs.filter(p => p.gender === gender)
+        .forEach((p, i) => { p.pairNum = i + 1; });
+    }
 
     const a1 = state.athletes.find(x => x.id === _swapSource.athleteId);
     cancelSwapMode();
@@ -4381,17 +4400,15 @@ function handleEmptySlotClick(el) {
     showToast('→ Przeniesiono ' + displayName(a1) + ' na Tor ' + lane, 'success');
 
   } else {
-    // Brak trybu pick — zmień tor SOLO zawodnika (jedyny zawodnik w parze)
+    // Bez trybu pick — zmień tor SOLO zawodnika
     const soloId   = pair.aId || pair.bId;
     const soloSlot = pair.aId ? 'a' : 'b';
-    const oldLane  = soloSlot === 'a' ? pair.aLane : pair.bLane;
-    const newLane  = lane;
-    if (soloSlot === 'a') pair.aLane = newLane;
-    else                   pair.bLane = newLane;
+    if (soloSlot === 'a') pair.aLane = lane;
+    else                  pair.bLane = lane;
     const a = state.athletes.find(x => x.id === soloId);
     save();
     renderSeries1View();
-    showToast('↔ Zmieniono tor: ' + displayName(a) + ' → Tor ' + newLane, 'success');
+    showToast('↔ Zmieniono tor: ' + displayName(a) + ' → Tor ' + lane, 'success');
   }
 }
 
@@ -4444,10 +4461,7 @@ function handleAthleteClick(el) {
   const targetPair = parseInt(el.dataset.pairNum);
   const gender     = el.dataset.gender;
 
-  // Kliknięcie na siebie = anuluj
   if (targetId === _swapSource.athleteId) { cancelSwapMode(); return; }
-
-  // Tylko ta sama płeć
   if (gender !== _swapSource.gender) {
     showToast('Można zamieniać tylko zawodników tej samej płci', 'warning');
     return;
@@ -4459,27 +4473,12 @@ function handleAthleteClick(el) {
 
   const srcSlot = srcPair.aId === _swapSource.athleteId ? 'a' : 'b';
   const tgtSlot = tgtPair.aId === targetId ? 'a' : 'b';
-  const srcLane = srcSlot === 'a' ? srcPair.aLane : srcPair.bLane;
-  const tgtLane = tgtSlot === 'a' ? tgtPair.aLane : tgtPair.bLane;
 
-  // Sprawdź czy target jest SOLO (drugi slot w parze jest null)
-  const tgtIsSolo = tgtPair.bId === null || tgtPair.aId === null;
-  const srcIsSolo = srcPair.bId === null || srcPair.aId === null;
-
-  if (tgtIsSolo && tgtPair.pairNum !== srcPair.pairNum) {
-    // Target jest jedynym zawodnikiem w swojej parze — nie ma z kim zamieniać torów,
-    // więc zamieniamy zawodników między parami (jeden solo idzie do pary src, src-nik do pary solo)
-    if (srcSlot === 'a') { srcPair.aId = targetId; srcPair.aLane = tgtLane; }
-    else                  { srcPair.bId = targetId; srcPair.bLane = tgtLane; }
-    if (tgtSlot === 'a') { tgtPair.aId = _swapSource.athleteId; tgtPair.aLane = srcLane; }
-    else                  { tgtPair.bId = _swapSource.athleteId; tgtPair.bLane = srcLane; }
-  } else {
-    // Normalna zamiana zawodnik ↔ zawodnik (swap slotów i torów)
-    if (srcSlot === 'a') { srcPair.aId = targetId;               srcPair.aLane = tgtLane; }
-    else                  { srcPair.bId = targetId;               srcPair.bLane = tgtLane; }
-    if (tgtSlot === 'a') { tgtPair.aId = _swapSource.athleteId;  tgtPair.aLane = srcLane; }
-    else                  { tgtPair.bId = _swapSource.athleteId;  tgtPair.bLane = srcLane; }
-  }
+  // Tory zostają przy slotach — zamieniamy TYLKO id zawodników
+  if (srcSlot === 'a') srcPair.aId = targetId;
+  else                 srcPair.bId = targetId;
+  if (tgtSlot === 'a') tgtPair.aId = _swapSource.athleteId;
+  else                 tgtPair.bId = _swapSource.athleteId;
 
   const a1 = state.athletes.find(x => x.id === _swapSource.athleteId);
   const a2 = state.athletes.find(x => x.id === targetId);
@@ -4489,7 +4488,26 @@ function handleAthleteClick(el) {
   showToast('↔ Zamieniono: ' + displayName(a1) + ' ↔ ' + displayName(a2), 'success');
 }
 
-function openSwapS1(pairNum, slot, gender) { /* stara funkcja — już nieużywana */ }
+function movePair(gender, pairNum, dir) {
+  const pairs = state.s1pairs.filter(p => p.gender === gender);
+  const idx   = pairs.findIndex(p => p.pairNum === pairNum);
+  const swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= pairs.length) return;
+
+  // Zamień pary miejscami w tablicy
+  const tmp = state.s1pairs.indexOf(pairs[idx]);
+  const swp = state.s1pairs.indexOf(pairs[swapIdx]);
+  [state.s1pairs[tmp], state.s1pairs[swp]] = [state.s1pairs[swp], state.s1pairs[tmp]];
+
+  // Przenumeruj
+  state.s1pairs.filter(p => p.gender === gender)
+    .forEach((p, i) => { p.pairNum = i + 1; });
+
+  save();
+  renderSeries1View();
+}
+
+function openSwapS1(pairNum, slot, gender) { /* nieużywana */ }
 function doSwapS1() { /* stara funkcja — już nieużywana */ }
 function confirmDrawSeries1(gender) { openDrawPanel(); }
 
