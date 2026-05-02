@@ -410,10 +410,7 @@ tr:last-child > td { border-bottom: none; }
         <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS1JudgeList('K')" title="Lista sędziowska — Kobiety">📋 Sędz. K</button>
       </div>
       <!-- Losowanie osobno -->
-      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmDrawSeries1('M')" title="Losuj pary — Mężczyźni">🎲 Losuj M</button>
-        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmDrawSeries1('K')" title="Losuj pary — Kobiety">🎲 Losuj K</button>
-      </div>
+      <button class="btn btn-sm btn-primary" onclick="openDrawPanel()" title="Panel losowania Serii 1">🎲 Losowanie S1</button>
     </div>
   </div>
 
@@ -981,6 +978,71 @@ tr:last-child > td { border-bottom: none; }
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-bib-swap')">Anuluj</button>
       <button class="btn btn-primary" onclick="doBibSwap()">Zmień numer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: PANEL LOSOWANIA S1 ═══ -->
+<div class="modal-overlay" id="modal-draw-s1">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">🎲 Losowanie Serii 1</div>
+
+    <div class="form-group">
+      <label>Kogo losować</label>
+      <div style="display:flex;gap:8px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
+          <input type="radio" name="draw-gender" value="M" id="draw-g-m" /> Mężczyźni
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
+          <input type="radio" name="draw-gender" value="K" id="draw-g-k" /> Kobiety
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);">
+          <input type="radio" name="draw-gender" value="" id="draw-g-mk" checked /> M + K
+        </label>
+      </div>
+    </div>
+
+    <div id="draw-warning" style="display:none;" class="alert alert-warning"></div>
+
+    <div style="background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text3);line-height:1.6;">
+      <strong style="color:var(--text2);">ℹ Zasady losowania:</strong><br>
+      · Zawodnicy z nieparzystym nr w drużynie → Tor L<br>
+      · Zawodnicy z parzystym nr w drużynie → Tor P<br>
+      · System stara się nie parować zawodników tej samej drużyny<br>
+      · Zablokowane pary (🔒) nie są zmieniane<br>
+      · Istniejące czasy <strong style="color:var(--text2);">nie</strong> są kasowane
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-draw-s1')">Anuluj</button>
+      <button class="btn btn-primary" onclick="doDrawS1()">🎲 Losuj</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: ZAMIANA ZAWODNIKA W PARZE S1 ═══ -->
+<div class="modal-overlay" id="modal-swap-s1">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title">↔ Zamień zawodnika</div>
+    <input type="hidden" id="swap-s1-pair-num" />
+    <input type="hidden" id="swap-s1-slot" /> <!-- 'a' lub 'b' -->
+    <input type="hidden" id="swap-s1-gender" />
+
+    <div id="swap-s1-info" style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius);margin-bottom:16px;font-size:13px;line-height:1.6;"></div>
+
+    <div class="form-group">
+      <label>Zamień z zawodnikiem</label>
+      <select id="swap-s1-target" style="font-size:13px;">
+        <option value="">— wybierz —</option>
+      </select>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;">Lista zawiera wszystkich zawodników tej płci. Wybrany zawodnik zamieni się miejscem (para + tor).</div>
+    </div>
+
+    <div id="swap-s1-warn" style="display:none;font-size:11px;color:var(--orange);padding:6px 10px;background:rgba(232,148,77,.08);border-radius:var(--radius);margin-bottom:8px;"></div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-swap-s1')">Anuluj</button>
+      <button class="btn btn-primary" onclick="doSwapS1()">↔ Zamień</button>
     </div>
   </div>
 </div>
@@ -2500,12 +2562,20 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   const s1time = series === 's2' ? getTime(a.id, 's1') : '';
   const s1dsq  = series === 's2' ? isDisq(a.id, 's1') : false;
   const g      = gender || a.gender;
+  const slot   = series === 's1' ? (lane === (state.s1pairs.find(p=>p.pairNum===pairNum&&p.gender===g)?.aLane) ? 'a' : 'b') : null;
+
+  const swapBtn = (series === 's1' && pairNum)
+    ? '<button onclick="openSwapS1(' + pairNum + ',\'' + slot + '\',\'' + g + '\')" ' +
+      'style="font-size:10px;padding:2px 6px;border:1px solid var(--border2);border-radius:var(--radius);' +
+      'background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.4;" title="Zamień zawodnika">↔</button>'
+    : '';
 
   return '<div class="pair-athlete" style="flex:1;' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
     '<div style="display:flex;align-items:center;gap:6px;">' +
     '<span class="pair-athlete-name">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
     '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;" title="Zmień numer startowy" onclick="openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
+    swapBtn +
     '</div>' +
     '<span class="lane-badge lane-' + lane + '">' + lane + '</span>' +
     '</div>' +
@@ -4094,29 +4164,147 @@ function getPairsWithTimes(series) {
   });
 }
 
-function confirmDrawSeries1(gender) {
-  const gLabel    = gender === 'M' ? 'Mężczyźni' : gender === 'K' ? 'Kobiety' : 'M+K';
-  const withTimes = getPairsWithTimes('s1').filter(p => !gender || p.gender === gender);
-  const locked    = (state.lockedPairs && state.lockedPairs.s1 || [])
-    .filter(k => !gender || k.includes('_' + gender + '_'));
-  if (withTimes.length === 0 && locked.length === 0) {
-    drawSeries1(gender);
-    return;
+// ═══════════════════════════════════════════════════
+// PANEL LOSOWANIA S1
+// ═══════════════════════════════════════════════════
+function openDrawPanel() {
+  // Sprawdź ostrzeżenia
+  const warn = document.getElementById('draw-warning');
+  const mPairs = state.s1pairs.filter(p => p.gender === 'M');
+  const kPairs = state.s1pairs.filter(p => p.gender === 'K');
+  const withTimes = getPairsWithTimes('s1');
+  const locked = (state.lockedPairs?.s1 || []).length;
+
+  let warnLines = [];
+  if (mPairs.length || kPairs.length) {
+    warnLines.push('Istnieją już wylosowane pary: ' + mPairs.length + ' M, ' + kPairs.length + ' K.');
   }
-  let msg = 'Ponowne losowanie [' + gLabel + '] zmieni układ par.\n\n';
   if (withTimes.length > 0) {
-    msg += '⚠ ' + withTimes.length + ' par ma już wpisane czasy:\n';
-    withTimes.forEach(p => {
-      const a = state.athletes.find(x => x.id === p.aId);
-      const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
-      msg += '  Para ' + p.pairNum + ': ' + (a ? a.name : '?') + (b ? ' / ' + b.name : '') + '\n';
-    });
-    msg += '\n';
+    warnLines.push('⚠ ' + withTimes.length + ' par ma wpisane czasy (nie zostaną skasowane).');
   }
-  if (locked.length > 0) msg += '🔒 ' + locked.length + ' par jest zablokowanych.\n\n';
-  msg += 'Czasy NIE zostaną usunięte. Kontynuować?';
-  if (confirm(msg)) drawSeries1(gender);
+  if (locked > 0) {
+    warnLines.push('🔒 ' + locked + ' par jest zablokowanych (nie zostaną zmienione).');
+  }
+
+  if (warnLines.length) {
+    warn.style.display = 'block';
+    warn.innerHTML = warnLines.join('<br>');
+  } else {
+    warn.style.display = 'none';
+  }
+
+  document.getElementById('modal-draw-s1').classList.add('open');
 }
+
+function doDrawS1() {
+  const gender = document.querySelector('input[name="draw-gender"]:checked')?.value;
+  closeModal('modal-draw-s1');
+  drawSeries1(gender || undefined);
+}
+
+// ═══════════════════════════════════════════════════
+// ZAMIANA ZAWODNIKÓW W PARZE S1
+// ═══════════════════════════════════════════════════
+function openSwapS1(pairNum, slot, gender) {
+  // pairNum: numer pary, slot: 'a' lub 'b', gender: 'M'/'K'
+  const pairs = state.s1pairs.filter(p => p.gender === gender);
+  const pair  = pairs.find(p => p.pairNum === pairNum);
+  if (!pair) return;
+
+  const athleteId = slot === 'a' ? pair.aId : pair.bId;
+  const athlete   = state.athletes.find(a => a.id === athleteId);
+  const lane      = slot === 'a' ? pair.aLane : pair.bLane;
+
+  document.getElementById('swap-s1-pair-num').value = pairNum;
+  document.getElementById('swap-s1-slot').value     = slot;
+  document.getElementById('swap-s1-gender').value   = gender;
+
+  document.getElementById('swap-s1-info').innerHTML =
+    'Zamienisz: <strong>' + esc(displayName(athlete)) + '</strong>' +
+    ' · Para <strong>' + pairNum + '</strong>' +
+    ' · Tor <strong>' + lane + '</strong>';
+
+  // Wypełnij select — wszyscy zawodnicy tej płci oprócz bieżącego
+  const sel = document.getElementById('swap-s1-target');
+  const allAthletes = state.athletes.filter(a => a.gender === gender && a.id !== athleteId)
+    .sort((a, b) => {
+      // Najpierw po parze (żeby łatwo znaleźć), potem po nazwisku
+      const pA = state.s1pairs.find(p => p.aId === a.id || p.bId === a.id);
+      const pB = state.s1pairs.find(p => p.aId === b.id || p.bId === b.id);
+      const nA = pA ? pA.pairNum : 999;
+      const nB = pB ? pB.pairNum : 999;
+      return nA - nB;
+    });
+
+  sel.innerHTML = '<option value="">— wybierz zawodnika —</option>';
+  allAthletes.forEach(a => {
+    const p = state.s1pairs.find(px => px.aId === a.id || px.bId === a.id);
+    const pairInfo = p ? ' [Para ' + p.pairNum + ', Tor ' + (p.aId === a.id ? p.aLane : p.bLane) + ']' : ' [bez pary]';
+    const hasTime  = getTime(a.id, 's1');
+    sel.innerHTML += '<option value="' + a.id + '">' + esc(displayName(a)) + ' · ' + esc(a.team) + pairInfo + (hasTime ? ' ✓' : '') + '</option>';
+  });
+
+  document.getElementById('swap-s1-warn').style.display = 'none';
+  sel.onchange = () => {
+    const tid = parseInt(sel.value);
+    if (!tid) { document.getElementById('swap-s1-warn').style.display = 'none'; return; }
+    const ta = state.athletes.find(a => a.id === tid);
+    const warn = document.getElementById('swap-s1-warn');
+    const tTime = getTime(tid, 's1');
+    const myTime = getTime(athleteId, 's1');
+    if (tTime || myTime) {
+      warn.style.display = 'block';
+      warn.textContent = '⚠ ' + (tTime ? displayName(ta) + ' ma czas: ' + tTime + '. ' : '') +
+        (myTime ? displayName(athlete) + ' ma czas: ' + myTime + '. ' : '') + 'Czasy pozostają przy zawodnikach.';
+    } else {
+      warn.style.display = 'none';
+    }
+  };
+
+  document.getElementById('modal-swap-s1').classList.add('open');
+}
+
+function doSwapS1() {
+  const pairNum  = parseInt(document.getElementById('swap-s1-pair-num').value);
+  const slot     = document.getElementById('swap-s1-slot').value;
+  const gender   = document.getElementById('swap-s1-gender').value;
+  const targetId = parseInt(document.getElementById('swap-s1-target').value);
+
+  if (!targetId) { alert('Wybierz zawodnika.'); return; }
+
+  // Znajdź parę źródłową
+  const srcPair = state.s1pairs.find(p => p.pairNum === pairNum && p.gender === gender);
+  if (!srcPair) return;
+
+  const srcId   = slot === 'a' ? srcPair.aId : srcPair.bId;
+  const srcLane = slot === 'a' ? srcPair.aLane : srcPair.bLane;
+
+  // Znajdź parę docelową (może być ta sama para, inny slot)
+  const tgtPair = state.s1pairs.find(p => p.aId === targetId || p.bId === targetId);
+  const tgtSlot = tgtPair ? (tgtPair.aId === targetId ? 'a' : 'b') : null;
+  const tgtLane = tgtPair ? (tgtPair.aId === targetId ? tgtPair.aLane : tgtPair.bLane) : null;
+
+  // Wykonaj zamianę — zamień zawodników miejscami (para + tor)
+  if (tgtPair) {
+    // Zawodnik z innej pary — zamień wzajemnie
+    if (slot === 'a') { srcPair.aId = targetId; srcPair.aLane = tgtLane; }
+    else              { srcPair.bId = targetId; srcPair.bLane = tgtLane; }
+
+    if (tgtSlot === 'a') { tgtPair.aId = srcId; tgtPair.aLane = srcLane; }
+    else                 { tgtPair.bId = srcId; tgtPair.bLane = srcLane; }
+  } else {
+    // Zawodnik bez pary (nie powinno się zdarzyć, ale obsługujemy)
+    if (slot === 'a') srcPair.aId = targetId;
+    else              srcPair.bId = targetId;
+  }
+
+  closeModal('modal-swap-s1');
+  save();
+  renderSeries1View();
+  showToast('↔ Zamieniono zawodników', 'success');
+}
+
+function confirmDrawSeries1(gender) { openDrawPanel(); }
 
 function confirmBuildSeries2(gender) {
   const gLabel    = gender === 'M' ? 'Mężczyźni' : gender === 'K' ? 'Kobiety' : 'M+K';
