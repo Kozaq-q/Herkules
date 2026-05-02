@@ -2418,30 +2418,12 @@ function updateStats() {
 // IMPORT CSV
 // ═══════════════════════════════════════════════════
 function openImportModal() {
-  document.getElementById('import-csv').value = '';
-  document.getElementById('import-preview').textContent = '';
   document.getElementById('modal-import').classList.add('open');
 }
 
-document.getElementById('import-csv').addEventListener('input', function() {
-  const lines = this.value.trim().split('\n').filter(l => l.trim());
-  document.getElementById('import-preview').textContent = 'Wykryto ' + lines.length + ' wierszy';
-});
+function importCSV() { /* nieużywana */ }
 
-function importCSV() {
-  const raw = document.getElementById('import-csv').value.trim();
-  if (!raw) return;
-  _importRawCSV(raw);
-  closeModal('modal-import');
-}
-
-function importCSVFromConfig() {
-  const raw = document.getElementById('import-csv-config').value.trim();
-  if (!raw) return;
-  _importRawCSV(raw);
-  document.getElementById('import-csv-config').value = '';
-  showToast('✓ Import zakończony', 'success');
-}
+function importCSVFromConfig() { /* nieużywana */ }
 
 function _importRawCSV(raw) {
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
