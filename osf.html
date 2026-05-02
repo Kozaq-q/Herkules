@@ -537,7 +537,10 @@ tr:last-child > td { border-bottom: none; }
       <div class="text-muted mt-4" style="font-size:12px;">Bieg indywidualny M + Bieg drużynowy · Kobiety nie liczą się do klasyfikacji zespołowej</div>
     </div>
     <div class="flex">
-      <button class="btn btn-sm" onclick="printKlasyfikacjaPDF()">🖨 Drukuj PDF</button>
+      <button class="btn btn-sm" onclick="printIndM()" style="margin-right:6px;">🖨 Wyniki M</button>
+      <button class="btn btn-sm" onclick="printIndK()" style="margin-right:6px;">🖨 Wyniki K</button>
+      <button class="btn btn-sm" onclick="printBiegDruz()" style="margin-right:6px;">🖨 Bieg drużynowy</button>
+      <button class="btn btn-sm" onclick="printKlasyfikacjaPDF()">🖨 Klasyfikacja</button>
     </div>
   </div>
 
@@ -1240,7 +1243,7 @@ function launchApp() {
   renderAthletes();
   updateStats();
   updateBibButtons();
-  const savedTab = sessionStorage.getItem('osf_active_tab');
+  const savedTab = localStorage.getItem('osf_tab_' + SLOT_ID);
   if (savedTab && document.getElementById('page-' + savedTab)) {
     showTab(savedTab);
   }
@@ -1277,7 +1280,7 @@ function showTab(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
-  sessionStorage.setItem('osf_active_tab', name);
+  localStorage.setItem('osf_tab_' + SLOT_ID, name);
   if (name === 'seria1') renderSeries1View();
   if (name === 'seria2') renderSeries2View();
   if (name === 'wyniki') renderResults();
@@ -3647,52 +3650,296 @@ function renderKlasyfikacja() {
   }
 }
 
+const PREMIUM_PDF_CSS = `
+  @page { size: A4 portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #000; background: #fff; width: 210mm; min-height: 297mm; padding: 12mm 14mm 10mm; }
+
+  .doc-header { border-bottom: 4px solid #000; padding-bottom: 8px; margin-bottom: 14px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .doc-title { font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; line-height: 1; }
+  .doc-subtitle { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #555; margin-top: 4px; }
+  .doc-meta { font-size: 9px; color: #888; text-align: right; line-height: 1.6; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #000; color: #fff; }
+  thead th { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; padding: 8px 10px; text-align: left; }
+  thead th.r { text-align: right; }
+  thead th.c { text-align: center; }
+
+  tbody tr { border-bottom: 1px solid #e0e0e0; }
+  tbody tr:nth-child(even):not(.top1):not(.top2):not(.top3) td { background: #f7f7f7; }
+  tbody td { padding: 9px 10px; font-size: 12px; vertical-align: middle; }
+  tbody td.r { text-align: right; }
+  tbody td.c { text-align: center; }
+
+  .rank-col { width: 52px; text-align: center; font-weight: 900; font-size: 16px; border-right: 3px solid #000; padding: 9px 6px; }
+  .mono { font-family: monospace; }
+  .small { font-size: 10px; color: #555; }
+  .bold { font-weight: 700; }
+  .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
+
+  /* TOP 3 */
+  tr.top1 td { background: #000 !important; color: #fff !important; border-bottom: 1px solid #333; }
+  tr.top2 td { background: #1a1a1a !important; color: #fff !important; border-bottom: 1px solid #333; }
+  tr.top3 td { background: #333 !important; color: #fff !important; border-bottom: 1px solid #444; }
+  tr.top1 .rank-col, tr.top2 .rank-col, tr.top3 .rank-col { border-right-color: #555; }
+  tr.top1 .small, tr.top2 .small, tr.top3 .small { color: #bbb !important; }
+  tr.top1 .bib, tr.top2 .bib, tr.top3 .bib { color: #888 !important; }
+  .medal { font-size: 18px; display: block; line-height: 1; }
+
+  .dsq { text-decoration: line-through; opacity: .5; }
+  .dsq-label { font-size: 9px; margin-left: 3px; opacity: .7; }
+
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; background: #000; color: #fff; padding: 5px 10px; margin: 16px 0 0; }
+
+  /* Duże wyróżnienie top3 — tryb "pełna strona" */
+  .podium-block { display: flex; gap: 0; border: 3px solid #000; margin-bottom: 16px; overflow: hidden; }
+  .podium-place { flex: 1; padding: 16px 14px; border-right: 2px solid #000; }
+  .podium-place:last-child { border-right: none; }
+  .podium-place.p1 { background: #000; color: #fff; flex: 1.15; }
+  .podium-place.p2 { background: #1a1a1a; color: #fff; }
+  .podium-place.p3 { background: #333; color: #fff; }
+  .podium-rank { font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .podium-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; line-height: 1.2; }
+  .podium-team { font-size: 10px; opacity: .7; margin-bottom: 6px; }
+  .podium-time { font-family: monospace; font-size: 20px; font-weight: 900; letter-spacing: 1px; }
+  .podium-pts { font-size: 10px; opacity: .7; margin-top: 3px; }
+
+  @media print { body { padding: 10mm 12mm 8mm; } }
+`;
+
+function _pdfHeader(title, subtitle) {
+  const c = state.contest;
+  const meta = [c.name, c.city, c.date].filter(Boolean).join(' · ');
+  return '<div class="doc-header">' +
+    '<div><div class="doc-title">' + title + '</div>' +
+    (subtitle ? '<div class="doc-subtitle">' + subtitle + '</div>' : '') +
+    '</div>' +
+    '<div class="doc-meta">OSF — Herkules<br>' + esc(meta) + '</div>' +
+    '</div>';
+}
+
+function printIndM() { _printInd('M'); }
+function printIndK() { _printInd('K'); }
+
+function _printInd(gender) {
+  const athletes = state.athletes.filter(a => a.gender === gender);
+  if (!athletes.length) { alert('Brak zawodników ' + gender); return; }
+
+  const ranked = athletes.map(a => ({
+    athlete: a,
+    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+  })).sort((a,b) => a.bestSec - b.bestSec);
+
+  const gLabel = gender === 'M' ? 'Bieg Indywidualny — Mężczyźni' : 'Bieg Indywidualny — Kobiety';
+  const medals = ['🥇','🥈','🥉'];
+  let rank = 1;
+
+  // Podium top3
+  const top3 = ranked.filter(r => r.bestSec !== Infinity).slice(0,3);
+  let podium = '';
+  if (top3.length) {
+    podium = '<div class="podium-block">';
+    top3.forEach((r, i) => {
+      const cls = 'p' + (i+1);
+      podium += '<div class="podium-place ' + cls + '">' +
+        '<div class="podium-rank">' + medals[i] + '</div>' +
+        '<div class="podium-name">' + esc(displayName(r.athlete)) + '</div>' +
+        '<div class="podium-team">' + esc(r.athlete.team) + '</div>' +
+        '<div class="podium-time">' + (r.best||'—') + '</div>' +
+        '</div>';
+    });
+    podium += '</div>';
+  }
+
+  // Tabela wszystkich
+  let html = _pdfHeader('OSF', gLabel);
+  html += podium;
+  html += '<div class="section-title">Pełna klasyfikacja — ' + ranked.length + ' zawodników</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th>' +
+    '<th>Zawodnik</th>' +
+    '<th>Drużyna</th>' +
+    '<th class="c">Seria 1</th>' +
+    '<th class="c">Seria 2</th>' +
+    '<th class="c">Wynik</th>' +
+    '</tr></thead><tbody>';
+
+  rank = 1;
+  ranked.forEach(r => {
+    const noBest = r.bestSec === Infinity;
+    const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
+    const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
+    const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + (noBest ? '—' : rank) + '</td>' +
+      '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
+      '<td class="small">' + esc(r.athlete.team) + '</td>' +
+      '<td class="c mono">' + s1d + '</td>' +
+      '<td class="c mono">' + s2d + '</td>' +
+      '<td class="c mono bold">' + (r.best||'—') + '</td>' +
+      '</tr>';
+    if (!noBest) rank++;
+  });
+  html += '</tbody></table>';
+  openPrint(html, PREMIUM_PDF_CSS);
+}
+
+function printBiegDruz() {
+  const N = TEAM_COUNT();
+  const mult = getMultiplier();
+  const teams = getTeams();
+  const medals = ['🥇','🥈','🥉'];
+
+  const rows = teams.map(team => {
+    const athletes = getTeamAthletes(team);
+    const ok = athletes.length >= TEAM_MIN_VAL();
+    const s1 = getTeamTime(team,'s1'); const s1dsq = state.teamDisq && state.teamDisq['s1_'+team];
+    const s2 = getTeamTime(team,'s2'); const s2dsq = state.teamDisq && state.teamDisq['s2_'+team];
+    const best = teamBestTimeEffective(team);
+    const bestSec = parseTime(best);
+    return { team, ok, s1, s2, s1dsq, s2dsq, best, bestSec };
+  }).sort((a,b) => {
+    if (!a.ok && b.ok) return 1; if (a.ok && !b.ok) return -1;
+    return a.bestSec - b.bestSec;
+  });
+
+  let rankIdx = 1;
+  const ranked = rows.map(r => {
+    const dsq = !r.ok; const noBest = r.bestSec === Infinity;
+    const rank = (dsq || noBest) ? null : rankIdx++;
+    return { ...r, rank, dsq, noBest };
+  });
+
+  // Podium
+  const top3 = ranked.filter(r => r.rank && r.rank <= 3);
+  let podium = '';
+  if (top3.length) {
+    podium = '<div class="podium-block">';
+    top3.forEach(r => {
+      const i = r.rank - 1;
+      const cls = 'p' + r.rank;
+      podium += '<div class="podium-place ' + cls + '">' +
+        '<div class="podium-rank">' + medals[i] + '</div>' +
+        '<div class="podium-name">' + esc(r.team) + '</div>' +
+        '<div class="podium-time">' + (r.best||'—') + '</div>' +
+        '</div>';
+    });
+    podium += '</div>';
+  }
+
+  let html = _pdfHeader('OSF', 'Bieg Drużynowy');
+  html += '<div style="font-size:10px;color:#555;margin-bottom:14px;">Liczy się czas ' + N + '. zawodnika · lepszy wynik z 2 serii</div>';
+  html += podium;
+  html += '<div class="section-title">Pełna klasyfikacja — ' + rows.length + ' drużyn</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th>' +
+    '<th>Drużyna</th>' +
+    '<th class="c">Seria 1</th>' +
+    '<th class="c">Seria 2</th>' +
+    '<th class="c">Wynik</th>' +
+    '</tr></thead><tbody>';
+
+  ranked.forEach(r => {
+    const topCls = r.rank === 1 ? ' top1' : r.rank === 2 ? ' top2' : r.rank === 3 ? ' top3' : '';
+    const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
+    const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
+    const rankTxt = r.rank || (r.dsq ? 'DSQ' : '—');
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + rankTxt + '</td>' +
+      '<td class="bold">' + esc(r.team) + '</td>' +
+      '<td class="c mono">' + s1d + '</td>' +
+      '<td class="c mono">' + s2d + '</td>' +
+      '<td class="c mono bold">' + (r.best||'—') + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  openPrint(html, PREMIUM_PDF_CSS);
+}
+
 function printKlasyfikacjaPDF() {
   const { result, rankedMen, rankedTeams } = getTeamClassification();
   const mult   = getMultiplier();
   const N_men  = state.athletes.filter(a => a.gender === 'M').length;
   const N_team = rankedTeams.filter(r => r.rank !== null).length;
+  const medals = ['🥇','🥈','🥉'];
 
-  let html = '<h1>OSF — Klasyfikacja Zespołowa</h1>';
-  html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
+  // Podium klasyfikacji końcowej
+  const top3 = result.slice(0,3);
+  let podium = '';
+  if (top3.length) {
+    podium = '<div class="podium-block">';
+    top3.forEach((r, i) => {
+      podium += '<div class="podium-place p' + (i+1) + '">' +
+        '<div class="podium-rank">' + medals[i] + '</div>' +
+        '<div class="podium-name">' + esc(r.team) + '</div>' +
+        '<div class="podium-pts">' + r.indPts + ' + ' + r.teamPts + ' pkt</div>' +
+        '<div class="podium-time">' + r.total + ' PKT</div>' +
+        '</div>';
+    });
+    podium += '</div>';
+  }
 
-  html += '<h2>Klasyfikacja końcowa</h2>';
-  html += '<table><thead><tr><th>Msc</th><th>Drużyna</th><th>Pkt ind. M</th><th>Pkt drużyn.</th><th>SUMA</th></tr></thead><tbody>';
+  let html = _pdfHeader('OSF', 'Klasyfikacja Zespołowa');
+  html += podium;
+
+  // Tabela klasyfikacji końcowej
+  html += '<div class="section-title">Klasyfikacja końcowa</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th><th>Drużyna</th>' +
+    '<th class="c">Pkt ind. M</th><th class="c">Pkt drużyn.</th><th class="c">SUMA</th>' +
+    '</tr></thead><tbody>';
   result.forEach((r, i) => {
     const rank = i + 1;
-    const topStyle = rank === 1 ? ' style="background:#000;color:#fff;"'
-                   : rank === 2 ? ' style="background:#222;color:#fff;"'
-                   : rank === 3 ? ' style="background:#333;color:#fff;"'
-                   : (i%2 ? ' style="background:#f5f5f5;"' : '');
-    html += '<tr' + topStyle + '><td>' + (i+1) + '</td><td><b>' + esc(r.team) + '</b></td><td style="text-align:center;">' + r.indPts + '</td><td style="text-align:center;">' + r.teamPts + '</td><td style="text-align:center;font-size:15px;font-weight:bold;">' + r.total + '</td></tr>';
+    const topCls = rank===1?' top1':rank===2?' top2':rank===3?' top3':'';
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + rank + '</td>' +
+      '<td class="bold">' + esc(r.team) + '</td>' +
+      '<td class="c">' + r.indPts + '</td>' +
+      '<td class="c">' + r.teamPts + '</td>' +
+      '<td class="c bold" style="font-size:15px;">' + r.total + '</td>' +
+      '</tr>';
   });
   html += '</tbody></table>';
 
-  html += '<h2>Bieg indywidualny M (N=' + N_men + ')</h2>';
-  html += '<table><thead><tr><th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>Czas</th><th>Pkt</th></tr></thead><tbody>';
+  // Szczegóły ind. M
+  html += '<div class="section-title">Bieg indywidualny M (N=' + N_men + ')</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th><th>Zawodnik</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
+    '</tr></thead><tbody>';
   rankedMen.forEach((r, i) => {
     const rk = r.rank;
-    const topStyle = rk === 1 ? ' style="background:#000;color:#fff;"'
-                   : rk === 2 ? ' style="background:#222;color:#fff;"'
-                   : rk === 3 ? ' style="background:#333;color:#fff;"'
-                   : (i%2 ? ' style="background:#f5f5f5;"' : '');
-    html += '<tr' + topStyle + '><td>' + (r.rank||'—') + '</td><td>' + esc(displayName(r.athlete)) + '</td><td>' + esc(r.athlete.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
+    const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + (r.rank||'—') + '</td>' +
+      '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
+      '<td class="small">' + esc(r.athlete.team) + '</td>' +
+      '<td class="c mono">' + (r.best||'—') + '</td>' +
+      '<td class="r bold">' + r.pts + '</td>' +
+      '</tr>';
   });
   html += '</tbody></table>';
 
-  html += '<h2>Bieg drużynowy (N=' + N_team + ' × ' + mult + ')</h2>';
-  html += '<table><thead><tr><th>Msc</th><th>Drużyna</th><th>Czas</th><th>Pkt</th></tr></thead><tbody>';
+  // Szczegóły drużynowy
+  html += '<div class="section-title">Bieg drużynowy (N=' + N_team + ' × ' + mult + ')</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
+    '</tr></thead><tbody>';
   rankedTeams.forEach((r, i) => {
     const rk = r.rank;
-    const topStyle = rk === 1 ? ' style="background:#000;color:#fff;"'
-                   : rk === 2 ? ' style="background:#222;color:#fff;"'
-                   : rk === 3 ? ' style="background:#333;color:#fff;"'
-                   : (i%2 ? ' style="background:#f5f5f5;"' : '');
-    html += '<tr' + topStyle + '><td>' + (r.rank||'—') + '</td><td>' + esc(r.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
+    const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + (r.rank||'—') + '</td>' +
+      '<td class="bold">' + esc(r.team) + '</td>' +
+      '<td class="c mono">' + (r.best||'—') + '</td>' +
+      '<td class="r bold">' + r.pts + '</td>' +
+      '</tr>';
   });
   html += '</tbody></table>';
 
-  openPrint(html, PAIRS_PDF_CSS);
+  openPrint(html, PREMIUM_PDF_CSS);
 }
 
 // Mnożnik — przyciski
