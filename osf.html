@@ -856,14 +856,6 @@ tr:last-child > td { border-bottom: none; }
           <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
           <span id="import-file-name" style="font-size:11px;color:var(--text3);margin-left:10px;font-family:var(--font-m);"></span>
         </div>
-
-        <div style="border-top:1px solid var(--border);padding-top:14px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Lub wklej CSV</div>
-          <textarea id="import-csv-config" rows="5" placeholder="st. szer.;Jan KOWALSKI;M;1 Batalion&#10;kpr.;Anna NOWAK;K;2 Batalion" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px;font-family:var(--font-m);font-size:12px;resize:vertical;"></textarea>
-          <div style="margin-top:8px;">
-            <button class="btn btn-sm btn-primary" onclick="importCSVFromConfig()">↑ Importuj z pola</button>
-          </div>
-        </div>
       </div>
 
       <!-- Zarządzanie zawodami -->
@@ -941,31 +933,77 @@ tr:last-child > td { border-bottom: none; }
       <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFromFile(event)" />
     </div>
 
-    <div style="border-top:1px solid var(--border);padding-top:14px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Lub wklej CSV</div>
-      <textarea id="import-csv" rows="7" placeholder="KOWALSKI Jan;M;1 Batalion;1&#10;NOWAK Anna;K;2 Batalion;2"></textarea>
-      <div id="import-preview" class="text-muted" style="font-size:12px;margin-top:4px;"></div>
-    </div>
-
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-import')">Anuluj</button>
-      <button class="btn btn-primary" onclick="importCSV()">Importuj z pola tekstowego</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: WYCZYŚĆ ZAWODNIKÓW ═══ -->
+<div class="modal-overlay" id="modal-clear-athletes">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" style="color:var(--orange);">🗑 Wyczyść listę zawodników</div>
+    <div style="background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text2);">
+      Usunięta zostanie <strong>lista zawodników oraz układ par</strong>.<br>
+      Czasy i wyniki zostaną zachowane.<br>
+      <span style="font-size:11px;color:var(--text3);">Aby usunąć wszystko — użyj Resetu.</span>
+    </div>
+    <div class="form-group">
+      <label>Wpisz liczbę zawodników (<span id="clear-athletes-count" style="font-family:var(--font-m);color:var(--orange);"></span>) aby potwierdzić</label>
+      <input type="text" id="clear-athletes-input" placeholder="np. 24" autocomplete="off"
+        style="font-family:var(--font-m);font-size:22px;font-weight:700;text-align:center;letter-spacing:3px;"
+        oninput="validateClearAthletesInput()" />
+      <div id="clear-athletes-hint" style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-clear-athletes')">Anuluj</button>
+      <button class="btn btn-danger" id="clear-athletes-confirm-btn" disabled onclick="confirmClearAthletes()" style="opacity:.4;cursor:not-allowed;">🗑 Wyczyść</button>
     </div>
   </div>
 </div>
 
 <!-- ═══ MODAL: RESET ═══ -->
 <div class="modal-overlay" id="modal-reset">
-  <div class="modal" style="max-width:380px;">
-    <div class="modal-title" style="color:var(--red);">⚠ Reset zawodów</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">Ta operacja <strong>nieodwracalnie</strong> usunie wszystkie dane zawodów — zawodników, pary, czasy i wyniki.</p>
-    <div class="form-group">
-      <label>Wpisz <span style="color:var(--red);font-family:var(--font-m);font-weight:700;">RESET</span> aby potwierdzić</label>
-      <input type="text" id="reset-confirm-input" placeholder="RESET" autocomplete="off" style="font-family:var(--font-m);letter-spacing:2px;" />
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" style="color:var(--red);">⛔ Reset wszystkich danych</div>
+    <div style="background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.3);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text2);">
+      Zostanie <strong>nieodwracalnie</strong> usunięte:<br>
+      lista zawodników · pary · czasy · wyniki · dane z chmury
     </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-reset')">Anuluj</button>
-      <button class="btn btn-danger" onclick="confirmReset()">Usuń wszystkie dane</button>
+
+    <!-- Krok 1: wpisz RESET -->
+    <div id="reset-step-1">
+      <div class="form-group">
+        <label>Krok 1 z 2 — wpisz <span style="color:var(--red);font-family:var(--font-m);font-weight:700;letter-spacing:2px;">RESET</span></label>
+        <input type="text" id="reset-confirm-input" placeholder="RESET" autocomplete="off"
+          style="font-family:var(--font-m);letter-spacing:3px;font-size:18px;text-align:center;text-transform:uppercase;"
+          oninput="validateResetStep1()" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-reset')">Anuluj</button>
+        <button class="btn btn-danger" id="reset-step1-btn" disabled onclick="showResetStep2()" style="opacity:.4;cursor:not-allowed;">Dalej →</button>
+      </div>
+    </div>
+
+    <!-- Krok 2: odliczanie -->
+    <div id="reset-step-2" style="display:none;">
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">Krok 2 z 2 — przytrzymaj przycisk przez <strong id="reset-countdown-secs">5</strong> sekund</div>
+        <button id="reset-hold-btn"
+          onmousedown="startResetHold()" onmouseup="cancelResetHold()" onmouseleave="cancelResetHold()"
+          ontouchstart="startResetHold()" ontouchend="cancelResetHold()"
+          style="width:160px;height:160px;border-radius:50%;background:rgba(224,85,85,.12);border:3px solid var(--red);color:var(--red);font-family:var(--font-h);font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;transition:background .2s;">
+          <span style="font-size:36px;line-height:1;">⛔</span>
+          <span>PRZYTRZYMAJ</span>
+          <svg id="reset-ring" viewBox="0 0 160 160" style="position:absolute;top:0;left:0;width:160px;height:160px;transform:rotate(-90deg);">
+            <circle cx="80" cy="80" r="76" fill="none" stroke="var(--red)" stroke-width="4" stroke-dasharray="477" stroke-dashoffset="477" id="reset-ring-circle" style="transition:stroke-dashoffset linear;" />
+          </svg>
+        </button>
+        <div id="reset-hold-hint" style="font-size:11px;color:var(--text3);margin-top:12px;">Puść aby anulować</div>
+      </div>
+      <div class="modal-footer" style="justify-content:center;">
+        <button class="btn" onclick="cancelResetFull()">← Wróć</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2217,37 +2255,39 @@ function saveEditAthlete() {
   updateStats();
   updateBibButtons();
   closeModal('modal-edit');
-  showToast('✓ Dane zawodnika zapisane', 'success', 1800);
+  setTimeout(() => showToast('✓ Zapisano: ' + name, 'success', 2500), 80);
 }
 
 // ═══════════════════════════════════════════════════
-// RESET Z ZABEZPIECZENIEM
+// WYCZYŚĆ ZAWODNIKÓW — modal z wpisywaniem liczby
 // ═══════════════════════════════════════════════════
-function openResetModal() {
-  document.getElementById('reset-confirm-input').value = '';
-  document.getElementById('modal-reset').classList.add('open');
-  setTimeout(() => document.getElementById('reset-confirm-input').focus(), 50);
-}
-
-function confirmReset() {
-  const val = document.getElementById('reset-confirm-input').value.trim();
-  if (val !== 'RESET') {
-    document.getElementById('reset-confirm-input').style.borderColor = 'var(--red)';
-    setTimeout(() => document.getElementById('reset-confirm-input').style.borderColor = '', 1000);
-    return;
-  }
-  // Wyczyść localStorage
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(STORAGE_KEY + '_import_hash');
-  // Wyczyść Supabase — usuń wiersz żeby przy ponownym otwarciu nie załadował starych danych
-  try {
-    getSupabase().from('osf_state').delete().eq('slot_id', STORAGE_KEY).then(() => {});
-  } catch(e) {}
-  window.location.href = 'start.html';
-}
-
 function clearAthletes() {
-  if (!confirm('Usunąć całą listę zawodników?\n\nCzasy i wyniki zostaną zachowane (ale nie będą miały przypisanych zawodników).\n\nAby usunąć WSZYSTKO użyj "Reset wszystkich danych".')) return;
+  const count = state.athletes.length;
+  if (count === 0) { showToast('Lista zawodników jest już pusta', 'info'); return; }
+  document.getElementById('clear-athletes-count').textContent = count;
+  document.getElementById('clear-athletes-input').value = '';
+  document.getElementById('clear-athletes-hint').textContent = '';
+  const btn = document.getElementById('clear-athletes-confirm-btn');
+  btn.disabled = true; btn.style.opacity = '.4'; btn.style.cursor = 'not-allowed';
+  document.getElementById('modal-clear-athletes').classList.add('open');
+  setTimeout(() => document.getElementById('clear-athletes-input').focus(), 80);
+}
+
+function validateClearAthletesInput() {
+  const count = state.athletes.length;
+  const val   = document.getElementById('clear-athletes-input').value.trim();
+  const btn   = document.getElementById('clear-athletes-confirm-btn');
+  const hint  = document.getElementById('clear-athletes-hint');
+  const ok    = val === String(count);
+  btn.disabled    = !ok;
+  btn.style.opacity    = ok ? '1' : '.4';
+  btn.style.cursor     = ok ? 'pointer' : 'not-allowed';
+  hint.textContent     = val && !ok ? 'Liczba się nie zgadza' : '';
+  hint.style.color     = 'var(--red)';
+}
+
+function confirmClearAthletes() {
+  const count = state.athletes.length;
   state.athletes = [];
   state.s1pairs  = [];
   state.s2pairs  = [];
@@ -2257,8 +2297,90 @@ function clearAthletes() {
   save();
   renderAthletes();
   updateStats();
-  showToast('✓ Lista zawodników wyczyszczona', 'success');
+  closeModal('modal-clear-athletes');
+  showToast('🗑 Usunięto ' + count + ' zawodników', 'success');
 }
+
+// ═══════════════════════════════════════════════════
+// RESET — dwuetapowy z przytrzymaniem przycisku
+// ═══════════════════════════════════════════════════
+function openResetModal() {
+  document.getElementById('reset-confirm-input').value = '';
+  document.getElementById('reset-step-1').style.display = 'block';
+  document.getElementById('reset-step-2').style.display = 'none';
+  const btn = document.getElementById('reset-step1-btn');
+  btn.disabled = true; btn.style.opacity = '.4'; btn.style.cursor = 'not-allowed';
+  document.getElementById('modal-reset').classList.add('open');
+  setTimeout(() => document.getElementById('reset-confirm-input').focus(), 80);
+}
+
+function validateResetStep1() {
+  const val = document.getElementById('reset-confirm-input').value.trim().toUpperCase();
+  const btn = document.getElementById('reset-step1-btn');
+  const ok  = val === 'RESET';
+  btn.disabled         = !ok;
+  btn.style.opacity    = ok ? '1' : '.4';
+  btn.style.cursor     = ok ? 'pointer' : 'not-allowed';
+}
+
+function showResetStep2() {
+  document.getElementById('reset-step-1').style.display = 'none';
+  document.getElementById('reset-step-2').style.display = 'block';
+  document.getElementById('reset-countdown-secs').textContent = '5';
+  const circle = document.getElementById('reset-ring-circle');
+  circle.style.transition = 'none';
+  circle.style.strokeDashoffset = '477';
+}
+
+let _resetHoldTimer  = null;
+let _resetHoldStart  = null;
+const RESET_HOLD_MS  = 5000;
+
+function startResetHold() {
+  _resetHoldStart = Date.now();
+  const circle = document.getElementById('reset-ring-circle');
+  const btn    = document.getElementById('reset-hold-btn');
+  btn.style.background = 'rgba(224,85,85,.22)';
+  circle.style.transition = 'stroke-dashoffset ' + (RESET_HOLD_MS/1000) + 's linear';
+  circle.style.strokeDashoffset = '0';
+
+  // Odliczanie sekund
+  _resetHoldTimer = setInterval(() => {
+    const elapsed = Date.now() - _resetHoldStart;
+    const remaining = Math.max(0, Math.ceil((RESET_HOLD_MS - elapsed) / 1000));
+    document.getElementById('reset-countdown-secs').textContent = remaining;
+    if (elapsed >= RESET_HOLD_MS) {
+      clearInterval(_resetHoldTimer); _resetHoldTimer = null;
+      execReset();
+    }
+  }, 100);
+}
+
+function cancelResetHold() {
+  if (_resetHoldTimer) { clearInterval(_resetHoldTimer); _resetHoldTimer = null; }
+  const circle = document.getElementById('reset-ring-circle');
+  const btn    = document.getElementById('reset-hold-btn');
+  if (!circle) return;
+  circle.style.transition = 'stroke-dashoffset .3s ease';
+  circle.style.strokeDashoffset = '477';
+  btn.style.background = 'rgba(224,85,85,.12)';
+  document.getElementById('reset-countdown-secs').textContent = '5';
+}
+
+function cancelResetFull() {
+  cancelResetHold();
+  closeModal('modal-reset');
+}
+
+function execReset() {
+  closeModal('modal-reset');
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY + '_import_hash');
+  try { getSupabase().from('osf_state').delete().eq('slot_id', STORAGE_KEY).then(() => {}); } catch(e) {}
+  window.location.href = 'start.html';
+}
+
+function confirmReset() { execReset(); } // backward compat
 
 // ═══════════════════════════════════════════════════
 // OCHRONA PRZED DUPLIKOWANYM IMPORTEM
