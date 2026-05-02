@@ -1646,7 +1646,8 @@ function renderTeamOrderSection(series) {
     h += '<span class="pair-athlete-name">' + esc(item.team) + '</span>';
     h += '<div style="display:flex;align-items:center;gap:6px;">';
     h += '<span class="lane-badge lane-' + item.lane + '">' + item.lane + '</span>';
-    h += '<button onclick="event.stopPropagation();activateTeamSwap('' + esc(item.team).replace(/'/g,"&#39;") + '',' + idxInOrder + ','' + series + '')" class="swap-trigger-btn" style="font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.5;" title="Zamień drużynę">↔</button>';
+    const teamEscaped = esc(item.team).replace(/'/g, '&#39;');
+    h += '<button onclick="event.stopPropagation();activateTeamSwap(\'' + teamEscaped + '\',' + idxInOrder + ',\'' + series + '\')" class="swap-trigger-btn" style="font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.5;" title="Zamień drużynę">↔</button>';
     h += '</div></div>';
     h += '<div class="pair-athlete-meta" style="margin-bottom:8px;">';
     if (!ok) h += '<span style="color:var(--red);">⚠ Tylko ' + athletes.length + ' M — min. ' + TEAM_MIN_VAL() + ' wymagane</span>';
