@@ -2297,30 +2297,43 @@ function openEditModal(id) {
 }
 
 function saveEditAthlete() {
-  const id     = parseInt(document.getElementById('edit-id').value);
+  const idRaw  = document.getElementById('edit-id').value;
+  const id     = parseInt(idRaw);
   const rank   = document.getElementById('edit-rank').value.trim();
   const name   = document.getElementById('edit-name').value.trim();
   const gender = document.getElementById('edit-gender').value;
   const team   = document.getElementById('edit-team').value.trim();
   const newBib = document.getElementById('edit-bib').value.trim();
+
   if (!name) { alert('Podaj imię i nazwisko.'); return; }
-  const a = state.athletes.find(x => x.id === id);
-  if (!a) return;
-  a.rank   = rank;
-  a.name   = name;
-  a.gender = gender;
-  a.team   = team;
-  if (newBib && String(newBib) !== String(a.bib)) {
-    const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));
-    if (conflict) { const tmp = a.bib; a.bib = newBib; conflict.bib = tmp; }
-    else a.bib = newBib;
+
+  // Zamknij modal NAJPIERW — niezależnie od błędów
+  document.getElementById('modal-edit').classList.remove('open');
+
+  try {
+    const a = state.athletes.find(x => x.id === id);
+    if (!a) { showToast('Błąd: nie znaleziono zawodnika', 'error'); return; }
+
+    a.rank   = rank;
+    a.name   = name;
+    a.gender = gender;
+    a.team   = team;
+
+    if (newBib && String(newBib) !== String(a.bib)) {
+      const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));
+      if (conflict) { const tmp = a.bib; a.bib = newBib; conflict.bib = tmp; }
+      else a.bib = newBib;
+    }
+
+    save();
+    renderAthletes();
+    updateStats();
+    updateBibButtons();
+  } catch(e) {
+    console.error('saveEditAthlete error:', e);
   }
-  save();
-  renderAthletes();
-  updateStats();
-  updateBibButtons();
-  closeModal('modal-edit');
-  setTimeout(() => showToast('✓ Zapisano: ' + name, 'success', 2500), 80);
+
+  showToast('✓ Zapisano: ' + name, 'success', 2500);
 }
 
 // ═══════════════════════════════════════════════════
