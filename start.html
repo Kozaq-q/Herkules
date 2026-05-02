@@ -357,6 +357,11 @@ function showApp() {
     render();
     showSyncStatus('ok');
   }).catch(() => showSyncStatus('error'));
+
+  // Polling co 30s — nowe zawody od innych urządzeń
+  setInterval(() => {
+    syncSlotsFromCloud().then(() => render()).catch(() => {});
+  }, 30000);
 }
 
 function openChangePassword() {
@@ -431,7 +436,11 @@ function deleteSlot(id) {
 async function syncSlotsFromCloud() {
   try {
     const { data, error } = await getSB().from(SB_TABLE).select('slot_id, slot_json, updated_at').order('updated_at', { ascending: true });
-    if (error) { console.warn('Supabase sync error:', error.message); return; }
+    if (error) {
+      // Tabela może nie istnieć jeszcze — nie blokuj inicjalizacji
+      console.warn('Supabase sync error (tabela herkules_slots może nie istnieć):', error.message);
+      return;
+    }
     if (!data || !data.length) return;
 
     const localIds = new Set(getSlotIds().map(String));

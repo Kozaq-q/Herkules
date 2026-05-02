@@ -231,7 +231,24 @@ async function boot(s) {
   renderAll();
   startClock();
   startRealtime();
-  setInterval(async () => { if (await loadState()) softRender(); }, 20000);
+
+  // Polling co 20s jako fallback gdy WebSocket padnie
+  setInterval(async () => {
+    try {
+      if (await loadState()) softRender();
+    } catch(e) {
+      console.warn('Projektor poll error:', e);
+    }
+  }, 20000);
+
+  // Reconnect realtime co 60s jeśli połączenie zerwane
+  setInterval(() => {
+    const dot = document.getElementById('sync-dot');
+    if (dot && dot.classList.contains('off')) {
+      if (rtChannel) { getDB().removeChannel(rtChannel); rtChannel = null; }
+      startRealtime();
+    }
+  }, 60000);
 }
 
 // ═══════════════════════════════════════════════
@@ -266,7 +283,7 @@ async function loadState() {
 function startRealtime() {
   if (rtChannel) return;
   rtChannel = getDB().channel('osf_proj_' + slotId)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + slotId },
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + slotId },
       (payload) => {
         try { state = JSON.parse(payload.new.state_json); softRender(); flashSync(); } catch(e) {}
       })

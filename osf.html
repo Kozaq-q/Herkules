@@ -1167,6 +1167,15 @@ tr:last-child > td { border-bottom: none; }
 const SLOT_ID = new URLSearchParams(window.location.search).get('slot') || '0';
 const STORAGE_KEY = 'osf_slot_' + SLOT_ID;
 
+// Zabezpieczenie — jeśli brak slot w URL i brak danych lokalnych, wróć do panelu
+if (SLOT_ID === '0') {
+  const hasLocal = localStorage.getItem('osf_slot_0');
+  if (!hasLocal) {
+    // Brak danych — zamiast działać na slot 0, wróć do panelu
+    window.location.replace('start.html');
+  }
+}
+
 let state = {
   contest: { name: '', city: '', date: '' },
   athletes: [],
@@ -1220,10 +1229,12 @@ function scheduleSave() {
 async function saveToSupabase() {
   try {
     const db = getSupabase();
+    const now = new Date().toISOString();
+    state._savedAt = now;
     const payload = {
       slot_id:    STORAGE_KEY,
       state_json: JSON.stringify(state),
-      updated_at: new Date().toISOString()
+      updated_at: now
     };
     const { error } = await db.from('osf_state').upsert(payload, { onConflict: 'slot_id' });
     const el = document.getElementById('header-autosave');
@@ -1263,6 +1274,37 @@ async function loadFromSupabase() {
   }
 }
 
+// Keep-alive dla Supabase Free tier (ping co 6h by nie pauzował projektu)
+(function keepAlive() {
+  const PING_KEY = 'sb_last_ping';
+  const SIX_HOURS = 6 * 60 * 60 * 1000;
+  const lastPing = parseInt(localStorage.getItem(PING_KEY) || '0');
+  if (Date.now() - lastPing > SIX_HOURS) {
+    getSupabase().from('osf_state').select('slot_id').limit(1).then(() => {
+      localStorage.setItem(PING_KEY, String(Date.now()));
+    }).catch(() => {});
+  }
+})();
+
+// Zabezpieczenie przed utratą danych przy zamknięciu zakładki
+window.addEventListener('beforeunload', () => {
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    // Próba synchronicznego wysłania (best-effort, przeglądarka może to uciąć)
+    const payload = JSON.stringify({
+      slot_id:    STORAGE_KEY,
+      state_json: JSON.stringify(state),
+      updated_at: new Date().toISOString()
+    });
+    navigator.sendBeacon
+      ? navigator.sendBeacon(
+          SUPABASE_URL + '/rest/v1/osf_state',
+          new Blob([payload], { type: 'application/json' })
+        )
+      : saveToSupabase(); // fallback async
+  }
+});
+
 // Real-time — odświeżanie gdy ktoś inny wpisze dane
 let _realtimeChannel = null;
 function startRealtimeSync() {
@@ -1271,10 +1313,21 @@ function startRealtimeSync() {
   _realtimeChannel = db
     .channel('osf_state_changes_' + STORAGE_KEY)
     .on('postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
+      { event: '*', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
       (payload) => {
-        // Ignoruj własne zmiany
-        if (payload.new.updated_at && new Date(payload.new.updated_at) <= new Date(_lastSyncTime)) return;
+        // Ignoruj własne zmiany (porównaj timestamp)
+        const incomingTime = new Date(payload.new?.updated_at || 0).getTime();
+        const localTime    = new Date(_lastSyncTime).getTime();
+        if (incomingTime <= localTime) return;
+
+        // Sprawdź czy nie mamy niezapisanych zmian nowszych niż przychodzące
+        const localStateTime = state._savedAt ? new Date(state._savedAt).getTime() : 0;
+        if (localStateTime > incomingTime + 2000) {
+          // Lokalny stan jest nowszy — poczekaj, nasze scheduleSave() wygra
+          console.warn('Realtime: lokalny stan nowszy — ignoruję przychodzące');
+          return;
+        }
+
         try {
           state = JSON.parse(payload.new.state_json);
           ensureStateDefaults();
