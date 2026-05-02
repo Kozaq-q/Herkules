@@ -369,7 +369,7 @@ tr:last-child > td { border-bottom: none; }
         </div>
       </div>
     </div>
-    <button class="btn btn-sm" onclick="exportData()" title="Eksportuj dane do JSON" style="flex-shrink:0;font-size:10px;color:var(--text3);border-color:var(--border);">↓ JSON</button>
+    <button class="btn btn-sm" onclick="exportData()" title="Pobierz kopię zapasową zawodów (JSON)" style="flex-shrink:0;font-size:10px;color:var(--text3);border-color:var(--border);">⬇ Backup</button>
     <button class="btn btn-sm" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
   </div>
 </header>
@@ -882,7 +882,9 @@ tr:last-child > td { border-bottom: none; }
       <div class="card">
         <div class="card-title">🔧 Zarządzanie zawodami</div>
         <div class="flex" style="flex-direction:column;gap:10px;align-items:flex-start;">
-          <button class="btn btn-sm" onclick="exportData()">↓ Eksportuj dane (JSON)</button>
+          <button class="btn btn-sm" onclick="exportData()">⬇ Backup (pobierz JSON)</button>
+          <button class="btn btn-sm" onclick="document.getElementById('import-json-input').click()">↑ Przywróć z backupu (JSON)</button>
+          <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(event)" />
           <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);" onclick="clearAthletes()">🗑 Wyczyść listę zawodników</button>
           <button class="btn btn-sm" style="color:var(--green);border-color:rgba(76,175,130,.4);background:rgba(76,175,130,.08);" onclick="finishContest()">✓ Zakończ zawody i wróć do panelu</button>
           <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
@@ -3943,6 +3945,54 @@ function openProjektor() {
   localStorage.setItem('osf_proj_slot', STORAGE_KEY);
   window.open(url, 'osf_projektor', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
   document.getElementById('proj-settings-pop').style.display = 'none';
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    let parsed;
+    try {
+      parsed = JSON.parse(ev.target.result);
+    } catch(err) {
+      alert('Błąd odczytu pliku JSON: ' + err.message);
+      return;
+    }
+
+    // Walidacja — czy to wygląda jak kopia zawodów OSF
+    if (!parsed || typeof parsed !== 'object' || !parsed.athletes) {
+      alert('Nieprawidłowy plik — to nie jest kopia zawodów OSF.');
+      return;
+    }
+
+    const city   = parsed.contest?.city || parsed.setup?.city || '?';
+    const date   = parsed.contest?.date || parsed.setup?.date || '';
+    const count  = (parsed.athletes || []).length;
+    const label  = city + (date ? ' · ' + date : '') + ' (' + count + ' zawodników)';
+
+    if (!confirm('Wczytać kopię zawodów:\n' + label + '\n\nAktualne dane zostaną zastąpione. Kontynuować?')) return;
+
+    // Zastąp stan
+    state = parsed;
+    ensureStateDefaults();
+    save();
+
+    // Jeśli zawody mają dane — otwórz aplikację
+    if (state.contest && state.contest.city) {
+      launchApp();
+      startRealtimeSync();
+      startPolling();
+      showToast('✓ Wczytano kopię: ' + label, 'success', 3000);
+    } else {
+      // Brak danych zawodów — pokaż welcome screen
+      hideLoading();
+      document.getElementById('welcome-screen').style.display = 'flex';
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
 }
 
 function exportData() {
