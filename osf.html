@@ -209,12 +209,18 @@ tr:last-child > td { border-bottom: none; }
 .osf-swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: border-color .15s, transform .1s; padding: 0; }
 .osf-swatch:hover { transform: scale(1.15); }
 .osf-swatch.active { border-color: var(--text1); transform: scale(1.1); }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <!-- ═══════════════════ WELCOME SCREEN ═══════════════════ -->
-<div id="welcome-screen">
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg1);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+  <div style="font-family:var(--font-h);font-size:48px;font-weight:900;letter-spacing:6px;color:var(--accent);">OSF</div>
+  <div style="width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;"></div>
+</div>
+
+<div id="welcome-screen" style="display:none;">
   <div class="welcome-logo">OSF</div>
   <div class="welcome-sub">Ośrodek Sprawności Fizycznej · Herkules</div>
   <div class="welcome-form">
@@ -1208,7 +1214,13 @@ function startContest() {
   startPolling();
 }
 
+function hideLoading() {
+  const el = document.getElementById('loading-screen');
+  if (el) el.style.display = 'none';
+}
+
 function launchApp() {
+  hideLoading();
   document.getElementById('welcome-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   const c = state.contest;
@@ -1228,6 +1240,10 @@ function launchApp() {
   renderAthletes();
   updateStats();
   updateBibButtons();
+  const savedTab = sessionStorage.getItem('osf_active_tab');
+  if (savedTab && document.getElementById('page-' + savedTab)) {
+    showTab(savedTab);
+  }
 }
 
 function resetContest() {
@@ -1261,6 +1277,7 @@ function showTab(name) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
+  sessionStorage.setItem('osf_active_tab', name);
   if (name === 'seria1') renderSeries1View();
   if (name === 'seria2') renderSeries2View();
   if (name === 'wyniki') renderResults();
@@ -3047,7 +3064,12 @@ function pairTableRowsJudge(pairs, showS1) {
     // Środek — komórki czasu z oznaczeniami L/P
     html += '<td class="time-wrap">';
     if (isSolo) {
-      html += '<div class="time-pair"><span class="lane-badge-L">L</span><div class="time-cell"></div></div>';
+      const soloLane = p.aLane; // rzeczywisty tor solo-zawodnika
+      if (soloLane === 'L') {
+        html += '<div class="time-pair"><span class="lane-badge-L">L</span><div class="time-cell"></div></div>';
+      } else {
+        html += '<div class="time-pair"><div class="time-cell"></div><span class="lane-badge-P">P</span></div>';
+      }
     } else {
       html += '<div class="time-pair"><span class="lane-badge-L">L</span><div class="time-cell"></div><div class="time-cell"></div><span class="lane-badge-P">P</span></div>';
     }
@@ -4216,6 +4238,8 @@ function applyImportRows(rows) {
     startRealtimeSync();
     startPolling();
   }
+  hideLoading();
+  document.getElementById('welcome-screen').style.display = 'flex';
 })();
 </script>
 </body>
