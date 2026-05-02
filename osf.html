@@ -469,12 +469,22 @@ tr:last-child > td { border-bottom: none; }
       style="width:100%;max-width:340px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 12px;font-family:var(--font-b);font-size:13px;" />
   </div>
 
+  <!-- Zakładki wewnętrzne M / K -->
+  <div id="s1-inner-tabs" style="display:none;margin-bottom:14px;display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;">
+    <button id="s1-tab-M" onclick="switchS1Tab('M')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      ♂ Mężczyźni
+    </button>
+    <button id="s1-tab-K" onclick="switchS1Tab('K')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      ♀ Kobiety
+    </button>
+  </div>
+
   <div id="s1-section-M" style="display:none;">
-    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--male);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Mężczyźni</div>
     <div id="s1-pairs-M"></div>
   </div>
-  <div id="s1-section-K" style="display:none;margin-top:20px;">
-    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--female);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Kobiety</div>
+  <div id="s1-section-K" style="display:none;">
     <div id="s1-pairs-K"></div>
   </div>
 
@@ -2644,6 +2654,33 @@ function rerenderPairTime(input) {
   input.classList.toggle('is-best', !!val && isPersonalBest(id, series, val));
 }
 
+let _s1ActiveTab = 'M';
+
+function switchS1Tab(gender) {
+  _s1ActiveTab = gender;
+  const hasM = state.s1pairs.some(p => p.gender === 'M');
+  const hasK = state.s1pairs.some(p => p.gender === 'K');
+
+  // Sekcje
+  document.getElementById('s1-section-M').style.display = (gender === 'M' && hasM) ? 'block' : 'none';
+  document.getElementById('s1-section-K').style.display = (gender === 'K' && hasK) ? 'block' : 'none';
+
+  // Style zakładek
+  const tabM = document.getElementById('s1-tab-M');
+  const tabK = document.getElementById('s1-tab-K');
+  if (!tabM || !tabK) return;
+
+  const activeStyle   = (color) => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + color + ';background:rgba(255,255,255,.05);color:' + color + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+
+  tabM.style.cssText = gender === 'M' ? activeStyle('var(--male)')   : inactiveStyle;
+  tabK.style.cssText = gender === 'K' ? activeStyle('var(--female)') : inactiveStyle;
+
+  // Pokaż zakładkę K tylko jeśli są kobiety
+  tabK.style.display = hasK ? '' : 'none';
+  tabM.style.display = hasM ? '' : 'none';
+}
+
 function renderSeries1View() {
   const mPairs = state.s1pairs.filter(p => p.gender === 'M');
   const kPairs = state.s1pairs.filter(p => p.gender === 'K');
@@ -2652,9 +2689,7 @@ function renderSeries1View() {
   document.getElementById('s1-alert-no-athletes').style.display = noAthletes ? 'block' : 'none';
 
   const hasPairs = state.s1pairs.length > 0;
-  document.getElementById('s1-section-M').style.display = mPairs.length > 0 ? 'block' : 'none';
-  document.getElementById('s1-section-K').style.display = kPairs.length > 0 ? 'block' : 'none';
-  document.getElementById('s1-next-btn').style.display  = hasPairs ? 'block' : 'none';
+  document.getElementById('s1-next-btn').style.display   = hasPairs ? 'block' : 'none';
   document.getElementById('s1-search-wrap').style.display = hasPairs ? 'block' : 'none';
 
   if (hasPairs) {
@@ -2669,6 +2704,19 @@ function renderSeries1View() {
 
   renderPairsHTML('s1-pairs-M', mPairs, false);
   renderPairsHTML('s1-pairs-K', kPairs, false);
+
+  // Zakładki wewnętrzne — pokaż tylko gdy są pary
+  const tabs = document.getElementById('s1-inner-tabs');
+  const hasM = mPairs.length > 0;
+  const hasK = kPairs.length > 0;
+  tabs.style.display = hasPairs ? 'flex' : 'none';
+
+  // Ustaw widoczność zakładki — zachowaj aktywną jeśli ma pary, inaczej przełącz
+  const cur = _s1ActiveTab || 'M';
+  if (cur === 'M' && hasM) switchS1Tab('M');
+  else if (cur === 'K' && hasK) switchS1Tab('K');
+  else if (hasM) switchS1Tab('M');
+  else if (hasK) switchS1Tab('K');
 }
 
 function renderPairsHTML(containerId, pairs, isS2) {
