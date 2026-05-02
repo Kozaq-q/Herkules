@@ -254,69 +254,71 @@ tr:last-child > td { border-bottom: none; }
   <div class="header-right">
     <span class="header-contest-name" id="header-contest-name"></span>
     <span class="header-autosave" id="header-autosave">● zapisano</span>
-    <div style="position:relative;">
-      <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);">📺 Projektor</button>
-      <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:18px 20px;min-width:300px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.8);">
+    <div style="position:relative;display:flex;gap:0;">
+      <button class="btn btn-sm" onclick="openProjektor()" title="Otwórz projektor" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-right:none;border-radius:var(--radius) 0 0 var(--radius);">📺 Projektor</button>
+      <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-radius:0 var(--radius) var(--radius) 0;padding:0 8px;">⚙</button>
+      <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:18px 20px;width:340px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.8);">
         <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px;">⚙ Ustawienia projektora</div>
 
         <div class="form-group">
-          <label>Domyślna zakładka</label>
-          <select id="ps-default-tab" onchange="saveProjSettings()">
-            <option value="ind">Wyniki indywidualne</option>
-            <option value="team">Bieg drużynowy</option>
-            <option value="klas">🏆 Klasyfikacja</option>
-          </select>
+          <label>Tytuł wyświetlany na projektorze</label>
+          <input type="text" id="ps-custom-title" placeholder="np. Zawody OSF — 1 Brygada" oninput="saveProjSettings()" />
+          <div style="font-size:10px;color:var(--text3);margin-top:3px;">Puste = tytuł z zawodów</div>
         </div>
 
         <div class="form-group">
-          <label>Auto-scroll między zakładkami</label>
-          <select id="ps-auto-scroll" onchange="saveProjSettings()">
-            <option value="0">Wyłączony</option>
-            <option value="10">Co 10 sekund</option>
-            <option value="20">Co 20 sekund</option>
-            <option value="30">Co 30 sekund</option>
-            <option value="60">Co minutę</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Pokazuj top N zawodników (0 = wszyscy)</label>
-          <input type="number" id="ps-top-n" min="0" max="50" value="0" oninput="saveProjSettings()" style="font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
-        </div>
-
-        <div class="form-group">
-          <label>Rozmiar czcionki</label>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-sm" onclick="setProjFontSize('small')">Mały</button>
-            <button class="btn btn-sm" onclick="setProjFontSize('normal')">Normalny</button>
-            <button class="btn btn-sm" onclick="setProjFontSize('large')">Duży</button>
-            <button class="btn btn-sm" onclick="setProjFontSize('xlarge')">Bardzo duży</button>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Własny nagłówek projektora</label>
-          <input type="text" id="ps-custom-title" placeholder="np. 18. Dywizja Zmechanizowana" oninput="saveProjSettings()" />
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="ps-show-pts" onchange="saveProjSettings()" checked />
-            <span>Pokazuj punkty</span>
+          <label style="margin-bottom:6px;display:block;">Wyświetlane sekcje</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
+            <input type="checkbox" id="ps-show-ind-m" onchange="saveProjSettings()" checked />
+            <span>Wyniki indywidualne — Mężczyźni</span>
           </label>
-        </div>
-
-        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
+            <input type="checkbox" id="ps-show-ind-k" onchange="saveProjSettings()" checked />
+            <span>Wyniki indywidualne — Kobiety</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
+            <input type="checkbox" id="ps-show-team" onchange="saveProjSettings()" checked />
+            <span>Bieg drużynowy</span>
+          </label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
             <input type="checkbox" id="ps-show-klas" onchange="saveProjSettings()" checked />
-            <span>Pokaż zakładkę Klasyfikacja</span>
+            <span>Klasyfikacja zespołowa</span>
           </label>
         </div>
 
         <div class="form-group">
+          <label style="margin-bottom:6px;display:block;">Serie przy zawodnikach</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
+            <input type="checkbox" id="ps-show-s1" onchange="saveProjSettings()" checked />
+            <span>Pokaż Serię 1</span>
+          </label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="ps-show-team" onchange="saveProjSettings()" checked />
-            <span>Pokaż zakładkę Drużynowy</span>
+            <input type="checkbox" id="ps-show-s2" onchange="saveProjSettings()" checked />
+            <span>Pokaż Serię 2</span>
+          </label>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px;">Najlepszy wynik zawsze widoczny</div>
+        </div>
+
+        <div class="form-group">
+          <label>Liczba wyświetlanych pozycji (0 = wszystkie)</label>
+          <input type="number" id="ps-top-n" min="0" max="100" value="0" oninput="saveProjSettings()" style="font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
+        </div>
+
+        <div class="form-group">
+          <label>Scrollowanie wyników</label>
+          <select id="ps-scroll-speed" onchange="saveProjSettings()">
+            <option value="0">Wyłączone</option>
+            <option value="15">Wolne (15 px/s)</option>
+            <option value="30">Średnie (30 px/s)</option>
+            <option value="60">Szybkie (60 px/s)</option>
+            <option value="100">Bardzo szybkie (100 px/s)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="ps-show-progress" onchange="saveProjSettings()" checked />
+            <span>Pasek postępu zawodów</span>
           </label>
         </div>
 
@@ -3378,16 +3380,17 @@ function syncSetupToPanel() {
 function toggleProjSettings() {
   const pop = document.getElementById('proj-settings-pop');
   if (pop.style.display === 'none') {
-    // Wczytaj aktualne ustawienia do formularza
     const s = getProjSettings();
-    document.getElementById('ps-default-tab').value   = s.defaultTab;
-    document.getElementById('ps-auto-scroll').value   = s.autoScroll;
-    document.getElementById('ps-top-n').value         = s.topN;
     document.getElementById('ps-custom-title').value  = s.customTitle;
-    document.getElementById('ps-show-pts').checked    = s.showPts;
-    document.getElementById('ps-show-klas').checked   = s.showKlas;
+    document.getElementById('ps-show-ind-m').checked  = s.showIndM;
+    document.getElementById('ps-show-ind-k').checked  = s.showIndK;
     document.getElementById('ps-show-team').checked   = s.showTeam;
-    updateFontSizeButtons(s.fontSize);
+    document.getElementById('ps-show-klas').checked   = s.showKlas;
+    document.getElementById('ps-show-s1').checked     = s.showS1;
+    document.getElementById('ps-show-s2').checked     = s.showS2;
+    document.getElementById('ps-top-n').value         = s.topN;
+    document.getElementById('ps-scroll-speed').value  = s.scrollSpeed;
+    document.getElementById('ps-show-progress').checked = s.showProgress;
     pop.style.display = 'block';
   } else {
     pop.style.display = 'none';
@@ -3404,57 +3407,40 @@ function getProjSettings() {
 
 function defaultProjSettings() {
   return {
-    defaultTab:  'ind',
-    autoScroll:  0,
-    topN:        0,
-    fontSize:    'normal',
-    customTitle: '',
-    showPts:     true,
-    showKlas:    true,
-    showTeam:    true
+    customTitle:  '',
+    showIndM:     true,
+    showIndK:     true,
+    showTeam:     true,
+    showKlas:     true,
+    showS1:       true,
+    showS2:       true,
+    topN:         0,
+    scrollSpeed:  0,
+    showProgress: true
   };
 }
 
 function saveProjSettings() {
   const s = {
-    defaultTab:  document.getElementById('ps-default-tab').value,
-    autoScroll:  parseInt(document.getElementById('ps-auto-scroll').value) || 0,
-    topN:        parseInt(document.getElementById('ps-top-n').value) || 0,
-    fontSize:    getProjSettings().fontSize, // przechowywany osobno przez setProjFontSize
-    customTitle: document.getElementById('ps-custom-title').value.trim(),
-    showPts:     document.getElementById('ps-show-pts').checked,
-    showKlas:    document.getElementById('ps-show-klas').checked,
-    showTeam:    document.getElementById('ps-show-team').checked
+    customTitle:  document.getElementById('ps-custom-title').value.trim(),
+    showIndM:     document.getElementById('ps-show-ind-m').checked,
+    showIndK:     document.getElementById('ps-show-ind-k').checked,
+    showTeam:     document.getElementById('ps-show-team').checked,
+    showKlas:     document.getElementById('ps-show-klas').checked,
+    showS1:       document.getElementById('ps-show-s1').checked,
+    showS2:       document.getElementById('ps-show-s2').checked,
+    topN:         parseInt(document.getElementById('ps-top-n').value) || 0,
+    scrollSpeed:  parseInt(document.getElementById('ps-scroll-speed').value) || 0,
+    showProgress: document.getElementById('ps-show-progress').checked
   };
   localStorage.setItem('osf_proj_settings', JSON.stringify(s));
 }
 
-function setProjFontSize(size) {
-  const s = getProjSettings();
-  s.fontSize = size;
-  localStorage.setItem('osf_proj_settings', JSON.stringify(s));
-  updateFontSizeButtons(size);
-}
-
-function updateFontSizeButtons(active) {
-  const sizes = ['small','normal','large','xlarge'];
-  const labels = ['Mały','Normalny','Duży','Bardzo duży'];
-  const wrap = document.getElementById('proj-settings-pop');
-  if (!wrap) return;
-  const btns = wrap.querySelectorAll('.form-group button');
-  btns.forEach((btn, i) => {
-    if (i < sizes.length) {
-      btn.style.background   = sizes[i] === active ? 'var(--accent)' : 'var(--bg3)';
-      btn.style.color        = sizes[i] === active ? '#111' : 'var(--text2)';
-      btn.style.borderColor  = sizes[i] === active ? 'var(--accent)' : 'var(--border2)';
-    }
-  });
-}
-
 function openProjektor() {
+  saveProjSettings();
   const url = 'osf-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY);
-  localStorage.setItem('osf_proj_slot', STORAGE_KEY); // backup
-  window.open(url, 'osf_projektor', 'width=1280,height=720');
+  localStorage.setItem('osf_proj_slot', STORAGE_KEY);
+  window.open(url, 'osf_projektor', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
   document.getElementById('proj-settings-pop').style.display = 'none';
 }
 

@@ -11,7 +11,9 @@
   --bg:     #090b0b;
   --bg2:    #0f1212;
   --bg3:    #151919;
+  --bg4:    #1a1f1f;
   --border: #1e2828;
+  --border2:#2a3535;
   --text1:  #f0f2f2;
   --text2:  #c8cfcf;
   --text3:  #6a7a7a;
@@ -29,269 +31,232 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); height: 100vh; overflow: hidden; }
 
-/* ─── ŁADOWANIE ─── */
+/* ── SPLASH ── */
 #splash {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 100vh; gap: 16px;
 }
-.splash-logo { font-family: var(--font-h); font-size: 80px; font-weight: 900; letter-spacing: 6px; color: var(--orange); }
-.splash-sub  { font-family: var(--font-m); font-size: 14px; color: var(--text3); letter-spacing: 2px; }
 
-/* ─── HEADER ─── */
+/* ── HEADER ── */
 #proj-header {
   background: var(--bg2); border-bottom: 3px solid var(--orange);
-  padding: 0 32px; height: 64px;
+  padding: 0 24px; height: 56px;
   display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
 }
-.proj-logo { font-family: var(--font-h); font-size: 28px; font-weight: 900; letter-spacing: 3px; color: var(--orange); }
-.proj-title { font-family: var(--font-h); font-size: 20px; font-weight: 700; letter-spacing: 1px; color: var(--text2); }
-.proj-clock { font-family: var(--font-m); font-size: 20px; color: var(--text3); }
-.proj-sync  { font-family: var(--font-m); font-size: 11px; color: var(--green); }
+.proj-logo  { font-family: var(--font-h); font-size: 26px; font-weight: 900; letter-spacing: 3px; color: var(--orange); }
+.proj-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--text2); flex: 1; text-align: center; }
+.proj-clock { font-family: var(--font-m); font-size: 18px; color: var(--text3); min-width: 90px; text-align: right; }
+.sync-dot   { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 5px; animation: pulse 2s infinite; }
+.sync-dot.off { background: var(--red); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* ─── TABS ─── */
-#proj-tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; gap: 2px; }
-.proj-tab { font-family: var(--font-h); font-size: 14px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 10px 18px; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; transition: color .15s, border-color .15s; }
-.proj-tab:hover { color: var(--text1); }
-.proj-tab.active { color: var(--orange); border-bottom-color: var(--orange); }
+/* ── PROGRESS BAR ── */
+#proj-progress {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 6px 24px; display: flex; gap: 20px; align-items: center; flex-shrink: 0;
+}
+.prog-item { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.prog-label { font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); display: flex; justify-content: space-between; }
+.prog-count { font-family: var(--font-m); font-size: 11px; color: var(--accent); }
+.prog-bar   { background: var(--bg4); border-radius: 3px; height: 6px; overflow: hidden; border: 1px solid var(--border); }
+.prog-fill  { height: 100%; border-radius: 3px; transition: width .6s ease; }
 
-/* ─── MAIN ─── */
-#proj-main { height: calc(100vh - 64px - 44px); overflow-y: auto; padding: 24px 32px; }
-.proj-view { display: none; }
-.proj-view.active { display: block; }
+/* ── MAIN GRID ── */
+#proj-main {
+  display: grid;
+  height: calc(100vh - 56px); /* zmieniane przez JS gdy progress widoczny */
+  overflow: hidden;
+}
+/* kolumny dynamiczne — ustawiane przez JS */
 
-/* ─── RANKING TABLE ─── */
-.rank-table { width: 100%; border-collapse: collapse; }
-.rank-table th { font-family: var(--font-h); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text3); padding: 10px 16px; border-bottom: 2px solid var(--border); text-align: left; }
+/* ── SEKCJA ── */
+.proj-section {
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--border);
+  overflow: hidden; min-width: 0;
+}
+.proj-section:last-child { border-right: none; }
+
+.section-header {
+  font-family: var(--font-h); font-size: 12px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  padding: 7px 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 2px solid;
+}
+.section-header.ind-m { color: var(--male);   border-color: var(--male);   background: rgba(91,155,213,.06); }
+.section-header.ind-k { color: var(--female); border-color: var(--female); background: rgba(212,91,155,.06); }
+.section-header.team  { color: var(--orange); border-color: var(--orange); background: rgba(232,148,77,.06); }
+.section-header.klas  { color: var(--accent); border-color: var(--accent); background: rgba(232,212,77,.06); }
+.section-count { font-family: var(--font-m); font-size: 10px; color: var(--text3); }
+
+/* ── SCROLL VIEWPORT ── */
+.scroll-viewport {
+  flex: 1; overflow: hidden; position: relative; min-height: 0;
+}
+.scroll-track {
+  position: absolute; top: 0; left: 0; right: 0;
+  will-change: transform;
+}
+
+/* ── RANKING TABLE ── */
+.rank-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .rank-table td { padding: 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.rank-row { transition: background .2s; }
-.rank-row:hover td { background: rgba(255,255,255,.02); }
+.rank-row { }
+.rank-row.top1 td { background: rgba(255,215,0,.07); }
+.rank-row.top2 td { background: rgba(192,192,192,.04); }
+.rank-row.top3 td { background: rgba(205,127,50,.05); }
+.rank-row.dsq  td { opacity: .4; }
 
-/* Miejsca */
-.rank-pos { font-family: var(--font-h); font-size: 32px; font-weight: 900; width: 60px; text-align: center; padding: 14px 8px; }
+.rank-pos { font-family: var(--font-h); font-weight: 900; text-align: center; width: 48px; padding: 10px 4px; }
 .rank-pos.p1 { color: #FFD700; }
 .rank-pos.p2 { color: #C0C0C0; }
 .rank-pos.p3 { color: #CD7F32; }
-.rank-pos.other { color: var(--text3); font-size: 22px; }
+.rank-pos.other { color: var(--text3); }
 
-/* Zawodnik / Drużyna */
-.rank-name { font-family: var(--font-h); font-size: 28px; font-weight: 800; padding: 14px 16px; }
-.rank-team { font-size: 13px; color: var(--text3); font-weight: 400; display: block; margin-top: 2px; }
-.rank-time { font-family: var(--font-m); font-size: 24px; font-weight: 600; color: var(--green); padding: 14px 16px; text-align: right; white-space: nowrap; }
-.rank-times { font-size: 12px; color: var(--text3); display: block; margin-top: 2px; text-align: right; }
-.rank-pts  { font-family: var(--font-h); font-size: 30px; font-weight: 900; color: var(--accent); padding: 14px 20px; text-align: right; min-width: 80px; }
+.rank-name-cell { padding: 10px 10px 10px 6px; min-width: 0; }
+.rank-name { font-family: var(--font-h); font-weight: 800; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-team-sub { font-size: 11px; color: var(--text3); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Top 3 highlight */
-.rank-row.top1 td { background: rgba(255,215,0,.06); }
-.rank-row.top2 td { background: rgba(192,192,192,.04); }
-.rank-row.top3 td { background: rgba(205,127,50,.04); }
+.rank-time-cell { font-family: var(--font-m); font-weight: 600; color: var(--green); text-align: right; white-space: nowrap; padding: 10px 6px; }
+.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; }
+.rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-h); letter-spacing: 1px; }
 
-/* DSQ */
-.rank-row.dsq td { opacity: .4; }
-.dsq-label { font-size: 11px; color: var(--red); font-family: var(--font-h); letter-spacing: 1px; }
+/* ── KLASYFIKACJA WIERSZE ── */
+.klas-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+.klas-row.top1 { background: rgba(255,215,0,.07); }
+.klas-row.top2 { background: rgba(192,192,192,.04); }
+.klas-row.top3 { background: rgba(205,127,50,.05); }
+.klas-pos  { font-family: var(--font-h); font-weight: 900; width: 48px; text-align: center; padding: 10px 4px; flex-shrink: 0; }
+.klas-name { font-family: var(--font-h); font-size: 18px; font-weight: 800; flex: 1; padding: 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.klas-pts-detail { font-family: var(--font-m); font-size: 10px; color: var(--text3); padding: 0 6px; }
+.klas-score { font-family: var(--font-h); font-weight: 900; color: var(--accent); padding: 10px 12px; flex-shrink: 0; text-align: right; }
 
-/* ─── GENDER HEADER ─── */
-.gender-hdr { font-family: var(--font-h); font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; padding: 8px 16px; margin: 16px 0 0; border-bottom: 2px solid; }
-.gender-hdr.M { color: var(--male); border-color: var(--male); }
-.gender-hdr.K { color: var(--female); border-color: var(--female); }
+/* ── NO DATA ── */
+.no-data { text-align: center; padding: 40px 16px; color: var(--text3); font-family: var(--font-h); font-size: 16px; letter-spacing: 2px; text-transform: uppercase; }
 
-/* ─── KLASYFIKACJA ZESPOŁOWA ─── */
-.team-rank-row { display: flex; align-items: center; gap: 0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
-.team-rank-pos { font-family: var(--font-h); font-size: 48px; font-weight: 900; width: 80px; text-align: center; padding: 16px 0; background: var(--bg2); flex-shrink: 0; }
-.team-rank-pos.p1 { color: #FFD700; }
-.team-rank-pos.p2 { color: #C0C0C0; }
-.team-rank-pos.p3 { color: #CD7F32; }
-.team-rank-pos.other { color: var(--text3); font-size: 32px; }
-.team-rank-body { flex: 1; padding: 14px 20px; background: var(--bg2); }
-.team-rank-name { font-family: var(--font-h); font-size: 32px; font-weight: 800; line-height: 1; }
-.team-rank-detail { font-size: 12px; color: var(--text3); margin-top: 4px; font-family: var(--font-m); }
-.team-rank-score { font-family: var(--font-h); font-size: 56px; font-weight: 900; color: var(--accent); padding: 16px 28px; background: var(--bg3); flex-shrink: 0; line-height: 1; display: flex; flex-direction: column; align-items: center; }
-.team-rank-score-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; margin-top: 2px; }
-
-/* ─── BRAK DANYCH ─── */
-.no-data { text-align: center; padding: 60px 20px; color: var(--text3); font-family: var(--font-h); font-size: 20px; letter-spacing: 2px; text-transform: uppercase; }
-
-/* ─── SYNC STATUS ─── */
-.sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; animation: pulse 2s infinite; }
-.sync-dot.offline { background: var(--red); animation: none; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border2); }
 </style>
 </head>
 <body>
 
-<!-- ŁADOWANIE -->
-<div id="splash" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;">
-  <div style="font-family:var(--font-h);font-size:70px;font-weight:900;letter-spacing:6px;color:var(--orange);">⬡ OSF</div>
+<!-- SPLASH -->
+<div id="splash">
+  <div style="font-family:var(--font-h);font-size:72px;font-weight:900;letter-spacing:6px;color:var(--orange);">OSF</div>
   <div style="font-family:var(--font-m);font-size:13px;color:var(--text3);letter-spacing:2px;">ŁĄCZENIE...</div>
 </div>
 
 <!-- PROJEKTOR -->
-<div id="proj-app" style="display:none;">
+<div id="proj-app" style="display:none;flex-direction:column;height:100vh;">
+
   <header id="proj-header">
-    <div class="proj-logo">⬡ OSF</div>
+    <div class="proj-logo">OSF</div>
     <div class="proj-title" id="proj-title">—</div>
-    <div style="display:flex;align-items:center;gap:16px;">
-      <span class="proj-sync"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">POŁĄCZONO</span></span>
+    <div style="display:flex;align-items:center;gap:12px;min-width:140px;justify-content:flex-end;">
+      <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);letter-spacing:1px;">
+        <span class="sync-dot" id="sync-dot"></span><span id="sync-label">LIVE</span>
+      </span>
       <span class="proj-clock" id="proj-clock"></span>
     </div>
   </header>
 
-  <div id="proj-tabs">
-    <button class="proj-tab active" onclick="showView('ind')" id="ptab-ind">Wyniki indywidualne</button>
-    <button class="proj-tab" onclick="showView('team')" id="ptab-team">Bieg drużynowy</button>
-    <button class="proj-tab" onclick="showView('klas')" id="ptab-klas">🏆 Klasyfikacja</button>
-  </div>
+  <div id="proj-progress" style="display:none;"></div>
 
-  <div id="proj-main">
+  <div id="proj-main"></div>
 
-    <!-- WYNIKI INDYWIDUALNE -->
-    <div class="proj-view active" id="pview-ind">
-      <div id="ind-content"></div>
-    </div>
-
-    <!-- BIEG DRUŻYNOWY -->
-    <div class="proj-view" id="pview-team">
-      <div id="team-content"></div>
-    </div>
-
-    <!-- KLASYFIKACJA ZESPOŁOWA -->
-    <div class="proj-view" id="pview-klas">
-      <div id="klas-content"></div>
-    </div>
-
-  </div>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════
-// SUPABASE — TYLKO ODCZYT
+// SUPABASE
 // ═══════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_aPrFnhbnuEL0xlj8b8SpiQ_Jq7CD-KL';
-
-let db          = null;
-let slotId      = null;
-let state       = null;
-let rtChannel   = null;
-
+let db = null;
 function getDB() {
   if (!db) db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   return db;
 }
 
-// Pobierz slot z localStorage (przekazany przez osf.html) lub URL (fallback)
+let slotId    = null;
+let state     = null;
+let cfg       = null; // ustawienia projektora
+let rtChannel = null;
+const _scrollRAFs = {}; // per-section scroll animation frame ids
+
+// ═══════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════
 (async function() {
   const slotFromURL     = new URLSearchParams(window.location.search).get('slot');
   const slotFromStorage = localStorage.getItem('osf_proj_slot');
-  const s = slotFromURL || slotFromStorage; // URL ma priorytet
+  const s = slotFromURL || slotFromStorage;
 
   if (!s) {
-    // Pokaż formularz ręcznego wpisania slotu
     document.getElementById('splash').innerHTML =
-      '<div style="font-family:var(--font-h);font-size:70px;font-weight:900;letter-spacing:6px;color:var(--orange);">⬡ OSF</div>' +
-      '<div style="font-family:var(--font-m);font-size:13px;color:var(--text3);letter-spacing:2px;margin-bottom:24px;">PROJEKTOR</div>' +
-      '<div style="font-size:12px;color:var(--text3);margin-bottom:12px;">Wpisz ID slotu (np. <span style="color:var(--orange);font-family:var(--font-m);">osf_slot_1</span>)</div>' +
-      '<input id="manual-slot" style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text1);font-family:var(--font-m);font-size:16px;padding:10px 18px;text-align:center;width:280px;letter-spacing:1px;" placeholder="osf_slot_1" />' +
-      '<button onclick="manualConnect()" style="margin-top:12px;background:var(--orange);color:#111;font-family:var(--font-h);font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;border:none;border-radius:4px;padding:10px 28px;cursor:pointer;display:block;">Połącz →</button>' +
-      '<div style="font-size:11px;color:var(--text3);margin-top:12px;">lub otwórz projektor z aplikacji OSF (przycisk 📺)</div>';
+      '<div style="font-family:var(--font-h);font-size:72px;font-weight:900;letter-spacing:6px;color:var(--orange);">OSF</div>' +
+      '<div style="font-family:var(--font-m);font-size:13px;color:var(--text3);letter-spacing:2px;margin-bottom:20px;">PROJEKTOR</div>' +
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Wpisz ID slotu:</div>' +
+      '<input id="manual-slot" style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text1);font-family:var(--font-m);font-size:16px;padding:10px 18px;text-align:center;width:260px;" placeholder="osf_slot_1" />' +
+      '<button onclick="manualConnect()" style="margin-top:12px;background:var(--orange);color:#111;font-family:var(--font-h);font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;border:none;border-radius:4px;padding:10px 28px;cursor:pointer;">Połącz →</button>';
     return;
   }
-
-  await bootProjector(s);
+  await boot(s);
 })();
 
 async function manualConnect() {
   const val = (document.getElementById('manual-slot').value || '').trim();
   if (!val) return;
   localStorage.setItem('osf_proj_slot', val);
-  await bootProjector(val);
+  await boot(val);
 }
 
-async function bootProjector(s) {
+async function boot(s) {
   slotId = s;
-  document.querySelector('#splash div:nth-child(2)') && (document.querySelector('#splash').innerHTML =
-    '<div style="font-family:var(--font-h);font-size:70px;font-weight:900;letter-spacing:6px;color:var(--orange);">⬡ OSF</div>' +
-    '<div style="font-family:var(--font-m);font-size:13px;color:var(--text3);letter-spacing:2px;">ŁĄCZENIE...</div>');
+  cfg = loadSettings();
   const ok = await loadState();
   if (!ok) {
     document.getElementById('splash').innerHTML =
-      '<div style="font-family:var(--font-h);font-size:70px;font-weight:900;letter-spacing:6px;color:var(--orange);">⬡ OSF</div>' +
-      '<div style="font-family:var(--font-m);font-size:13px;color:var(--red);letter-spacing:2px;">BŁĄD: Nie można załadować danych dla slotu: ' + s + '</div>' +
-      '<button onclick="location.reload()" style="margin-top:16px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:8px 20px;cursor:pointer;font-family:var(--font-b);">Spróbuj ponownie</button>';
+      '<div style="font-family:var(--font-h);font-size:72px;font-weight:900;color:var(--orange);">OSF</div>' +
+      '<div style="font-family:var(--font-m);font-size:13px;color:var(--red);letter-spacing:2px;margin-top:8px;">BŁĄD — brak danych dla: ' + s + '</div>' +
+      '<button onclick="location.reload()" style="margin-top:20px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:8px 20px;cursor:pointer;">Spróbuj ponownie</button>';
     return;
   }
-  loadProjSettings();
-  document.getElementById('splash').style.display   = 'none';
-  document.getElementById('proj-app').style.display = 'block';
-  applySettings();
+  document.getElementById('splash').style.display = 'none';
+  const app = document.getElementById('proj-app');
+  app.style.display = 'flex';
+  applyTitle();
+  buildLayout();
   renderAll();
-  startRealtime();
   startClock();
-  setInterval(async () => { const ok = await loadState(); if (ok) renderAll(); }, 20000);
+  startRealtime();
+  setInterval(async () => { if (await loadState()) softRender(); }, 20000);
 }
 
 // ═══════════════════════════════════════════════
-// USTAWIENIA (z osf.html przez localStorage)
+// SETTINGS
 // ═══════════════════════════════════════════════
-let projSettings = {};
-let autoScrollTimer = null;
-
-function loadProjSettings() {
+function loadSettings() {
+  const defaults = {
+    customTitle: '', showIndM: true, showIndK: true,
+    showTeam: true, showKlas: true,
+    showS1: true, showS2: true,
+    topN: 0, scrollSpeed: 0, showProgress: true
+  };
   try {
     const raw = localStorage.getItem('osf_proj_settings');
-    projSettings = raw ? JSON.parse(raw) : {};
-  } catch(e) { projSettings = {}; }
-  // Defaults
-  projSettings.defaultTab  = projSettings.defaultTab  || 'ind';
-  projSettings.autoScroll  = parseInt(projSettings.autoScroll)  || 0;
-  projSettings.topN        = parseInt(projSettings.topN)        || 0;
-  projSettings.fontSize    = projSettings.fontSize    || 'normal';
-  projSettings.customTitle = projSettings.customTitle || '';
-  projSettings.showPts     = projSettings.showPts     !== false;
-  projSettings.showKlas    = projSettings.showKlas    !== false;
-  projSettings.showTeam    = projSettings.showTeam    !== false;
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch(e) {}
+  return defaults;
 }
 
-function applySettings() {
-  // Rozmiar czcionki
-  const sizeMap = { small: '80%', normal: '100%', large: '120%', xlarge: '145%' };
-  document.getElementById('proj-main').style.fontSize = sizeMap[projSettings.fontSize] || '100%';
-
-  // Widoczność zakładek
-  const tabTeam = document.getElementById('ptab-team');
-  const tabKlas = document.getElementById('ptab-klas');
-  const viewTeam = document.getElementById('pview-team');
-  const viewKlas = document.getElementById('pview-klas');
-  if (tabTeam)  tabTeam.style.display  = projSettings.showTeam ? '' : 'none';
-  if (tabKlas)  tabKlas.style.display  = projSettings.showKlas ? '' : 'none';
-  if (viewTeam) viewTeam.style.display = 'none';
-  if (viewKlas) viewKlas.style.display = 'none';
-
-  // Domyślna zakładka
-  showView(projSettings.defaultTab);
-
-  // Auto-scroll
-  if (autoScrollTimer) { clearInterval(autoScrollTimer); autoScrollTimer = null; }
-  if (projSettings.autoScroll > 0) {
-    const tabs = ['ind'];
-    if (projSettings.showTeam) tabs.push('team');
-    if (projSettings.showKlas) tabs.push('klas');
-    if (tabs.length > 1) {
-      let idx = tabs.indexOf(projSettings.defaultTab);
-      autoScrollTimer = setInterval(() => {
-        idx = (idx + 1) % tabs.length;
-        showView(tabs[idx]);
-      }, projSettings.autoScroll * 1000);
-    }
-  }
-}
-
+// ═══════════════════════════════════════════════
+// STATE / SUPABASE
+// ═══════════════════════════════════════════════
 async function loadState() {
   try {
-    const { data, error } = await getDB()
-      .from('osf_state')
-      .select('state_json')
-      .eq('slot_id', slotId)
-      .single();
+    const { data, error } = await getDB().from('osf_state').select('state_json').eq('slot_id', slotId).single();
     if (error || !data) return false;
     state = JSON.parse(data.state_json);
     return true;
@@ -300,293 +265,411 @@ async function loadState() {
 
 function startRealtime() {
   if (rtChannel) return;
-  rtChannel = getDB()
-    .channel('proj_' + slotId)
-    .on('postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + slotId },
+  rtChannel = getDB().channel('osf_proj_' + slotId)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + slotId },
       (payload) => {
-        try {
-          state = JSON.parse(payload.new.state_json);
-          renderAll();
-          flashSync();
-        } catch(e) {}
-      }
-    )
+        try { state = JSON.parse(payload.new.state_json); softRender(); flashSync(); } catch(e) {}
+      })
     .subscribe((status) => {
-      const dot   = document.getElementById('sync-dot');
-      const label = document.getElementById('sync-label');
-      if (status === 'SUBSCRIBED') {
-        dot.classList.remove('offline'); label.textContent = 'LIVE';
-      } else {
-        dot.classList.add('offline'); label.textContent = 'OFFLINE';
-      }
+      const dot = document.getElementById('sync-dot');
+      const lbl = document.getElementById('sync-label');
+      if (status === 'SUBSCRIBED') { dot.classList.remove('off'); lbl.textContent = 'LIVE'; }
+      else { dot.classList.add('off'); lbl.textContent = 'OFFLINE'; }
     });
 }
 
 function flashSync() {
-  const label = document.getElementById('sync-label');
-  label.textContent = '↓ AKTUALIZACJA';
-  setTimeout(() => { label.textContent = 'LIVE'; }, 1500);
+  const lbl = document.getElementById('sync-label');
+  lbl.textContent = '↓ SYNC';
+  setTimeout(() => { lbl.textContent = 'LIVE'; }, 1500);
 }
 
 function startClock() {
-  function tick() {
-    const now = new Date();
-    const h   = String(now.getHours()).padStart(2,'0');
-    const m   = String(now.getMinutes()).padStart(2,'0');
-    const s   = String(now.getSeconds()).padStart(2,'0');
-    document.getElementById('proj-clock').textContent = h + ':' + m + ':' + s;
-  }
-  tick();
-  setInterval(tick, 1000);
+  const tick = () => {
+    const n = new Date();
+    document.getElementById('proj-clock').textContent =
+      String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0') + ':' + String(n.getSeconds()).padStart(2,'0');
+  };
+  tick(); setInterval(tick, 1000);
 }
 
 // ═══════════════════════════════════════════════
-// HELPERS — kalka z osf.html (tylko odczyt)
+// HELPERS
 // ═══════════════════════════════════════════════
-function esc(s) {
-  if (!s) return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
 
 function parseTime(t) {
   if (!t) return Infinity;
   t = t.trim().replace(',','.');
   const col = t.match(/^(\d+):(\d{1,2})(?:\.(\d+))?$/);
-  if (col) { const m=parseInt(col[1]),s=parseInt(col[2]),f=col[3]?parseFloat('0.'+col[3]):0; return m*60+s+f; }
+  if (col) return parseInt(col[1])*60 + parseInt(col[2]) + (col[3] ? parseFloat('0.'+col[3]) : 0);
   const dec = t.match(/^(\d+)(?:\.(\d+))?$/);
-  if (dec) return parseFloat(t);
-  return Infinity;
+  return dec ? parseFloat(t) : Infinity;
 }
 
-function getTime(id, series) {
-  return state.times && state.times[id] && state.times[id][series] ? state.times[id][series] : '';
-}
-
-function isDisq(id, series) {
-  return !!(state.disq && state.disq[id] && state.disq[id][series]);
-}
-
+function getTime(id, ser) { return state.times?.[id]?.[ser] || ''; }
+function isDisq(id, ser)  { return !!(state.disq?.[id]?.[ser]); }
 function bestTime(id) {
-  const s1  = getTime(id,'s1'), s2 = getTime(id,'s2');
-  const s1ok = s1 && !isDisq(id,'s1'), s2ok = s2 && !isDisq(id,'s2');
-  if (!s1ok && !s2ok) return '';
-  if (!s1ok) return s2; if (!s2ok) return s1;
+  const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
+  const ok1 = s1 && !isDisq(id,'s1'), ok2 = s2 && !isDisq(id,'s2');
+  if (!ok1 && !ok2) return '';
+  if (!ok1) return s2; if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
 }
 
-function getTeams() {
-  if (!state.athletes) return [];
-  return [...new Set(state.athletes.map(a => a.team).filter(Boolean))].sort();
-}
-
-function getTeamAthletes(team) {
-  return (state.athletes || []).filter(a => a.team === team && a.gender === 'M');
-}
-
-function getTeamTime(team, series) {
-  return state.teamTimes && state.teamTimes[team] && state.teamTimes[team][series] ? state.teamTimes[team][series] : '';
-}
-
-function isTeamDisq(team, series) {
-  return !!(state.teamDisq && state.teamDisq[team] && state.teamDisq[team][series]);
-}
-
-function teamBestTime(team) {
+function getTeams() { return [...new Set((state.athletes||[]).map(a=>a.team).filter(Boolean))].sort(); }
+function getTeamAthletes(team) { return (state.athletes||[]).filter(a=>a.team===team && a.gender==='M'); }
+function getTeamTime(team, ser) { return state.teamTimes?.[team]?.[ser] || ''; }
+function isTeamDisq(team, ser)  { return !!(state.teamDisq?.[team]?.[ser]); }
+function teamBestTimeEff(team) {
   const s1 = getTeamTime(team,'s1'), s2 = getTeamTime(team,'s2');
-  const s1ok = s1 && !isTeamDisq(team,'s1'), s2ok = s2 && !isTeamDisq(team,'s2');
-  if (!s1ok && !s2ok) return '';
-  if (!s1ok) return s2; if (!s2ok) return s1;
+  const ok1 = s1 && !isTeamDisq(team,'s1'), ok2 = s2 && !isTeamDisq(team,'s2');
+  if (!ok1 && !ok2) return '';
+  if (!ok1) return s2; if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
 }
+function teamMin()  { return state.setup?.teamMin  || 8; }
+function teamCnt()  { return state.setup?.teamCount || 8; }
+function mult()     { return state.setup?.teamMultiplier || 3; }
 
-function teamMinVal() { return state.setup && state.setup.teamMin ? state.setup.teamMin : 8; }
-function teamCount()  { return state.setup && state.setup.teamCount ? state.setup.teamCount : 8; }
-function multiplier() { return state.setup && state.setup.teamMultiplier ? state.setup.teamMultiplier : 3; }
+function calcIndPts(rank, N)        { return rank===1 ? N+1 : Math.max(0, N-rank+1); }
+function calcTeamPts(rank, N, m)    { return rank===1 ? N*m+1 : Math.max(0, N*m-rank+1); }
 
-function calcIndPts(rank, N)         { return rank === 1 ? N+1 : Math.max(0, N-rank); }
-function calcTeamPts(rank, N, mult)  { return rank === 1 ? N*mult+1 : Math.max(0, N*mult-rank); }
+// ═══════════════════════════════════════════════
+// LAYOUT — buduj sekcje wg ustawień
+// ═══════════════════════════════════════════════
+function applyTitle() {
+  const c = state?.contest || {};
+  const title = cfg.customTitle || [(c.name||''), (c.city||''), (c.date||'')].filter(Boolean).join(' · ');
+  document.getElementById('proj-title').textContent = title;
+  if (state?.setup?.accentColor) {
+    document.documentElement.style.setProperty('--orange', state.setup.accentColor);
+  }
+}
+
+function buildLayout() {
+  // Zbierz aktywne sekcje
+  const sections = [];
+  if (cfg.showIndM) sections.push({ id: 'ind-m', cls: 'ind-m', label: '♂ Mężczyźni',    render: renderIndM });
+  if (cfg.showIndK) sections.push({ id: 'ind-k', cls: 'ind-k', label: '♀ Kobiety',       render: renderIndK });
+  if (cfg.showTeam) sections.push({ id: 'team',  cls: 'team',  label: 'Bieg drużynowy',  render: renderTeam });
+  if (cfg.showKlas) sections.push({ id: 'klas',  cls: 'klas',  label: '🏆 Klasyfikacja', render: renderKlas });
+
+  const n = sections.length || 1;
+  const main = document.getElementById('proj-main');
+  main.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+
+  main.innerHTML = sections.map(s =>
+    `<div class="proj-section" id="section-${s.id}">
+      <div class="section-header ${s.cls}">
+        <span>${s.label}</span>
+        <span class="section-count" id="count-${s.id}"></span>
+      </div>
+      <div class="scroll-viewport" id="vp-${s.id}">
+        <div class="scroll-track" id="track-${s.id}"></div>
+      </div>
+    </div>`
+  ).join('');
+
+  // Pasek postępu
+  const prog = document.getElementById('proj-progress');
+  const hdrH = 56 + (cfg.showProgress ? 34 : 0);
+  document.getElementById('proj-main').style.height = `calc(100vh - ${hdrH}px)`;
+  prog.style.display = cfg.showProgress ? 'flex' : 'none';
+}
 
 // ═══════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════
-function showView(name) {
-  document.querySelectorAll('.proj-view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.proj-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('pview-' + name).classList.add('active');
-  document.getElementById('ptab-' + name).classList.add('active');
-}
-
 function renderAll() {
   if (!state) return;
-  // Tytuł — własny lub z zawodów
-  const c = state.contest || {};
-  const customTitle = projSettings.customTitle;
-  document.getElementById('proj-title').textContent = customTitle ||
-    (c.name ? c.name + ' · ' : '') + (c.city || '') + (c.date ? ' · ' + c.date : '');
-  // Kolor akcentu z zawodów
-  if (state.setup && state.setup.accentColor) {
-    document.documentElement.style.setProperty('--orange', state.setup.accentColor);
+  applyTitle();
+  if (cfg.showIndM) renderIndM();
+  if (cfg.showIndK) renderIndK();
+  if (cfg.showTeam) renderTeam();
+  if (cfg.showKlas) renderKlas();
+  if (cfg.showProgress) renderProgress();
+}
+
+function softRender() {
+  // Odśwież dane bez przebudowy layoutu (nie resetuje scrollowania)
+  applyTitle();
+  if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M'));
+  if (cfg.showIndK) refillTrack('ind-k', buildIndRows('K'));
+  if (cfg.showTeam) refillTrack('team',  buildTeamRows());
+  if (cfg.showKlas) refillTrack('klas',  buildKlasRows());
+  if (cfg.showProgress) renderProgress();
+}
+
+function refillTrack(id, { html, count }) {
+  const track = document.getElementById('track-' + id);
+  if (!track) return;
+  const countEl = document.getElementById('count-' + id);
+  if (countEl) countEl.textContent = count;
+  // Ustaw nową zawartość, scroll kontynuuje od tej samej pozycji transform
+  const isScrolling = !!_scrollRAFs[id];
+  if (isScrolling) {
+    // Wymień zawartość zachowując aktualną pozycję transform
+    const curTransform = track.style.transform;
+    track.innerHTML = html + html; // 2 kopie dla seamless loop
+    track.style.transform = curTransform;
+  } else {
+    track.innerHTML = html;
   }
-  renderInd();
-  renderTeam();
-  renderKlas();
 }
 
 // ── Wyniki indywidualne ──
-function renderInd() {
-  const athletes = state.athletes || [];
-  const topN     = projSettings.topN || 0;
-  const showPts  = projSettings.showPts !== false;
-  let html = '';
-  ['M','K'].forEach(g => {
-    const pool = athletes.filter(a => a.gender === g);
-    if (!pool.length) return;
-    const N = pool.length;
-    let ranked = pool.map(a => ({
-      athlete: a,
-      best: bestTime(a.id),
-      bestSec: parseTime(bestTime(a.id)),
-      s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
-      s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2')
-    })).sort((a,b) => a.bestSec - b.bestSec);
-    if (topN > 0) ranked = ranked.slice(0, topN);
+function buildIndRows(gender) {
+  const athletes = (state.athletes||[]).filter(a => a.gender === gender);
+  const N = athletes.length;
+  let ranked = athletes.map(a => ({
+    a, best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
+    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+    s1d: isDisq(a.id,'s1'), s2d: isDisq(a.id,'s2')
+  })).sort((x,y) => x.bestSec - y.bestSec);
 
-    html += '<div class="gender-hdr ' + g + '">' + (g==='M'?'Mężczyźni':'Kobiety') + (topN>0?' — top '+topN:'') + '</div>';
-    html += '<table class="rank-table"><thead><tr>';
-    html += '<th style="width:60px">Msc</th><th>' + (g==='M'?'♂':'♀') + ' Zawodnik</th>';
-    html += '<th style="text-align:right;width:160px;">Seria 1</th>';
-    html += '<th style="text-align:right;width:160px;">Seria 2</th>';
-    html += '<th style="text-align:right;width:180px;">Wynik</th>';
-    if (g==='M' && showPts) html += '<th style="text-align:right;width:80px;">Pkt</th>';
-    html += '</tr></thead><tbody>';
-
-    let rank = 1;
-    ranked.forEach(r => {
-      const noBest = r.bestSec === Infinity;
-      const posClass = rank===1?'p1':rank===2?'p2':rank===3?'p3':'other';
-      const rowClass = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
-      const pts = (g==='M' && showPts && !noBest) ? calcIndPts(rank, N) : null;
-      const s1d = r.s1dsq ? '<span class="dsq-label">DSQ</span>' : (r.s1||'—');
-      const s2d = r.s2dsq ? '<span class="dsq-label">DSQ</span>' : (r.s2||'—');
-      html += '<tr class="rank-row ' + rowClass + (noBest?' dsq':'') + '">';
-      html += '<td class="rank-pos ' + posClass + '">' + (noBest ? '—' : rank) + '</td>';
-      html += '<td class="rank-name">' + esc(r.athlete.name) + '<span class="rank-team">' + esc(r.athlete.team) + '</span></td>';
-      html += '<td class="rank-time" style="font-size:16px;color:var(--text3);">' + s1d + '</td>';
-      html += '<td class="rank-time" style="font-size:16px;color:var(--text3);">' + s2d + '</td>';
-      html += '<td class="rank-time">' + (r.best||'—') + '</td>';
-      if (g==='M' && showPts) html += '<td class="rank-pts">' + (pts!==null?pts:'—') + '</td>';
-      html += '</tr>';
-      if (!noBest) rank++;
-    });
-    html += '</tbody></table>';
-  });
-  if (!html) html = '<div class="no-data">Brak wyników</div>';
-  document.getElementById('ind-content').innerHTML = html;
-}
-
-// ── Bieg drużynowy ──
-function renderTeam() {
-  const teams    = getTeams();
-  const topN     = projSettings.topN || 0;
-  const showPts  = projSettings.showPts !== false;
-  if (!teams.length) { document.getElementById('team-content').innerHTML = '<div class="no-data">Brak drużyn</div>'; return; }
-  const N    = teams.filter(t => getTeamAthletes(t).length >= teamMinVal() && (getTeamTime(t,'s1')||getTeamTime(t,'s2'))).length;
-  const mult = multiplier();
-
-  let rows = teams.map(team => {
-    const ok   = getTeamAthletes(team).length >= teamMinVal();
-    const best = teamBestTime(team);
-    return { team, ok, best, bestSec: parseTime(best), s1: getTeamTime(team,'s1'), s2: getTeamTime(team,'s2') };
-  }).sort((a,b) => { if (!a.ok&&b.ok) return 1; if (a.ok&&!b.ok) return -1; return a.bestSec-b.bestSec; });
-  if (topN > 0) rows = rows.slice(0, topN);
-
-  let html = '<table class="rank-table"><thead><tr>';
-  html += '<th style="width:60px">Msc</th><th>Drużyna</th>';
-  html += '<th style="text-align:right;width:180px;">Seria 1</th>';
-  html += '<th style="text-align:right;width:180px;">Seria 2</th>';
-  html += '<th style="text-align:right;width:180px;">Wynik</th>';
-  html += '<th style="text-align:right;width:80px;">Pkt</th>';
-  html += '</tr></thead><tbody>';
+  const topN = cfg.topN > 0 ? cfg.topN : ranked.length;
+  const shown = ranked.slice(0, topN);
 
   let rank = 1;
-  rows.forEach(r => {
-    const noBest = r.bestSec === Infinity || !r.ok;
-    const posClass = rank===1?'p1':rank===2?'p2':rank===3?'p3':'other';
-    const rowClass = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
-    const pts = (!noBest && showPts) ? calcTeamPts(rank, N, mult) : null;
-    html += '<tr class="rank-row ' + rowClass + (noBest?' dsq':'') + '">';
-    html += '<td class="rank-pos ' + posClass + '">' + (!r.ok?'DSQ':noBest?'—':rank) + '</td>';
-    html += '<td class="rank-name">' + esc(r.team) + '</td>';
-    html += '<td class="rank-time" style="font-size:16px;color:var(--text3);">' + (r.s1||'—') + '</td>';
-    html += '<td class="rank-time" style="font-size:16px;color:var(--text3);">' + (r.s2||'—') + '</td>';
-    html += '<td class="rank-time">' + (r.best||'—') + '</td>';
-    if (showPts) html += '<td class="rank-pts">' + (pts!==null?pts:'—') + '</td>';
-    html += '</tr>';
+  const rows = shown.map(r => {
+    const noBest = r.bestSec === Infinity;
+    const posIdx = noBest ? 0 : rank;
+    const posCls = posIdx===1?'p1':posIdx===2?'p2':posIdx===3?'p3':'other';
+    const rowCls = posIdx===1?'top1':posIdx===2?'top2':posIdx===3?'top3':'';
+    const fontSize = N > 20 ? '16px' : N > 12 ? '20px' : '24px';
+    const subSize  = N > 20 ? '10px' : '11px';
+
+    let timeSub = '';
+    if (cfg.showS1 && r.s1) timeSub += 'S1: ' + (r.s1d ? '<span class="rank-dsq-label">DSQ</span>' : r.s1);
+    if (cfg.showS2 && r.s2) timeSub += (timeSub ? ' &nbsp; ' : '') + 'S2: ' + (r.s2d ? '<span class="rank-dsq-label">DSQ</span>' : r.s2);
+
+    const posSize = N > 20 ? '20px' : '28px';
+    const html =
+      `<tr class="rank-row ${rowCls}${noBest?' dsq':''}">
+        <td class="rank-pos ${posCls}" style="font-size:${posSize};">${noBest?'—':posIdx}</td>
+        <td class="rank-name-cell">
+          <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}</span>
+          <span class="rank-team-sub" style="font-size:${subSize};">${esc(r.a.team)}</span>
+        </td>
+        <td class="rank-time-cell" style="font-size:${N>20?'16px':'20px'};">
+          ${r.best || '<span style="color:var(--text3);">—</span>'}
+          ${timeSub ? `<span class="rank-sub-time" style="font-size:${subSize};">${timeSub}</span>` : ''}
+        </td>
+      </tr>`;
     if (!noBest) rank++;
-  });
-  html += '</tbody></table>';
-  document.getElementById('team-content').innerHTML = html;
+    return html;
+  }).join('');
+
+  return {
+    html: `<table class="rank-table"><tbody>${rows||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
+    count: shown.length + ' zaw.'
+  };
 }
 
-// ── Klasyfikacja zespołowa ──
-function renderKlas() {
+function renderIndM() { const d = buildIndRows('M'); _renderSection('ind-m', d); }
+function renderIndK() { const d = buildIndRows('K'); _renderSection('ind-k', d); }
+
+// ── Bieg drużynowy ──
+function buildTeamRows() {
+  const teams = getTeams();
+  let rows = teams.map(team => {
+    const ok = getTeamAthletes(team).length >= teamMin();
+    const s1 = getTeamTime(team,'s1'), s2 = getTeamTime(team,'s2');
+    const s1d = isTeamDisq(team,'s1'), s2d = isTeamDisq(team,'s2');
+    const best = teamBestTimeEff(team);
+    return { team, ok, s1, s2, s1d, s2d, best, bestSec: parseTime(best) };
+  }).sort((a,b) => {
+    if (!a.ok&&b.ok) return 1; if (a.ok&&!b.ok) return -1;
+    return a.bestSec - b.bestSec;
+  });
+
+  const topN = cfg.topN > 0 ? cfg.topN : rows.length;
+  rows = rows.slice(0, topN);
+  const fontSize = rows.length > 12 ? '18px' : '22px';
+  const subSize  = rows.length > 12 ? '10px' : '11px';
+
+  let rank = 1;
+  const html = rows.map(r => {
+    const noBest = r.bestSec === Infinity || !r.ok;
+    const posIdx = noBest ? 0 : rank;
+    const posCls = posIdx===1?'p1':posIdx===2?'p2':posIdx===3?'p3':'other';
+    const rowCls = posIdx===1?'top1':posIdx===2?'top2':posIdx===3?'top3':'';
+
+    let timeSub = '';
+    if (cfg.showS1 && r.s1) timeSub += 'S1: ' + (r.s1d ? '<span class="rank-dsq-label">DSQ</span>' : r.s1);
+    if (cfg.showS2 && r.s2) timeSub += (timeSub?'&nbsp;&nbsp;':'') + 'S2: ' + (r.s2d ? '<span class="rank-dsq-label">DSQ</span>' : r.s2);
+
+    const rankTxt = !r.ok ? 'DSQ' : (noBest ? '—' : posIdx);
+    if (!noBest) rank++;
+    return `<tr class="rank-row ${rowCls}${!r.ok?' dsq':''}">
+      <td class="rank-pos ${posCls}" style="font-size:${rows.length>12?'20px':'28px'};">${rankTxt}</td>
+      <td class="rank-name-cell">
+        <span class="rank-name" style="font-size:${fontSize};">${esc(r.team)}</span>
+      </td>
+      <td class="rank-time-cell" style="font-size:${rows.length>12?'16px':'20px'};">
+        ${r.best || '<span style="color:var(--text3);">—</span>'}
+        ${timeSub ? `<span class="rank-sub-time" style="font-size:${subSize};">${timeSub}</span>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  return {
+    html: `<table class="rank-table"><tbody>${html||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
+    count: rows.length + ' drużyn'
+  };
+}
+
+function renderTeam() { _renderSection('team', buildTeamRows()); }
+
+// ── Klasyfikacja ──
+function buildKlasRows() {
   const teams    = getTeams();
   const athletes = state.athletes || [];
-  const menN     = athletes.filter(a => a.gender==='M').length;
-  const mult     = multiplier();
+  const menAll   = athletes.filter(a=>a.gender==='M' && !a.pk);
+  const N_men    = menAll.length;
+  const M        = mult();
 
-  // Punkty ind M per drużyna
-  const menRanked = athletes.filter(a => a.gender==='M').map(a => ({
-    athlete: a, bestSec: parseTime(bestTime(a.id))
-  })).sort((a,b) => a.bestSec-b.bestSec);
-  let mRank = 1;
-  const indPts = {};
-  teams.forEach(t => indPts[t] = 0);
+  // pkt ind M
+  const menRanked = menAll.map(a=>({ a, bestSec: parseTime(bestTime(a.id)) })).sort((x,y)=>x.bestSec-y.bestSec);
+  const indPts = {}; teams.forEach(t=>indPts[t]=0);
+  let mr = 1;
   menRanked.forEach(r => {
-    const noBest = r.bestSec === Infinity;
-    const pts    = !noBest ? calcIndPts(mRank, menN) : 0;
-    if (!noBest) mRank++;
-    const team = r.athlete.team;
-    if (team && indPts[team] !== undefined) indPts[team] += pts;
+    const nb = r.bestSec===Infinity;
+    if (!nb) { if (indPts[r.a.team]!==undefined) indPts[r.a.team] += calcIndPts(mr, N_men); mr++; }
   });
 
-  // Punkty drużynowe
-  const teamRows = teams.map(t => {
-    const ok   = getTeamAthletes(t).length >= teamMinVal();
-    const best = teamBestTime(t);
-    return { team: t, ok, bestSec: parseTime(best) };
-  }).sort((a,b) => { if (!a.ok&&b.ok) return 1; if (a.ok&&!b.ok) return -1; return a.bestSec-b.bestSec; });
-  const validN = teamRows.filter(r => r.ok && r.bestSec<Infinity).length;
-  const teamPts = {};
-  teams.forEach(t => teamPts[t] = 0);
-  let tRank = 1;
-  teamRows.forEach(r => {
-    const noBest = r.bestSec===Infinity || !r.ok;
-    if (!noBest) { teamPts[r.team] = calcTeamPts(tRank, validN, mult); tRank++; }
-  });
+  // pkt drużynowy
+  const tRows = teams.map(t=>({ t, ok: getTeamAthletes(t).length>=teamMin(), bestSec: parseTime(teamBestTimeEff(t)) }))
+    .sort((a,b)=>{ if(!a.ok&&b.ok)return 1;if(a.ok&&!b.ok)return -1;return a.bestSec-b.bestSec; });
+  const N_teams = tRows.filter(r=>r.ok&&r.bestSec<Infinity).length;
+  const teamPts = {}; teams.forEach(t=>teamPts[t]=0);
+  let tr = 1;
+  tRows.forEach(r=>{ if(r.ok&&r.bestSec<Infinity){ teamPts[r.t]=calcTeamPts(tr,N_teams,M); tr++; } });
 
-  // Połącz i posortuj
-  const result = teams.map(t => ({
-    team: t, indPts: indPts[t]||0, teamPts: teamPts[t]||0, total: (indPts[t]||0)+(teamPts[t]||0)
-  })).sort((a,b) => b.total-a.total);
+  const result = teams.map(t=>({ team:t, ind:indPts[t]||0, team_:teamPts[t]||0, total:(indPts[t]||0)+(teamPts[t]||0) }))
+    .sort((a,b)=>b.total-a.total);
+
+  const topN = cfg.topN > 0 ? cfg.topN : result.length;
+  const shown = result.slice(0, topN);
+  const fontSize = shown.length > 12 ? '16px' : '20px';
+  const scoreSize = shown.length > 12 ? '22px' : '30px';
 
   const medals = ['🥇','🥈','🥉'];
-  let html = '';
-  result.forEach((r, i) => {
-    const rank    = i + 1;
-    const posClass = rank===1?'p1':rank===2?'p2':rank===3?'p3':'other';
-    html += '<div class="team-rank-row">';
-    html += '<div class="team-rank-pos ' + posClass + '">' + (rank<=3 ? medals[rank-1] : rank) + '</div>';
-    html += '<div class="team-rank-body">';
-    html += '<div class="team-rank-name">' + esc(r.team) + '</div>';
-    html += '<div class="team-rank-detail">Ind. M: ' + r.indPts + ' pkt &nbsp;·&nbsp; Drużynowy: ' + r.teamPts + ' pkt</div>';
-    html += '</div>';
-    html += '<div class="team-rank-score">' + r.total + '<span class="team-rank-score-label">PKT</span></div>';
-    html += '</div>';
-  });
-  if (!html) html = '<div class="no-data">Brak danych</div>';
-  document.getElementById('klas-content').innerHTML = html;
+  const html = shown.map((r,i) => {
+    const rank = i+1;
+    const posCls = rank===1?'p1':rank===2?'p2':rank===3?'p3':'other';
+    const rowCls = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
+    const posDisp = rank<=3 ? medals[rank-1] : rank;
+    return `<div class="klas-row ${rowCls}">
+      <div class="klas-pos ${posCls}" style="font-size:${rank<=3?'22px':'20px'};">${posDisp}</div>
+      <div class="klas-name" style="font-size:${fontSize};">${esc(r.team)}
+        <div class="klas-pts-detail">${r.ind} + ${r.team_}</div>
+      </div>
+      <div class="klas-score" style="font-size:${scoreSize};">${r.total}<br><span style="font-size:10px;color:var(--text3);">PKT</span></div>
+    </div>`;
+  }).join('');
+
+  return {
+    html: html || '<div class="no-data">Brak danych</div>',
+    count: shown.length + ' drużyn'
+  };
+}
+
+function renderKlas() { _renderSection('klas', buildKlasRows()); }
+
+// ── Pasek postępu ──
+function renderProgress() {
+  const athletes = state.athletes || [];
+  const teams    = getTeams();
+  const prog     = document.getElementById('proj-progress');
+  if (!prog || !cfg.showProgress) return;
+
+  const sections = [];
+
+  if (cfg.showIndM || cfg.showIndK) {
+    const pool = athletes.filter(a => cfg.showIndM && a.gender==='M' || cfg.showIndK && a.gender==='K');
+    const withResult = pool.filter(a => bestTime(a.id));
+    sections.push({ label: 'Ind. wyniki', color: 'var(--blue)', done: withResult.length, total: pool.length });
+  }
+  if (cfg.showTeam) {
+    const withResult = teams.filter(t => teamBestTimeEff(t));
+    sections.push({ label: 'Drużynowy', color: 'var(--orange)', done: withResult.length, total: teams.length });
+  }
+  if (cfg.showIndM) {
+    const pool = athletes.filter(a=>a.gender==='M');
+    const s1done = pool.filter(a=>getTime(a.id,'s1')).length;
+    const s2done = pool.filter(a=>getTime(a.id,'s2')).length;
+    if (pool.length > 0) {
+      sections.push({ label: 'Seria 1 M', color: 'var(--male)',   done: s1done, total: pool.length });
+      sections.push({ label: 'Seria 2 M', color: 'var(--green)',  done: s2done, total: pool.length });
+    }
+  }
+  if (cfg.showIndK) {
+    const pool = athletes.filter(a=>a.gender==='K');
+    const s1done = pool.filter(a=>getTime(a.id,'s1')).length;
+    const s2done = pool.filter(a=>getTime(a.id,'s2')).length;
+    if (pool.length > 0) {
+      sections.push({ label: 'Seria 1 K', color: 'var(--female)', done: s1done, total: pool.length });
+      sections.push({ label: 'Seria 2 K', color: 'var(--green)',  done: s2done, total: pool.length });
+    }
+  }
+
+  prog.innerHTML = sections.map(s => {
+    const pct = s.total > 0 ? Math.round(100 * s.done / s.total) : 0;
+    return `<div class="prog-item">
+      <div class="prog-label"><span>${s.label}</span><span class="prog-count">${s.done}/${s.total}</span></div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${s.color};"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── Wspólny render sekcji + scroll ──
+function _renderSection(id, { html, count }) {
+  const track   = document.getElementById('track-' + id);
+  const countEl = document.getElementById('count-' + id);
+  if (!track) return;
+  if (countEl) countEl.textContent = count;
+
+  // Zatrzymaj stary scroll
+  if (_scrollRAFs[id]) { cancelAnimationFrame(_scrollRAFs[id]); delete _scrollRAFs[id]; }
+
+  const speed = cfg.scrollSpeed || 0;
+
+  if (speed > 0) {
+    // Dwie kopie dla seamless infinite scroll
+    track.innerHTML = html + html;
+    track.style.transform = 'translateY(0)';
+    // Odczekaj na reflow
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const totalH = track.offsetHeight;
+      const oneH   = totalH / 2;
+      if (oneH <= 0) return;
+      const COPIES = Math.max(2, Math.ceil(120 * speed / oneH) + 1);
+      // Dodaj kopie żeby wystarczyło na ~2 minuty
+      if (COPIES > 2) {
+        const single = html;
+        track.innerHTML = Array(COPIES).fill(single).join('');
+      }
+      const fullH  = track.offsetHeight;
+      const segH   = fullH / (track.innerHTML.split(html).length - 1);
+
+      let pos = 0, lastT = null;
+      function step(now) {
+        if (!lastT) lastT = now;
+        const dt = Math.min(now - lastT, 50);
+        lastT = now;
+        pos += speed * dt / 1000;
+        if (pos >= segH) pos -= segH;
+        track.style.transform = `translateY(-${pos}px)`;
+        _scrollRAFs[id] = requestAnimationFrame(step);
+      }
+      _scrollRAFs[id] = requestAnimationFrame(step);
+    }));
+  } else {
+    track.innerHTML = html;
+    track.style.transform = 'translateY(0)';
+  }
 }
 </script>
 </body>
