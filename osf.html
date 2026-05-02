@@ -1408,9 +1408,18 @@ function finishContest() {
       const slotRaw = localStorage.getItem('herkules_slot_' + panelId);
       if (slotRaw) {
         const slot = JSON.parse(slotRaw);
-        slot.done = true;
-        slot.doneAt = new Date().toISOString();
+        slot.done    = true;
+        slot.doneAt  = new Date().toISOString();
+        slot._updated = slot.doneAt;
         localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
+        // Sync do Supabase
+        try {
+          getSupabase().from('herkules_slots').upsert({
+            slot_id:    String(panelId),
+            slot_json:  JSON.stringify(slot),
+            updated_at: slot._updated
+          }, { onConflict: 'slot_id' });
+        } catch(e) {}
       }
     }
   } catch(e) {}
@@ -3630,7 +3639,16 @@ function syncSetupToPanel() {
       if (state.setup.name) slot.name = state.setup.name;
       if (state.setup.city) slot.city = state.setup.city;
       if (state.setup.date) slot.date = state.setup.date;
+      slot._updated = new Date().toISOString();
       localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+      // Sync do Supabase
+      try {
+        getSupabase().from('herkules_slots').upsert({
+          slot_id:    String(SLOT_ID),
+          slot_json:  JSON.stringify(slot),
+          updated_at: slot._updated
+        }, { onConflict: 'slot_id' });
+      } catch(e) {}
     }
   } catch(e) {}
   const el = document.getElementById('sync-status');

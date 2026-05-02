@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:      #0d0f0f;
@@ -177,6 +178,10 @@ select option { background: var(--bg3); }
     <span class="logo-sub">Zawody Wojskowe</span>
   </div>
   <div class="header-right">
+    <div id="sync-indicator" style="display:flex;align-items:center;gap:5px;font-family:var(--font-m);font-size:10px;color:var(--text3);padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
+      <span id="sync-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text3);display:inline-block;"></span>
+      <span id="sync-label">—</span>
+    </div>
     <div class="header-date" id="header-date"></div>
     <button class="hdr-btn" onclick="openChangePassword()">⚙ Hasło</button>
     <button class="hdr-btn" onclick="doLogout()">⏻ Wyloguj</button>
@@ -346,6 +351,12 @@ function showApp() {
   document.getElementById('main-content').style.display  = '';
   document.getElementById('header-date').textContent = formatDate();
   render();
+  // Wczytaj sloty z chmury i odśwież widok
+  showSyncStatus('syncing');
+  syncSlotsFromCloud().then(() => {
+    render();
+    showSyncStatus('ok');
+  }).catch(() => showSyncStatus('error'));
 }
 
 function openChangePassword() {
@@ -373,20 +384,83 @@ function savePassword() {
 }
 
 // ═══════════════════════════════════
-// STORAGE
+// SUPABASE
+// ═══════════════════════════════════
+const SB_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+const SB_KEY = 'sb_publishable_aPrFnhbnuEL0xlj8b8SpiQ_Jq7CD-KL';
+const SB_TABLE = 'herkules_slots';
+let _sbClient = null;
+function getSB() {
+  if (!_sbClient) _sbClient = supabase.createClient(SB_URL, SB_KEY);
+  return _sbClient;
+}
+
+// ═══════════════════════════════════
+// STORAGE — localStorage + Supabase
 // ═══════════════════════════════════
 const SLOTS_KEY = 'herkules_slots';
 
 function getSlotIds()     { try { return JSON.parse(localStorage.getItem(SLOTS_KEY)) || []; } catch(e) { return []; } }
 function saveSlotIds(ids) { localStorage.setItem(SLOTS_KEY, JSON.stringify(ids)); }
 function getSlot(id)      { try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; } }
-function saveSlot(slot)   { localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot)); }
+
+function saveSlot(slot) {
+  localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot));
+  // Zapisz metadane slotu do Supabase (nie dane zawodów — te są w osf_state)
+  getSB().from(SB_TABLE).upsert({
+    slot_id: String(slot.id),
+    slot_json: JSON.stringify(slot),
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'slot_id' }).then(({ error }) => {
+    if (error) console.warn('Supabase saveSlot error:', error.message);
+  });
+}
 
 function deleteSlot(id) {
   localStorage.removeItem('herkules_slot_' + id);
   localStorage.removeItem('zawody_slot_' + id);
   localStorage.removeItem('osf_slot_' + id);
   saveSlotIds(getSlotIds().filter(x => x !== id));
+  // Usuń z Supabase
+  getSB().from(SB_TABLE).delete().eq('slot_id', String(id)).then(({ error }) => {
+    if (error) console.warn('Supabase deleteSlot error:', error.message);
+  });
+}
+
+// Wczytaj sloty z Supabase i scal z localStorage
+async function syncSlotsFromCloud() {
+  try {
+    const { data, error } = await getSB().from(SB_TABLE).select('slot_id, slot_json, updated_at').order('updated_at', { ascending: true });
+    if (error) { console.warn('Supabase sync error:', error.message); return; }
+    if (!data || !data.length) return;
+
+    const localIds = new Set(getSlotIds().map(String));
+    const cloudIds = [];
+
+    data.forEach(row => {
+      try {
+        const slot = JSON.parse(row.slot_json);
+        const id   = slot.id;
+        cloudIds.push(id);
+        // Scal: chmura wygrywa jeśli lokalny slot nie istnieje
+        const localSlot = getSlot(id);
+        if (!localSlot) {
+          localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+        } else {
+          // Jeśli chmura jest nowsza — nadpisz
+          const cloudTime = new Date(row.updated_at).getTime();
+          const localTime = localSlot._updated ? new Date(localSlot._updated).getTime() : 0;
+          if (cloudTime > localTime) {
+            localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+          }
+        }
+      } catch(e) {}
+    });
+
+    // Scala indeks ID — unia localnych i chmury
+    const allIds = [...new Set([...getSlotIds(), ...cloudIds])];
+    saveSlotIds(allIds);
+  } catch(e) { console.warn('syncSlotsFromCloud exception:', e); }
 }
 
 function getSlotStats(slot) {
@@ -402,6 +476,23 @@ function getSlotStats(slot) {
     }
   } catch(e) {}
   return { athletes, teams };
+}
+
+function showSyncStatus(status) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (!dot) return;
+  if (status === 'syncing') {
+    dot.style.background = 'var(--accent)';
+    lbl.textContent = 'sync...';
+  } else if (status === 'ok') {
+    dot.style.background = 'var(--green)';
+    lbl.textContent = 'zsync.';
+    setTimeout(() => { dot.style.background = 'var(--text3)'; lbl.textContent = 'online'; }, 2000);
+  } else {
+    dot.style.background = 'var(--red)';
+    lbl.textContent = 'offline';
+  }
 }
 
 // ═══════════════════════════════════
@@ -489,7 +580,8 @@ function createSlot() {
   if (!city) { document.getElementById('new-city').focus(); return; }
   const ids   = getSlotIds();
   const newId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
-  saveSlot({ id: newId, type: selectedType, city, name, date, created: new Date().toISOString() });
+  const slot  = { id: newId, type: selectedType, city, name, date, created: new Date().toISOString(), _updated: new Date().toISOString() };
+  saveSlot(slot);
   saveSlotIds([...ids, newId]);
   closeModal(); render(); openSlot(newId);
 }
@@ -530,6 +622,7 @@ function reactivateSlot(id, e) {
   const slot = getSlot(id);
   if (!slot) return;
   slot.done = false; delete slot.doneAt;
+  slot._updated = new Date().toISOString();
   saveSlot(slot); render();
 }
 
