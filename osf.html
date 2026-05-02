@@ -1600,6 +1600,21 @@ function rerenderTeamTime(input) {
 // ═══════════════════════════════════════════════════
 // BIEG DRUŻYNOWY — generowanie serii
 // ═══════════════════════════════════════════════════
+
+// Przelicza tory w order[] na podstawie pozycji — zawsze L/P/L/P...
+// Solo (nieparzysta liczba) = idx 0 dostaje L, reszta naprzemiennie
+function recalcLanes(order) {
+  const isOdd = order.length % 2 !== 0;
+  order.forEach((item, idx) => {
+    if (!item) return;
+    if (isOdd) {
+      item.lane = idx === 0 ? 'L' : (idx % 2 === 1 ? 'L' : 'P');
+    } else {
+      item.lane = idx % 2 === 0 ? 'L' : 'P';
+    }
+  });
+}
+
 function buildTeamSeries1() {
   const teams = getTeams();
   if (teams.length === 0) { alert('Brak drużyn na liście zawodników.'); return; }
@@ -1626,13 +1641,17 @@ function buildTeamSeries1() {
   // Upewnij się że solo jest zawsze na początku (idx 0 = solo jeśli nieparzysta)
   const isOdd = sorted.length % 2 !== 0;
   // sorted[0] = najsłabsza → jeśli nieparzysta liczba, biega solo jako pierwsza
-  state.teamOrder.s1 = sorted.map((item, idx) => ({
-    team:     item.team,
-    lane:     isOdd ? (idx === 0 ? 'L' : (idx % 2 === 1 ? 'L' : 'P')) : (idx % 2 === 0 ? 'L' : 'P'),
-    startNum: idx + 1,
-    sum:      item.sum,
-    count:    item.count
-  }));
+  state.teamOrder.s1 = sorted.map((item, idx) => {
+    let lane;
+    if (isOdd) {
+      // idx=0 → solo (tor L), potem pary: idx=1→L, idx=2→P, idx=3→L, idx=4→P...
+      lane = idx === 0 ? 'L' : (idx % 2 === 1 ? 'L' : 'P');
+    } else {
+      // parzysta liczba drużyn — naprzemiennie L/P
+      lane = idx % 2 === 0 ? 'L' : 'P';
+    }
+    return { team: item.team, lane, startNum: idx + 1, sum: item.sum, count: item.count };
+  });
   state.teamOrder.s2 = [];
   save();
   renderTeamView();
@@ -1663,6 +1682,7 @@ function buildTeamSeries2() {
     sum:      item.sum,
     count:    item.count
   }));
+  recalcLanes(state.teamOrder.s2);
   save();
   renderTeamView();
 }
@@ -4813,6 +4833,7 @@ function handleTeamClick(el) {
   const n1 = order[srcIdx].team, n2 = order[tgtIdx].team;
   order[srcIdx] = { ...order[srcIdx], team: n2, lane: srcLane };
   order[tgtIdx] = { ...order[tgtIdx], team: n1, lane: tgtLane };
+  recalcLanes(order);
   cancelTeamSwap();
   save();
   renderTeamView();
@@ -4836,6 +4857,7 @@ function handleTeamEmptySlotClick(el) {
     const newSrcIdx = order.findIndex((item, i) => i !== emptyIdx && item && item.team === srcItem.team);
     if (newSrcIdx >= 0) order.splice(newSrcIdx, 1);
     order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+    recalcLanes(order);
     const n = _teamSwapSource.teamName;
     cancelTeamSwap();
     save();
