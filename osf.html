@@ -524,12 +524,22 @@ tr:last-child > td { border-bottom: none; }
       style="width:100%;max-width:340px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 12px;font-family:var(--font-b);font-size:13px;" />
   </div>
 
+  <!-- Zakładki wewnętrzne M / K -->
+  <div id="s2-inner-tabs" style="display:none;margin-bottom:14px;display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;">
+    <button id="s2-tab-M" onclick="switchS2Tab('M')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      ♂ Mężczyźni
+    </button>
+    <button id="s2-tab-K" onclick="switchS2Tab('K')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      ♀ Kobiety
+    </button>
+  </div>
+
   <div id="s2-section-M" style="display:none;">
-    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--male);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Mężczyźni</div>
     <div id="s2-pairs-M"></div>
   </div>
-  <div id="s2-section-K" style="display:none;margin-top:20px;">
-    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--female);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Kobiety</div>
+  <div id="s2-section-K" style="display:none;">
     <div id="s2-pairs-K"></div>
   </div>
 
@@ -2762,13 +2772,16 @@ function renderPairsHTML(containerId, pairs, isS2) {
   const total = pairs.length;
   pairs.forEach((p, idx) => {
     const isLast  = idx === total - 1;
-    const isSolo  = p.bId === null;
+    const isSolo  = !p.aId || !p.bId;
+    const soloAth = isSolo ? (state.athletes.find(x => x.id === (p.aId || p.bId))) : null;
+    const soloSlotKey = isSolo ? (p.aId ? 'a' : 'b') : null;
+    const a = isSolo ? soloAth : state.athletes.find(x => x.id === p.aId);
+    const b = (!isSolo && p.bId) ? state.athletes.find(x => x.id === p.bId) : null;
+    const aTime = isSolo ? getTime(soloAth?.id, series) : getTime(p.aId, series);
+    const bTime = b ? getTime(p.bId, series) : null;
+    const soloLane = isSolo ? (soloSlotKey === 'a' ? p.aLane : p.bLane) : null;
     const gender  = p.gender;
     const locked  = isPairLocked(series, gender, p.pairNum);
-    const a = state.athletes.find(x => x.id === p.aId);
-    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
-    const aTime = getTime(p.aId, series);
-    const bTime = b ? getTime(p.bId, series) : null;
     const hasTime = !!(aTime || bTime);
 
     let cls = 'pair-card';
@@ -2801,8 +2814,8 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '</div>';
 
     if (isSolo) {
-      const soloLane  = p.aLane || 'L';
-      const otherLane = soloLane === 'L' ? 'P' : 'L';
+      const sl        = soloLane || 'L';
+      const otherLane = sl === 'L' ? 'P' : 'L';
       const emptySlot = series === 's1'
         ? '<div class="pair-athlete solo-empty-slot" ' +
             'data-pair-num="' + p.pairNum + '" data-lane="' + otherLane + '" data-gender="' + gender + '" ' +
@@ -2814,16 +2827,14 @@ function renderPairsHTML(containerId, pairs, isS2) {
             '</div>'
         : '<div style="flex:1;"></div>';
       html += '<div class="pair-athletes">';
-      if (soloLane === 'L') {
-        // Zawodnik na torze L — po lewej, pusty slot P po prawej
-        html += athleteCardHTML(a, 'L', aTime, series, p.pairNum, gender);
+      if (sl === 'L') {
+        html += athleteCardHTML(soloAth, 'L', aTime, series, p.pairNum, gender);
         html += '<div class="pair-vs">VS</div>';
         html += emptySlot;
       } else {
-        // Zawodnik na torze P — pusty slot L po lewej, zawodnik po prawej
         html += emptySlot;
         html += '<div class="pair-vs">VS</div>';
-        html += athleteCardHTML(a, 'P', aTime, series, p.pairNum, gender);
+        html += athleteCardHTML(soloAth, 'P', aTime, series, p.pairNum, gender);
       }
       html += '</div>';
     } else {
@@ -3195,6 +3206,25 @@ function buildSeries2(gender) {
   renderSeries2View();
 }
 
+let _s2ActiveTab = 'M';
+
+function switchS2Tab(gender) {
+  _s2ActiveTab = gender;
+  const hasM = state.s2pairs.some(p => p.gender === 'M');
+  const hasK = state.s2pairs.some(p => p.gender === 'K');
+  document.getElementById('s2-section-M').style.display = (gender === 'M' && hasM) ? 'block' : 'none';
+  document.getElementById('s2-section-K').style.display = (gender === 'K' && hasK) ? 'block' : 'none';
+  const tabM = document.getElementById('s2-tab-M');
+  const tabK = document.getElementById('s2-tab-K');
+  if (!tabM || !tabK) return;
+  const activeStyle   = (color) => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + color + ';background:rgba(255,255,255,.05);color:' + color + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  tabM.style.cssText = gender === 'M' ? activeStyle('var(--male)')   : inactiveStyle;
+  tabK.style.cssText = gender === 'K' ? activeStyle('var(--female)') : inactiveStyle;
+  tabM.style.display = hasM ? '' : 'none';
+  tabK.style.display = hasK ? '' : 'none';
+}
+
 function renderSeries2View() {
   const mPairs = state.s2pairs.filter(p => p.gender === 'M');
   const kPairs = state.s2pairs.filter(p => p.gender === 'K');
@@ -3211,13 +3241,22 @@ function renderSeries2View() {
     alert.style.display = 'none';
   }
 
-  document.getElementById('s2-section-M').style.display = mPairs.length > 0 ? 'block' : 'none';
-  document.getElementById('s2-section-K').style.display = kPairs.length > 0 ? 'block' : 'none';
   document.getElementById('s2-next-btn').style.display  = hasPairs ? 'block' : 'none';
   document.getElementById('s2-search-wrap').style.display = hasPairs ? 'block' : 'none';
 
   renderPairsHTML('s2-pairs-M', mPairs, true);
   renderPairsHTML('s2-pairs-K', kPairs, true);
+
+  // Zakładki wewnętrzne
+  const tabs = document.getElementById('s2-inner-tabs');
+  const hasM = mPairs.length > 0;
+  const hasK = kPairs.length > 0;
+  tabs.style.display = hasPairs ? 'flex' : 'none';
+  const cur = _s2ActiveTab || 'M';
+  if (cur === 'M' && hasM) switchS2Tab('M');
+  else if (cur === 'K' && hasK) switchS2Tab('K');
+  else if (hasM) switchS2Tab('M');
+  else if (hasK) switchS2Tab('K');
 }
 
 // ═══════════════════════════════════════════════════
@@ -4477,10 +4516,13 @@ let _swapSource = null; // { athleteId, pairNum, gender }
 
 function handleEmptySlotClick(el) {
   const pairNum = parseInt(el.dataset.pairNum);
-  const lane    = el.dataset.lane;
+  const lane    = el.dataset.lane;   // 'L' lub 'P' — tor który kliknięto
   const gender  = el.dataset.gender;
   const pair    = state.s1pairs.find(p => p.pairNum === pairNum && p.gender === gender);
   if (!pair) return;
+
+  // Wyznacz który slot (a/b) odpowiada klikniętemu torowi
+  const tgtSlot = pair.aLane === lane ? 'a' : 'b';
 
   if (_swapSource) {
     if (_swapSource.gender !== gender) {
@@ -4491,20 +4533,18 @@ function handleEmptySlotClick(el) {
     if (!srcPair) { cancelSwapMode(); return; }
     const srcSlot = srcPair.aId === _swapSource.athleteId ? 'a' : 'b';
 
-    // Tory zostają przy slotach — wstawiamy zawodnika do pustego slotu (aId lub bId który jest null)
-    const tgtSlot = pair.aId === null ? 'a' : 'b';
+    // Wstaw zawodnika do właściwego slotu (tego który ma ten tor)
     if (tgtSlot === 'a') pair.aId = _swapSource.athleteId;
     else                 pair.bId = _swapSource.athleteId;
 
-    // Wyczyść ze źródłowej pary — slot staje się null (pusty, klikalny)
+    // Wyczyść ze źródłowej pary
     if (srcSlot === 'a') srcPair.aId = null;
     else                 srcPair.bId = null;
 
-    // Jeśli para źródłowa jest teraz całkowicie pusta (oba null) — usuń ją
+    // Jeśli para źródłowa jest całkowicie pusta — usuń ją i przenumeruj
     if (!srcPair.aId && !srcPair.bId) {
       const idx = state.s1pairs.indexOf(srcPair);
       if (idx >= 0) state.s1pairs.splice(idx, 1);
-      // Przenumeruj pary tej płci
       state.s1pairs.filter(p => p.gender === gender)
         .forEach((p, i) => { p.pairNum = i + 1; });
     }
@@ -4516,11 +4556,14 @@ function handleEmptySlotClick(el) {
     showToast('→ Przeniesiono ' + displayName(a1) + ' na Tor ' + lane, 'success');
 
   } else {
-    // Bez trybu pick — zmień tor SOLO zawodnika
-    const soloId   = pair.aId || pair.bId;
+    // Bez trybu pick — zmień tor SOLO zawodnika na kliknięty tor
+    // (zawodnik jest w jedynym zajętym slocie, przenosimy go do klikniętego)
     const soloSlot = pair.aId ? 'a' : 'b';
-    if (soloSlot === 'a') pair.aLane = lane;
-    else                  pair.bLane = lane;
+    // Zamień tory między slotami
+    const soloLane = soloSlot === 'a' ? pair.aLane : pair.bLane;
+    if (soloSlot === 'a') { pair.aLane = lane;     pair.bLane = soloLane; }
+    else                  { pair.bLane = lane;     pair.aLane = soloLane; }
+    const soloId = pair.aId || pair.bId;
     const a = state.athletes.find(x => x.id === soloId);
     save();
     renderSeries1View();
