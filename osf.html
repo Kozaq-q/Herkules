@@ -1700,9 +1700,38 @@ function renderTeamOrderSection(series) {
     if (isLast && !p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA</span>';
     html += '</div>';
     html += '<div class="pair-athletes">';
-    html += teamSlot(p.a, p.aIdx, false);
-    html += '<div class="pair-vs">VS</div>';
-    html += p.isSolo ? teamSlot(null, p.bIdx, true) : teamSlot(p.b, p.bIdx, false);
+    // L zawsze po lewej, P po prawej
+    if (p.isSolo) {
+      const soloLane  = p.a ? p.a.lane : 'L';
+      const otherLane = soloLane === 'L' ? 'P' : 'L';
+      const emptyIdx  = soloLane === 'L' ? p.aIdx + 1 : p.aIdx;
+      const emptySoloSlot =
+        '<div class="pair-athlete team-empty-slot" ' +
+        'data-series="' + series + '" data-idx="' + emptyIdx + '" data-lane="' + otherLane + '" ' +
+        'onclick="handleTeamEmptySlotClick(this)" ' +
+        'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:90px;' +
+        'border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;">' +
+        '<span class="lane-badge lane-' + otherLane + '" style="font-size:16px;">' + otherLane + '</span>' +
+        '<span style="font-size:10px;color:var(--text3);">pusty tor</span></div>';
+      if (soloLane === 'L') {
+        html += teamSlot(p.a, p.aIdx, false);
+        html += '<div class="pair-vs">VS</div>';
+        html += emptySoloSlot;
+      } else {
+        html += emptySoloSlot;
+        html += '<div class="pair-vs">VS</div>';
+        html += teamSlot(p.a, p.aIdx, false);
+      }
+    } else {
+      const aIsL      = p.a && p.a.lane === 'L';
+      const leftItem  = aIsL ? p.a   : p.b;
+      const rightItem = aIsL ? p.b   : p.a;
+      const leftIdx   = aIsL ? p.aIdx : p.bIdx;
+      const rightIdx  = aIsL ? p.bIdx : p.aIdx;
+      html += teamSlot(leftItem,  leftIdx,  false);
+      html += '<div class="pair-vs">VS</div>';
+      html += teamSlot(rightItem, rightIdx, false);
+    }
     html += '</div></div>';
   });
   teamsEl.innerHTML = html;
@@ -1774,13 +1803,16 @@ function teamStartListHTML(series) {
   html += '<div style="font-size:10px;color:#888;margin-bottom:14px;">Liczy si\u0119 czas ' + N + '. zawodnika na mecie.</div>';
 
   for (let i = 0; i < order.length; i += 2) {
-    const itemL = order[i], itemP = order[i+1] || null;
+    const raw0 = order[i], raw1 = order[i+1] || null;
     const pairNum = Math.floor(i/2) + 1;
-    const isLast = i >= order.length - 2;
-    const isSolo = !itemP;
-    const { top: topL, rest: restL } = getSortedTeamAthletes(itemL.team);
+    const isLast  = i >= order.length - 2;
+    const isSolo  = !raw1;
+    // Wyznacz który element jest L a który P na podstawie pola lane
+    const itemL = raw1 ? (raw0.lane === 'L' ? raw0 : raw1) : (raw0.lane === 'L' ? raw0 : null);
+    const itemP = raw1 ? (raw0.lane === 'P' ? raw0 : raw1) : (raw0.lane === 'P' ? raw0 : null);
+    const { top: topL, rest: restL } = itemL ? getSortedTeamAthletes(itemL.team) : { top: [], rest: [] };
     const { top: topP, rest: restP } = itemP ? getSortedTeamAthletes(itemP.team) : { top: [], rest: [] };
-    const okL = (topL.length + restL.length) >= TEAM_MIN_VAL();
+    const okL = itemL ? (topL.length + restL.length) >= TEAM_MIN_VAL() : true;
     const okP = itemP ? (topP.length + restP.length) >= TEAM_MIN_VAL() : true;
 
     html += '<div style="margin-bottom:20px;page-break-inside:avoid;">';
@@ -1789,7 +1821,7 @@ function teamStartListHTML(series) {
     if (isSolo) html += '<span style="font-size:10px;background:#444;padding:2px 6px;letter-spacing:1px;">SOLO</span>';
     if (isLast && !isSolo) html += '<span style="font-size:10px;background:#444;padding:2px 6px;letter-spacing:1px;">OSTATNIA PARA</span>';
     if (series === 's2' && !isSolo) {
-      html += '<span style="margin-left:auto;font-size:10px;opacity:.7;">S1: L=' + (getTeamTime(itemL.team,'s1')||'\u2014') + ' \u00b7 P=' + (itemP?getTeamTime(itemP.team,'s1')||'\u2014':'\u2014') + '</span>';
+      html += '<span style="margin-left:auto;font-size:10px;opacity:.7;">S1: L=' + (itemL?getTeamTime(itemL.team,'s1')||'\u2014':'\u2014') + ' \u00b7 P=' + (itemP?getTeamTime(itemP.team,'s1')||'\u2014':'\u2014') + '</span>';
     }
     html += '</div>';
 
@@ -1838,10 +1870,13 @@ function teamJudgeListHTML(series) {
   html += '<div style="font-size:10px;color:#888;margin-bottom:14px;">Liczy si\u0119 czas ' + TEAM_COUNT() + '. zawodnika na mecie.</div>';
 
   for (let i = 0; i < order.length; i += 2) {
-    const itemL  = order[i], itemP = order[i+1] || null;
+    const raw0 = order[i], raw1 = order[i+1] || null;
     const pairNum = Math.floor(i/2) + 1;
-    const isSolo  = !itemP;
-    const s1L = series === 's2' ? (getTeamTime(itemL.team,'s1')||'\u2014') : '';
+    const isSolo  = !raw1;
+    // Wyznacz L/P na podstawie pola lane
+    const itemL = raw1 ? (raw0.lane === 'L' ? raw0 : raw1) : (raw0.lane === 'L' ? raw0 : null);
+    const itemP = raw1 ? (raw0.lane === 'P' ? raw0 : raw1) : (raw0.lane === 'P' ? raw0 : null);
+    const s1L = (series === 's2' && itemL) ? (getTeamTime(itemL.team,'s1')||'\u2014') : '';
     const s1P = (series === 's2' && itemP) ? (getTeamTime(itemP.team,'s1')||'\u2014') : '';
 
     html += '<div style="margin-bottom:18px;page-break-inside:avoid;">';
@@ -1855,7 +1890,7 @@ function teamJudgeListHTML(series) {
     html += '<div style="display:flex;align-items:center;gap:10px;">';
     html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;flex-shrink:0;">L</div>';
     html += '<div>';
-    html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL.team) + '</div>';
+    html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL ? itemL.team : '—') + '</div>';
     if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1L + '</div>';
     html += '</div>';
     html += '<div style="margin-left:auto;flex-shrink:0;"><div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;text-align:center;">Czas</div><div style="width:72px;height:32px;border:2px solid #000;background:#fff;"></div></div>';
@@ -2766,29 +2801,44 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '</div>';
 
     if (isSolo) {
-      const otherLane = p.aLane === 'L' ? 'P' : 'L';
+      const soloLane  = p.aLane || 'L';
+      const otherLane = soloLane === 'L' ? 'P' : 'L';
+      const emptySlot = series === 's1'
+        ? '<div class="pair-athlete solo-empty-slot" ' +
+            'data-pair-num="' + p.pairNum + '" data-lane="' + otherLane + '" data-gender="' + gender + '" ' +
+            'onclick="handleEmptySlotClick(this)" ' +
+            'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;transition:opacity .15s,border-color .15s;" ' +
+            'title="Kliknij aby przenieść tu zaznaczonego zawodnika lub zmienić tor SOLO">' +
+            '<span class="lane-badge lane-' + otherLane + '" style="font-size:16px;">' + otherLane + '</span>' +
+            '<span style="font-size:10px;color:var(--text3);">pusty tor</span>' +
+            '</div>'
+        : '<div style="flex:1;"></div>';
       html += '<div class="pair-athletes">';
-      html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum, gender);
-      html += '<div class="pair-vs">VS</div>';
-      // Pusty slot drugiego toru — klikalny w trybie swap LUB z przyciskiem zmiany toru
-      if (series === 's1') {
-        html += '<div class="pair-athlete solo-empty-slot" ' +
-          'data-pair-num="' + p.pairNum + '" data-lane="' + otherLane + '" data-gender="' + gender + '" ' +
-          'onclick="handleEmptySlotClick(this)" ' +
-          'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;transition:opacity .15s,border-color .15s;" ' +
-          'title="Kliknij aby przenieść tu zaznaczonego zawodnika lub zmienić tor SOLO">' +
-          '<span class="lane-badge lane-' + otherLane + '" style="font-size:16px;">' + otherLane + '</span>' +
-          '<span style="font-size:10px;color:var(--text3);">pusty tor</span>' +
-          '</div>';
+      if (soloLane === 'L') {
+        // Zawodnik na torze L — po lewej, pusty slot P po prawej
+        html += athleteCardHTML(a, 'L', aTime, series, p.pairNum, gender);
+        html += '<div class="pair-vs">VS</div>';
+        html += emptySlot;
       } else {
-        html += '<div style="flex:1;"></div>';
+        // Zawodnik na torze P — pusty slot L po lewej, zawodnik po prawej
+        html += emptySlot;
+        html += '<div class="pair-vs">VS</div>';
+        html += athleteCardHTML(a, 'P', aTime, series, p.pairNum, gender);
       }
       html += '</div>';
     } else {
+      // Tor L zawsze po lewej, Tor P zawsze po prawej
+      const leftA  = p.aLane === 'L';
+      const leftId = leftA ? p.aId  : p.bId;
+      const rightId= leftA ? p.bId  : p.aId;
+      const leftAt = state.athletes.find(x => x.id === leftId);
+      const rightAt= state.athletes.find(x => x.id === rightId);
+      const leftT  = leftId  ? getTime(leftId,  series) : null;
+      const rightT = rightId ? getTime(rightId, series) : null;
       html += '<div class="pair-athletes">';
-      html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum, gender);
+      html += athleteCardHTML(leftAt,  'L', leftT,  series, p.pairNum, gender);
       html += '<div class="pair-vs">VS</div>';
-      html += athleteCardHTML(b, p.bLane, bTime, series, p.pairNum, gender);
+      html += athleteCardHTML(rightAt, 'P', rightT, series, p.pairNum, gender);
       html += '</div>';
     }
     html += '</div>';
