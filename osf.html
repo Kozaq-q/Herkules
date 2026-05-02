@@ -179,10 +179,22 @@ tr:last-child > td { border-bottom: none; }
 }
 .swap-mode .pair-card { opacity: .65; transition: opacity .15s; }
 .swap-mode .pair-card:has(.swap-active-athlete) { opacity: 1; }
+.swap-mode .solo-empty-slot,
+.swap-mode .team-empty-slot {
+  opacity: 1 !important;
+  border-color: rgba(232,212,77,.4) !important;
+  background: rgba(232,212,77,.04) !important;
+}
+.swap-mode .solo-empty-slot:hover,
+.swap-mode .team-empty-slot:hover {
+  border-color: var(--accent) !important;
+  background: rgba(232,212,77,.10) !important;
+}
 #swap-cancel-bar {
-  display: none; position: sticky; top: 0; z-index: 100;
-  background: rgba(232,212,77,.10); border: 1px solid rgba(232,212,77,.3);
-  border-radius: var(--radius); padding: 8px 14px; margin-bottom: 10px;
+  display: none; position: fixed; top: 96px; left: 0; right: 0; z-index: 200;
+  background: var(--bg2); border-bottom: 2px solid var(--accent);
+  box-shadow: 0 4px 16px rgba(0,0,0,.6);
+  padding: 10px 20px;
   font-size: 13px; font-weight: 600; color: var(--accent);
   align-items: center; gap: 12px;
 }
@@ -644,6 +656,10 @@ tr:last-child > td { border-bottom: none; }
   <div id="dr-alert-no-times" class="alert alert-warning" style="display:none;">
     Brak czasów z biegu indywidualnego. Najpierw uzupełnij wyniki Serii 1 i 2 w zakładkach indywidualnych.
   </div>
+  <div id="team-swap-cancel-bar" style="display:none;position:fixed;top:96px;left:0;right:0;z-index:200;background:var(--bg2);border-bottom:2px solid var(--orange);box-shadow:0 4px 16px rgba(0,0,0,.6);padding:10px 20px;font-size:13px;font-weight:600;color:var(--orange);align-items:center;gap:12px;">
+    <span id="team-swap-cancel-info" style="flex:1;">Wybierz drużynę do zamiany</span>
+    <button onclick="cancelTeamSwap()" style="background:rgba(232,148,77,.15);border:1px solid rgba(232,148,77,.4);border-radius:var(--radius);color:var(--orange);font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;">✕ Anuluj zamianę</button>
+  </div>
 
   <!-- SERIA 1 DRUŻYNOWA -->
   <div class="card mb-12">
@@ -652,7 +668,7 @@ tr:last-child > td { border-bottom: none; }
       <div class="flex">
         <button class="btn btn-sm" onclick="printTeamS1StartList()">🖨 Lista startowa</button>
         <button class="btn btn-sm" onclick="printTeamS1JudgeList()">🖨 Lista sędziowska</button>
-        <button class="btn btn-sm btn-primary" onclick="buildTeamSeries1()">⚙ Generuj kolejność S1</button>
+        <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s1')">⚙ Generuj kolejność S1</button>
       </div>
     </div>
     <div id="dr-alert-s1" class="alert alert-info" style="display:none;"></div>
@@ -666,7 +682,7 @@ tr:last-child > td { border-bottom: none; }
       <div class="flex">
         <button class="btn btn-sm" onclick="printTeamS2StartList()">🖨 Lista startowa</button>
         <button class="btn btn-sm" onclick="printTeamS2JudgeList()">🖨 Lista sędziowska</button>
-        <button class="btn btn-sm btn-primary" onclick="buildTeamSeries2()">⚙ Generuj kolejność S2</button>
+        <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s2')">⚙ Generuj kolejność S2</button>
       </div>
     </div>
     <div id="dr-alert-s2" class="alert alert-info" style="display:none;"></div>
@@ -1050,6 +1066,26 @@ tr:last-child > td { border-bottom: none; }
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-draw-s1')">Anuluj</button>
       <button class="btn btn-primary" onclick="doDrawS1()">🎲 Losuj</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: GENEROWANIE KOLEJNOŚCI DRUŻYNOWEJ ═══ -->
+<div class="modal-overlay" id="modal-team-draw">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title" id="team-draw-title">⚙ Generuj kolejność S1</div>
+    <input type="hidden" id="team-draw-series" value="s1" />
+
+    <div id="team-draw-warning" style="display:none;" class="alert alert-warning"></div>
+
+    <div style="background:var(--bg3);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text3);line-height:1.6;">
+      <strong style="color:var(--text2);" id="team-draw-rules">ℹ Zasady generowania S1:</strong><br>
+      <span id="team-draw-rules-text"></span>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-team-draw')">Anuluj</button>
+      <button class="btn btn-primary" id="team-draw-confirm-btn" onclick="doTeamDraw()">⚙ Generuj</button>
     </div>
   </div>
 </div>
@@ -1539,10 +1575,21 @@ function renderTeamOrderSection(series) {
   alertEl.style.display = 'none';
 
   // Pomocnicza: renderuje kartę jednej drużyny
-  function teamSlot(item) {
-    if (!item) {
-      return '<div class="pair-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.2;min-height:90px;"><span>—</span></div>';
+  function teamSlot(item, idxInOrder, isSoloEmpty) {
+    if (isSoloEmpty) {
+      const soloItem = order[idxInOrder - 1];
+      const otherLane = soloItem ? (soloItem.lane === 'L' ? 'P' : 'L') : 'P';
+      return '<div class="pair-athlete team-empty-slot" ' +
+        'data-series="' + series + '" data-idx="' + (idxInOrder - 1) + '" data-lane="' + otherLane + '" ' +
+        'onclick="handleTeamEmptySlotClick(this)" ' +
+        'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:90px;' +
+        'border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;transition:opacity .15s,border-color .15s;">' +
+        '<span class="lane-badge lane-' + otherLane + '" style="font-size:16px;">' + otherLane + '</span>' +
+        '<span style="font-size:10px;color:var(--text3);">pusty tor</span>' +
+        '</div>';
     }
+    if (!item) return '<div class="pair-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.2;min-height:90px;"><span>—</span></div>';
+
     const athletes = getTeamAthletes(item.team);
     const ok    = athletes.length >= TEAM_MIN_VAL();
     const t     = getTeamTime(item.team, series);
@@ -1553,55 +1600,52 @@ function renderTeamOrderSection(series) {
 
     const borderColor = !ok ? 'rgba(224,85,85,.5)' : tdsq ? 'rgba(224,85,85,.3)' : 'var(--border)';
     const bgColor     = tdsq ? 'rgba(224,85,85,.05)' : 'var(--bg3)';
+    const pickAttr = 'data-team-name="' + esc(item.team) + '" data-team-idx="' + idxInOrder + '" data-series="' + series + '"';
 
-    let h = '<div class="pair-athlete" style="flex:1;border:1px solid ' + borderColor + ';border-radius:var(--radius);padding:10px 12px;background:' + bgColor + ';min-width:0;">';
-    if (tdsq) {
-      h += '<div style="background:var(--red);color:#fff;font-family:var(--font-h);font-size:10px;font-weight:800;letter-spacing:1.5px;text-align:center;padding:2px 0;margin-bottom:6px;border-radius:2px 2px 0 0;">⛔ DYSKWALIFIKACJA</div>';
-    }
+    let h = '<div class="pair-athlete team-slot-card" ' + pickAttr + ' onclick="handleTeamClick(this)" style="flex:1;border:1px solid ' + borderColor + ';border-radius:var(--radius);padding:10px 12px;background:' + bgColor + ';min-width:0;cursor:pointer;">';
+    if (tdsq) h += '<div style="background:var(--red);color:#fff;font-family:var(--font-h);font-size:10px;font-weight:800;letter-spacing:1.5px;text-align:center;padding:2px 0;margin-bottom:6px;border-radius:2px 2px 0 0;">⛔ DYSKWALIFIKACJA</div>';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">';
     h += '<span class="pair-athlete-name">' + esc(item.team) + '</span>';
+    h += '<div style="display:flex;align-items:center;gap:6px;">';
     h += '<span class="lane-badge lane-' + item.lane + '">' + item.lane + '</span>';
-    h += '</div>';
+    h += '<button onclick="event.stopPropagation();activateTeamSwap('' + esc(item.team).replace(/'/g,"&#39;") + '',' + idxInOrder + ','' + series + '')" class="swap-trigger-btn" style="font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.5;" title="Zamień drużynę">↔</button>';
+    h += '</div></div>';
     h += '<div class="pair-athlete-meta" style="margin-bottom:8px;">';
-    if (!ok) {
-      h += '<span style="color:var(--red);">⚠ Tylko ' + athletes.length + ' M — min. ' + TEAM_MIN_VAL() + ' wymagane</span>';
-    } else {
-      h += athletes.length + ' mężczyzn';
-    }
+    if (!ok) h += '<span style="color:var(--red);">⚠ Tylko ' + athletes.length + ' M — min. ' + TEAM_MIN_VAL() + ' wymagane</span>';
+    else h += athletes.length + ' mężczyzn';
     if (series === 's1') h += ' <span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">· Σ ' + formatSum(item.sum) + '</span>';
     if (series === 's2' && s1t) h += ' <span style="font-family:var(--font-m);font-size:11px;color:' + (s1dsq ? 'var(--red)' : 'var(--text3)') + ';">· S1: ' + (s1dsq ? 'DSQ' : s1t) + '</span>';
     h += '</div>';
-    h += '<div style="display:flex;gap:4px;align-items:center;">';
+    h += '<div style="display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation();">';
     const inputStyle = tdsq ? ' style="flex:1;color:var(--red);background:rgba(224,85,85,.08);border-color:var(--red);" disabled' : ' style="flex:1;" onchange="saveTeamTime(this);rerenderTeamTime(this)" oninput="saveTeamTime(this);rerenderTeamTime(this)" onblur="normalizeTimeInput(this)"';
     h += '<input class="qe-time' + (best ? ' is-best' : '') + '" type="text" value="' + (t||'') + '" placeholder="0:00.00" data-team="' + esc(item.team) + '" data-series="' + series + '"' + inputStyle + ' />';
     const dsqStyle = 'font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 7px;border:1px solid ' + (tdsq ? 'var(--red)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (tdsq ? 'var(--red)' : 'var(--bg3)') + ';color:' + (tdsq ? '#fff' : 'var(--text3)') + ';cursor:pointer;white-space:nowrap;';
-    h += '<button onclick="toggleTeamDisq(' + "'" + esc(item.team) + "'" + ',' + "'" + series + "'" + ')" style="' + dsqStyle + '">' + (tdsq ? '✓ Cofnij DSQ' : 'DSQ') + '</button>';
-    h += '</div>';
-    h += '</div>';
+    h += '<button onclick="event.stopPropagation();toggleTeamDisq(\'' + esc(item.team) + '\',\'' + series + '\')" style="' + dsqStyle + '">' + (tdsq ? '✓ Cofnij DSQ' : 'DSQ') + '</button>';
+    h += '</div></div>';
     return h;
   }
 
   // Grupuj po pary (L + P obok siebie)
   const pairs = [];
   for (let i = 0; i < order.length; i += 2) {
-    pairs.push({ a: order[i], b: order[i+1] || null, pairNum: Math.floor(i/2) + 1 });
+    const isSolo = !order[i+1];
+    pairs.push({ a: order[i], aIdx: i, b: order[i+1]||null, bIdx: i+1, isSolo, pairNum: Math.floor(i/2)+1 });
   }
 
   let html = '';
   const total = pairs.length;
   pairs.forEach(function(p, idx) {
     const isLast = idx === total - 1;
-    html += '<div class="pair-card' + (isLast ? ' last-pair' : '') + '">';
-    html += '<div class="pair-header">';
-    html += '<span class="pair-num">' + p.pairNum + '</span>';
-    if (isLast) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA</span>';
+    html += '<div class="pair-card' + (isLast&&!p.isSolo ? ' last-pair' : '') + '">';
+    html += '<div class="pair-header"><span class="pair-num">' + p.pairNum + '</span>';
+    if (p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
+    if (isLast && !p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA</span>';
     html += '</div>';
     html += '<div class="pair-athletes">';
-    html += teamSlot(p.a);
+    html += teamSlot(p.a, p.aIdx, false);
     html += '<div class="pair-vs">VS</div>';
-    html += teamSlot(p.b);
-    html += '</div>';
-    html += '</div>';
+    html += p.isSolo ? teamSlot(null, p.bIdx, true) : teamSlot(p.b, p.bIdx, false);
+    html += '</div></div>';
   });
   teamsEl.innerHTML = html;
 }
@@ -2547,8 +2591,23 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '</div>';
 
     if (isSolo) {
-      html += '<div style="display:flex;align-items:center;gap:10px;">';
+      const otherLane = p.aLane === 'L' ? 'P' : 'L';
+      html += '<div class="pair-athletes">';
       html += athleteCardHTML(a, p.aLane, aTime, series, p.pairNum, gender);
+      html += '<div class="pair-vs">VS</div>';
+      // Pusty slot drugiego toru — klikalny w trybie swap LUB z przyciskiem zmiany toru
+      if (series === 's1') {
+        html += '<div class="pair-athlete solo-empty-slot" ' +
+          'data-pair-num="' + p.pairNum + '" data-lane="' + otherLane + '" data-gender="' + gender + '" ' +
+          'onclick="handleEmptySlotClick(this)" ' +
+          'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;transition:opacity .15s,border-color .15s;" ' +
+          'title="Kliknij aby przenieść tu zaznaczonego zawodnika lub zmienić tor SOLO">' +
+          '<span class="lane-badge lane-' + otherLane + '" style="font-size:16px;">' + otherLane + '</span>' +
+          '<span style="font-size:10px;color:var(--text3);">pusty tor</span>' +
+          '</div>';
+      } else {
+        html += '<div style="flex:1;"></div>';
+      }
       html += '</div>';
     } else {
       html += '<div class="pair-athletes">';
@@ -4182,6 +4241,55 @@ function getPairsWithTimes(series) {
 // ═══════════════════════════════════════════════════
 let _swapSource = null; // { athleteId, pairNum, gender }
 
+function handleEmptySlotClick(el) {
+  const pairNum = parseInt(el.dataset.pairNum);
+  const lane    = el.dataset.lane;
+  const gender  = el.dataset.gender;
+  const pair    = state.s1pairs.find(p => p.pairNum === pairNum && p.gender === gender);
+  if (!pair) return;
+
+  if (_swapSource) {
+    // Tryb pick — przenieś zaznaczonego zawodnika do tego pustego slotu
+    if (_swapSource.gender !== gender) {
+      showToast('Można zamieniać tylko zawodników tej samej płci', 'warning');
+      return;
+    }
+    const srcPair = state.s1pairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
+    if (!srcPair) { cancelSwapMode(); return; }
+    const srcSlot = srcPair.aId === _swapSource.athleteId ? 'a' : 'b';
+    const srcLane = srcSlot === 'a' ? srcPair.aLane : srcPair.bLane;
+
+    // Zawodnik ze źródłowej pary idzie do pustego slotu tej pary
+    // Pusty slot (bId===null) wypełniamy zawodnikiem źródłowym, źródłowy slot nullujemy
+    const tgtSlot = pair.aId === null ? 'a' : 'b'; // który slot jest pusty
+    if (tgtSlot === 'a') { pair.aId = _swapSource.athleteId; pair.aLane = lane; }
+    else                  { pair.bId = _swapSource.athleteId; pair.bLane = lane; }
+
+    // Wyczyść ze źródłowej pary
+    if (srcSlot === 'a') { srcPair.aId = null; srcPair.aLane = null; }
+    else                  { srcPair.bId = null; srcPair.bLane = null; }
+
+    const a1 = state.athletes.find(x => x.id === _swapSource.athleteId);
+    cancelSwapMode();
+    save();
+    renderSeries1View();
+    showToast('→ Przeniesiono ' + displayName(a1) + ' na Tor ' + lane, 'success');
+
+  } else {
+    // Brak trybu pick — zmień tor SOLO zawodnika (jedyny zawodnik w parze)
+    const soloId   = pair.aId || pair.bId;
+    const soloSlot = pair.aId ? 'a' : 'b';
+    const oldLane  = soloSlot === 'a' ? pair.aLane : pair.bLane;
+    const newLane  = lane;
+    if (soloSlot === 'a') pair.aLane = newLane;
+    else                   pair.bLane = newLane;
+    const a = state.athletes.find(x => x.id === soloId);
+    save();
+    renderSeries1View();
+    showToast('↔ Zmieniono tor: ' + displayName(a) + ' → Tor ' + newLane, 'success');
+  }
+}
+
 function activateSwap(athleteId, pairNum, gender) {
   // Jeśli kliknięto tego samego — anuluj
   if (_swapSource && _swapSource.athleteId === athleteId) {
@@ -4225,13 +4333,13 @@ function cancelSwapMode() {
 }
 
 function handleAthleteClick(el) {
-  if (!_swapSource) return; // nie jesteśmy w trybie pick
+  if (!_swapSource) return;
 
-  const targetId  = parseInt(el.dataset.athleteId);
+  const targetId   = parseInt(el.dataset.athleteId);
   const targetPair = parseInt(el.dataset.pairNum);
-  const gender    = el.dataset.gender;
+  const gender     = el.dataset.gender;
 
-  // Kliknięcie na siebie samego = anuluj
+  // Kliknięcie na siebie = anuluj
   if (targetId === _swapSource.athleteId) { cancelSwapMode(); return; }
 
   // Tylko ta sama płeć
@@ -4240,7 +4348,6 @@ function handleAthleteClick(el) {
     return;
   }
 
-  // Wykonaj zamianę
   const srcPair = state.s1pairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
   const tgtPair = state.s1pairs.find(p => p.pairNum === targetPair && p.gender === gender);
   if (!srcPair || !tgtPair) { cancelSwapMode(); return; }
@@ -4250,15 +4357,27 @@ function handleAthleteClick(el) {
   const srcLane = srcSlot === 'a' ? srcPair.aLane : srcPair.bLane;
   const tgtLane = tgtSlot === 'a' ? tgtPair.aLane : tgtPair.bLane;
 
-  // Zamień zawodników i tory
-  if (srcSlot === 'a') { srcPair.aId = targetId;             srcPair.aLane = tgtLane; }
-  else                 { srcPair.bId = targetId;             srcPair.bLane = tgtLane; }
-  if (tgtSlot === 'a') { tgtPair.aId = _swapSource.athleteId; tgtPair.aLane = srcLane; }
-  else                 { tgtPair.bId = _swapSource.athleteId; tgtPair.bLane = srcLane; }
+  // Sprawdź czy target jest SOLO (drugi slot w parze jest null)
+  const tgtIsSolo = tgtPair.bId === null || tgtPair.aId === null;
+  const srcIsSolo = srcPair.bId === null || srcPair.aId === null;
+
+  if (tgtIsSolo && tgtPair.pairNum !== srcPair.pairNum) {
+    // Target jest jedynym zawodnikiem w swojej parze — nie ma z kim zamieniać torów,
+    // więc zamieniamy zawodników między parami (jeden solo idzie do pary src, src-nik do pary solo)
+    if (srcSlot === 'a') { srcPair.aId = targetId; srcPair.aLane = tgtLane; }
+    else                  { srcPair.bId = targetId; srcPair.bLane = tgtLane; }
+    if (tgtSlot === 'a') { tgtPair.aId = _swapSource.athleteId; tgtPair.aLane = srcLane; }
+    else                  { tgtPair.bId = _swapSource.athleteId; tgtPair.bLane = srcLane; }
+  } else {
+    // Normalna zamiana zawodnik ↔ zawodnik (swap slotów i torów)
+    if (srcSlot === 'a') { srcPair.aId = targetId;               srcPair.aLane = tgtLane; }
+    else                  { srcPair.bId = targetId;               srcPair.bLane = tgtLane; }
+    if (tgtSlot === 'a') { tgtPair.aId = _swapSource.athleteId;  tgtPair.aLane = srcLane; }
+    else                  { tgtPair.bId = _swapSource.athleteId;  tgtPair.bLane = srcLane; }
+  }
 
   const a1 = state.athletes.find(x => x.id === _swapSource.athleteId);
   const a2 = state.athletes.find(x => x.id === targetId);
-
   cancelSwapMode();
   save();
   renderSeries1View();
@@ -4268,6 +4387,122 @@ function handleAthleteClick(el) {
 function openSwapS1(pairNum, slot, gender) { /* stara funkcja — już nieużywana */ }
 function doSwapS1() { /* stara funkcja — już nieużywana */ }
 function confirmDrawSeries1(gender) { openDrawPanel(); }
+
+// ═══════════════════════════════════════════════════
+// PANEL GENEROWANIA KOLEJNOŚCI DRUŻYNOWEJ
+// ═══════════════════════════════════════════════════
+function openTeamDrawPanel(series) {
+  const iS1 = series === 's1';
+  document.getElementById('team-draw-series').value = series;
+  document.getElementById('team-draw-title').textContent = iS1 ? '⚙ Generuj kolejność S1' : '⚙ Generuj kolejność S2';
+  document.getElementById('team-draw-confirm-btn').textContent = iS1 ? '⚙ Generuj S1' : '⚙ Generuj S2';
+  const rulesText = iS1
+    ? '· Drużyny sortowane wg sumy 8 najlepszych czasów ind. M (malejąco)<br>· Najsłabsze drużyny startują pierwsze<br>· Tor L: nieparzysta pozycja · Tor P: parzysta pozycja<br>· Nieparzysta liczba drużyn → najsłabsza biega SOLO'
+    : '· Drużyny sortowane wg czasu S1 (najwolniejsze pierwsze)<br>· Tory zamieniane względem S1 (L→P, P→L)<br>· DSQ i brak czasu → na początku kolejki';
+  document.getElementById('team-draw-rules-text').innerHTML = rulesText;
+  const warn = document.getElementById('team-draw-warning');
+  const order = state.teamOrder[series];
+  const hasAnyTime = state.teamOrder.s1.some(item => getTeamTime(item.team, series));
+  const warnLines = [];
+  if (order.length) warnLines.push('Istnieje już kolejność ' + series.toUpperCase() + ' (' + order.length + ' drużyn).');
+  if (hasAnyTime) warnLines.push('⚠ Niektóre drużyny mają wpisane czasy (nie zostaną skasowane).');
+  if (!iS1 && !state.teamOrder.s1.length) warnLines.push('⚠ Brak kolejności S1 — najpierw wygeneruj S1.');
+  warn.style.display = warnLines.length ? 'block' : 'none';
+  warn.innerHTML = warnLines.join('<br>');
+  document.getElementById('modal-team-draw').classList.add('open');
+}
+
+function doTeamDraw() {
+  const series = document.getElementById('team-draw-series').value;
+  closeModal('modal-team-draw');
+  if (series === 's1') buildTeamSeries1();
+  else buildTeamSeries2();
+}
+
+// ═══════════════════════════════════════════════════
+// PICK-MODE — zamiana drużyn w kolejności
+// ═══════════════════════════════════════════════════
+let _teamSwapSource = null;
+
+function activateTeamSwap(teamName, idx, series) {
+  if (_teamSwapSource && _teamSwapSource.teamName === teamName && _teamSwapSource.series === series) {
+    cancelTeamSwap(); return;
+  }
+  _teamSwapSource = { teamName, idx: parseInt(idx), series };
+  document.querySelectorAll('.team-slot-card').forEach(el => el.classList.remove('swap-active-athlete'));
+  document.querySelectorAll('[data-team-name="' + teamName + '"][data-series="' + series + '"]')
+    .forEach(el => el.classList.add('swap-active-athlete'));
+  const containers = ['dr-s1-teams', 'dr-s2-teams'];
+  containers.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('swap-mode'); });
+  const bar = document.getElementById('team-swap-cancel-bar');
+  document.getElementById('team-swap-cancel-info').innerHTML =
+    '↔ Wybierz z kim zamienić: <strong>' + esc(teamName) + '</strong> · kliknij drużynę lub';
+  bar.style.display = 'flex';
+  document.addEventListener('keydown', _teamSwapEscHandler);
+}
+
+function _teamSwapEscHandler(e) { if (e.key === 'Escape') cancelTeamSwap(); }
+
+function cancelTeamSwap() {
+  _teamSwapSource = null;
+  document.querySelectorAll('.team-slot-card').forEach(el => el.classList.remove('swap-active-athlete'));
+  document.querySelectorAll('.swap-mode').forEach(el => el.classList.remove('swap-mode'));
+  document.getElementById('team-swap-cancel-bar').style.display = 'none';
+  document.removeEventListener('keydown', _teamSwapEscHandler);
+}
+
+function handleTeamClick(el) {
+  if (!_teamSwapSource) return;
+  const tgtName = el.dataset.teamName;
+  const tgtIdx  = parseInt(el.dataset.teamIdx);
+  const series  = el.dataset.series;
+  if (tgtName === _teamSwapSource.teamName) { cancelTeamSwap(); return; }
+  if (series !== _teamSwapSource.series) { showToast('Można zamieniać drużyny tylko w tej samej serii', 'warning'); return; }
+  const order   = state.teamOrder[series];
+  const srcIdx  = _teamSwapSource.idx;
+  const srcLane = order[srcIdx].lane;
+  const tgtLane = order[tgtIdx].lane;
+  const n1 = order[srcIdx].team, n2 = order[tgtIdx].team;
+  order[srcIdx] = { ...order[srcIdx], team: n2, lane: srcLane };
+  order[tgtIdx] = { ...order[tgtIdx], team: n1, lane: tgtLane };
+  cancelTeamSwap();
+  save();
+  renderTeamView();
+  showToast('↔ Zamieniono: ' + n1 + ' ↔ ' + n2, 'success');
+}
+
+function handleTeamEmptySlotClick(el) {
+  const series  = el.dataset.series;
+  const soloIdx = parseInt(el.dataset.idx);
+  const newLane = el.dataset.lane;
+  const order   = state.teamOrder[series];
+
+  if (_teamSwapSource && _teamSwapSource.series === series) {
+    // Tryb pick — przenieś zaznaczoną drużynę do pustego slotu
+    const srcIdx   = _teamSwapSource.idx;
+    const srcItem  = { ...order[srcIdx] };
+    const emptyIdx = soloIdx + 1;
+    // Wstaw drużynę do pustego miejsca z nowym torem
+    order.splice(emptyIdx, 0, { ...srcItem, lane: newLane, startNum: emptyIdx + 1 });
+    // Usuń ze starego miejsca (indeks mógł się przesunąć)
+    const newSrcIdx = order.findIndex((item, i) => i !== emptyIdx && item && item.team === srcItem.team);
+    if (newSrcIdx >= 0) order.splice(newSrcIdx, 1);
+    order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+    const n = _teamSwapSource.teamName;
+    cancelTeamSwap();
+    save();
+    renderTeamView();
+    showToast('→ Przeniesiono ' + n + ' na Tor ' + newLane, 'success');
+  } else {
+    // Bez pick-mode — zmień tor SOLO drużyny
+    const soloItem = order[soloIdx];
+    if (!soloItem) return;
+    order[soloIdx] = { ...soloItem, lane: newLane };
+    save();
+    renderTeamView();
+    showToast('↔ Zmieniono tor: ' + soloItem.team + ' → Tor ' + newLane, 'success');
+  }
+}
 
 function openDrawPanel() {
   // Sprawdź ostrzeżenia
