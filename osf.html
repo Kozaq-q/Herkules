@@ -157,6 +157,35 @@ tr:last-child > td { border-bottom: none; }
 .pair-athlete { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; }
 .pair-athlete-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
 .pair-athlete-meta { font-size: 11px; color: var(--text3); font-family: var(--font-m); }
+
+/* ── Tryb zamiany zawodników ── */
+.swap-active-athlete {
+  border-color: var(--accent) !important;
+  background: rgba(232,212,77,.10) !important;
+  box-shadow: 0 0 0 2px rgba(232,212,77,.35);
+  animation: swap-pulse 1.4s ease-in-out infinite;
+}
+@keyframes swap-pulse {
+  0%,100% { box-shadow: 0 0 0 2px rgba(232,212,77,.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(232,212,77,.08); }
+}
+.swap-mode .pair-athlete:not(.swap-active-athlete) {
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.swap-mode .pair-athlete:not(.swap-active-athlete):hover {
+  border-color: var(--accent);
+  background: rgba(232,212,77,.06);
+}
+.swap-mode .pair-card { opacity: .65; transition: opacity .15s; }
+.swap-mode .pair-card:has(.swap-active-athlete) { opacity: 1; }
+#swap-cancel-bar {
+  display: none; position: sticky; top: 0; z-index: 100;
+  background: rgba(232,212,77,.10); border: 1px solid rgba(232,212,77,.3);
+  border-radius: var(--radius); padding: 8px 14px; margin-bottom: 10px;
+  font-size: 13px; font-weight: 600; color: var(--accent);
+  align-items: center; gap: 12px;
+}
 .pair-vs { text-align: center; font-family: var(--font-h); font-size: 16px; font-weight: 800; color: var(--text3); }
 
 /* ─── QE TABLE ─── */
@@ -412,6 +441,11 @@ tr:last-child > td { border-bottom: none; }
       <!-- Losowanie osobno -->
       <button class="btn btn-sm btn-primary" onclick="openDrawPanel()" title="Panel losowania Serii 1">🎲 Losowanie S1</button>
     </div>
+  </div>
+
+  <div id="swap-cancel-bar">
+    <span id="swap-cancel-info" style="flex:1;">Wybierz zawodnika do zamiany</span>
+    <button onclick="cancelSwapMode()" style="background:rgba(232,212,77,.15);border:1px solid rgba(232,212,77,.4);border-radius:var(--radius);color:var(--accent);font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;letter-spacing:.5px;">✕ Anuluj zamianę</button>
   </div>
 
   <div id="s1-alert-no-athletes" class="alert alert-warning" style="display:none;">Brak zawodników. Przejdź do zakładki Zawodnicy i dodaj uczestników.</div>
@@ -1016,33 +1050,6 @@ tr:last-child > td { border-bottom: none; }
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-draw-s1')">Anuluj</button>
       <button class="btn btn-primary" onclick="doDrawS1()">🎲 Losuj</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ MODAL: ZAMIANA ZAWODNIKA W PARZE S1 ═══ -->
-<div class="modal-overlay" id="modal-swap-s1">
-  <div class="modal" style="max-width:460px;">
-    <div class="modal-title">↔ Zamień zawodnika</div>
-    <input type="hidden" id="swap-s1-pair-num" />
-    <input type="hidden" id="swap-s1-slot" /> <!-- 'a' lub 'b' -->
-    <input type="hidden" id="swap-s1-gender" />
-
-    <div id="swap-s1-info" style="padding:10px 14px;background:var(--bg3);border-radius:var(--radius);margin-bottom:16px;font-size:13px;line-height:1.6;"></div>
-
-    <div class="form-group">
-      <label>Zamień z zawodnikiem</label>
-      <select id="swap-s1-target" style="font-size:13px;">
-        <option value="">— wybierz —</option>
-      </select>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px;">Lista zawiera wszystkich zawodników tej płci. Wybrany zawodnik zamieni się miejscem (para + tor).</div>
-    </div>
-
-    <div id="swap-s1-warn" style="display:none;font-size:11px;color:var(--orange);padding:6px 10px;background:rgba(232,148,77,.08);border-radius:var(--radius);margin-bottom:8px;"></div>
-
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-swap-s1')">Anuluj</button>
-      <button class="btn btn-primary" onclick="doSwapS1()">↔ Zamień</button>
     </div>
   </div>
 </div>
@@ -2562,27 +2569,33 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   const s1time = series === 's2' ? getTime(a.id, 's1') : '';
   const s1dsq  = series === 's2' ? isDisq(a.id, 's1') : false;
   const g      = gender || a.gender;
-  const slot   = series === 's1' ? (lane === (state.s1pairs.find(p=>p.pairNum===pairNum&&p.gender===g)?.aLane) ? 'a' : 'b') : null;
 
-  const swapBtn = (series === 's1' && pairNum)
-    ? '<button onclick="openSwapS1(' + pairNum + ',\'' + slot + '\',\'' + g + '\')" ' +
-      'style="font-size:10px;padding:2px 6px;border:1px solid var(--border2);border-radius:var(--radius);' +
-      'background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.4;" title="Zamień zawodnika">↔</button>'
+  // W S1 — karta zawodnika jest klikalna (pick-mode)
+  const pickAttr = (series === 's1' && pairNum)
+    ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + g + '" onclick="handleAthleteClick(this)"'
     : '';
 
-  return '<div class="pair-athlete" style="flex:1;' + (dsq ? 'opacity:.6;' : '') + '">' +
+  // Przycisk ↔ tylko w S1
+  const swapBtn = (series === 's1' && pairNum)
+    ? '<button onclick="event.stopPropagation();activateSwap(' + a.id + ',' + pairNum + ',\'' + g + '\')" ' +
+      'class="swap-trigger-btn" ' +
+      'style="font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:var(--radius);' +
+      'background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.5;flex-shrink:0;" title="Zamień zawodnika">↔</button>'
+    : '';
+
+  return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-    '<div style="display:flex;align-items:center;gap:6px;">' +
-    '<span class="pair-athlete-name">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
-    '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;" title="Zmień numer startowy" onclick="openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
+    '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">' +
+    '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
+    '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;flex-shrink:0;" title="Zmień numer startowy" onclick="event.stopPropagation();openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
     swapBtn +
     '</div>' +
-    '<span class="lane-badge lane-' + lane + '">' + lane + '</span>' +
+    '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;margin-left:6px;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:6px;">' + esc(a.team) +
     (s1time ? ' <span style="color:' + (s1dsq ? 'var(--red)' : 'var(--text3)') + ';font-family:var(--font-m);font-size:11px;">S1: ' + (s1dsq ? 'DSQ' : s1time) + '</span>' : '') +
     '</div>' +
-    '<div style="display:flex;gap:4px;align-items:center;">' +
+    '<div style="display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation();">' +
     '<input class="qe-time' + (isBest ? ' is-best' : '') + '" type="text" value="' + (time||'') + '" placeholder="0:00.00"' +
     ' data-id="' + a.id + '" data-series="' + series + '" data-pairnum="' + (pairNum||0) + '" data-gender="' + g + '"' +
     ' onchange="saveTime(this);rerenderPairTime(this);if(this.value.trim()&&+this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,this.dataset.gender,+this.dataset.pairnum)"' +
@@ -4165,8 +4178,97 @@ function getPairsWithTimes(series) {
 }
 
 // ═══════════════════════════════════════════════════
-// PANEL LOSOWANIA S1
+// PICK-MODE — zamiana zawodników w S1
 // ═══════════════════════════════════════════════════
+let _swapSource = null; // { athleteId, pairNum, gender }
+
+function activateSwap(athleteId, pairNum, gender) {
+  // Jeśli kliknięto tego samego — anuluj
+  if (_swapSource && _swapSource.athleteId === athleteId) {
+    cancelSwapMode();
+    return;
+  }
+  _swapSource = { athleteId, pairNum, gender };
+
+  // Podświetl aktywnego zawodnika
+  document.querySelectorAll('.pair-athlete').forEach(el => el.classList.remove('swap-active-athlete'));
+  document.querySelectorAll('[data-athlete-id="' + athleteId + '"]').forEach(el => el.classList.add('swap-active-athlete'));
+
+  // Wejdź w tryb pick
+  const containers = ['s1-pairs-M', 's1-pairs-K'];
+  containers.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('swap-mode');
+  });
+
+  // Pokaż pasek z imieniem i przyciskiem anulowania
+  const a = state.athletes.find(x => x.id === athleteId);
+  const bar  = document.getElementById('swap-cancel-bar');
+  const info = document.getElementById('swap-cancel-info');
+  info.innerHTML = '↔ Wybierz z kim zamienić: <strong>' + esc(displayName(a)) + '</strong> · kliknij zawodnika lub';
+  bar.style.display = 'flex';
+
+  // ESC
+  document.addEventListener('keydown', _swapEscHandler);
+}
+
+function _swapEscHandler(e) {
+  if (e.key === 'Escape') cancelSwapMode();
+}
+
+function cancelSwapMode() {
+  _swapSource = null;
+  document.querySelectorAll('.pair-athlete').forEach(el => el.classList.remove('swap-active-athlete'));
+  document.querySelectorAll('.swap-mode').forEach(el => el.classList.remove('swap-mode'));
+  document.getElementById('swap-cancel-bar').style.display = 'none';
+  document.removeEventListener('keydown', _swapEscHandler);
+}
+
+function handleAthleteClick(el) {
+  if (!_swapSource) return; // nie jesteśmy w trybie pick
+
+  const targetId  = parseInt(el.dataset.athleteId);
+  const targetPair = parseInt(el.dataset.pairNum);
+  const gender    = el.dataset.gender;
+
+  // Kliknięcie na siebie samego = anuluj
+  if (targetId === _swapSource.athleteId) { cancelSwapMode(); return; }
+
+  // Tylko ta sama płeć
+  if (gender !== _swapSource.gender) {
+    showToast('Można zamieniać tylko zawodników tej samej płci', 'warning');
+    return;
+  }
+
+  // Wykonaj zamianę
+  const srcPair = state.s1pairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
+  const tgtPair = state.s1pairs.find(p => p.pairNum === targetPair && p.gender === gender);
+  if (!srcPair || !tgtPair) { cancelSwapMode(); return; }
+
+  const srcSlot = srcPair.aId === _swapSource.athleteId ? 'a' : 'b';
+  const tgtSlot = tgtPair.aId === targetId ? 'a' : 'b';
+  const srcLane = srcSlot === 'a' ? srcPair.aLane : srcPair.bLane;
+  const tgtLane = tgtSlot === 'a' ? tgtPair.aLane : tgtPair.bLane;
+
+  // Zamień zawodników i tory
+  if (srcSlot === 'a') { srcPair.aId = targetId;             srcPair.aLane = tgtLane; }
+  else                 { srcPair.bId = targetId;             srcPair.bLane = tgtLane; }
+  if (tgtSlot === 'a') { tgtPair.aId = _swapSource.athleteId; tgtPair.aLane = srcLane; }
+  else                 { tgtPair.bId = _swapSource.athleteId; tgtPair.bLane = srcLane; }
+
+  const a1 = state.athletes.find(x => x.id === _swapSource.athleteId);
+  const a2 = state.athletes.find(x => x.id === targetId);
+
+  cancelSwapMode();
+  save();
+  renderSeries1View();
+  showToast('↔ Zamieniono: ' + displayName(a1) + ' ↔ ' + displayName(a2), 'success');
+}
+
+function openSwapS1(pairNum, slot, gender) { /* stara funkcja — już nieużywana */ }
+function doSwapS1() { /* stara funkcja — już nieużywana */ }
+function confirmDrawSeries1(gender) { openDrawPanel(); }
+
 function openDrawPanel() {
   // Sprawdź ostrzeżenia
   const warn = document.getElementById('draw-warning');
@@ -4202,109 +4304,6 @@ function doDrawS1() {
   drawSeries1(gender || undefined);
 }
 
-// ═══════════════════════════════════════════════════
-// ZAMIANA ZAWODNIKÓW W PARZE S1
-// ═══════════════════════════════════════════════════
-function openSwapS1(pairNum, slot, gender) {
-  // pairNum: numer pary, slot: 'a' lub 'b', gender: 'M'/'K'
-  const pairs = state.s1pairs.filter(p => p.gender === gender);
-  const pair  = pairs.find(p => p.pairNum === pairNum);
-  if (!pair) return;
-
-  const athleteId = slot === 'a' ? pair.aId : pair.bId;
-  const athlete   = state.athletes.find(a => a.id === athleteId);
-  const lane      = slot === 'a' ? pair.aLane : pair.bLane;
-
-  document.getElementById('swap-s1-pair-num').value = pairNum;
-  document.getElementById('swap-s1-slot').value     = slot;
-  document.getElementById('swap-s1-gender').value   = gender;
-
-  document.getElementById('swap-s1-info').innerHTML =
-    'Zamienisz: <strong>' + esc(displayName(athlete)) + '</strong>' +
-    ' · Para <strong>' + pairNum + '</strong>' +
-    ' · Tor <strong>' + lane + '</strong>';
-
-  // Wypełnij select — wszyscy zawodnicy tej płci oprócz bieżącego
-  const sel = document.getElementById('swap-s1-target');
-  const allAthletes = state.athletes.filter(a => a.gender === gender && a.id !== athleteId)
-    .sort((a, b) => {
-      // Najpierw po parze (żeby łatwo znaleźć), potem po nazwisku
-      const pA = state.s1pairs.find(p => p.aId === a.id || p.bId === a.id);
-      const pB = state.s1pairs.find(p => p.aId === b.id || p.bId === b.id);
-      const nA = pA ? pA.pairNum : 999;
-      const nB = pB ? pB.pairNum : 999;
-      return nA - nB;
-    });
-
-  sel.innerHTML = '<option value="">— wybierz zawodnika —</option>';
-  allAthletes.forEach(a => {
-    const p = state.s1pairs.find(px => px.aId === a.id || px.bId === a.id);
-    const pairInfo = p ? ' [Para ' + p.pairNum + ', Tor ' + (p.aId === a.id ? p.aLane : p.bLane) + ']' : ' [bez pary]';
-    const hasTime  = getTime(a.id, 's1');
-    sel.innerHTML += '<option value="' + a.id + '">' + esc(displayName(a)) + ' · ' + esc(a.team) + pairInfo + (hasTime ? ' ✓' : '') + '</option>';
-  });
-
-  document.getElementById('swap-s1-warn').style.display = 'none';
-  sel.onchange = () => {
-    const tid = parseInt(sel.value);
-    if (!tid) { document.getElementById('swap-s1-warn').style.display = 'none'; return; }
-    const ta = state.athletes.find(a => a.id === tid);
-    const warn = document.getElementById('swap-s1-warn');
-    const tTime = getTime(tid, 's1');
-    const myTime = getTime(athleteId, 's1');
-    if (tTime || myTime) {
-      warn.style.display = 'block';
-      warn.textContent = '⚠ ' + (tTime ? displayName(ta) + ' ma czas: ' + tTime + '. ' : '') +
-        (myTime ? displayName(athlete) + ' ma czas: ' + myTime + '. ' : '') + 'Czasy pozostają przy zawodnikach.';
-    } else {
-      warn.style.display = 'none';
-    }
-  };
-
-  document.getElementById('modal-swap-s1').classList.add('open');
-}
-
-function doSwapS1() {
-  const pairNum  = parseInt(document.getElementById('swap-s1-pair-num').value);
-  const slot     = document.getElementById('swap-s1-slot').value;
-  const gender   = document.getElementById('swap-s1-gender').value;
-  const targetId = parseInt(document.getElementById('swap-s1-target').value);
-
-  if (!targetId) { alert('Wybierz zawodnika.'); return; }
-
-  // Znajdź parę źródłową
-  const srcPair = state.s1pairs.find(p => p.pairNum === pairNum && p.gender === gender);
-  if (!srcPair) return;
-
-  const srcId   = slot === 'a' ? srcPair.aId : srcPair.bId;
-  const srcLane = slot === 'a' ? srcPair.aLane : srcPair.bLane;
-
-  // Znajdź parę docelową (może być ta sama para, inny slot)
-  const tgtPair = state.s1pairs.find(p => p.aId === targetId || p.bId === targetId);
-  const tgtSlot = tgtPair ? (tgtPair.aId === targetId ? 'a' : 'b') : null;
-  const tgtLane = tgtPair ? (tgtPair.aId === targetId ? tgtPair.aLane : tgtPair.bLane) : null;
-
-  // Wykonaj zamianę — zamień zawodników miejscami (para + tor)
-  if (tgtPair) {
-    // Zawodnik z innej pary — zamień wzajemnie
-    if (slot === 'a') { srcPair.aId = targetId; srcPair.aLane = tgtLane; }
-    else              { srcPair.bId = targetId; srcPair.bLane = tgtLane; }
-
-    if (tgtSlot === 'a') { tgtPair.aId = srcId; tgtPair.aLane = srcLane; }
-    else                 { tgtPair.bId = srcId; tgtPair.bLane = srcLane; }
-  } else {
-    // Zawodnik bez pary (nie powinno się zdarzyć, ale obsługujemy)
-    if (slot === 'a') srcPair.aId = targetId;
-    else              srcPair.bId = targetId;
-  }
-
-  closeModal('modal-swap-s1');
-  save();
-  renderSeries1View();
-  showToast('↔ Zamieniono zawodników', 'success');
-}
-
-function confirmDrawSeries1(gender) { openDrawPanel(); }
 
 function confirmBuildSeries2(gender) {
   const gLabel    = gender === 'M' ? 'Mężczyźni' : gender === 'K' ? 'Kobiety' : 'M+K';
