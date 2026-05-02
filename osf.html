@@ -1604,7 +1604,7 @@ function teamStartListHTML(series) {
     html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#222;color:#fff;border-right:3px solid #fff;">';
     html += '&#9632; TOR L \u00a0\u2014\u00a0 <span style="text-transform:uppercase;">' + esc(itemL.team) + '</span>' + (okL?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
     if (itemP) {
-      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#555;color:#fff;">';
+      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#333;color:#fff;">';
       html += '&#9633; TOR P \u00a0\u2014\u00a0 <span style="text-transform:uppercase;">' + esc(itemP.team) + '</span>' + (okP?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
     } else {
       html += '<th style="background:#e0e0e0;color:#aaa;padding:7px 12px;">\u2014</th>';
@@ -1621,7 +1621,6 @@ function teamStartListHTML(series) {
       html += '</tr>';
     }
     if (maxRest > 0) {
-      html += '<tr><td colspan="2" style="padding:3px 12px;background:#f0f0f0;font-size:9px;color:#999;letter-spacing:1px;text-transform:uppercase;border-top:2px dashed #ccc;">Poni\u017cej nie liczy si\u0119 do wyniku</td></tr>';
       for (let j = 0; j < maxRest; j++) {
         const aL = restL[j], aP = restP[j];
         html += '<tr style="background:#fafafa;">';
@@ -1659,20 +1658,26 @@ function teamJudgeListHTML(series) {
     html += '</div>';
     html += '<table style="width:100%;border-collapse:collapse;">';
     html += '<tr>';
-    html += '<td style="width:42%;padding:10px 14px;border:1px solid #ccc;text-align:right;vertical-align:top;">';
+    html += '<td style="width:50%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:middle;">';
+    html += '<div style="display:flex;align-items:center;gap:10px;">';
+    html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;flex-shrink:0;">L</div>';
+    html += '<div>';
     html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL.team) + '</div>';
-    html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;margin-top:5px;letter-spacing:1px;">L</div>';
-    if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:3px;">S1: ' + s1L + '</div>';
+    if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1L + '</div>';
+    html += '</div>';
+    html += '<div style="margin-left:auto;flex-shrink:0;"><div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;text-align:center;">Czas</div><div style="width:72px;height:32px;border:2px solid #000;background:#fff;"></div></div>';
+    html += '</div>';
     html += '</td>';
-    html += '<td style="width:16%;text-align:center;vertical-align:middle;padding:10px;border-top:1px solid #ccc;border-bottom:1px solid #ccc;">';
-    html += '<div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Czas</div>';
-    html += '<div style="width:72px;height:32px;border:2px solid #000;background:#fff;margin:0 auto;"></div>';
-    html += '</td>';
-    html += '<td style="width:42%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:top;">';
+    html += '<td style="width:50%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:middle;">';
     if (itemP) {
+      html += '<div style="display:flex;align-items:center;gap:10px;">';
+      html += '<div style="display:inline-block;background:#333;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;flex-shrink:0;">P</div>';
+      html += '<div>';
       html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemP.team) + '</div>';
-      html += '<div style="display:inline-block;background:#555;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;margin-top:5px;letter-spacing:1px;">P</div>';
-      if (s1P) html += '<div style="font-size:10px;color:#888;margin-top:3px;">S1: ' + s1P + '</div>';
+      if (s1P) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1P + '</div>';
+      html += '</div>';
+      html += '<div style="margin-left:auto;flex-shrink:0;"><div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;text-align:center;">Czas</div><div style="width:72px;height:32px;border:2px solid #000;background:#fff;"></div></div>';
+      html += '</div>';
     } else {
       html += '<div style="color:#ccc;font-style:italic;">SOLO</div>';
     }
@@ -1720,7 +1725,7 @@ function printTeamResults() {
   }).sort((a, b) => { if (!a.ok && b.ok) return 1; if (a.ok && !b.ok) return -1; return a.bestSec - b.bestSec; });
 
   const medals = ['🥇', '🥈', '🥉'];
-  const topBg  = ['#000', '#333', '#555'];
+  const topBg  = ['#000', '#222', '#333'];
   const topFg  = ['#fff', '#fff', '#fff'];
 
   const css = PAIRS_PDF_CSS + `
@@ -3031,7 +3036,6 @@ function pairTableRowsJudge(pairs, showS1) {
     // Tor L — wyrównany do prawej, nazwa blisko środka
     html += '<td class="athlete-left">';
     if (athL) {
-      html += '<span class="lane-badge-L">L</span>';
       html += '<span class="athlete-name">' + esc(athL.name) + '</span>';
       html += '<span class="athlete-team">' + esc(athL.team) + '</span>';
       if (showS1 && s1L) html += '<span class="athlete-s1">S1: ' + s1L + '</span>';
@@ -3040,19 +3044,19 @@ function pairTableRowsJudge(pairs, showS1) {
     }
     html += '</td>';
 
-    // Środek — komórki czasu
+    // Środek — komórki czasu z oznaczeniami L/P
     html += '<td class="time-wrap">';
     if (isSolo) {
-      html += '<div class="time-cell"></div>';
+      html += '<div class="time-pair"><span class="lane-badge-L">L</span><div class="time-cell"></div></div>';
     } else {
-      html += '<div class="time-pair"><div class="time-cell"></div><div class="time-cell"></div></div>';
+      html += '<div class="time-pair"><span class="lane-badge-L">L</span><div class="time-cell"></div><div class="time-cell"></div><span class="lane-badge-P">P</span></div>';
     }
     html += '</td>';
 
     // Tor P — wyrównany do lewej, nazwa blisko środka
     html += '<td class="athlete-right">';
     if (athP) {
-      html += '<span class="athlete-name">' + esc(athP.name) + (athP.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '') + '<span class="lane-badge-P">P</span></span>';
+      html += '<span class="athlete-name">' + esc(athP.name) + (athP.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '') + '</span>';
       html += '<span class="athlete-team">' + esc(athP.team) + '</span>';
       if (showS1 && s1P) html += '<span class="athlete-s1">S1: ' + s1P + '</span>';
     } else {
@@ -3100,7 +3104,7 @@ const PAIRS_PDF_CSS = `
   /* Lista sędziowska — horizontal */
   td.athlete-left{padding:12px 10px 12px 12px;text-align:right;width:42%;}
   td.athlete-right{padding:12px 12px 12px 10px;text-align:left;width:42%;}
-  td.time-wrap{text-align:center;width:16%;padding:8px 6px;border-left:2px solid #000;border-right:2px solid #000;background:#fff;}
+  td.time-wrap{text-align:center;width:22%;padding:8px 4px;border-left:2px solid #000;border-right:2px solid #000;background:#fff;}
   .time-cell{width:54px;height:28px;border:2px solid #000;background:#fff;display:inline-block;vertical-align:middle;}
   .time-pair{display:flex;gap:4px;justify-content:center;align-items:center;}
   .athlete-name{font-weight:bold;font-size:14px;display:block;line-height:1.2;}
@@ -3197,9 +3201,9 @@ const RESULTS_PDF_CSS = `
   /* TOP 3 */
   tr.top1 td { background: #000 !important; color: #fff; }
   tr.top1 .rank-cell::before { content: "🥇 "; }
-  tr.top2 td { background: #333 !important; color: #fff; }
+  tr.top2 td { background: #222 !important; color: #fff; }
   tr.top2 .rank-cell::before { content: "🥈 "; }
-  tr.top3 td { background: #666 !important; color: #fff; }
+  tr.top3 td { background: #333 !important; color: #fff; }
   tr.top3 .rank-cell::before { content: "🥉 "; }
   tr.top1 td, tr.top2 td, tr.top3 td { border-bottom: 1px solid #888; }
   .dsq { text-decoration: line-through; color: #888; font-size: 10px; }
@@ -3633,21 +3637,36 @@ function printKlasyfikacjaPDF() {
   html += '<h2>Klasyfikacja końcowa</h2>';
   html += '<table><thead><tr><th>Msc</th><th>Drużyna</th><th>Pkt ind. M</th><th>Pkt drużyn.</th><th>SUMA</th></tr></thead><tbody>';
   result.forEach((r, i) => {
-    html += '<tr' + (i%2?' style="background:#f5f5f5;"':'') + '><td>' + (i+1) + '</td><td><b>' + esc(r.team) + '</b></td><td style="text-align:center;">' + r.indPts + '</td><td style="text-align:center;">' + r.teamPts + '</td><td style="text-align:center;font-size:15px;font-weight:bold;">' + r.total + '</td></tr>';
+    const rank = i + 1;
+    const topStyle = rank === 1 ? ' style="background:#000;color:#fff;"'
+                   : rank === 2 ? ' style="background:#222;color:#fff;"'
+                   : rank === 3 ? ' style="background:#333;color:#fff;"'
+                   : (i%2 ? ' style="background:#f5f5f5;"' : '');
+    html += '<tr' + topStyle + '><td>' + (i+1) + '</td><td><b>' + esc(r.team) + '</b></td><td style="text-align:center;">' + r.indPts + '</td><td style="text-align:center;">' + r.teamPts + '</td><td style="text-align:center;font-size:15px;font-weight:bold;">' + r.total + '</td></tr>';
   });
   html += '</tbody></table>';
 
   html += '<h2>Bieg indywidualny M (N=' + N_men + ')</h2>';
   html += '<table><thead><tr><th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>Czas</th><th>Pkt</th></tr></thead><tbody>';
   rankedMen.forEach((r, i) => {
-    html += '<tr' + (i%2?' style="background:#f5f5f5;"':'') + '><td>' + (r.rank||'—') + '</td><td>' + esc(displayName(r.athlete)) + '</td><td>' + esc(r.athlete.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
+    const rk = r.rank;
+    const topStyle = rk === 1 ? ' style="background:#000;color:#fff;"'
+                   : rk === 2 ? ' style="background:#222;color:#fff;"'
+                   : rk === 3 ? ' style="background:#333;color:#fff;"'
+                   : (i%2 ? ' style="background:#f5f5f5;"' : '');
+    html += '<tr' + topStyle + '><td>' + (r.rank||'—') + '</td><td>' + esc(displayName(r.athlete)) + '</td><td>' + esc(r.athlete.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
   });
   html += '</tbody></table>';
 
   html += '<h2>Bieg drużynowy (N=' + N_team + ' × ' + mult + ')</h2>';
   html += '<table><thead><tr><th>Msc</th><th>Drużyna</th><th>Czas</th><th>Pkt</th></tr></thead><tbody>';
   rankedTeams.forEach((r, i) => {
-    html += '<tr' + (i%2?' style="background:#f5f5f5;"':'') + '><td>' + (r.rank||'—') + '</td><td>' + esc(r.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
+    const rk = r.rank;
+    const topStyle = rk === 1 ? ' style="background:#000;color:#fff;"'
+                   : rk === 2 ? ' style="background:#222;color:#fff;"'
+                   : rk === 3 ? ' style="background:#333;color:#fff;"'
+                   : (i%2 ? ' style="background:#f5f5f5;"' : '');
+    html += '<tr' + topStyle + '><td>' + (r.rank||'—') + '</td><td>' + esc(r.team) + '</td><td>' + (r.best||'—') + '</td><td style="text-align:right;font-weight:bold;">' + r.pts + '</td></tr>';
   });
   html += '</tbody></table>';
 
