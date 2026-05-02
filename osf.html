@@ -192,6 +192,14 @@ tr:last-child > td { border-bottom: none; }
 .pk-row td { opacity: 0.55; }
 .pk-row td:first-child, .pk-row td:nth-child(2) { opacity: 1; }
 
+/* ─── PAIR INFO POPOVER ─── */
+.pair-info-pop { position:fixed; z-index:5000; background:var(--bg2); border:1px solid var(--border2); border-radius:6px; padding:12px 14px; width:290px; box-shadow:0 4px 20px rgba(0,0,0,.7); font-size:12px; color:var(--text2); line-height:1.6; }
+.pi-title { font-family:var(--font-h); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--accent); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+.pi-row { margin-bottom:4px; }
+.pi-label { color:var(--text3); font-size:11px; }
+.pi-val { color:var(--text1); font-family:var(--font-m); }
+.pi-note { font-size:11px; color:var(--orange); margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+
 #toast-container { position:fixed; bottom:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
 .toast { font-family:var(--font-b); font-size:13px; padding:10px 18px; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.5); opacity:0; transform:translateY(12px); transition:opacity .25s, transform .25s; pointer-events:none; max-width:320px; }
 .toast.show { opacity:1; transform:translateY(0); }
@@ -753,6 +761,15 @@ tr:last-child > td { border-bottom: none; }
         <div class="alert alert-info mt-12" style="font-size:11px;">
           💡 Algorytm Serii 2 zawsze respektuje obowiązkową zmianę toru — powyższe opcje dotyczą wyłącznie Serii 1.
         </div>
+
+        <div style="border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:12px 14px;margin-top:10px;background:rgba(232,148,77,.04);">
+          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">Tryb uproszczony — brak zasady toru</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Wyłącza zasadę że nieparzysty numer bib = tor L, parzysty = tor P. Obowiązuje we wszystkich biegach — S1 i S2 dla obu płci oraz bieg drużynowy. W S2 zmiana toru nadal jest obowiązkowa.</div>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
+            <input type="checkbox" id="osf-ignore-lane-rule" onchange="saveSetup()" />
+            <span>Pomiń zasadę toru z numeru startowego</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -995,7 +1012,8 @@ let state = {
     teamMin: 8,      // min. zawodników M do startu
     teamMultiplier: 3, // mnożnik punktowy dla biegu drużynowego
     allowSameTeamPair: false,
-    allowSoloPair: false
+    allowSoloPair: false,
+    ignoreLaneRule: false  // gdy true — tor z numeru bib ignorowany, dowolne parowanie
   }
 };
 
@@ -1357,10 +1375,13 @@ function buildTeamSeries1() {
     return b.sum - a.sum; // najsłabsze (największa suma) pierwsze
   });
 
-  // przydziel tory: L, P, L, P...
+  // Jeśli nieparzysta liczba drużyn — najsłabsza (pierwsza) biega solo
+  // Upewnij się że solo jest zawsze na początku (idx 0 = solo jeśli nieparzysta)
+  const isOdd = sorted.length % 2 !== 0;
+  // sorted[0] = najsłabsza → jeśli nieparzysta liczba, biega solo jako pierwsza
   state.teamOrder.s1 = sorted.map((item, idx) => ({
     team:     item.team,
-    lane:     idx % 2 === 0 ? 'L' : 'P',
+    lane:     isOdd ? (idx === 0 ? 'L' : (idx % 2 === 1 ? 'L' : 'P')) : (idx % 2 === 0 ? 'L' : 'P'),
     startNum: idx + 1,
     sum:      item.sum,
     count:    item.count
@@ -1541,62 +1562,75 @@ function renderTeamResults() {
 // ═══════════════════════════════════════════════════
 // BIEG DRUŻYNOWY — druki PDF
 // ═══════════════════════════════════════════════════
+function getSortedTeamAthletes(team) {
+  const all = getTeamAthletes(team);
+  const N   = TEAM_COUNT();
+  const scored = all.map(a => ({ a, t: parseTime(bestTime(a.id)) })).sort((x,y) => x.t - y.t);
+  return { top: scored.slice(0,N).map(x=>x.a), rest: scored.slice(N).map(x=>x.a) };
+}
+
 function teamStartListHTML(series) {
   const order = state.teamOrder[series];
   if (!order.length) return null;
-  const seriesLabel = series === 's1' ? 'Seria 1' : 'Seria 2';
   const c = state.contest;
-  let html = '<h1>OSF — Bieg Drużynowy · ' + seriesLabel + '</h1>';
-  html += '<div class="sub">' + esc(c.name||'') + (c.name?' · ':'') + esc(c.city) + (c.date?' · '+c.date:'') + '</div>';
-  html += '<p style="font-size:10px;color:#555;margin-bottom:12px;">Liczy się czas ' + TEAM_COUNT() + '. zawodnika na mecie.</p>';
+  const N = TEAM_COUNT();
+  const sl = series === 's1' ? 'Seria 1' : 'Seria 2';
 
-  // Grupuj w pary (L + P)
+  let html = '<h1 style="font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;">OSF \u2014 Bieg Dru\u017cynowy \u00b7 ' + sl + '</h1>';
+  html += '<div style="font-size:10px;color:#555;margin-bottom:4px;">' + esc(c.name||'') + (c.name?' \u00b7 ':'') + esc(c.city) + (c.date?' \u00b7 '+c.date:'') + '</div>';
+  html += '<div style="font-size:10px;color:#888;margin-bottom:14px;">Liczy si\u0119 czas ' + N + '. zawodnika na mecie.</div>';
+
   for (let i = 0; i < order.length; i += 2) {
-    const itemL = order[i];
-    const itemP = order[i+1] || null;
+    const itemL = order[i], itemP = order[i+1] || null;
     const pairNum = Math.floor(i/2) + 1;
     const isLast = i >= order.length - 2;
+    const isSolo = !itemP;
+    const { top: topL, rest: restL } = getSortedTeamAthletes(itemL.team);
+    const { top: topP, rest: restP } = itemP ? getSortedTeamAthletes(itemP.team) : { top: [], rest: [] };
+    const okL = (topL.length + restL.length) >= TEAM_MIN_VAL();
+    const okP = itemP ? (topP.length + restP.length) >= TEAM_MIN_VAL() : true;
 
-    const athL = getTeamAthletes(itemL.team);
-    const athP = itemP ? getTeamAthletes(itemP.team) : [];
-    const okL  = athL.length >= TEAM_MIN_VAL();
-    const okP  = itemP ? athP.length >= TEAM_MIN_VAL() : true;
-
-    // Nagłówek pary
-    html += '<div style="margin-bottom:16px;page-break-inside:avoid;">';
-    html += '<div style="background:#000;color:#fff;padding:5px 10px;display:flex;align-items:center;gap:12px;margin-bottom:0;">';
-    html += '<span style="font-size:15px;font-weight:bold;">' + pairNum + '.</span>';
-    if (isLast) html += '<span style="font-size:10px;letter-spacing:1px;opacity:.7;">OSTATNIA PARA</span>';
-    if (series === 's2') {
-      const s1L = itemL ? getTeamTime(itemL.team,'s1') : '';
-      const s1P = itemP ? getTeamTime(itemP.team,'s1') : '';
-      html += '<span style="margin-left:auto;font-size:10px;opacity:.7;">S1: L=' + (s1L||'—') + ' · P=' + (s1P||'—') + '</span>';
+    html += '<div style="margin-bottom:20px;page-break-inside:avoid;">';
+    html += '<div style="background:#000;color:#fff;padding:7px 14px;display:flex;align-items:center;gap:14px;">';
+    html += '<span style="font-size:16px;font-weight:bold;min-width:28px;">' + pairNum + '.</span>';
+    if (isSolo) html += '<span style="font-size:10px;background:#444;padding:2px 6px;letter-spacing:1px;">SOLO</span>';
+    if (isLast && !isSolo) html += '<span style="font-size:10px;background:#444;padding:2px 6px;letter-spacing:1px;">OSTATNIA PARA</span>';
+    if (series === 's2' && !isSolo) {
+      html += '<span style="margin-left:auto;font-size:10px;opacity:.7;">S1: L=' + (getTeamTime(itemL.team,'s1')||'\u2014') + ' \u00b7 P=' + (itemP?getTeamTime(itemP.team,'s1')||'\u2014':'\u2014') + '</span>';
     }
     html += '</div>';
 
-    // Dwie kolumny
-    html += '<table style="width:100%;border-collapse:collapse;">';
-    html += '<thead><tr>';
-    html += '<th style="width:50%;background:#333;color:#fff;padding:5px 10px;font-size:10px;text-align:left;">🔵 TOR L — ' + esc(itemL.team) + (okL ? '' : ' [DSQ]') + '</th>';
-    html += '<th style="width:50%;background:#555;color:#fff;padding:5px 10px;font-size:10px;text-align:left;">⬜ TOR P — ' + (itemP ? esc(itemP.team) + (okP ? '' : ' [DSQ]') : '—') + '</th>';
+    html += '<table style="width:100%;border-collapse:collapse;"><thead><tr>';
+    html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#222;color:#fff;border-right:3px solid #fff;">';
+    html += '&#9632; TOR L \u00a0\u2014\u00a0 <span style="text-transform:uppercase;">' + esc(itemL.team) + '</span>' + (okL?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
+    if (itemP) {
+      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#555;color:#fff;">';
+      html += '&#9633; TOR P \u00a0\u2014\u00a0 <span style="text-transform:uppercase;">' + esc(itemP.team) + '</span>' + (okP?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
+    } else {
+      html += '<th style="background:#e0e0e0;color:#aaa;padding:7px 12px;">\u2014</th>';
+    }
     html += '</tr></thead><tbody>';
 
-    const maxLen = Math.max(athL.length, athP.length);
-    for (let j = 0; j < maxLen; j++) {
-      const aL = athL[j];
-      const aP = athP[j];
-      const rowBg = j % 2 === 0 ? '' : 'background:#f8f8f8;';
-      html += '<tr style="' + rowBg + '">';
-      html += '<td style="padding:4px 10px;font-size:11px;border-right:2px solid #ddd;">';
-      if (aL) html += '<span style="color:#888;font-size:9px;margin-right:6px;">' + aL.bib + '</span>' + esc(aL.name);
-      html += '</td>';
-      html += '<td style="padding:4px 10px;font-size:11px;">';
-      if (aP) html += '<span style="color:#888;font-size:9px;margin-right:6px;">' + aP.bib + '</span>' + esc(aP.name);
-      html += '</td>';
+    const maxTop = Math.max(topL.length, topP.length);
+    const maxRest = Math.max(restL.length, restP.length);
+    for (let j = 0; j < maxTop; j++) {
+      const aL = topL[j], aP = topP[j];
+      html += '<tr style="' + (j%2?'background:#f8f8f8;':'') + '">';
+      html += '<td style="padding:4px 12px;font-size:11px;border-right:2px solid #ddd;"><span style="color:#bbb;font-size:9px;margin-right:5px;">'+(j+1)+'.</span>' + (aL?'<span style="color:#888;font-size:9px;margin-right:5px;">'+aL.bib+'</span>'+esc(displayName(aL)):'') + '</td>';
+      html += '<td style="padding:4px 12px;font-size:11px;"><span style="color:#bbb;font-size:9px;margin-right:5px;">'+(j+1)+'.</span>' + (aP?'<span style="color:#888;font-size:9px;margin-right:5px;">'+aP.bib+'</span>'+esc(displayName(aP)):'') + '</td>';
       html += '</tr>';
     }
-    html += '</tbody></table>';
-    html += '</div>';
+    if (maxRest > 0) {
+      html += '<tr><td colspan="2" style="padding:3px 12px;background:#f0f0f0;font-size:9px;color:#999;letter-spacing:1px;text-transform:uppercase;border-top:2px dashed #ccc;">Poni\u017cej nie liczy si\u0119 do wyniku</td></tr>';
+      for (let j = 0; j < maxRest; j++) {
+        const aL = restL[j], aP = restP[j];
+        html += '<tr style="background:#fafafa;">';
+        html += '<td style="padding:3px 12px;font-size:10px;color:#aaa;border-right:2px solid #eee;">' + (aL?aL.bib+' '+esc(displayName(aL)):'') + '</td>';
+        html += '<td style="padding:3px 12px;font-size:10px;color:#aaa;">' + (aP?aP.bib+' '+esc(displayName(aP)):'') + '</td>';
+        html += '</tr>';
+      }
+    }
+    html += '</tbody></table></div>';
   }
   return html;
 }
@@ -1604,28 +1638,49 @@ function teamStartListHTML(series) {
 function teamJudgeListHTML(series) {
   const order = state.teamOrder[series];
   if (!order.length) return null;
-  const seriesLabel = series === 's1' ? 'Seria 1' : 'Seria 2';
-  let html = '<h1>OSF — Lista Sędziowska Drużynowy · ' + seriesLabel + '</h1>';
-  html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
-  html += '<p style="font-size:11px;color:#555;margin-bottom:10px;">Liczy się czas ' + TEAM_COUNT() + '. zawodnika przekraczającego linię mety.</p>';
-  html += '<table><thead><tr><th style="width:40px">Start</th><th>Drużyna</th><th style="width:44px">Tor</th>';
-  if (series === 's2') html += '<th style="width:80px">Czas S1</th>';
-  html += '<th style="width:100px">Czas (s.ds)</th></tr></thead><tbody>';
-  order.forEach((item, idx) => {
-    const ok    = getTeamAthletes(item.team).length >= TEAM_MIN_VAL();
-    const rowBg = idx % 2 === 1 ? 'background:#f5f5f5;' : '';
-    html += '<tr style="' + rowBg + '">';
-    html += '<td style="text-align:center;font-weight:bold;">' + item.startNum + '</td>';
-    html += '<td style="font-weight:bold;">' + esc(item.team) + (ok ? '' : ' <span style="color:red;font-size:10px;">[DSQ]</span>') + '</td>';
-    html += '<td><span class="lane-' + item.lane + '">' + item.lane + '</span></td>';
-    if (series === 's2') html += '<td style="font-family:monospace;">' + (getTeamTime(item.team,'s1')||'—') + '</td>';
-    html += '<td class="time-cell"></td>';
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
+  const c = state.contest;
+  const sl = series === 's1' ? 'Seria 1' : 'Seria 2';
+
+  let html = '<h1 style="font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;">OSF \u2014 Lista S\u0119dziowska \u00b7 Dru\u017cynowy \u00b7 ' + sl + '</h1>';
+  html += '<div style="font-size:10px;color:#555;margin-bottom:4px;">' + esc(c.name||'') + (c.name?' \u00b7 ':'') + esc(c.city) + (c.date?' \u00b7 '+c.date:'') + '</div>';
+  html += '<div style="font-size:10px;color:#888;margin-bottom:14px;">Liczy si\u0119 czas ' + TEAM_COUNT() + '. zawodnika na mecie.</div>';
+
+  for (let i = 0; i < order.length; i += 2) {
+    const itemL  = order[i], itemP = order[i+1] || null;
+    const pairNum = Math.floor(i/2) + 1;
+    const isSolo  = !itemP;
+    const s1L = series === 's2' ? (getTeamTime(itemL.team,'s1')||'\u2014') : '';
+    const s1P = (series === 's2' && itemP) ? (getTeamTime(itemP.team,'s1')||'\u2014') : '';
+
+    html += '<div style="margin-bottom:18px;page-break-inside:avoid;">';
+    html += '<div style="background:#000;color:#fff;padding:6px 14px;font-weight:bold;font-size:15px;display:flex;align-items:center;gap:12px;">';
+    html += '<span>' + pairNum + '.</span>';
+    if (isSolo) html += '<span style="font-size:10px;background:#444;padding:1px 6px;font-weight:400;">SOLO</span>';
+    html += '</div>';
+    html += '<table style="width:100%;border-collapse:collapse;">';
+    html += '<tr>';
+    html += '<td style="width:42%;padding:10px 14px;border:1px solid #ccc;text-align:right;vertical-align:top;">';
+    html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL.team) + '</div>';
+    html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;margin-top:5px;letter-spacing:1px;">L</div>';
+    if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:3px;">S1: ' + s1L + '</div>';
+    html += '</td>';
+    html += '<td style="width:16%;text-align:center;vertical-align:middle;padding:10px;border-top:1px solid #ccc;border-bottom:1px solid #ccc;">';
+    html += '<div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;">Czas</div>';
+    html += '<div style="width:72px;height:32px;border:2px solid #000;background:#fff;margin:0 auto;"></div>';
+    html += '</td>';
+    html += '<td style="width:42%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:top;">';
+    if (itemP) {
+      html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemP.team) + '</div>';
+      html += '<div style="display:inline-block;background:#555;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;margin-top:5px;letter-spacing:1px;">P</div>';
+      if (s1P) html += '<div style="font-size:10px;color:#888;margin-top:3px;">S1: ' + s1P + '</div>';
+    } else {
+      html += '<div style="color:#ccc;font-style:italic;">SOLO</div>';
+    }
+    html += '</td>';
+    html += '</tr></table></div>';
+  }
   return html;
 }
-
 function printTeamS1StartList() {
   const html = teamStartListHTML('s1');
   if (!html) { alert('Brak kolejności S1 — najpierw wygeneruj.'); return; }
@@ -1650,33 +1705,71 @@ function printTeamS2JudgeList() {
 function printTeamResults() {
   const teams = getTeams();
   if (!teams.length) { alert('Brak drużyn.'); return; }
+  const c = state.contest;
+  const N = TEAM_COUNT();
+
   const rows = teams.map(team => {
     const athletes = getTeamAthletes(team);
-    const ok = athletes.length >= TEAM_MIN_VAL();
-    const s1 = getTeamTime(team, 's1');
-    const s2 = getTeamTime(team, 's2');
-    const best = teamBestTime(team);
-    return { team, ok, athletes, s1, s2, best, bestSec: parseTime(best), sum: getTeamIndividualSum(team) };
+    const ok   = athletes.length >= TEAM_MIN_VAL();
+    const s1   = getTeamTime(team, 's1');
+    const s2   = getTeamTime(team, 's2');
+    const s1dsq = isTeamDisq(team, 's1');
+    const s2dsq = isTeamDisq(team, 's2');
+    const best = teamBestTimeEffective(team);
+    return { team, ok, athletes, s1, s2, s1dsq, s2dsq, best, bestSec: parseTime(best), sum: getTeamIndividualSum(team) };
   }).sort((a, b) => { if (!a.ok && b.ok) return 1; if (a.ok && !b.ok) return -1; return a.bestSec - b.bestSec; });
 
-  let html = '<h1>OSF — Wyniki Drużynowe</h1>';
-  html += '<div class="sub">' + esc(state.contest.name||'') + (state.contest.name?' · ':'') + esc(state.contest.city) + (state.contest.date?' · '+state.contest.date:'') + '</div>';
-  html += '<table><thead><tr><th>Msc</th><th>Drużyna</th><th>Zaw.</th><th>Σ ind. (8 najl.)</th><th>Seria 1</th><th>Seria 2</th><th>Wynik</th></tr></thead><tbody>';
+  const medals = ['🥇', '🥈', '🥉'];
+  const topBg  = ['#000', '#333', '#555'];
+  const topFg  = ['#fff', '#fff', '#fff'];
+
+  const css = PAIRS_PDF_CSS + `
+    .team-row { margin-bottom: 14px; page-break-inside: avoid; }
+    .team-header { padding: 10px 16px; display: flex; align-items: center; gap: 14px; }
+    .team-header.normal { background: #f0f0f0; border-left: 4px solid #999; }
+    .team-header.dsq { background: #f5f5f5; border-left: 4px solid #ccc; opacity: .6; }
+    .team-rank { font-size: 26px; font-weight: 900; min-width: 36px; }
+    .team-name { font-size: 18px; font-weight: bold; flex: 1; }
+    .team-time { font-family: monospace; font-size: 20px; font-weight: bold; }
+    .team-detail { display: flex; gap: 20px; padding: 6px 16px 10px; font-size: 11px; color: #555; border-left: 4px solid #ddd; margin-left: 0; }
+    .dsq-s { text-decoration: line-through; color: #aaa; }
+  `;
+
+  let html = '<h1 style="font-size:20px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;">OSF — Wyniki Biegu Drużynowego</h1>';
+  html += '<div style="font-size:11px;color:#555;margin-bottom:4px;">' + esc(c.name||'') + (c.name?' · ':'') + esc(c.city) + (c.date?' · '+c.date:'') + '</div>';
+  html += '<div style="font-size:10px;color:#888;margin-bottom:18px;">Liczy się czas ' + N + '. zawodnika · lepszy wynik z 2 serii</div>';
+
   let rank = 1;
   rows.forEach(r => {
-    const dsq = !r.ok;
+    const dsq    = !r.ok;
     const noBest = r.bestSec === Infinity;
-    html += '<tr><td>' + (dsq ? 'DSQ' : (noBest ? '—' : rank)) + '</td>';
-    html += '<td><b>' + esc(r.team) + '</b></td>';
-    html += '<td>' + r.athletes.length + (r.ok ? '' : ' ⚠') + '</td>';
-    html += '<td>' + formatSum(r.sum) + '</td>';
-    html += '<td>' + (r.s1||'—') + '</td>';
-    html += '<td>' + (r.s2||'—') + '</td>';
-    html += '<td><b>' + (r.best||'—') + '</b></td></tr>';
+    const isTop  = !dsq && !noBest && rank <= 3;
+    const bg     = isTop ? topBg[rank-1] : (dsq ? '#f5f5f5' : '#f0f0f0');
+    const fg     = isTop ? topFg[rank-1] : '#000';
+    const medal  = isTop ? medals[rank-1] + ' ' : '';
+    const rankTxt = dsq ? 'DSQ' : (noBest ? '—' : rank);
+
+    const s1disp = r.s1dsq ? '<span class="dsq-s">' + (r.s1||'') + '</span> DSQ' : (r.s1||'—');
+    const s2disp = r.s2dsq ? '<span class="dsq-s">' + (r.s2||'') + '</span> DSQ' : (r.s2||'—');
+
+    html += '<div class="team-row">';
+    html += '<div class="team-header" style="background:' + bg + ';color:' + fg + ';border-left:4px solid ' + (isTop?bg:'#999') + ';">';
+    html += '<span class="team-rank">' + medal + rankTxt + '</span>';
+    html += '<span class="team-name">' + esc(r.team) + '</span>';
+    html += '<span class="team-time">' + (r.best || (dsq ? 'DSQ — brak składu' : '—')) + '</span>';
+    html += '</div>';
+    html += '<div class="team-detail">';
+    html += '<span>S1: ' + s1disp + '</span>';
+    html += '<span>S2: ' + s2disp + '</span>';
+    html += '<span>Σ ind. (' + N + ' najl.): ' + formatSum(r.sum) + '</span>';
+    html += '<span>Zawodników M: ' + r.athletes.length + (r.ok ? '' : ' ⚠') + '</span>';
+    html += '</div>';
+    html += '</div>';
+
     if (!noBest && !dsq) rank++;
   });
-  html += '</tbody></table>';
-  openPrint(html, PAIRS_PDF_CSS);
+
+  openPrint(html, css);
 }
 
 // ═══════════════════════════════════════════════════
@@ -2125,7 +2218,10 @@ function drawSeries1(gender) {
   }
 
   function getLaneFromBib(a) {
-    // Nieparzysty numer w drużynie → L, parzysty → P
+    // Gdy ignoreLaneRule — losuj tor
+    if (state.setup && state.setup.ignoreLaneRule) {
+      return Math.random() < 0.5 ? 'L' : 'P';
+    }
     return getBibNum(a) % 2 === 1 ? 'L' : 'P';
   }
 
@@ -2349,6 +2445,7 @@ function renderPairsHTML(containerId, pairs, isS2) {
     if (isLast && !isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA PARA</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
     if (hasTime) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
+    if (isS2 && p._info) html += '<button onclick="showPairInfo(this)" data-info=\'' + JSON.stringify(p._info).replace(/'/g,'&#39;') + '\' style="font-size:11px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:2px 8px;cursor:pointer;line-height:1.4;" title="Dlaczego ta kolejność?">ℹ</button>';
     html += '<button class="lock-btn" onclick="togglePairLock(\'' + series + '\',\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '"' +
       ' style="margin-left:auto;background:' + (locked ? 'rgba(232,148,77,.12)' : 'transparent') + ';border:1px solid ' + (locked ? 'var(--orange)' : 'var(--border2)') + ';border-radius:var(--radius);color:' + (locked ? 'var(--orange)' : 'var(--text3)') + ';font-size:13px;padding:2px 7px;cursor:pointer;line-height:1;">' + (locked ? '🔒' : '🔓') + '</button>';
     html += '</div>';
@@ -2636,26 +2733,45 @@ function buildSeries2(gender) {
       return b.s1time - a.s1time; // slowest first (will start first)
     });
 
-    // Required lane in S2 = opposite of S1
-    // S2: zamiana torów obowiązkowa
-    // Zbuduj osobne kolejki dla każdego wymaganego toru w S2
-    // (s2lane = odwrotność s1lane)
-    pool.forEach(p => { p.s2lane = p.s1lane === 'L' ? 'P' : 'L'; });
+    // Required lane in S2 = opposite of S1 (chyba że ignoreLaneRule)
+    pool.forEach(p => {
+      if (state.setup && state.setup.ignoreLaneRule) {
+        p.s2lane = Math.random() < 0.5 ? 'L' : 'P'; // losowy tor
+      } else {
+        p.s2lane = p.s1lane === 'L' ? 'P' : 'L'; // obowiązkowa zmiana
+      }
+    });
 
     // Podziel na dwie kolejki: ci którzy potrzebują L w S2, ci którzy potrzebują P
     // Każda kolejka posortowana: brak czasu/DSQ → najwolniejsi → najszybsi
     const needL = pool.filter(p => p.s2lane === 'L'); // w S1 byli na P
     const needP = pool.filter(p => p.s2lane === 'P'); // w S1 byli na L
 
-    // Paruj zachłannie: pierwszego z needL z pierwszym z needP
-    // Obaj startują jako pierwsi → najsłabsi na początku
+    // Globalna kolejność wg samego czasu (bez podziału na tory)
+    const globalRank = new Map();
+    pool.forEach((p, i) => globalRank.set(p.athlete.id, i + 1));
+    const total = pool.length;
+
     const pairs = [];
     const minLen = Math.min(needL.length, needP.length);
 
     for (let i = 0; i < minLen; i++) {
-      const a = needL[i]; // jedzie L w S2
-      const b = needP[i]; // jedzie P w S2
-      pairs.push({ pairNum: 0, gender, aId: a.athlete.id, aLane: 'L', bId: b.athlete.id, bLane: 'P' });
+      const a = needL[i];
+      const b = needP[i];
+      const aGlobal = globalRank.get(a.athlete.id);
+      const bGlobal = globalRank.get(b.athlete.id);
+      pairs.push({
+        pairNum: 0, gender,
+        aId: a.athlete.id, aLane: 'L',
+        bId: b.athlete.id, bLane: 'P',
+        _info: {
+          aTime:     a.s1time === Infinity ? null : a.s1time,
+          bTime:     b.s1time === Infinity ? null : b.s1time,
+          aQueuePos: i + 1, aQueueLen: needL.length, aGlobal,
+          bQueuePos: i + 1, bQueueLen: needP.length, bGlobal,
+          total
+        }
+      });
     }
 
     // Pozostałe bez pary (nadwyżka jednej strony) — solo
@@ -3163,6 +3279,7 @@ function renderSetupPage() {
   setVal('osf-team-multiplier',  s.teamMultiplier || 3);
   setChk('osf-allow-same-team-pair', s.allowSameTeamPair);
   setChk('osf-allow-solo-pair',      s.allowSoloPair);
+  setChk('osf-ignore-lane-rule',     s.ignoreLaneRule);
   updateMultiplierButtons();
 
   // swatche koloru
@@ -3188,6 +3305,7 @@ function saveSetup() {
   state.setup.teamMultiplier = getNum('osf-team-multiplier', 3);
   state.setup.allowSameTeamPair = getChk('osf-allow-same-team-pair');
   state.setup.allowSoloPair     = getChk('osf-allow-solo-pair');
+  state.setup.ignoreLaneRule    = getChk('osf-ignore-lane-rule');
 
   // Synchronizuj contest z setup
   if (state.setup.name) state.contest.name = state.setup.name;
@@ -3786,6 +3904,80 @@ function togglePK(id) {
   save();
   renderAthletes();
   updateStats();
+}
+
+// ═══════════════════════════════════════════════════
+// PARA INFO — DLACZEGO TAKA KOLEJNOŚĆ?
+// ═══════════════════════════════════════════════════
+let _pairInfoPop = null;
+
+function showPairInfo(btn) {
+  // Zamknij poprzedni
+  if (_pairInfoPop) { _pairInfoPop.remove(); _pairInfoPop = null; return; }
+
+  const info = JSON.parse(btn.dataset.info);
+  const { aTime, bTime, aQueuePos, aQueueLen, bQueuePos, bQueueLen, aGlobal, bGlobal, total } = info;
+
+  function timeStr(t) { return t === null ? 'brak czasu / DSQ' : formatSum(t); }
+  function ordinal(n, len) {
+    if (n === 1) return '1. (najsłabszy) z ' + len;
+    if (n === len) return n + '. (najszybszy) z ' + len;
+    return n + '. z ' + len;
+  }
+  function globalStr(g, total) {
+    if (g === 1) return 'najsłabszy ze wszystkich (' + total + ')';
+    if (g === total) return 'najszybszy ze wszystkich (' + total + ')';
+    return g + '. ze wszystkich ' + total + ' zawodników';
+  }
+
+  // Nota o torze
+  let noteL = '', noteP = '';
+  if (aGlobal !== bGlobal) {
+    const diff = Math.abs(aGlobal - bGlobal);
+    if (aGlobal < bGlobal) {
+      noteL = 'Tor L jest ' + diff + ' pozycj' + (diff===1?'ę':'e') + ' szybszy od P — wymóg toru zbliżył te pary';
+    } else {
+      noteP = 'Tor P jest ' + diff + ' pozycj' + (diff===1?'ę':'e') + ' szybszy od L — wymóg toru zbliżył te pary';
+    }
+  }
+  if (aQueuePos !== bGlobal && !noteL) {
+    const idealGlobal = aGlobal;
+    if (Math.abs(idealGlobal - bGlobal) > 1) {
+      noteL = 'Bez podziału na tory zawodnik L byłby w parze z kimś o ' + Math.abs(idealGlobal-bGlobal) + ' pozycje ' + (idealGlobal<bGlobal?'szybszym':'wolniejszym');
+    }
+  }
+
+  const pop = document.createElement('div');
+  pop.className = 'pair-info-pop';
+  pop.innerHTML =
+    '<div class="pi-title">ℹ Dlaczego ta kolejność?</div>' +
+    '<div style="margin-bottom:8px;font-family:var(--font-h);font-size:11px;letter-spacing:.5px;color:var(--text3);text-transform:uppercase;">Tor L</div>' +
+    '<div class="pi-row"><span class="pi-label">Czas S1: </span><span class="pi-val">' + timeStr(aTime) + '</span></div>' +
+    '<div class="pi-row"><span class="pi-label">Pozycja w kolejce L: </span><span class="pi-val">' + ordinal(aQueuePos, aQueueLen) + '</span></div>' +
+    '<div class="pi-row"><span class="pi-label">Globalnie: </span><span class="pi-val">' + globalStr(aGlobal, total) + '</span></div>' +
+    '<div style="margin:8px 0;font-family:var(--font-h);font-size:11px;letter-spacing:.5px;color:var(--text3);text-transform:uppercase;">Tor P</div>' +
+    '<div class="pi-row"><span class="pi-label">Czas S1: </span><span class="pi-val">' + timeStr(bTime) + '</span></div>' +
+    '<div class="pi-row"><span class="pi-label">Pozycja w kolejce P: </span><span class="pi-val">' + ordinal(bQueuePos, bQueueLen) + '</span></div>' +
+    '<div class="pi-row"><span class="pi-label">Globalnie: </span><span class="pi-val">' + globalStr(bGlobal, total) + '</span></div>' +
+    (noteL ? '<div class="pi-note">💡 ' + noteL + '</div>' : '') +
+    (noteP ? '<div class="pi-note">💡 ' + noteP + '</div>' : '') +
+    '<div style="margin-top:10px;font-size:10px;color:var(--text3);">Kliknij gdziekolwiek aby zamknąć</div>';
+
+  document.body.appendChild(pop);
+  _pairInfoPop = pop;
+
+  // Pozycja pod przyciskiem
+  const rect = btn.getBoundingClientRect();
+  const left = Math.min(rect.left, window.innerWidth - 310);
+  pop.style.top  = (rect.bottom + 6) + 'px';
+  pop.style.left = left + 'px';
+
+  // Zamknij po kliknięciu gdziekolwiek
+  setTimeout(() => {
+    document.addEventListener('click', function close(e) {
+      if (!pop.contains(e.target)) { pop.remove(); _pairInfoPop = null; document.removeEventListener('click', close); }
+    });
+  }, 50);
 }
 
 function showToast(msg, type, duration) {

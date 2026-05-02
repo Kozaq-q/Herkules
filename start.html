@@ -538,7 +538,11 @@ function removeSlot(id, e) {
   const slot = getSlot(id);
   if (!slot) return;
   const label = (slot.type === 'czworboj' ? 'Czwórbój' : 'OSF') + ' — ' + slot.city;
-  if (!confirm('Usunąć zawody "' + label + '"?\n\nWszystkie dane zostaną utracone.')) return;
+  const input = prompt('Aby usunąć zawody "' + label + '", wpisz RESET:');
+  if (input !== 'RESET') {
+    if (input !== null) alert('Nieprawidłowe potwierdzenie. Zawody nie zostały usunięte.');
+    return;
+  }
   deleteSlot(id); render();
 }
 
