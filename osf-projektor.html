@@ -93,61 +93,64 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .scroll-track { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
 
 /* ── RANKING TABLE ── */
-.rank-table { width: 100%; border-collapse: collapse; table-layout: auto; }
-.rank-table td { padding: 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.rank-row.top1 td { background: rgba(255,210,0,.06); }
-.rank-row.top2 td { background: rgba(200,210,220,.04); }
-.rank-row.top3 td { background: rgba(200,140,60,.04); }
-.rank-row.dsq  td { opacity: .35; }
+.rank-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.rank-table td { border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; }
+/* Naprzemienne tła wierszy */
+.rank-row.even td { background: var(--bg2); }
+.rank-row.odd  td { background: var(--bg3); }
+/* Podświetlenia top3 nadpisują naprzemienne */
+.rank-row.top1 td { background: rgba(255,210,0,.09) !important; }
+.rank-row.top2 td { background: rgba(200,210,220,.06) !important; }
+.rank-row.top3 td { background: rgba(200,140,60,.06) !important; }
+.rank-row.dsq  td { background: transparent !important; opacity: .4; }
 
-/* Pozycja — stała szerokość */
-.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; width: 52px; min-width: 52px; padding: 12px 6px; white-space: nowrap; }
+/* Pozycja — stała szerokość, nie obcina */
+.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; width: 50px; padding: 10px 4px; white-space: nowrap; flex-shrink: 0; }
 .rank-pos.p1 { color: #ffd700; }
 .rank-pos.p2 { color: #c8d0d8; }
 .rank-pos.p3 { color: #d4a060; }
 .rank-pos.other { color: var(--text3); font-size: .85em; }
 
-/* Kolumna nazwy — rozciąga się, nie obcina */
-.rank-name-cell { padding: 12px 8px 12px 4px; width: 100%; }
+/* Kolumna nazwy — z paddingiem, wrap */
+.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; }
 .rank-name {
   font-family: var(--font-b); font-weight: 700;
   display: block;
-  /* KLUCZOWE: wrap zamiast ellipsis — zawsze pełne nazwisko */
-  white-space: normal;
-  word-break: break-word;
-  line-height: 1.25;
+  white-space: normal; word-break: break-word; line-height: 1.3;
+  padding-right: 4px;
 }
 .rank-team-sub {
   font-family: var(--font-b); font-size: 11px; font-weight: 400;
   color: var(--text3); display: block;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: 2px; padding-right: 4px;
 }
 
-/* Czas — stała szerokość po prawej */
+/* Czas — stała szerokość, nie obcina */
 .rank-time-cell {
   font-family: var(--font-m); font-weight: 500; color: var(--green);
   text-align: right; white-space: nowrap;
-  padding: 12px 14px 12px 8px;
-  min-width: 80px;
+  padding: 10px 12px 10px 6px;
+  width: 90px; min-width: 90px;
 }
 .rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; }
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 
 /* ── KLASYFIKACJA WIERSZE ── */
 .klas-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
-.klas-row.top1 { background: rgba(255,210,0,.06); }
-.klas-row.top2 { background: rgba(200,210,220,.04); }
-.klas-row.top3 { background: rgba(200,140,60,.04); }
-.klas-pos  { font-family: var(--font-h); font-weight: 700; width: 52px; min-width: 52px; text-align: center; padding: 12px 6px; flex-shrink: 0; }
+.klas-row.even { background: var(--bg2); }
+.klas-row.odd  { background: var(--bg3); }
+.klas-row.top1 { background: rgba(255,210,0,.09) !important; }
+.klas-row.top2 { background: rgba(200,210,220,.06) !important; }
+.klas-row.top3 { background: rgba(200,140,60,.06) !important; }
+.klas-pos  { font-family: var(--font-h); font-weight: 700; width: 50px; min-width: 50px; text-align: center; padding: 10px 4px; flex-shrink: 0; }
 .klas-name {
   font-family: var(--font-b); font-weight: 700;
-  flex: 1; padding: 12px 10px;
-  /* pełna nazwa, bez obcinania */
-  white-space: normal; word-break: break-word; line-height: 1.25;
+  flex: 1; padding: 10px 10px;
+  white-space: normal; word-break: break-word; line-height: 1.3; overflow: hidden;
 }
 .klas-pts-detail { font-family: var(--font-m); font-size: 10px; color: var(--text3); display: block; margin-top: 2px; font-weight: 400; }
-.klas-score { font-family: var(--font-h); font-weight: 700; color: var(--accent); padding: 12px 16px; flex-shrink: 0; text-align: right; white-space: nowrap; }
+.klas-score { font-family: var(--font-h); font-weight: 700; color: var(--accent); padding: 10px 14px; flex-shrink: 0; text-align: right; white-space: nowrap; min-width: 70px; }
 
 /* ── NO DATA ── */
 .no-data { text-align: center; padding: 48px 16px; color: var(--text3); font-family: var(--font-b); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
@@ -459,60 +462,66 @@ function softRender() {
 }
 
 function refillTrack(id, { html, count }) {
-  const track = document.getElementById('track-' + id);
-  if (!track) return;
+  // Przy aktualizacji danych odświeżamy zawartość bez resetowania pozycji
+  // Scroll jest zarządzany przez _renderSection / animFrame — nie resetujemy go tutaj
+  const track   = document.getElementById('track-' + id);
   const countEl = document.getElementById('count-' + id);
+  if (!track) return;
   if (countEl) countEl.textContent = count;
-  // Ustaw nową zawartość, scroll kontynuuje od tej samej pozycji transform
-  const isScrolling = !!_scrollRAFs[id];
-  if (isScrolling) {
-    // Wymień zawartość zachowując aktualną pozycję transform
-    const curTransform = track.style.transform;
-    track.innerHTML = html + html; // 2 kopie dla seamless loop
-    track.style.transform = curTransform;
-  } else {
-    track.innerHTML = html;
-  }
+  // Zawsze przebuduj przez _renderSection — to zapewnia poprawną liczbę kopii i segH
+  _renderSection(id, { html, count });
 }
 
 // ── Wyniki indywidualne ──
 function buildIndRows(gender) {
   const athletes = (state.athletes||[]).filter(a => a.gender === gender);
-  const N = athletes.length;
+
   let ranked = athletes.map(a => ({
     a, best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
     s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
-    s1d: isDisq(a.id,'s1'), s2d: isDisq(a.id,'s2')
-  })).sort((x,y) => x.bestSec - y.bestSec);
+    s1d: isDisq(a.id,'s1'), s2d: isDisq(a.id,'s2'),
+    allDsq: isDisq(a.id,'s1') && isDisq(a.id,'s2'),
+    hasAnyResult: !!(getTime(a.id,'s1') || getTime(a.id,'s2'))
+  }));
 
-  const topN = cfg.topN > 0 ? cfg.topN : ranked.length;
-  const shown = ranked.slice(0, topN);
+  // Filtruj: pokaż tylko tych co mają jakikolwiek wynik LUB DSQ; ukryj zupełnie bez wyniku
+  const withResult = ranked.filter(r => r.hasAnyResult);
+  // Sortuj: z wynikiem wg czasu, DSQ na końcu
+  const withTime   = withResult.filter(r => r.bestSec < Infinity).sort((x,y) => x.bestSec - y.bestSec);
+  const dsqOnly    = withResult.filter(r => r.bestSec === Infinity);
+  const shown0     = [...withTime, ...dsqOnly];
 
-  // Dobierz rozmiar czcionki: bazowo wg liczby zawodników, ale ogranicz dla długich nazwisk
-  const baseSize = N > 24 ? 14 : N > 16 ? 16 : N > 10 ? 18 : 20;
-  const posSize  = N > 24 ? 18 : N > 16 ? 20 : 24;
-  const subSize  = 11;
+  const topN = cfg.topN > 0 ? cfg.topN : shown0.length;
+  const shown = shown0.slice(0, topN);
+  const N = shown.length;
+
+  const baseSize = N > 24 ? 13 : N > 16 ? 15 : N > 10 ? 17 : 19;
+  const posSize  = N > 24 ? 17 : N > 16 ? 19 : 22;
+  const subSize  = 10;
 
   let rank = 1;
-  const rows = shown.map(r => {
+  const rows = shown.map((r, rowIdx) => {
     const noBest = r.bestSec === Infinity;
-    const posIdx = noBest ? 0 : rank;
+    const isDsq  = noBest && r.hasAnyResult;
+    const posIdx = (noBest || isDsq) ? 0 : rank;
     const posCls = posIdx===1?'p1':posIdx===2?'p2':posIdx===3?'p3':'other';
-    const rowCls = posIdx===1?'top1':posIdx===2?'top2':posIdx===3?'top3':'';
-    // Nazwisko długie > 20 znaków → zmniejsz czcionkę
+    const topCls = posIdx===1?'top1':posIdx===2?'top2':posIdx===3?'top3':'';
+    const altCls = rowIdx % 2 === 0 ? 'even' : 'odd';
+    const rowCls = [topCls, altCls, isDsq?'dsq':''].filter(Boolean).join(' ');
     const nameLen = (r.a.name || '').length;
-    const fontSize = nameLen > 22 ? Math.max(12, baseSize - 3) + 'px'
-                   : nameLen > 16 ? Math.max(13, baseSize - 1) + 'px'
+    const fontSize = nameLen > 22 ? Math.max(11, baseSize - 3) + 'px'
+                   : nameLen > 16 ? Math.max(12, baseSize - 1) + 'px'
                    : baseSize + 'px';
-    const timeSize = N > 24 ? '14px' : N > 16 ? '16px' : '18px';
+    const timeSize = N > 24 ? '13px' : N > 16 ? '15px' : '17px';
 
     let timeSub = '';
     if (cfg.showS1 && r.s1) timeSub += 'S1: ' + (r.s1d ? '<span class="rank-dsq-label">DSQ</span>' : r.s1);
     if (cfg.showS2 && r.s2) timeSub += (timeSub ? ' &nbsp; ' : '') + 'S2: ' + (r.s2d ? '<span class="rank-dsq-label">DSQ</span>' : r.s2);
 
-    const html =
-      `<tr class="rank-row ${rowCls}${noBest?' dsq':''}">
-        <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${noBest?'—':posIdx}</td>
+    const posDisp = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
+    if (!noBest) rank++;
+    return `<tr class="rank-row ${rowCls}">
+        <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</td>
         <td class="rank-name-cell">
           <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}</span>
           <span class="rank-team-sub" style="font-size:${subSize}px;">${esc(r.a.team)}</span>
@@ -522,13 +531,11 @@ function buildIndRows(gender) {
           ${timeSub ? `<span class="rank-sub-time">${timeSub}</span>` : ''}
         </td>
       </tr>`;
-    if (!noBest) rank++;
-    return html;
   }).join('');
 
   return {
     html: `<table class="rank-table"><tbody>${rows||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
-    count: shown.length + ' zaw.'
+    count: shown.filter(r=>r.bestSec<Infinity).length + ' zaw.'
   };
 }
 
@@ -556,24 +563,32 @@ function buildTeamRows() {
   const timeFs  = rows.length > 16 ? 14 : rows.length > 10 ? 16 : 18;
   const subSize = 11;
 
+  // Filtruj: tylko z wynikiem lub DSQ; kwalifikujące bez czasu — ukryte
+  const withResult2 = rows.filter(r => !r.ok || r.best);
+  const topN2 = cfg.topN > 0 ? cfg.topN : withResult2.length;
+  const shown2 = withResult2.slice(0, topN2);
+
   let rank = 1;
-  const html = rows.map(r => {
-    const noBest = r.bestSec === Infinity || !r.ok;
-    const posIdx = noBest ? 0 : rank;
+  const html = shown2.map((r, rowIdx) => {
+    const isDsq  = !r.ok;
+    const noBest = r.bestSec === Infinity;
+    const posIdx = (isDsq || noBest) ? 0 : rank;
     const posCls = posIdx===1?'p1':posIdx===2?'p2':posIdx===3?'p3':'other';
-    const rowCls = posIdx===1?'top1':posIdx===2?'top2':posIdx===3?'top3':'';
+    const topCls = posIdx===1?'top1':posIdx===2?'top2':posIdx===3?'top3':'';
+    const altCls = rowIdx % 2 === 0 ? 'even' : 'odd';
+    const rowCls = [topCls, altCls, isDsq?'dsq':''].filter(Boolean).join(' ');
     const nameLen = (r.team || '').length;
-    const fontSize = nameLen > 22 ? Math.max(12, baseFs - 3) + 'px'
-                   : nameLen > 16 ? Math.max(13, baseFs - 1) + 'px'
+    const fontSize = nameLen > 22 ? Math.max(11, baseFs - 3) + 'px'
+                   : nameLen > 16 ? Math.max(12, baseFs - 1) + 'px'
                    : baseFs + 'px';
 
     let timeSub = '';
     if (cfg.showS1 && r.s1) timeSub += 'S1: ' + (r.s1d ? '<span class="rank-dsq-label">DSQ</span>' : r.s1);
     if (cfg.showS2 && r.s2) timeSub += (timeSub?'&nbsp;&nbsp;':'') + 'S2: ' + (r.s2d ? '<span class="rank-dsq-label">DSQ</span>' : r.s2);
 
-    const rankTxt = !r.ok ? 'DSQ' : (noBest ? '—' : posIdx);
-    if (!noBest) rank++;
-    return `<tr class="rank-row ${rowCls}${!r.ok?' dsq':''}">
+    const rankTxt = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
+    if (!isDsq && !noBest) rank++;
+    return `<tr class="rank-row ${rowCls}">
       <td class="rank-pos ${posCls}" style="font-size:${posFs}px;">${rankTxt}</td>
       <td class="rank-name-cell">
         <span class="rank-name" style="font-size:${fontSize};">${esc(r.team)}</span>
@@ -587,7 +602,7 @@ function buildTeamRows() {
 
   return {
     html: `<table class="rank-table"><tbody>${html||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
-    count: rows.length + ' drużyn'
+    count: shown2.filter(r=>r.ok&&r.best).length + ' drużyn'
   };
 }
 
@@ -629,14 +644,16 @@ function buildKlasRows() {
   const html = shown.map((r,i) => {
     const rank = i+1;
     const posCls = rank===1?'p1':rank===2?'p2':rank===3?'p3':'other';
-    const rowCls = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
+    const topCls = rank===1?'top1':rank===2?'top2':rank===3?'top3':'';
+    const altCls = i % 2 === 0 ? 'even' : 'odd';
+    const rowCls = [topCls, altCls].filter(Boolean).join(' ');
     const posDisp = rank<=3 ? medals[rank-1] : rank;
     const nameLen = (r.team||'').length;
-    const fontSize = nameLen > 22 ? Math.max(12, baseKlasFs - 2) + 'px'
-                   : nameLen > 16 ? Math.max(13, baseKlasFs - 1) + 'px'
+    const fontSize = nameLen > 22 ? Math.max(11, baseKlasFs - 2) + 'px'
+                   : nameLen > 16 ? Math.max(12, baseKlasFs - 1) + 'px'
                    : baseKlasFs + 'px';
     return `<div class="klas-row ${rowCls}">
-      <div class="klas-pos ${posCls}" style="font-size:${rank<=3?'22px':'18px'};">${posDisp}</div>
+      <div class="klas-pos ${posCls}" style="font-size:${rank<=3?'20px':'17px'};">${posDisp}</div>
       <div class="klas-name" style="font-size:${fontSize};">${esc(r.team)}
         <span class="klas-pts-detail">${r.ind} + ${r.team_} pkt</span>
       </div>
@@ -701,6 +718,7 @@ function renderProgress() {
 // ── Wspólny render sekcji + scroll ──
 function _renderSection(id, { html, count }) {
   const track   = document.getElementById('track-' + id);
+  const vp      = document.getElementById('vp-' + id);
   const countEl = document.getElementById('count-' + id);
   if (!track) return;
   if (countEl) countEl.textContent = count;
@@ -711,29 +729,31 @@ function _renderSection(id, { html, count }) {
   const speed = cfg.scrollSpeed || 0;
 
   if (speed > 0) {
-    // Dwie kopie dla seamless infinite scroll
-    track.innerHTML = html + html;
+    // Ustaw jedną kopię i zmierz wysokość
+    track.innerHTML = html;
     track.style.transform = 'translateY(0)';
-    // Odczekaj na reflow
+
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const totalH = track.offsetHeight;
-      const oneH   = totalH / 2;
+      const vpH   = vp ? vp.offsetHeight : window.innerHeight;
+      const oneH  = track.offsetHeight;
       if (oneH <= 0) return;
-      const COPIES = Math.max(2, Math.ceil(120 * speed / oneH) + 1);
-      // Dodaj kopie żeby wystarczyło na ~2 minuty
-      if (COPIES > 2) {
-        const single = html;
-        track.innerHTML = Array(COPIES).fill(single).join('');
-      }
-      const fullH  = track.offsetHeight;
-      const segH   = fullH / (track.innerHTML.split(html).length - 1);
+
+      // Ile kopii potrzeba żeby wypełnić przynajmniej 2× viewport (płynna pętla)
+      // Minimalna liczba kopii: tyle żeby oneH * copies >= vpH * 2
+      const copies = Math.max(3, Math.ceil((vpH * 2.5) / oneH) + 1);
+      track.innerHTML = Array(copies).fill(html).join('');
+      track.style.transform = 'translateY(0)';
+
+      // segH = wysokość jednej kopii po wypełnieniu (może się nieznacznie różnić)
+      const segH = track.offsetHeight / copies;
 
       let pos = 0, lastT = null;
       function step(now) {
-        if (!lastT) lastT = now;
+        if (!lastT) { lastT = now; }
         const dt = Math.min(now - lastT, 50);
         lastT = now;
         pos += speed * dt / 1000;
+        // Kiedy przewinęliśmy dokładnie jedną kopię — cofnij bezszwowo
         if (pos >= segH) pos -= segH;
         track.style.transform = `translateY(-${pos}px)`;
         _scrollRAFs[id] = requestAnimationFrame(step);
