@@ -361,8 +361,12 @@ function showApp() {
     showSyncStatus(ok ? 'ok' : 'error');
   });
 
-  // Supabase Realtime — natychmiastowe odświeżenie gdy ktokolwiek zmieni dane
-  let realtimeOk = false;
+  // Polling co 5s — zawsze aktywny, niezależnie od Realtime
+  setInterval(() => {
+    syncSlotsFromCloud().then(ok => { if (ok) render(); });
+  }, 5000);
+
+  // Supabase Realtime — natychmiastowe odświeżenie (bonus, jeśli tabela ma włączone Replication)
   try {
     getSB()
       .channel('herkules_slots_changes')
@@ -370,22 +374,17 @@ function showApp() {
         syncSlotsFromCloud().then(ok => { if (ok) render(); });
       })
       .subscribe(status => {
-        realtimeOk = (status === 'SUBSCRIBED');
         const dot = document.getElementById('sync-dot');
         const lbl = document.getElementById('sync-label');
-        if (dot && realtimeOk) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
-        if (dot && status === 'CHANNEL_ERROR') { dot.style.background = 'var(--red)'; lbl.textContent = 'offline'; }
+        if (status === 'SUBSCRIBED') {
+          if (dot) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          if (dot) { dot.style.background = 'var(--orange)'; lbl.textContent = 'poll 5s'; }
+        }
       });
   } catch(e) {
-    console.warn('Realtime niedostępny:', e);
+    console.warn('Realtime niedostępny, działa polling 5s:', e);
   }
-
-  // Polling tylko gdy Realtime nie działa (np. tabela bez replication)
-  setInterval(() => {
-    if (!realtimeOk) {
-      syncSlotsFromCloud().then(ok => { if (ok) render(); });
-    }
-  }, 15000);
 }
 
 function openChangePassword() {
