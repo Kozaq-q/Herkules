@@ -519,10 +519,18 @@ tr:last-child > td { border-bottom: none; }
         <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmBuildSeries2('M')">⚙ Generuj M</button>
         <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmBuildSeries2('K')">⚙ Generuj K</button>
       </div>
+      <button id="s2-edit-toggle-btn" class="btn btn-sm" onclick="toggleS2EditMode()"
+        style="color:var(--text3);border-color:var(--border2);font-size:11px;" title="Awaryjna ręczna edycja par Serii 2">🔒 Edycja awaryjna</button>
     </div>
   </div>
 
   <div id="s2-alert" class="alert alert-warning" style="display:none;"></div>
+
+  <div id="s2-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
+    <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S2</strong> — zmiany naruszają regulaminowe parowanie wg wyników S1.
+    Użyj tylko gdy zmiana jest konieczna (np. kontuzja zawodnika). Kliknięcie <em>Generuj</em> przywróci prawidłowe pary.
+    <button onclick="toggleS2EditMode()" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
+  </div>
 
   <!-- Wyszukiwarka S2 -->
   <div id="s2-search-wrap" style="display:none;margin-bottom:12px;">
@@ -2291,15 +2299,7 @@ function getAthleteWarnings(athlete) {
     }
   }
 
-  // 3. Za mało M do biegu drużynowego
-  if (athlete.gender === 'M') {
-    const mCount = state.athletes.filter(a => a.team === athlete.team && a.gender === 'M').length;
-    if (mCount < TEAM_MIN_VAL()) {
-      warnings.push({ code: 'team_m', msg: 'Drużyna "' + athlete.team + '" ma tylko ' + mCount + ' M — potrzeba min. ' + TEAM_MIN_VAL() + ' do biegu drużynowego.' });
-    }
-  }
-
-  // 4. Brak drużyny
+  // 3. Brak drużyny
   if (!athlete.team || !athlete.team.trim()) {
     warnings.push({ code: 'noteam', msg: 'Brak przypisanej drużyny.' });
   }
@@ -2872,6 +2872,43 @@ function rerenderPairTime(input) {
   input.classList.toggle('is-best', !!val && isPersonalBest(id, series, val));
 }
 
+let _s2EditMode = false;
+
+function toggleS2EditMode() {
+  if (!_s2EditMode) {
+    // Próba odblokowania — pokaż ostrzeżenie
+    if (!confirm(
+      '⚠ EDYCJA AWARYJNA SERII 2\n\n' +
+      'Ta opcja pozwala ręcznie zamienić zawodników w parach.\n' +
+      'Narusza to regulaminowe parowanie wg wyników Serii 1.\n\n' +
+      'Użyj TYLKO w wyjątkowych sytuacjach (kontuzja, pomyłka organizacyjna).\n\n' +
+      'Kliknięcie "Generuj M/K" w każdej chwili przywróci poprawne pary.\n\n' +
+      'Czy chcesz włączyć edycję awaryjną?'
+    )) return;
+    _s2EditMode = true;
+  } else {
+    _s2EditMode = false;
+    cancelSwapMode(); // anuluj ewentualną aktywną zamianę
+  }
+
+  const btn  = document.getElementById('s2-edit-toggle-btn');
+  const warn = document.getElementById('s2-edit-warning');
+  if (_s2EditMode) {
+    btn.textContent = '🔓 Edycja awaryjna AKTYWNA';
+    btn.style.color       = 'var(--red)';
+    btn.style.borderColor = 'rgba(224,85,85,.4)';
+    btn.style.background  = 'rgba(224,85,85,.08)';
+    warn.style.display = 'block';
+  } else {
+    btn.textContent = '🔒 Edycja awaryjna';
+    btn.style.color       = 'var(--text3)';
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.background  = '';
+    warn.style.display = 'none';
+  }
+  renderSeries2View();
+}
+
 let _s1ActiveTab = 'M';
 
 function switchS1Tab(gender) {
@@ -3038,17 +3075,18 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   const s1dsq  = series === 's2' ? isDisq(a.id, 's1') : false;
   const g      = gender || a.gender;
 
-  // W S1 — karta zawodnika jest klikalna (pick-mode)
-  const pickAttr = (series === 's1' && pairNum)
-    ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + g + '" onclick="handleAthleteClick(this)"'
+  // Karta klikalna w S1 zawsze, w S2 tylko w trybie edycji awaryjnej
+  const showSwap = (series === 's1' && pairNum) || (series === 's2' && pairNum && _s2EditMode);
+  const pickAttr = showSwap
+    ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + g + '" data-series="' + series + '" onclick="handleAthleteClick(this)"'
     : '';
 
-  // Przycisk ↔ tylko w S1
-  const swapBtn = (series === 's1' && pairNum)
-    ? '<button onclick="event.stopPropagation();activateSwap(' + a.id + ',' + pairNum + ',\'' + g + '\')" ' +
+  // Przycisk ↔ — S1 zawsze, S2 tylko awaryjna
+  const swapBtn = showSwap
+    ? '<button onclick="event.stopPropagation();activateSwap(' + a.id + ',' + pairNum + ',\'' + g + '\',\'' + series + '\')" ' +
       'class="swap-trigger-btn" ' +
       'style="font-size:11px;padding:2px 8px;border:1px solid var(--border2);border-radius:var(--radius);' +
-      'background:var(--bg3);color:var(--text3);cursor:pointer;line-height:1.5;flex-shrink:0;" title="Zamień zawodnika">↔</button>'
+      'background:var(--bg3);color:' + (series==='s2'?'var(--red)':'var(--text3)') + ';cursor:pointer;line-height:1.5;flex-shrink:0;" title="Zamień zawodnika">↔</button>'
     : '';
 
   return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
@@ -4792,33 +4830,28 @@ function handleEmptySlotClick(el) {
   }
 }
 
-function activateSwap(athleteId, pairNum, gender) {
-  // Jeśli kliknięto tego samego — anuluj
+function activateSwap(athleteId, pairNum, gender, series) {
+  series = series || 's1';
   if (_swapSource && _swapSource.athleteId === athleteId) {
-    cancelSwapMode();
-    return;
+    cancelSwapMode(); return;
   }
-  _swapSource = { athleteId, pairNum, gender };
+  _swapSource = { athleteId, pairNum, gender, series };
 
-  // Podświetl aktywnego zawodnika
   document.querySelectorAll('.pair-athlete').forEach(el => el.classList.remove('swap-active-athlete'));
   document.querySelectorAll('[data-athlete-id="' + athleteId + '"]').forEach(el => el.classList.add('swap-active-athlete'));
 
-  // Wejdź w tryb pick
-  const containers = ['s1-pairs-M', 's1-pairs-K'];
-  containers.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('swap-mode');
-  });
+  const containers = series === 's1'
+    ? ['s1-pairs-M', 's1-pairs-K']
+    : ['s2-pairs-M', 's2-pairs-K'];
+  containers.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('swap-mode'); });
 
-  // Pokaż pasek z imieniem i przyciskiem anulowania
-  const a = state.athletes.find(x => x.id === athleteId);
-  const bar  = document.getElementById('swap-cancel-bar');
-  const info = document.getElementById('swap-cancel-info');
-  info.innerHTML = '↔ Wybierz z kim zamienić: <strong>' + esc(displayName(a)) + '</strong> · kliknij zawodnika lub';
+  const a   = state.athletes.find(x => x.id === athleteId);
+  const bar = document.getElementById('swap-cancel-bar');
+  document.getElementById('swap-cancel-info').innerHTML =
+    '↔ Wybierz z kim zamienić: <strong>' + esc(displayName(a)) + '</strong>' +
+    (series === 's2' ? ' <span style="color:var(--red);font-size:11px;">[EDYCJA AWARYJNA S2]</span>' : '') +
+    ' · kliknij zawodnika lub';
   bar.style.display = 'flex';
-
-  // ESC
   document.addEventListener('keydown', _swapEscHandler);
 }
 
@@ -4840,21 +4873,21 @@ function handleAthleteClick(el) {
   const targetId   = parseInt(el.dataset.athleteId);
   const targetPair = parseInt(el.dataset.pairNum);
   const gender     = el.dataset.gender;
+  const series     = el.dataset.series || 's1';
 
   if (targetId === _swapSource.athleteId) { cancelSwapMode(); return; }
-  if (gender !== _swapSource.gender) {
-    showToast('Można zamieniać tylko zawodników tej samej płci', 'warning');
-    return;
-  }
+  if (gender !== _swapSource.gender) { showToast('Można zamieniać tylko zawodników tej samej płci', 'warning'); return; }
+  if (series !== _swapSource.series) { showToast('Można zamieniać tylko w obrębie tej samej serii', 'warning'); return; }
 
-  const srcPair = state.s1pairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
-  const tgtPair = state.s1pairs.find(p => p.pairNum === targetPair && p.gender === gender);
+  const pairs   = series === 's2' ? state.s2pairs : state.s1pairs;
+  const srcPair = pairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
+  const tgtPair = pairs.find(p => p.pairNum === targetPair && p.gender === gender);
   if (!srcPair || !tgtPair) { cancelSwapMode(); return; }
 
   const srcSlot = srcPair.aId === _swapSource.athleteId ? 'a' : 'b';
   const tgtSlot = tgtPair.aId === targetId ? 'a' : 'b';
 
-  // Tory zostają przy slotach — zamieniamy TYLKO id zawodników
+  // Tory zostają przy slotach — zamieniamy tylko ID
   if (srcSlot === 'a') srcPair.aId = targetId;
   else                 srcPair.bId = targetId;
   if (tgtSlot === 'a') tgtPair.aId = _swapSource.athleteId;
@@ -4864,7 +4897,7 @@ function handleAthleteClick(el) {
   const a2 = state.athletes.find(x => x.id === targetId);
   cancelSwapMode();
   save();
-  renderSeries1View();
+  if (series === 's2') renderSeries2View(); else renderSeries1View();
   showToast('↔ Zamieniono: ' + displayName(a1) + ' ↔ ' + displayName(a2), 'success');
 }
 
@@ -5167,11 +5200,24 @@ function showPairInfo(btn) {
   document.body.appendChild(pop);
   _pairInfoPop = pop;
 
-  // Pozycja pod przyciskiem
-  const rect = btn.getBoundingClientRect();
-  const left = Math.min(rect.left, window.innerWidth - 310);
-  pop.style.top  = (rect.bottom + 6) + 'px';
+  // Pozycja — zabezpieczenie przed wyjściem poza ekran
+  const rect   = btn.getBoundingClientRect();
+  const popW   = 300; // width popovera
+  const popH   = pop.offsetHeight || 260;
+  const margin = 8;
+
+  // Poziomo: nie wychodź za prawą krawędź
+  let left = rect.left;
+  if (left + popW + margin > window.innerWidth) left = window.innerWidth - popW - margin;
+  if (left < margin) left = margin;
+
+  // Pionowo: preferuj pod przyciskiem, jeśli nie ma miejsca — nad nim
+  let top = rect.bottom + 6;
+  if (top + popH + margin > window.innerHeight) top = rect.top - popH - 6;
+  if (top < margin) top = margin;
+
   pop.style.left = left + 'px';
+  pop.style.top  = top  + 'px';
 
   // Zamknij po kliknięciu gdziekolwiek
   setTimeout(() => {
