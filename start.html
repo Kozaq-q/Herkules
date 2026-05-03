@@ -431,52 +431,71 @@ function getSB() {
 // Przy starcie aplikacji zawsze pobieramy WSZYSTKIE sloty z Supabase.
 // localStorage służy tylko do wyświetlenia danych gdy Supabase nie odpowiada.
 
-const SLOTS_KEY = 'herkules_slots_cache'; // zmieniony klucz — stary cache ignorujemy
+// ═══════════════════════════════════════════════════════════════════════
+// STORAGE — Supabase jako jedyne źródło prawdy
+// Zasady:
+//   1. Każda zmiana idzie NAJPIERW do Supabase (await), potem do cache.
+//   2. syncSlotsFromCloud() pobiera WSZYSTKIE sloty z Supabase.
+//   3. Chmura zawsze wygrywa — lokalny cache jest tylko kopią.
+//   4. Migracja: przy starcie zbieramy IDs ze WSZYSTKICH starych kluczy localStorage.
+// ═══════════════════════════════════════════════════════════════════════
 
+const SLOTS_KEY = 'herkules_slots_v2'; // v2 — czyste konto, bez starych śmieci
+
+// ── cache helpers ──────────────────────────────────────────────────────
 function _cacheSlot(slot) {
   localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot));
 }
 function _cacheSlotIds(ids) {
-  localStorage.setItem(SLOTS_KEY, JSON.stringify(ids));
+  localStorage.setItem(SLOTS_KEY, JSON.stringify([...new Set(ids.map(String))]));
 }
 function getSlot(id) {
   try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; }
 }
 function getCachedSlotIds() {
-  try { return JSON.parse(localStorage.getItem(SLOTS_KEY)) || []; } catch(e) { return []; }
+  // Zbierz IDs ze wszystkich wersji klucza (migracja starych urządzeń)
+  const keys = ['herkules_slots_v2', 'herkules_slots_cache', 'herkules_slots'];
+  const ids = new Set();
+  keys.forEach(k => {
+    try { (JSON.parse(localStorage.getItem(k)) || []).forEach(id => ids.add(String(id))); } catch(e) {}
+  });
+  return [...ids];
 }
 
-// Zapisz slot — NAJPIERW Supabase, potem cache lokalny
+// ── pobierz slot z Supabase (zawsze aktualny) ─────────────────────────
+async function fetchSlotFromCloud(id) {
+  try {
+    const { data, error } = await getSB()
+      .from(SB_TABLE).select('slot_json').eq('slot_id', String(id)).single();
+    if (!error && data && data.slot_json) return JSON.parse(data.slot_json);
+  } catch(e) {}
+  return null;
+}
+
+// ── zapisz slot: Supabase → cache ─────────────────────────────────────
 async function saveSlot(slot) {
   slot._updated = new Date().toISOString();
-  // 1. Supabase (await — czekamy na potwierdzenie)
   const { error } = await getSB().from(SB_TABLE).upsert({
-    slot_id: String(slot.id),
-    slot_json: JSON.stringify(slot),
+    slot_id:    String(slot.id),
+    slot_json:  JSON.stringify(slot),
     updated_at: slot._updated
   }, { onConflict: 'slot_id' });
-  if (error) {
-    console.warn('Supabase saveSlot error:', error.message);
-    showSyncStatus('error');
-  }
-  // 2. Cache lokalny (zawsze, nawet jeśli Supabase zawiódł — offline fallback)
+  if (error) { console.warn('Supabase saveSlot error:', error.message); showSyncStatus('error'); }
   _cacheSlot(slot);
   const ids = getCachedSlotIds();
-  if (!ids.includes(slot.id)) { ids.push(slot.id); _cacheSlotIds(ids); }
+  if (!ids.includes(String(slot.id))) _cacheSlotIds([...ids, slot.id]);
 }
 
-// Usuń slot — Supabase + cache
+// ── usuń slot: Supabase → cache ───────────────────────────────────────
 async function deleteSlot(id) {
   const { error } = await getSB().from(SB_TABLE).delete().eq('slot_id', String(id));
   if (error) console.warn('Supabase deleteSlot error:', error.message);
-  localStorage.removeItem('herkules_slot_' + id);
-  localStorage.removeItem('zawody_slot_' + id);
-  localStorage.removeItem('osf_slot_' + id);
-  _cacheSlotIds(getCachedSlotIds().filter(x => x !== id));
+  ['herkules_slot_', 'zawody_slot_', 'osf_slot_'].forEach(p =>
+    localStorage.removeItem(p + id));
+  _cacheSlotIds(getCachedSlotIds().filter(x => x !== String(id)));
 }
 
-// Główna funkcja sync — pobiera WSZYSTKIE sloty z Supabase i aktualizuje cache
-// Przy starcie: wypchnij też lokalne sloty których Supabase nie zna (stare dane)
+// ── główny sync: Supabase → cache ─────────────────────────────────────
 async function syncSlotsFromCloud() {
   try {
     const { data, error } = await getSB()
@@ -484,62 +503,42 @@ async function syncSlotsFromCloud() {
       .select('slot_id, slot_json, updated_at')
       .order('updated_at', { ascending: true });
 
-    if (error) {
-      console.warn('Supabase sync error:', error.message);
-      showSyncStatus('error');
-      return false;
-    }
+    if (error) { console.warn('Supabase sync error:', error.message); showSyncStatus('error'); return false; }
 
     const cloudIds = [];
 
-    // Zastosuj dane z chmury do lokalnego cache
+    // Zastosuj dane z chmury — chmura ZAWSZE wygrywa (jest źródłem prawdy)
     (data || []).forEach(row => {
       try {
         const slot = JSON.parse(row.slot_json);
         cloudIds.push(String(slot.id));
-        const cached = getSlot(slot.id);
-        // Chmura wygrywa zawsze — jest źródłem prawdy
-        // Wyjątek: lokalny slot jest nowszy (edytowany offline)
-        const cloudTime = new Date(row.updated_at).getTime();
-        const localTime = cached && cached._updated ? new Date(cached._updated).getTime() : 0;
-        if (!cached || cloudTime >= localTime) {
-          _cacheSlot(slot);
-        }
+        _cacheSlot(slot); // nadpisz cache bez porównywania czasów
       } catch(e) {}
     });
 
-    // Wypchnij do Supabase lokalne sloty których chmura nie zna
-    // (np. założone przed wprowadzeniem Supabase, lub offline)
+    // Wypchnij lokalne sloty nieznane chmurze (offline / pre-Supabase)
     const localIds = getCachedSlotIds();
     const cloudIdSet = new Set(cloudIds);
     for (const id of localIds) {
       if (!cloudIdSet.has(String(id))) {
         const slot = getSlot(id);
         if (slot) {
-          console.log('Wypycham lokalny slot do Supabase:', id);
           slot._updated = slot._updated || new Date().toISOString();
-          await getSB().from(SB_TABLE).upsert({
-            slot_id: String(id),
-            slot_json: JSON.stringify(slot),
-            updated_at: slot._updated
+          const { error: e2 } = await getSB().from(SB_TABLE).upsert({
+            slot_id: String(id), slot_json: JSON.stringify(slot), updated_at: slot._updated
           }, { onConflict: 'slot_id' });
-          cloudIds.push(String(id));
+          if (!e2) cloudIds.push(String(id));
         }
       }
     }
 
-    // Cache indeksu = unia chmury i lokalnych (offline)
-    const allIds = [...new Set([...cloudIds, ...localIds])];
-    _cacheSlotIds(allIds);
+    // Indeks = tylko to co jest w chmurze (+ offline które właśnie wypchnęliśmy)
+    _cacheSlotIds(cloudIds);
     return true;
-  } catch(e) {
-    console.warn('syncSlotsFromCloud exception:', e);
-    showSyncStatus('error');
-    return false;
-  }
+  } catch(e) { console.warn('syncSlotsFromCloud exception:', e); showSyncStatus('error'); return false; }
 }
 
-// Pobierz wszystkie sloty do wyświetlenia — z cache
+// ── lista wszystkich slotów (z cache) ─────────────────────────────────
 function getAllSlots() {
   return getCachedSlotIds().map(id => getSlot(id)).filter(Boolean);
 }
@@ -710,10 +709,13 @@ function ensureCzworSlot(panelId, slot) {
 
 async function reactivateSlot(id, e) {
   e.stopPropagation();
-  const slot = getSlot(id);
-  if (!slot) return;
-  slot.done = false; delete slot.doneAt;
   showSyncStatus('syncing');
+  // Pobierz aktualny slot z Supabase (nie cache — może być nieaktualny)
+  let slot = await fetchSlotFromCloud(id);
+  if (!slot) slot = getSlot(id); // fallback: cache
+  if (!slot) { showSyncStatus('error'); alert('Nie można wznowić — brak danych zawodów.'); return; }
+  slot.done = false;
+  delete slot.doneAt;
   await saveSlot(slot);
   showSyncStatus('ok');
   render();
@@ -721,8 +723,10 @@ async function reactivateSlot(id, e) {
 
 async function removeSlot(id, e) {
   e.stopPropagation();
-  const slot = getSlot(id);
-  if (!slot) return;
+  // Pobierz aktualny slot dla nazwy (z cache lub chmury)
+  let slot = getSlot(id);
+  if (!slot) slot = await fetchSlotFromCloud(id);
+  if (!slot) { alert('Nie można usunąć — brak danych zawodów.'); return; }
   const label = (slot.type === 'czworboj' ? 'Czwórbój' : 'OSF') + ' — ' + slot.city;
   const input = prompt('Aby usunąć zawody "' + label + '", wpisz RESET:');
   if (input !== 'RESET') {
