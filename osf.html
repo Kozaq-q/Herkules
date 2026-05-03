@@ -1748,14 +1748,30 @@ function getTeamAllAthletes(team) {
 }
 
 function getTeamIndividualSum(team) {
-  // suma 8 najlepszych czasów indywidualnych zawodników drużyny
+  // Suma N najlepszych czasów indywidualnych — używana do SORTOWANIA
+  // Zwraca Infinity jeśli za mało czasów (fair ranking niemożliwy)
   const athletes = getTeamAthletes(team);
   const times = athletes
     .map(a => parseTime(bestTime(a.id)))
     .filter(t => t < Infinity)
-    .sort((a, b) => a - b); // rosnąco — najlepsze (najkrótsze) pierwsze
-  if (times.length < TEAM_COUNT()) return Infinity; // za mało czasów
+    .sort((a, b) => a - b);
+  if (times.length < TEAM_COUNT()) return Infinity;
   return times.slice(0, TEAM_COUNT()).reduce((s, t) => s + t, 0);
+}
+
+function getTeamSumDisplay(team) {
+  // Suma do WYŚWIETLANIA — pokazuje ile jest, nawet jeśli niepełna
+  const athletes = getTeamAthletes(team);
+  const N = TEAM_COUNT();
+  const times = athletes
+    .map(a => parseTime(bestTime(a.id)))
+    .filter(t => t < Infinity)
+    .sort((a, b) => a - b);
+  if (times.length === 0) return { sum: Infinity, label: '—', partial: false };
+  const count = Math.min(times.length, N);
+  const sum   = times.slice(0, count).reduce((s, t) => s + t, 0);
+  const partial = times.length < N;
+  return { sum, label: formatSum(sum) + (partial ? ' (' + times.length + '/' + N + ')' : ''), partial };
 }
 
 function formatSum(sec) {
@@ -2035,7 +2051,10 @@ function renderTeamOrderSection(series) {
     h += '<div class="pair-athlete-meta" style="margin-bottom:8px;">';
     if (!ok) h += '<span style="color:var(--red);">⚠ Tylko ' + athletes.length + ' M — min. ' + TEAM_MIN_VAL() + ' wymagane</span>';
     else h += athletes.length + ' mężczyzn';
-    if (series === 's1') h += '<div style="font-family:var(--font-m);font-size:11px;color:var(--text3);margin-top:3px;">Σ ' + TEAM_COUNT() + ' najl.: <span style="color:var(--text2);">' + formatSum(item.sum) + '</span></div>';
+    if (series === 's1') {
+      const sd = getTeamSumDisplay(item.team);
+      h += '<div style="font-family:var(--font-m);font-size:11px;color:var(--text3);margin-top:3px;">Σ ' + TEAM_COUNT() + ' najl.: <span style="color:' + (sd.partial ? 'var(--orange)' : 'var(--text2)') + ';">' + sd.label + '</span></div>';
+    }
     if (series === 's2' && s1t) h += ' <span style="font-family:var(--font-m);font-size:11px;color:' + (s1dsq ? 'var(--red)' : 'var(--text3)') + ';">· S1: ' + (s1dsq ? 'DSQ' : s1t) + '</span>';
     h += '</div>';
     h += '<div style="display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation();">';
@@ -2140,7 +2159,8 @@ function renderTeamResults() {
     html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;">' + medalEmoji + (dsq ? 'DSQ' : (noBest ? '—' : rank)) + '</td>';
     html += '<td style="font-weight:700;">' + esc(r.team) + '</td>';
     html += '<td style="font-size:11px;color:' + (r.ok ? 'var(--text3)' : 'var(--red)') + ';">' + r.athletes.length + (r.ok ? '' : ' ⚠') + '</td>';
-    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + formatSum(r.sum) + '</td>';
+    const sd2 = getTeamSumDisplay(r.team);
+    html += '<td class="mono" style="font-size:12px;color:' + (sd2.partial ? 'var(--orange)' : 'var(--text3)') + ';">' + sd2.label + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s1disp + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s2disp + '</td>';
     html += '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest || dsq ? 'var(--text3)' : 'var(--green)') + ';">' + (r.best||'—') + '</td>';
