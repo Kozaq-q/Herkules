@@ -659,23 +659,22 @@ tr:last-child > td { border-bottom: none; }
     </div>
   </div>
 
-  <!-- Szczegóły punktacji -->
-  <div class="grid-2 mt-16" style="gap:16px;">
-    <div class="card">
-      <div class="card-title" style="color:var(--orange);">Punkty — Bieg drużynowy</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Msc</th><th>Drużyna</th><th>Czas</th><th style="text-align:right;">Pkt</th></tr></thead>
-          <tbody id="klas-team-tbody"></tbody>
-        </table>
-      </div>
-    </div>
+  <!-- Szczegóły punktacji -->\n  <div class="grid-2 mt-16" style="gap:16px;">
     <div class="card">
       <div class="card-title" style="color:var(--male);">Punkty — Bieg indywidualny M</div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>Czas</th><th style="text-align:right;">Pkt</th></tr></thead>
           <tbody id="klas-ind-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:var(--orange);">Punkty — Bieg drużynowy</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Msc</th><th>Drużyna</th><th>Czas</th><th style="text-align:right;">Pkt</th></tr></thead>
+          <tbody id="klas-team-tbody"></tbody>
         </table>
       </div>
     </div>
@@ -4494,7 +4493,7 @@ const PREMIUM_PDF_CSS = `
   thead th.c { text-align: center; }
 
   tbody tr { border-bottom: 1px solid #e0e0e0; }
-  tbody tr:nth-child(even):not(.top1):not(.top2):not(.top3) td { background: #f7f7f7; }
+  tbody tr:nth-child(even) td { background: #f7f7f7; }
   tbody td { padding: 9px 10px; font-size: 12px; vertical-align: middle; }
   tbody td.r { text-align: right; }
   tbody td.c { text-align: center; }
@@ -4504,16 +4503,6 @@ const PREMIUM_PDF_CSS = `
   .small { font-size: 10px; color: #555; }
   .bold { font-weight: 700; }
   .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
-
-  /* TOP 3 — wszystko białe, czarne tło */
-  tr.top1 td, tr.top2 td, tr.top3 td { color: #fff !important; }
-  tr.top1 td { background: #000 !important; border-bottom: 1px solid #444; }
-  tr.top2 td { background: #1a1a1a !important; border-bottom: 1px solid #444; }
-  tr.top3 td { background: #333 !important; border-bottom: 1px solid #555; }
-  tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
-  tr.top1 .rank-col, tr.top2 .rank-col, tr.top3 .rank-col { border-right-color: #555; }
-  tr.top1 .small, tr.top2 .small, tr.top3 .small { color: #ccc !important; }
-  tr.top1 .bib, tr.top2 .bib, tr.top3 .bib { color: #ccc !important; }
   .medal { font-size: 18px; display: block; line-height: 1; }
 
   .dsq { text-decoration: line-through; opacity: .5; }
@@ -4599,11 +4588,10 @@ function _printInd(gender) {
   rank = 1;
   ranked.forEach(r => {
     const noBest = r.bestSec === Infinity;
-    const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
+    const rankEmojiInd = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
     const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
-    const rankEmojiInd = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
-    html += '<tr class="' + topCls + '">' +
+    html += '<tr>' +
       '<td class="rank-col">' + (rankEmojiInd || (noBest ? '—' : rank)) + '</td>' +
       '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
@@ -4673,12 +4661,11 @@ function printBiegDruz() {
     '</tr></thead><tbody>';
 
   ranked.forEach(r => {
-    const topCls = r.rank === 1 ? ' top1' : r.rank === 2 ? ' top2' : r.rank === 3 ? ' top3' : '';
     const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     const rankTxt = r.rank || (r.dsq ? 'DSQ' : '—');
     const rankDispDruz = r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':rankTxt;
-    html += '<tr class="' + topCls + '">' +
+    html += '<tr>' +
       '<td class="rank-col">' + rankDispDruz + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
@@ -4724,31 +4711,12 @@ function printKlasyfikacjaPDF() {
     '</tr></thead><tbody>';
   result.forEach((r, i) => {
     const rank = i + 1;
-    const topCls = rank===1?' top1':rank===2?' top2':rank===3?' top3':'';
-    html += '<tr class="' + topCls + '">' +
+    html += '<tr>' +
       '<td class="rank-col">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c">' + r.indPts + '</td>' +
       '<td class="c">' + r.teamPts + '</td>' +
       '<td class="c bold" style="font-size:15px;">' + r.total + '</td>' +
-      '</tr>';
-  });
-  html += '</tbody></table>';
-
-  // Szczegóły ind. M
-  html += '<div class="section-title">Bieg indywidualny M (N=' + N_men + ')</div>';
-  html += '<table><thead><tr>' +
-    '<th class="rank-col">Msc</th><th>Zawodnik</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
-    '</tr></thead><tbody>';
-  rankedMen.forEach((r, i) => {
-    const rk = r.rank;
-    const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
-    html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':(r.rank||'—')) + '</td>' +
-      '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
-      '<td class="small">' + esc(r.athlete.team) + '</td>' +
-      '<td class="c mono">' + (r.best||'—') + '</td>' +
-      '<td class="r bold">' + r.pts + '</td>' +
       '</tr>';
   });
   html += '</tbody></table>';
@@ -4759,11 +4727,25 @@ function printKlasyfikacjaPDF() {
     '<th class="rank-col">Msc</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
     '</tr></thead><tbody>';
   rankedTeams.forEach((r, i) => {
-    const rk = r.rank;
-    const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
-    html += '<tr class="' + topCls + '">' +
+    html += '<tr>' +
       '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':(r.rank||'—')) + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
+      '<td class="c mono">' + (r.best||'—') + '</td>' +
+      '<td class="r bold">' + r.pts + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Szczegóły ind. M
+  html += '<div class="section-title">Bieg indywidualny M (N=' + N_men + ')</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th><th>Zawodnik</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
+    '</tr></thead><tbody>';
+  rankedMen.forEach((r, i) => {
+    html += '<tr>' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':(r.rank||'—')) + '</td>' +
+      '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
+      '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + (r.best||'—') + '</td>' +
       '<td class="r bold">' + r.pts + '</td>' +
       '</tr>';
