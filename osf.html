@@ -3919,7 +3919,7 @@ const PAIRS_PDF_CSS = `
   .pair-sep td{border-bottom:3px solid #000;padding:0;height:4px;}
 
   @media print{@page{size:A4;margin:8mm}body{margin:0;padding:8px;}}
-``;
+`;
 
 function printS1StartList(gender) {
   if (!state.s1pairs.length) { alert('Brak par — najpierw wylosuj pary Serii 1.'); return; }
@@ -3998,12 +3998,10 @@ const RESULTS_PDF_CSS = `
   .team-cell { padding: 8px 10px; font-size: 10px; color: #666; }
   .time-cell { padding: 8px 10px; font-family: monospace; font-size: 11px; text-align: center; }
   .best-cell { padding: 8px 10px; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; border-left: 2px solid #000; }
-  tr.top1 td { border-bottom: 1px solid #ccc; font-weight: bold; }
-  tr.top1 .rank-cell { font-size: 17px; }
   .dsq { text-decoration: line-through; color: #666; font-size: 10px; }
   .dsq-label { font-size: 9px; color: #666; margin-left: 4px; }
   @media print { @page { size: A4; margin: 10mm; } body { margin: 0; padding: 8px; } }
-``;
+`;
 
 function printResultsGender(gender) {
   const athletes = state.athletes.filter(a => a.gender === gender);
@@ -4021,18 +4019,17 @@ function printResultsGender(gender) {
   let html = '<h1>OSF — Wyniki indywidualne</h1>';
   html += '<div class="sub">' + esc(c.name||'') + (c.name?' · ':'') + esc(c.city) + (c.date?' · '+c.date:'') + '</div>';
   html += '<h2>' + gLabel + '</h2>';
-  html += '<table><thead><tr><th class="rank-cell">Msc</th><th>Zawodnik</th><th>Drużyna</th><th style="text-align:center;">Seria 1</th><th style="text-align:center;">Seria 2</th><th style="text-align:center;border-left:2px solid #fff;">Wynik</th></tr></thead><tbody>';
+  html += '<table><thead><tr><th class="rank-cell">Msc</th><th>Zawodnik</th><th>Drużyna</th><th style="text-align:center;">Seria 1</th><th style="text-align:center;">Seria 2</th><th style="text-align:center;border-left:2px solid #000;">Wynik</th></tr></thead><tbody>';
 
   let rank = 1;
   ranked.forEach(r => {
     const noBest = r.bestSec === Infinity;
-    const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
     const s1d = r.s1dsq ? '<span class="dsq">' + (r.s1||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">' + (r.s2||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
-    html += '<tr class="' + topCls + '">';
     const rankEmoji = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
+    html += '<tr>';
     html += '<td class="rank-cell">' + (rankEmoji || (noBest ? '—' : rank)) + '</td>';
-    html += '<td class="name-cell">' + esc(displayName(r.athlete)) + ' <span style="font-size:9px;">' + r.athlete.bib + '</span></td>';
+    html += '<td class="name-cell">' + esc(displayName(r.athlete)) + ' <span style="font-size:9px;color:#666;">' + r.athlete.bib + '</span></td>';
     html += '<td class="team-cell">' + esc(r.athlete.team) + '</td>';
     html += '<td class="time-cell">' + s1d + '</td>';
     html += '<td class="time-cell">' + s2d + '</td>';
@@ -4504,7 +4501,7 @@ const PREMIUM_PDF_CSS = `
   .podium-pts { font-size: 10px; color: #666; margin-top: 3px; }
 
   @media print { body { padding: 10mm 12mm 8mm; } }
-``;
+`;
 
 function _pdfHeader(title, subtitle) {
   const c = state.contest;
