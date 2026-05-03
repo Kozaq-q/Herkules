@@ -131,9 +131,9 @@ tr:last-child > td { border-bottom: none; }
 .stat-label { font-size: 11px; color: var(--text3); margin-top: 4px; letter-spacing: 0.5px; }
 
 /* ─── RANK ─── */
-.rank-1 { color: #FFD700; font-weight: 800; }
-.rank-2 { color: #C0C0C0; font-weight: 800; }
-.rank-3 { color: #CD7F32; font-weight: 800; }
+.rank-1 { color: #fff; background: #000; font-weight: 900; padding: 2px 6px; border-radius: 3px; }
+.rank-2 { color: #fff; background: #2a2a2a; font-weight: 900; padding: 2px 6px; border-radius: 3px; }
+.rank-3 { color: #fff; background: #3a3a3a; font-weight: 900; padding: 2px 6px; border-radius: 3px; }
 
 /* ─── GENDER BADGE ─── */
 .gender-M { background: rgba(91,155,213,.15); color: var(--male); border: 1px solid rgba(91,155,213,.35); padding: 2px 8px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display: inline-block; }
@@ -2080,7 +2080,7 @@ function printTeamResults() {
     return { team, ok, athletes, s1, s2, s1dsq, s2dsq, best, bestSec: parseTime(best), sum: getTeamIndividualSum(team) };
   }).sort((a, b) => { if (!a.ok && b.ok) return 1; if (a.ok && !b.ok) return -1; return a.bestSec - b.bestSec; });
 
-  const medals = ['🥇', '🥈', '🥉'];
+  const medals = ['1.', '2.', '3.'];
   const topBg  = ['#000', '#222', '#333'];
   const topFg  = ['#fff', '#fff', '#fff'];
 
@@ -2093,6 +2093,7 @@ function printTeamResults() {
     .team-name { font-size: 18px; font-weight: bold; flex: 1; }
     .team-time { font-family: monospace; font-size: 20px; font-weight: bold; }
     .team-detail { display: flex; gap: 20px; padding: 6px 16px 10px; font-size: 11px; color: #555; border-left: 4px solid #ddd; margin-left: 0; }
+    .team-top .team-detail { color: #ccc; border-left-color: #555; }
     .dsq-s { text-decoration: line-through; color: #aaa; }
   `;
 
@@ -2113,7 +2114,7 @@ function printTeamResults() {
     const s1disp = r.s1dsq ? '<span class="dsq-s">' + (r.s1||'') + '</span> DSQ' : (r.s1||'—');
     const s2disp = r.s2dsq ? '<span class="dsq-s">' + (r.s2||'') + '</span> DSQ' : (r.s2||'—');
 
-    html += '<div class="team-row">';
+    html += '<div class="team-row' + (isTop ? ' team-top' : '') + '">';
     html += '<div class="team-header" style="background:' + bg + ';color:' + fg + ';border-left:4px solid ' + (isTop?bg:'#999') + ';">';
     html += '<span class="team-rank">' + medal + rankTxt + '</span>';
     html += '<span class="team-name">' + esc(r.team) + '</span>';
@@ -3607,7 +3608,8 @@ function renderResultsForGender(gender, tbodyId) {
       }
     }
     html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
-    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + rankDisp + '</td>';
+    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' +
+      (myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'') + rankDisp + '</td>';
     html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s1disp + '</td>';
@@ -3882,14 +3884,17 @@ const RESULTS_PDF_CSS = `
   .team-cell { padding: 8px 10px; font-size: 10px; color: #444; }
   .time-cell { padding: 8px 10px; font-family: monospace; font-size: 11px; text-align: center; }
   .best-cell { padding: 8px 10px; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; border-left: 2px solid #000; }
-  /* TOP 3 */
-  tr.top1 td { background: #000 !important; color: #fff; }
-  tr.top1 .rank-cell::before { content: "🥇 "; }
-  tr.top2 td { background: #222 !important; color: #fff; }
-  tr.top2 .rank-cell::before { content: "🥈 "; }
-  tr.top3 td { background: #333 !important; color: #fff; }
-  tr.top3 .rank-cell::before { content: "🥉 "; }
-  tr.top1 td, tr.top2 td, tr.top3 td { border-bottom: 1px solid #888; }
+  /* TOP 3 — wszystko białe, czarne tło */
+  tr.top1 td, tr.top2 td, tr.top3 td { color: #fff !important; border-bottom: 1px solid #666; }
+  tr.top1 td { background: #000 !important; }
+  tr.top1 .rank-cell::before { content: "1 "; }
+  tr.top2 td { background: #222 !important; }
+  tr.top2 .rank-cell::before { content: "2 "; }
+  tr.top3 td { background: #333 !important; }
+  tr.top3 .rank-cell::before { content: "3 "; }
+  tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
+  tr.top1 .dsq, tr.top2 .dsq, tr.top3 .dsq { color: #ccc !important; }
+  tr.top1 .dsq-label, tr.top2 .dsq-label, tr.top3 .dsq-label { color: #ccc !important; }
   .dsq { text-decoration: line-through; color: #888; font-size: 10px; }
   .dsq-label { font-size: 9px; color: #888; margin-left: 4px; }
   @media print { @page { size: A4; margin: 10mm; } body { margin: 0; padding: 8px; } }
@@ -4378,13 +4383,17 @@ const PREMIUM_PDF_CSS = `
   .bold { font-weight: 700; }
   .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
 
-  /* TOP 3 */
-  tr.top1 td { background: #000 !important; color: #fff !important; border-bottom: 1px solid #333; }
-  tr.top2 td { background: #1a1a1a !important; color: #fff !important; border-bottom: 1px solid #333; }
-  tr.top3 td { background: #333 !important; color: #fff !important; border-bottom: 1px solid #444; }
+  /* TOP 3 — wszystko białe, czarne tło */
+  tr.top1 td, tr.top2 td, tr.top3 td { color: #fff !important; }
+  tr.top1 td { background: #000 !important; border-bottom: 1px solid #444; }
+  tr.top2 td { background: #1a1a1a !important; border-bottom: 1px solid #444; }
+  tr.top3 td { background: #333 !important; border-bottom: 1px solid #555; }
+  tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
   tr.top1 .rank-col, tr.top2 .rank-col, tr.top3 .rank-col { border-right-color: #555; }
-  tr.top1 .small, tr.top2 .small, tr.top3 .small { color: #bbb !important; }
-  tr.top1 .bib, tr.top2 .bib, tr.top3 .bib { color: #888 !important; }
+  .small { font-size: 10px; color: #555; }
+  tr.top1 .small, tr.top2 .small, tr.top3 .small { color: #ccc !important; }
+  .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
+  tr.top1 .bib, tr.top2 .bib, tr.top3 .bib { color: #ccc !important; }
   .medal { font-size: 18px; display: block; line-height: 1; }
 
   .dsq { text-decoration: line-through; opacity: .5; }
