@@ -350,65 +350,18 @@ function showApp() {
   document.getElementById('main-header').style.display   = '';
   document.getElementById('main-content').style.display  = '';
   document.getElementById('header-date').textContent = formatDate();
-
-  // Pokaż od razu to co jest w cache
   render();
-
-  // Pełny sync przy starcie
+  // Wczytaj sloty z chmury i odśwież widok
   showSyncStatus('syncing');
-  syncSlotsFromCloud().then(ok => {
+  syncSlotsFromCloud().then(() => {
     render();
-    showSyncStatus(ok ? 'ok' : 'error');
-  });
+    showSyncStatus('ok');
+  }).catch(() => showSyncStatus('error'));
 
-  // Polling co 8s — zawsze aktywny, niezależnie od Realtime
+  // Polling co 30s — nowe zawody od innych urządzeń
   setInterval(() => {
-    syncSlotsFromCloud().then(ok => { if (ok) render(); });
-  }, 8000);
-
-  // Supabase Realtime — natychmiastowe odświeżenie per typ zdarzenia
-  try {
-    getSB()
-      .channel('herkules_slots_changes')
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'herkules_slots' }, payload => {
-        // Usuń lokalnie natychmiast — nie czekaj na sync (który mógłby przywrócić slot)
-        const id = payload.old && payload.old.slot_id;
-        if (id) {
-          ['herkules_slot_', 'zawody_slot_', 'osf_slot_'].forEach(p => localStorage.removeItem(p + id));
-          _cacheSlotIds(getCachedSlotIds().filter(x => x !== String(id)));
-          render();
-        }
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'herkules_slots' }, payload => {
-        // Nowy slot — pobierz i dodaj do cache
-        try {
-          const slot = JSON.parse(payload.new.slot_json);
-          _cacheSlot(slot);
-          const ids = getCachedSlotIds();
-          if (!ids.includes(String(slot.id))) _cacheSlotIds([...ids, slot.id]);
-          render();
-        } catch(e) {}
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'herkules_slots' }, payload => {
-        // Zaktualizowany slot — nadpisz cache
-        try {
-          const slot = JSON.parse(payload.new.slot_json);
-          _cacheSlot(slot);
-          render();
-        } catch(e) {}
-      })
-      .subscribe(status => {
-        const dot = document.getElementById('sync-dot');
-        const lbl = document.getElementById('sync-label');
-        if (status === 'SUBSCRIBED') {
-          if (dot) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (dot) { dot.style.background = 'var(--orange)'; lbl.textContent = 'poll 8s'; }
-        }
-      });
-  } catch(e) {
-    console.warn('Realtime niedostępny, działa polling 8s:', e);
-  }
+    syncSlotsFromCloud().then(() => render()).catch(() => {});
+  }, 30000);
 }
 
 function openChangePassword() {
@@ -448,115 +401,75 @@ function getSB() {
 }
 
 // ═══════════════════════════════════
-// STORAGE — Supabase jako jedyne źródło prawdy, localStorage jako cache
-// ═══════════════════════════════════════════════════════════════════════
-// Zasada: każda zmiana idzie NAJPIERW do Supabase, potem do localStorage.
-// Przy starcie aplikacji zawsze pobieramy WSZYSTKIE sloty z Supabase.
-// localStorage służy tylko do wyświetlenia danych gdy Supabase nie odpowiada.
+// STORAGE — localStorage + Supabase
+// ═══════════════════════════════════
+const SLOTS_KEY = 'herkules_slots';
 
-// ═══════════════════════════════════════════════════════════════════════
-// STORAGE — Supabase jako jedyne źródło prawdy
-// Zasady:
-//   1. Każda zmiana idzie NAJPIERW do Supabase (await), potem do cache.
-//   2. syncSlotsFromCloud() pobiera WSZYSTKIE sloty z Supabase.
-//   3. Chmura zawsze wygrywa — lokalny cache jest tylko kopią.
-//   4. Migracja: przy starcie zbieramy IDs ze WSZYSTKICH starych kluczy localStorage.
-// ═══════════════════════════════════════════════════════════════════════
+function getSlotIds()     { try { return JSON.parse(localStorage.getItem(SLOTS_KEY)) || []; } catch(e) { return []; } }
+function saveSlotIds(ids) { localStorage.setItem(SLOTS_KEY, JSON.stringify(ids)); }
+function getSlot(id)      { try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; } }
 
-const SLOTS_KEY = 'herkules_slots_v2'; // v2 — czyste konto, bez starych śmieci
-
-// ── cache helpers ──────────────────────────────────────────────────────
-function _cacheSlot(slot) {
+function saveSlot(slot) {
   localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot));
-}
-function _cacheSlotIds(ids) {
-  const clean = [...new Set(ids.map(String))];
-  localStorage.setItem(SLOTS_KEY, JSON.stringify(clean));
-  // Wyczyść stare klucze żeby nie wracały usunięte sloty
-  localStorage.removeItem('herkules_slots_cache');
-  localStorage.removeItem('herkules_slots');
-}
-function getSlot(id) {
-  try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; }
-}
-function getCachedSlotIds() {
-  // Przy pierwszym uruchomieniu: migruj ze starych kluczy do nowego
-  const legacy = ['herkules_slots_cache', 'herkules_slots'];
-  const v2 = JSON.parse(localStorage.getItem(SLOTS_KEY) || '[]');
-  if (v2.length === 0) {
-    // Tylko przy pustym v2 sprawdź stare klucze (jednorazowa migracja)
-    const ids = new Set(v2.map(String));
-    legacy.forEach(k => {
-      try { (JSON.parse(localStorage.getItem(k)) || []).forEach(id => ids.add(String(id))); } catch(e) {}
-    });
-    return [...ids];
-  }
-  return v2.map(String);
+  // Zapisz metadane slotu do Supabase (nie dane zawodów — te są w osf_state)
+  getSB().from(SB_TABLE).upsert({
+    slot_id: String(slot.id),
+    slot_json: JSON.stringify(slot),
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'slot_id' }).then(({ error }) => {
+    if (error) console.warn('Supabase saveSlot error:', error.message);
+  });
 }
 
-// ── pobierz slot z Supabase (zawsze aktualny) ─────────────────────────
-async function fetchSlotFromCloud(id) {
-  try {
-    const { data, error } = await getSB()
-      .from(SB_TABLE).select('slot_json').eq('slot_id', String(id)).single();
-    if (!error && data && data.slot_json) return JSON.parse(data.slot_json);
-  } catch(e) {}
-  return null;
+function deleteSlot(id) {
+  localStorage.removeItem('herkules_slot_' + id);
+  localStorage.removeItem('zawody_slot_' + id);
+  localStorage.removeItem('osf_slot_' + id);
+  saveSlotIds(getSlotIds().filter(x => x !== id));
+  // Usuń z Supabase
+  getSB().from(SB_TABLE).delete().eq('slot_id', String(id)).then(({ error }) => {
+    if (error) console.warn('Supabase deleteSlot error:', error.message);
+  });
 }
 
-// ── zapisz slot: Supabase → cache ─────────────────────────────────────
-async function saveSlot(slot) {
-  slot._updated = new Date().toISOString();
-  const { error } = await getSB().from(SB_TABLE).upsert({
-    slot_id:    String(slot.id),
-    slot_json:  JSON.stringify(slot),
-    updated_at: slot._updated
-  }, { onConflict: 'slot_id' });
-  if (error) { console.warn('Supabase saveSlot error:', error.message); showSyncStatus('error'); }
-  _cacheSlot(slot);
-  const ids = getCachedSlotIds();
-  if (!ids.includes(String(slot.id))) _cacheSlotIds([...ids, slot.id]);
-}
-
-// ── usuń slot: Supabase → cache ───────────────────────────────────────
-async function deleteSlot(id) {
-  const { error } = await getSB().from(SB_TABLE).delete().eq('slot_id', String(id));
-  if (error) console.warn('Supabase deleteSlot error:', error.message);
-  ['herkules_slot_', 'zawody_slot_', 'osf_slot_'].forEach(p =>
-    localStorage.removeItem(p + id));
-  _cacheSlotIds(getCachedSlotIds().filter(x => x !== String(id)));
-}
-
-// ── główny sync: Supabase → cache ─────────────────────────────────────
+// Wczytaj sloty z Supabase i scal z localStorage
 async function syncSlotsFromCloud() {
   try {
-    const { data, error } = await getSB()
-      .from(SB_TABLE)
-      .select('slot_id, slot_json, updated_at')
-      .order('updated_at', { ascending: true });
+    const { data, error } = await getSB().from(SB_TABLE).select('slot_id, slot_json, updated_at').order('updated_at', { ascending: true });
+    if (error) {
+      // Tabela może nie istnieć jeszcze — nie blokuj inicjalizacji
+      console.warn('Supabase sync error (tabela herkules_slots może nie istnieć):', error.message);
+      return;
+    }
+    if (!data || !data.length) return;
 
-    if (error) { console.warn('Supabase sync error:', error.message); showSyncStatus('error'); return false; }
-
+    const localIds = new Set(getSlotIds().map(String));
     const cloudIds = [];
 
-    // Zastosuj dane z chmury — chmura ZAWSZE wygrywa (jest źródłem prawdy)
-    (data || []).forEach(row => {
+    data.forEach(row => {
       try {
         const slot = JSON.parse(row.slot_json);
-        cloudIds.push(String(slot.id));
-        _cacheSlot(slot);
+        const id   = slot.id;
+        cloudIds.push(id);
+        // Scal: chmura wygrywa jeśli lokalny slot nie istnieje
+        const localSlot = getSlot(id);
+        if (!localSlot) {
+          localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+        } else {
+          // Jeśli chmura jest nowsza — nadpisz
+          const cloudTime = new Date(row.updated_at).getTime();
+          const localTime = localSlot._updated ? new Date(localSlot._updated).getTime() : 0;
+          if (cloudTime > localTime) {
+            localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+          }
+        }
       } catch(e) {}
     });
 
-    // Indeks = dokładnie to co jest w Supabase — nic nie dodajemy
-    _cacheSlotIds(cloudIds);
-    return true;
-  } catch(e) { console.warn('syncSlotsFromCloud exception:', e); showSyncStatus('error'); return false; }
-}
-
-// ── lista wszystkich slotów (z cache) ─────────────────────────────────
-function getAllSlots() {
-  return getCachedSlotIds().map(id => getSlot(id)).filter(Boolean);
+    // Scala indeks ID — unia localnych i chmury
+    const allIds = [...new Set([...getSlotIds(), ...cloudIds])];
+    saveSlotIds(allIds);
+  } catch(e) { console.warn('syncSlotsFromCloud exception:', e); }
 }
 
 function getSlotStats(slot) {
@@ -624,15 +537,15 @@ function slotCardHTML(slot) {
       '</div>' +
     '</div>' +
     '<div class="slot-actions">' +
-      '<button class="btn ' + openCls + '" data-action="open" data-id="' + slot.id + '">→ Otwórz</button>' +
-      (done ? '<button class="btn btn-green" data-action="reactivate" data-id="' + slot.id + '">↺ Wznów</button>' : '') +
-      '<button class="btn btn-danger" data-action="remove" data-id="' + slot.id + '">✕ Usuń</button>' +
+      '<button class="btn ' + openCls + '" onclick="openSlot(' + slot.id + ')">→ Otwórz</button>' +
+      (done ? '<button class="btn btn-green" onclick="reactivateSlot(' + slot.id + ', event)">↺ Wznów</button>' : '') +
+      '<button class="btn btn-danger" onclick="removeSlot(' + slot.id + ', event)">✕ Usuń</button>' +
     '</div>' +
   '</div>';
 }
 
 function render() {
-  const all      = getAllSlots();
+  const all      = getSlotIds().map(id => getSlot(id)).filter(Boolean);
   const czworboj = all.filter(s => s.type === 'czworboj' && !s.done);
   const osf      = all.filter(s => s.type === 'osf'      && !s.done);
   const done     = all.filter(s => s.done);
@@ -677,19 +590,17 @@ function generateSlotId() {
   });
 }
 
-async function createSlot() {
+function createSlot() {
   const city = document.getElementById('new-city').value.trim();
   const name = document.getElementById('new-name').value.trim();
   const date = document.getElementById('new-date').value;
   if (!city) { document.getElementById('new-city').focus(); return; }
+  const ids   = getSlotIds();
   const newId = generateSlotId();
   const slot  = { id: newId, type: selectedType, city, name, date, created: new Date().toISOString(), _updated: new Date().toISOString() };
-  closeModal();
-  showSyncStatus('syncing');
-  await saveSlot(slot);
-  showSyncStatus('ok');
-  render();
-  openSlot(newId);
+  saveSlot(slot);
+  saveSlotIds([...ids, newId]);
+  closeModal(); render(); openSlot(newId);
 }
 
 function openSlot(id) {
@@ -723,36 +634,26 @@ function ensureCzworSlot(panelId, slot) {
   } catch(e) { return 'panel_' + panelId; }
 }
 
-async function reactivateSlot(id, e) {
+function reactivateSlot(id, e) {
   e.stopPropagation();
-  showSyncStatus('syncing');
-  // Pobierz aktualny slot z Supabase (nie cache — może być nieaktualny)
-  let slot = await fetchSlotFromCloud(id);
-  if (!slot) slot = getSlot(id); // fallback: cache
-  if (!slot) { showSyncStatus('error'); alert('Nie można wznowić — brak danych zawodów.'); return; }
-  slot.done = false;
-  delete slot.doneAt;
-  await saveSlot(slot);
-  showSyncStatus('ok');
-  render();
+  const slot = getSlot(id);
+  if (!slot) return;
+  slot.done = false; delete slot.doneAt;
+  slot._updated = new Date().toISOString();
+  saveSlot(slot); render();
 }
 
-async function removeSlot(id, e) {
+function removeSlot(id, e) {
   e.stopPropagation();
-  // Pobierz aktualny slot dla nazwy (z cache lub chmury)
-  let slot = getSlot(id);
-  if (!slot) slot = await fetchSlotFromCloud(id);
-  if (!slot) { alert('Nie można usunąć — brak danych zawodów.'); return; }
+  const slot = getSlot(id);
+  if (!slot) return;
   const label = (slot.type === 'czworboj' ? 'Czwórbój' : 'OSF') + ' — ' + slot.city;
   const input = prompt('Aby usunąć zawody "' + label + '", wpisz RESET:');
   if (input !== 'RESET') {
     if (input !== null) alert('Nieprawidłowe potwierdzenie. Zawody nie zostały usunięte.');
     return;
   }
-  showSyncStatus('syncing');
-  await deleteSlot(id);
-  showSyncStatus('ok');
-  render();
+  deleteSlot(id); render();
 }
 
 // ═══════════════════════════════════
@@ -770,27 +671,10 @@ function formatDate() {
   return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
 
-document.getElementById('main-content').addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const id     = btn.dataset.id;
-  const action = btn.dataset.action;
-  if (action === 'open')        { openSlot(id); }
-  else if (action === 'reactivate') { reactivateSlot(id, e); }
-  else if (action === 'remove')     { removeSlot(id, e); }
-});
-
 document.getElementById('modal-new').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.getElementById('modal-password').addEventListener('click', function(e) { if (e.target === this) closePasswordModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closePasswordModal(); } });
 document.getElementById('login-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-// Gdy użytkownik wraca do zakładki (np. po pracy w osf.html) — od razu sync
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && isLoggedIn()) {
-    syncSlotsFromCloud().then(ok => { if (ok) render(); });
-  }
-});
 
 // BOOT
 if (isLoggedIn()) { showApp(); }

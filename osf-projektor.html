@@ -232,23 +232,31 @@ async function boot(s) {
   startClock();
   startRealtime();
 
-  // Polling co 20s jako fallback gdy WebSocket padnie
+  // Polling co 5s jako fallback gdy WebSocket padnie lub Realtime zgubi event
+  let _lastProjState = '';
   setInterval(async () => {
     try {
-      if (await loadState()) softRender();
+      const { data } = await getDB().from('osf_state').select('state_json, updated_at').eq('slot_id', slotId).single();
+      if (!data || !data.state_json) return;
+      if (data.state_json !== _lastProjState) {
+        _lastProjState = data.state_json;
+        state = JSON.parse(data.state_json);
+        softRender();
+        flashSync();
+      }
     } catch(e) {
       console.warn('Projektor poll error:', e);
     }
-  }, 20000);
+  }, 5000);
 
-  // Reconnect realtime co 60s jeśli połączenie zerwane
+  // Reconnect realtime co 30s jeśli połączenie zerwane
   setInterval(() => {
     const dot = document.getElementById('sync-dot');
     if (dot && dot.classList.contains('off')) {
       if (rtChannel) { getDB().removeChannel(rtChannel); rtChannel = null; }
       startRealtime();
     }
-  }, 60000);
+  }, 30000);
 }
 
 // ═══════════════════════════════════════════════
