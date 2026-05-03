@@ -1879,19 +1879,20 @@ function buildTeamSeries1() {
     return;
   }
 
-  // Sortuj kwalifikujące: najsłabsze (największa suma lub brak) → najlepsze
+  // Sortuj kwalifikujące: najsłabsze (największa suma) → najlepsze (najmniejsza suma)
+  // Drużyny bez pełnego zestawu N wyników (sum=Infinity) idą NA KONIEC —
+  // nie wiadomo jak silne są, więc nie traktujemy ich jako "najsłabszych"
   eligible.sort((a, b) => {
     if (a.sum === Infinity && b.sum === Infinity) return 0;
-    if (a.sum === Infinity) return -1; // brak wystarczającej liczby czasów → na początku
-    if (b.sum === Infinity) return 1;
+    if (a.sum === Infinity) return 1;  // brak N wyników → na koniec (nieznana siła)
+    if (b.sum === Infinity) return -1;
     return b.sum - a.sum; // największa suma = najwolniejsza = na początku
   });
 
-  // Jeśli nieparzysta liczba kwalifikujących → najsłabsza (idx 0) biega solo
+  // Jeśli nieparzysta liczba → najsłabsza (idx 0) biega solo
+  // Najlepsza (ostatni idx) zawsze w parze
   const isOdd = eligible.length % 2 !== 0;
 
-  // Tor w S1 — naprzemiennie L/P wg pozycji w kolejności
-  // (solo na idx 0 dostaje L, reszta naprzemiennie)
   const order = eligible.map((item, idx) => {
     const lane = isOdd
       ? (idx === 0 ? 'L' : (idx % 2 === 1 ? 'L' : 'P'))
