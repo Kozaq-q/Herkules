@@ -3808,6 +3808,17 @@ function pairTableRowsJudge(pairs, showS1) {
   let html = '';
   pairs.forEach((p, idx) => {
     const aIsL  = p.aLane === 'L';
+    const isSolo = !p.aId || !p.bId;
+    const isLast = idx === pairs.length - 1;
+    const rowBg  = idx % 2 === 0 ? '' : 'background:#fafafa;';
+
+    // Wyznacz rzeczywisty tor dla SOLO (zawodnik może być w slocie a lub b)
+    let soloLane = 'L';
+    if (isSolo) {
+      if (p.aId) soloLane = p.aLane || 'L';
+      else if (p.bId) soloLane = p.bLane || 'P';
+    }
+
     // Dla SOLO: zawodnik może być w slocie a lub b — wyznacz na podstawie rzeczywistego toru
     let athL, athP;
     if (isSolo) {
@@ -3821,16 +3832,6 @@ function pairTableRowsJudge(pairs, showS1) {
     }
     const s1L   = athL ? getTime(athL.id, 's1') : '';
     const s1P   = athP ? getTime(athP.id, 's1') : '';
-    const isSolo = !p.aId || !p.bId;
-    const isLast = idx === pairs.length - 1;
-    const rowBg  = idx % 2 === 0 ? '' : 'background:#fafafa;';
-
-    // Wyznacz rzeczywisty tor dla SOLO (zawodnik może być w slocie a lub b)
-    let soloLane = 'L';
-    if (isSolo) {
-      if (p.aId) soloLane = p.aLane || 'L';
-      else if (p.bId) soloLane = p.bLane || 'P';
-    }
 
     // Separator przed każdą parą (oprócz pierwszej)
     if (idx > 0) html += '<tr class="pair-sep"><td colspan="4"></td></tr>';
@@ -4012,6 +4013,10 @@ const RESULTS_PDF_CSS = `
   tr.top2 td { background: #222 !important; color: #fff !important; border-bottom: 1px solid #666; }
   tr.top3 td { background: #333 !important; color: #fff !important; border-bottom: 1px solid #666; }
   tr.top1 .team-cell, tr.top2 .team-cell, tr.top3 .team-cell { color: #fff !important; }
+  tr.top1 .name-cell, tr.top2 .name-cell, tr.top3 .name-cell { color: #fff !important; }
+  tr.top1 .rank-cell, tr.top2 .rank-cell, tr.top3 .rank-cell { color: #fff !important; }
+  tr.top1 .time-cell, tr.top2 .time-cell, tr.top3 .time-cell { color: #fff !important; }
+  tr.top1 .best-cell, tr.top2 .best-cell, tr.top3 .best-cell { color: #fff !important; }
   tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
   tr.top1 .dsq, tr.top2 .dsq, tr.top3 .dsq { color: #ccc !important; }
   tr.top1 .dsq-label, tr.top2 .dsq-label, tr.top3 .dsq-label { color: #ccc !important; }
@@ -4046,7 +4051,7 @@ function printResultsGender(gender) {
     const s2d = r.s2dsq ? '<span class="dsq">' + (r.s2||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     html += '<tr class="' + topCls + '">';
     const rankEmoji = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
-    html += '<td class="rank-cell">' + rankEmoji + (noBest ? '—' : rank) + '</td>';
+    html += '<td class="rank-cell">' + (rankEmoji || (noBest ? '—' : rank)) + '</td>';
     html += '<td class="name-cell">' + esc(displayName(r.athlete)) + ' <span style="font-size:9px;opacity:.6;">' + r.athlete.bib + '</span></td>';
     html += '<td class="team-cell">' + esc(r.athlete.team) + '</td>';
     html += '<td class="time-cell">' + s1d + '</td>';
@@ -4507,9 +4512,7 @@ const PREMIUM_PDF_CSS = `
   tr.top3 td { background: #333 !important; border-bottom: 1px solid #555; }
   tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
   tr.top1 .rank-col, tr.top2 .rank-col, tr.top3 .rank-col { border-right-color: #555; }
-  .small { font-size: 10px; color: #555; }
   tr.top1 .small, tr.top2 .small, tr.top3 .small { color: #ccc !important; }
-  .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
   tr.top1 .bib, tr.top2 .bib, tr.top3 .bib { color: #ccc !important; }
   .medal { font-size: 18px; display: block; line-height: 1; }
 
@@ -4601,7 +4604,7 @@ function _printInd(gender) {
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     const rankEmojiInd = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + rankEmojiInd + (noBest ? '—' : rank) + '</td>' +
+      '<td class="rank-col">' + (rankEmojiInd || (noBest ? '—' : rank)) + '</td>' +
       '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
@@ -4674,8 +4677,9 @@ function printBiegDruz() {
     const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     const rankTxt = r.rank || (r.dsq ? 'DSQ' : '—');
+    const rankDispDruz = r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':rankTxt;
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (posIdx===1?'🥇':posIdx===2?'🥈':posIdx===3?'🥉':'') + rankTxt + '</td>' +
+      '<td class="rank-col">' + rankDispDruz + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
       '<td class="c mono">' + s2d + '</td>' +
@@ -4722,7 +4726,7 @@ function printKlasyfikacjaPDF() {
     const rank = i + 1;
     const topCls = rank===1?' top1':rank===2?' top2':rank===3?' top3':'';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') + rank + '</td>' +
+      '<td class="rank-col">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c">' + r.indPts + '</td>' +
       '<td class="c">' + r.teamPts + '</td>' +
@@ -4740,7 +4744,7 @@ function printKlasyfikacjaPDF() {
     const rk = r.rank;
     const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':(r.rank||'—')) + '</td>' +
       '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + (r.best||'—') + '</td>' +
@@ -4758,7 +4762,7 @@ function printKlasyfikacjaPDF() {
     const rk = r.rank;
     const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':(r.rank||'—')) + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + (r.best||'—') + '</td>' +
       '<td class="r bold">' + r.pts + '</td>' +
