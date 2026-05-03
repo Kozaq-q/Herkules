@@ -1306,10 +1306,12 @@ function getSupabase() {
   return _supabaseClient;
 }
 
-// Debounced save — czeka 1.5s po ostatniej zmianie przed wysłaniem
-let _saveTimer = null;
-let _isSaving = false;
-let _lastSavedJson = '';
+// ── SYNC — zapis do Supabase ──────────────────────────────────────────
+// Debounce 300ms: grupuje szybkie kliknięcia w jeden zapis
+let _saveTimer  = null;
+let _isSaving   = false;
+// Unikalny znacznik tej sesji — odróżnia nasze zapisy od cudzych
+let _myWriteTag = '';
 
 function scheduleSave() {
   clearTimeout(_saveTimer);
@@ -1319,30 +1321,32 @@ function scheduleSave() {
 function saveImmediate() {
   clearTimeout(_saveTimer);
   _saveTimer = null;
-  if (_isSaving) { scheduleSave(); return; }
   saveToSupabase();
 }
 
 async function saveToSupabase() {
+  // Jeśli poprzedni zapis jeszcze trwa, odrocz o 300ms i wróć
   if (_isSaving) { scheduleSave(); return; }
   _isSaving = true;
   try {
-    const db = getSupabase();
+    const db  = getSupabase();
     const now = new Date().toISOString();
-    state._savedAt = now;
-    const stateJson = JSON.stringify(state);
-    _lastSavedJson = stateJson;
-    const payload = { slot_id: STORAGE_KEY, state_json: stateJson, updated_at: now };
-    const { error } = await db.from('osf_state').upsert(payload, { onConflict: 'slot_id' });
+    const tag = SESSION_ID + '_' + Date.now();
+    _myWriteTag       = tag;
+    state._savedAt    = now;
+    state._writerTag  = tag;
+    const stateJson   = JSON.stringify(state);
+    const payload     = { slot_id: STORAGE_KEY, state_json: stateJson, updated_at: now };
+    const { error }   = await db.from('osf_state').upsert(payload, { onConflict: 'slot_id' });
     const el = document.getElementById('header-autosave');
     if (error) {
       console.error('Supabase save error:', error);
-      if (el) el.textContent = '⚠ BŁĄD SYNC';
+      if (el) { el.textContent = '⚠ BŁĄD SYNC'; el.style.color = 'var(--red)'; }
     } else {
-      if (el) { el.textContent = '● zapisano'; el.style.color = ''; }
+      if (el) { el.textContent = '● zsync'; el.style.color = 'var(--green)'; }
     }
   } catch(e) { console.error('Supabase save exception:', e); }
-  finally { _isSaving = false; }
+  finally    { _isSaving = false; }
 }
 
 async function loadFromSupabase() {
@@ -1353,69 +1357,53 @@ async function loadFromSupabase() {
       .select('state_json, slot_id')
       .eq('slot_id', STORAGE_KEY)
       .single();
-    if (error || !data) {
-      console.log('Brak danych w Supabase dla slotu ' + STORAGE_KEY + ' — używam localStorage.');
-      return false;
-    }
-    // Weryfikacja — upewnij się że slot_id się zgadza
-    if (data.slot_id !== STORAGE_KEY) {
-      console.warn('Supabase zwrócił dane dla innego slotu! Ignoruję.');
-      return false;
-    }
+    if (error || !data) return false;
+    if (data.slot_id !== STORAGE_KEY) return false;
     const parsed = JSON.parse(data.state_json);
     state = parsed;
     ensureStateDefaults();
+    // Ustaw tag żeby pierwszy poll/RT nie rerenderował bez potrzeby
+    _myWriteTag = parsed._writerTag || '';
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    console.log('Stan wczytany z Supabase dla slotu ' + STORAGE_KEY);
     return true;
-  } catch(e) {
-    console.error('Supabase load error:', e);
-    return false;
-  }
+  } catch(e) { return false; }
 }
 
-// Keep-alive dla Supabase Free tier (ping co 6h by nie pauzował projektu)
+// Keep-alive dla Supabase Free tier (ping co 4h)
 (function keepAlive() {
-  const PING_KEY = 'sb_last_ping';
-  const SIX_HOURS = 6 * 60 * 60 * 1000;
-  const lastPing = parseInt(localStorage.getItem(PING_KEY) || '0');
-  if (Date.now() - lastPing > SIX_HOURS) {
+  const PING_KEY  = 'sb_last_ping';
+  const FOUR_H    = 4 * 60 * 60 * 1000;
+  const lastPing  = parseInt(localStorage.getItem(PING_KEY) || '0');
+  if (Date.now() - lastPing > FOUR_H) {
     getSupabase().from('osf_state').select('slot_id').limit(1).then(() => {
       localStorage.setItem(PING_KEY, String(Date.now()));
     }).catch(() => {});
   }
 })();
 
-// Zabezpieczenie przed utratą danych przy zamknięciu zakładki
+// Zapis awaryjny przy zamknięciu zakładki
 window.addEventListener('beforeunload', () => {
-  if (_saveTimer) {
-    clearTimeout(_saveTimer);
-    // Próba synchronicznego wysłania (best-effort, przeglądarka może to uciąć)
-    const payload = JSON.stringify({
-      slot_id:    STORAGE_KEY,
-      state_json: JSON.stringify(state),
-      updated_at: new Date().toISOString()
-    });
-    navigator.sendBeacon
-      ? navigator.sendBeacon(
-          SUPABASE_URL + '/rest/v1/osf_state',
-          new Blob([payload], { type: 'application/json' })
-        )
-      : saveToSupabase(); // fallback async
+  clearTimeout(_saveTimer);
+  const payload = JSON.stringify({
+    slot_id: STORAGE_KEY, state_json: JSON.stringify(state), updated_at: new Date().toISOString()
+  });
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(SUPABASE_URL + '/rest/v1/osf_state', new Blob([payload], { type: 'application/json' }));
   }
 });
 
-// ── Aplikuj stan z zewnątrz (Realtime lub polling) ───────────────────
-let _applyingRemote = false;
+// ── Aplikuj stan przychodzący z innego urządzenia ────────────────────
 function _applyRemoteState(stateJson) {
-  if (_applyingRemote) return;
-  if (_isSaving) return; // nasz zapis w toku — wygra jako późniejszy
-  if (stateJson === _lastSavedJson) return; // to nasze własne dane — ignoruj
-  _applyingRemote = true;
   try {
-    state = JSON.parse(stateJson);
+    const incoming = JSON.parse(stateJson);
+    // Ignoruj własne zapisy (Realtime echo naszego upsert)
+    if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
+    // Ignoruj jeśli my właśnie piszemy — nasz stan jest nowszy
+    if (_isSaving) return;
+    state = incoming;
     ensureStateDefaults();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Odśwież aktywny widok
     const activePage = document.querySelector('.page.active');
     const id = activePage ? activePage.id : '';
     if      (id === 'page-zawodnicy')    { renderAthletes(); updateStats(); }
@@ -1424,51 +1412,67 @@ function _applyRemoteState(stateJson) {
     else if (id === 'page-wyniki')       renderResults();
     else if (id === 'page-druzynowy')    renderTeamView();
     else if (id === 'page-klasyfikacja') renderKlasyfikacja();
+    // Sygnalizacja w UI
     const el = document.getElementById('header-autosave');
-    if (el) { el.textContent = '↓ SYNC'; el.style.color = 'var(--accent)'; setTimeout(() => { if (el) { el.textContent = '● zapisano'; el.style.color = ''; } }, 1500); }
+    if (el) {
+      el.textContent = '↓ SYNC';
+      el.style.color = 'var(--accent)';
+      setTimeout(() => { if (el) { el.textContent = '● zsync'; el.style.color = 'var(--green)'; } }, 1000);
+    }
   } catch(e) { console.error('Remote state parse error:', e); }
-  finally { setTimeout(() => { _applyingRemote = false; }, 100); }
 }
 
-// ── Realtime ──────────────────────────────────────────────────────────
+// ── Realtime WebSocket (główny kanał, ~200ms latencja) ────────────────
 let _realtimeChannel = null;
 function startRealtimeSync() {
   if (_realtimeChannel) return;
-  const db = getSupabase();
+  const db   = getSupabase();
   const rtEl = document.getElementById('rt-status');
-  if (rtEl) rtEl.textContent = 'RT: łączę...';
+  if (rtEl) { rtEl.textContent = 'RT: łączę...'; rtEl.style.color = 'var(--text3)'; }
+
   _realtimeChannel = db
     .channel('osf_rt_' + STORAGE_KEY)
     .on('postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
+      { event: '*', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
       (payload) => {
-        if (rtEl) { rtEl.textContent = 'RT: ↓'; rtEl.style.color = 'var(--accent)'; setTimeout(() => { if (rtEl) { rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)'; } }, 800); }
-        if (payload.new && payload.new.state_json) _applyRemoteState(payload.new.state_json);
+        if (rtEl) { rtEl.textContent = 'RT: ↓'; rtEl.style.color = 'var(--accent)'; setTimeout(() => { if (rtEl) { rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)'; } }, 600); }
+        const json = payload.new?.state_json;
+        if (json) _applyRemoteState(json);
       }
     )
     .subscribe((status) => {
       if (!rtEl) return;
-      if (status === 'SUBSCRIBED')     { rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)'; }
-      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      if (status === 'SUBSCRIBED') {
+        rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)';
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         rtEl.textContent = 'RT: błąd'; rtEl.style.color = 'var(--red)';
-        setTimeout(() => { _realtimeChannel = null; startRealtimeSync(); }, 5000);
+        // Próba reconnectu po 3s
+        getSupabase().removeChannel(_realtimeChannel);
+        _realtimeChannel = null;
+        setTimeout(startRealtimeSync, 3000);
       }
     });
 }
 
-// ── Polling co 2s — fallback gdy Realtime nie działa ─────────────────
-let _pollTimer = null;
-let _lastPollJson = '';
+// ── Polling co 2s — fallback gdy WebSocket nie dostarczy eventu ───────
+// Porównuje updated_at zamiast całego JSON — lekki i niezawodny
+let _pollTimer      = null;
+let _lastUpdatedAt  = '';
 function startPolling() {
   if (_pollTimer) return;
   _pollTimer = setInterval(async () => {
     if (_isSaving) return;
     try {
-      const { data } = await getSupabase().from('osf_state').select('state_json').eq('slot_id', STORAGE_KEY).single();
-      if (!data || !data.state_json) return;
-      if (data.state_json !== _lastPollJson) {
-        _lastPollJson = data.state_json;
-        _applyRemoteState(data.state_json);
+      const { data } = await getSupabase()
+        .from('osf_state')
+        .select('state_json, updated_at')
+        .eq('slot_id', STORAGE_KEY)
+        .single();
+      if (!data) return;
+      // Działa tylko jeśli timestamp się zmienił — nie parsuje JSON bez potrzeby
+      if (data.updated_at && data.updated_at !== _lastUpdatedAt) {
+        _lastUpdatedAt = data.updated_at;
+        if (data.state_json) _applyRemoteState(data.state_json);
       }
     } catch(e) {}
   }, 2000);

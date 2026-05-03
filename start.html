@@ -345,12 +345,15 @@ function doLogout() {
   document.getElementById('login-input').focus();
 }
 
+let _startRtChannel = null;
+
 function showApp() {
   document.getElementById('login-screen').style.display  = 'none';
   document.getElementById('main-header').style.display   = '';
   document.getElementById('main-content').style.display  = '';
   document.getElementById('header-date').textContent = formatDate();
   render();
+
   // Wczytaj sloty z chmury i odśwież widok
   showSyncStatus('syncing');
   syncSlotsFromCloud().then(() => {
@@ -358,10 +361,32 @@ function showApp() {
     showSyncStatus('ok');
   }).catch(() => showSyncStatus('error'));
 
-  // Polling co 30s — nowe zawody od innych urządzeń
+  // Realtime — natychmiastowe odświeżenie listy zawodów przy każdej zmianie
+  startSlotsRealtime();
+
+  // Polling co 5s jako fallback gdy WebSocket nie dostarczy eventu
   setInterval(() => {
     syncSlotsFromCloud().then(() => render()).catch(() => {});
-  }, 30000);
+  }, 5000);
+}
+
+function startSlotsRealtime() {
+  if (_startRtChannel) return;
+  _startRtChannel = getSB()
+    .channel('herkules_slots_panel')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'herkules_slots' },
+      () => {
+        syncSlotsFromCloud().then(() => render()).catch(() => {});
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        getSB().removeChannel(_startRtChannel);
+        _startRtChannel = null;
+        setTimeout(startSlotsRealtime, 3000);
+      }
+    });
 }
 
 function openChangePassword() {
