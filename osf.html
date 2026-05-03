@@ -2756,13 +2756,14 @@ function checkImportDuplicate(rows) {
 }
 
 function updateStats() {
-  const m = state.athletes.filter(a => a.gender === 'M').length;
-  const k = state.athletes.filter(a => a.gender === 'K').length;
+  const m     = state.athletes.filter(a => a.gender === 'M').length;
+  const k     = state.athletes.filter(a => a.gender === 'K').length;
   const teams = new Set(state.athletes.map(a => a.team).filter(Boolean)).size;
-  document.getElementById('stat-total').textContent = state.athletes.length;
-  document.getElementById('stat-m').textContent = m;
-  document.getElementById('stat-k').textContent = k;
-  document.getElementById('stat-teams').textContent = teams;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('stat-total', state.athletes.length);
+  set('stat-m', m);
+  set('stat-k', k);
+  set('stat-teams', teams);
 }
 
 // ═══════════════════════════════════════════════════
@@ -5653,8 +5654,8 @@ function applyImportRows(rows) {
       save();
     }
     if (state.contest.city) {
-      launchApp();
-      // 3. Uruchom synchronizację real-time
+      try { launchApp(); } catch(e) { console.error('launchApp error:', e); }
+      // 3. Uruchom synchronizację real-time — zawsze, nawet jeśli launchApp rzucił błąd
       startRealtimeSync();
       startPolling();
       return;
@@ -5665,7 +5666,7 @@ function applyImportRows(rows) {
       if (slotMeta.date) document.getElementById('ws-date').value = slotMeta.date;
     }
   } else if (state.contest && state.contest.city) {
-    launchApp();
+    try { launchApp(); } catch(e) { console.error('launchApp error:', e); }
     startRealtimeSync();
     startPolling();
   }
