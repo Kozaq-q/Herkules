@@ -1294,7 +1294,7 @@ function TEAM_MIN_VAL() { return state.setup && state.setup.teamMin ? state.setu
 // SUPABASE — synchronizacja między urządzeniami
 // ═══════════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_aPrFnhbnuEL0xlj8b8SpiQ_Jq7CD-KL';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
 const SESSION_ID   = Math.random().toString(36).slice(2); // unikalny ID tej sesji
 
 let _supabaseClient = null;
@@ -1319,7 +1319,6 @@ function scheduleSave() {
 
 async function saveToSupabase() {
   if (_isSaving) {
-    // Jeśli właśnie zapisujemy — zaplanuj jeszcze jeden zapis po zakończeniu
     scheduleSave();
     return;
   }
@@ -1328,9 +1327,11 @@ async function saveToSupabase() {
     const db = getSupabase();
     const now = new Date().toISOString();
     state._savedAt = now;
+    const stateJson = JSON.stringify(state);
+    _lastPollJson = stateJson; // aktualizuj cache pollingu — nie aplikuj własnych zmian
     const payload = {
       slot_id:    STORAGE_KEY,
-      state_json: JSON.stringify(state),
+      state_json: stateJson,
       updated_at: now
     };
     const { error } = await db.from('osf_state').upsert(payload, { onConflict: 'slot_id' });
@@ -1413,17 +1414,15 @@ let _realtimeChannel = null;
 let _applyingRemote = false;
 
 function _applyRemoteState(stateJson) {
-  // Nie nadpisuj jeśli właśnie zapisujemy (debounce aktywny)
-  // — za chwilę nasz zapis wygra jako późniejszy
-  if (_saveTimer) return;
   if (_applyingRemote) return;
+  // Nie nadpisuj jeśli właśnie trwa nasz zapis — za chwilę nasz stan wygra
+  if (_isSaving || _immediateTimer || _immediatePending) return;
   _applyingRemote = true;
   try {
     const incoming = JSON.parse(stateJson);
     state = incoming;
     ensureStateDefaults();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    // Odśwież aktywną zakładkę
     const activePage = document.querySelector('.page.active');
     const id = activePage ? activePage.id : '';
     if      (id === 'page-zawodnicy')    { renderAthletes(); updateStats(); }
@@ -1433,7 +1432,7 @@ function _applyRemoteState(stateJson) {
     else if (id === 'page-druzynowy')    renderTeamView();
     else if (id === 'page-klasyfikacja') renderKlasyfikacja();
     const el = document.getElementById('header-autosave');
-    if (el) { el.textContent = '↓ SYNC'; setTimeout(() => { el.textContent = '● zapisano'; }, 2000); }
+    if (el) { el.textContent = '↓ SYNC'; el.style.color = 'var(--green)'; setTimeout(() => { el.textContent = '● zapisano'; el.style.color = ''; }, 2000); }
   } catch(e) { console.error('Realtime parse error:', e); }
   finally { setTimeout(() => { _applyingRemote = false; }, 50); }
 }
@@ -1453,34 +1452,41 @@ function startRealtimeSync() {
     )
     .subscribe((status) => {
       const el = document.getElementById('header-autosave');
-      if (status === 'SUBSCRIBED' && el) el.title = 'Realtime aktywny';
+      if (status === 'SUBSCRIBED') {
+        if (el) { el.textContent = '● live'; el.style.color = 'var(--green)'; }
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (el) { el.textContent = '⚠ offline (poll 5s)'; el.style.color = 'var(--orange)'; }
+        // Próba reconnect
+        setTimeout(() => {
+          _realtimeChannel = null;
+          startRealtimeSync();
+        }, 5000);
+      }
     });
 }
 
-// Polling co 5s — działa zawsze jako fallback gdy Realtime nie dostarcza eventów
+// Polling co 2s — niezawodny fallback gdy Realtime nie działa
 let _pollTimer = null;
-let _lastPollState = '';
+let _lastPollJson = '';
 function startPolling() {
   if (_pollTimer) return;
   _pollTimer = setInterval(async () => {
-    if (_saveTimer || _isSaving) return; // nie nadpisuj gdy właśnie zapisujemy
+    // Nie nadpisuj jeśli właśnie trwa nasz własny zapis
+    if (_isSaving || _immediateTimer || _immediatePending) return;
     try {
       const db = getSupabase();
       const { data } = await db
         .from('osf_state')
-        .select('state_json, updated_at')
+        .select('state_json')
         .eq('slot_id', STORAGE_KEY)
         .single();
       if (!data || !data.state_json) return;
-      // Zastosuj tylko jeśli dane w Supabase są różne od lokalnych
-      const remoteAt = data.updated_at || '';
-      const localAt  = state._savedAt || '';
-      if (remoteAt !== localAt && data.state_json !== _lastPollState) {
-        _lastPollState = data.state_json;
+      if (data.state_json !== _lastPollJson) {
+        _lastPollJson = data.state_json;
         _applyRemoteState(data.state_json);
       }
     } catch(e) {}
-  }, 5000);
+  }, 2000);
 }
 
 function save() {

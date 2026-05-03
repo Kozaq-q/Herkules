@@ -172,7 +172,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 // SUPABASE
 // ═══════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_aPrFnhbnuEL0xlj8b8SpiQ_Jq7CD-KL';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
 let db = null;
 function getDB() {
   if (!db) db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
