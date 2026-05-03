@@ -401,6 +401,12 @@ tr:last-child > td { border-bottom: none; }
       <div class="flex">
         <input type="text" id="athletes-search" placeholder="🔍 Szukaj..." oninput="filterAthletes()"
           style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 10px;font-family:var(--font-b);font-size:12px;width:160px;" />
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+          <button id="fg-all" onclick="setGenderFilter('all')" style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;border-right:1px solid var(--border2);background:var(--accent);color:#111;cursor:pointer;">Wszyscy</button>
+          <button id="fg-M"   onclick="setGenderFilter('M')"   style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;border-right:1px solid var(--border2);background:var(--bg3);color:var(--male);cursor:pointer;">♂ M</button>
+          <button id="fg-K"   onclick="setGenderFilter('K')"   style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;background:var(--bg3);color:var(--female);cursor:pointer;">♀ K</button>
+        </div>
+        <input type="hidden" id="filter-gender" value="all" />
         <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;" title="Schemat numeracji startowej">
           <button id="bib-btn-team-alpha" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team-alpha')">X/Y A–Z</button>
           <button id="bib-btn-team" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team')">X/Y lista</button>
@@ -1062,14 +1068,22 @@ tr:last-child > td { border-bottom: none; }
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:4px;">Jeśli numer istnieje u innego zawodnika — numery zostaną zamienione automatycznie.</div>
     </div>
+    <div id="edit-warnings-section" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:6px;">⚠ Ostrzeżenia</div>
+      <div id="edit-warnings-list" style="font-size:12px;color:var(--text2);line-height:1.7;"></div>
+      <div id="edit-ignore-gender-wrap" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(232,148,77,.2);">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">
+          <input type="checkbox" id="edit-ignore-gender" onchange="toggleIgnoreGender()" />
+          Zatwierdź — płeć jest poprawna mimo sugerowanego imienia
+        </label>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-edit')">Anuluj</button>
       <button class="btn btn-primary" onclick="saveEditAthlete()">Zapisz zmiany</button>
     </div>
   </div>
 </div>
-
-<!-- ═══ MODAL: ZAMIEŃ NUMER STARTOWY ═══ -->
 <div class="modal-overlay" id="modal-bib-swap">
   <div class="modal" style="max-width:420px;">
     <div class="modal-title">Zmień numer startowy</div>
@@ -1256,19 +1270,23 @@ async function loadFromSupabase() {
     const db = getSupabase();
     const { data, error } = await db
       .from('osf_state')
-      .select('state_json')
+      .select('state_json, slot_id')
       .eq('slot_id', STORAGE_KEY)
       .single();
     if (error || !data) {
-      console.log('Brak danych w Supabase — używam localStorage.');
+      console.log('Brak danych w Supabase dla slotu ' + STORAGE_KEY + ' — używam localStorage.');
+      return false;
+    }
+    // Weryfikacja — upewnij się że slot_id się zgadza
+    if (data.slot_id !== STORAGE_KEY) {
+      console.warn('Supabase zwrócił dane dla innego slotu! Ignoruję.');
       return false;
     }
     const parsed = JSON.parse(data.state_json);
     state = parsed;
     ensureStateDefaults();
-    // Zaktualizuj też localStorage jako cache
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    console.log('Stan wczytany z Supabase.');
+    console.log('Stan wczytany z Supabase dla slotu ' + STORAGE_KEY);
     return true;
   } catch(e) {
     console.error('Supabase load error:', e);
@@ -2233,71 +2251,73 @@ const FEMALE_NAMES = new Set([
 ]);
 
 function getFirstName(athlete) {
-  // Imię to pierwsze słowo które nie jest stopniem wojskowym ani nazwiskiem (wielkie litery)
   const name = (athlete.name || '').trim();
   const words = name.split(/\s+/);
-  // Szukaj pierwszego słowa które nie jest CAPS (czyli nie jest nazwiskiem)
+  // Szukaj słowa które jest w bazie imion — sprawdź wszystkie słowa
   for (const w of words) {
+    if (w.endsWith('.')) continue; // pomiń skróty
     const lower = w.toLowerCase();
-    // Pomiń jeśli to całe CAPS (nazwisko) lub skrót stopnia
-    if (w === w.toUpperCase() && w.length > 1) continue;
-    // Pomiń inicjały i skróty (kończące się kropką)
-    if (w.endsWith('.')) continue;
-    return lower;
+    if (MALE_NAMES.has(lower) || FEMALE_NAMES.has(lower)) return lower;
   }
-  // Fallback — weź pierwsze słowo
+  // Fallback — pierwsze słowo które nie jest CAPS (nie jest nazwiskiem)
+  for (const w of words) {
+    if (w.endsWith('.')) continue;
+    if (w.length > 1 && w === w.toUpperCase()) continue; // pomiń CAPS (nazwisko)
+    return w.toLowerCase();
+  }
   return words[0] ? words[0].toLowerCase() : '';
 }
 
 function getAthleteWarnings(athlete) {
   const warnings = [];
+  const ignored  = athlete.ignoredWarnings || [];
   const firstName = getFirstName(athlete);
 
-  // 1. Podejrzana płeć na podstawie imienia (tylko gdy imię jest rozpoznawalne)
-  if (firstName && FEMALE_NAMES.has(firstName)) {
-    if (athlete.gender === 'M') {
-      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje kobietę, ale płeć ustawiona jako M' });
+  // 1. Podejrzana płeć
+  if (!ignored.includes('gender')) {
+    if (firstName && FEMALE_NAMES.has(firstName) && athlete.gender === 'M') {
+      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje kobietę, ale płeć ustawiona jako M. Jeśli to błąd — zmień płeć. Jeśli poprawne — zatwierdź w edycji zawodnika.' });
     }
-  }
-  if (firstName && MALE_NAMES.has(firstName)) {
-    if (athlete.gender === 'K') {
-      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje mężczyznę, ale płeć ustawiona jako K' });
+    if (firstName && MALE_NAMES.has(firstName) && athlete.gender === 'K') {
+      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje mężczyznę, ale płeć ustawiona jako K. Jeśli to błąd — zmień płeć. Jeśli poprawne — zatwierdź w edycji zawodnika.' });
     }
   }
 
   // 2. Jedyny zawodnik w drużynie
-  const teamCount = state.athletes.filter(a => a.team === athlete.team).length;
-  if (teamCount === 1) {
-    warnings.push({ code: 'solo', msg: 'Jedyny zawodnik w drużynie "' + athlete.team + '"' });
+  if (!ignored.includes('solo')) {
+    const teamCount = state.athletes.filter(a => a.team === athlete.team).length;
+    if (teamCount === 1 && athlete.team) {
+      warnings.push({ code: 'solo', msg: 'Jedyny zawodnik w drużynie "' + athlete.team + '" — prawdopodobnie błędna nazwa drużyny.' });
+    }
   }
 
-  // 3. Drużyna ma za mało mężczyzn do biegu drużynowego
+  // 3. Za mało M do biegu drużynowego
   if (athlete.gender === 'M') {
     const mCount = state.athletes.filter(a => a.team === athlete.team && a.gender === 'M').length;
     if (mCount < TEAM_MIN_VAL()) {
-      warnings.push({ code: 'team_m', msg: 'Drużyna ma tylko ' + mCount + ' M — potrzeba min. ' + TEAM_MIN_VAL() + ' do biegu drużynowego' });
+      warnings.push({ code: 'team_m', msg: 'Drużyna "' + athlete.team + '" ma tylko ' + mCount + ' M — potrzeba min. ' + TEAM_MIN_VAL() + ' do biegu drużynowego.' });
     }
   }
 
   // 4. Brak drużyny
   if (!athlete.team || !athlete.team.trim()) {
-    warnings.push({ code: 'noteam', msg: 'Brak przypisanej drużyny' });
+    warnings.push({ code: 'noteam', msg: 'Brak przypisanej drużyny.' });
   }
 
-  // 5. Brak imienia (samo nazwisko lub samo imię)
+  // 5. Niepełne imię i nazwisko
   const parts = (athlete.name || '').trim().split(/\s+/);
   if (parts.length < 2) {
-    warnings.push({ code: 'name', msg: 'Niepełne imię i nazwisko' });
+    warnings.push({ code: 'name', msg: 'Niepełne imię i nazwisko — wpisz imię i nazwisko.' });
   }
 
-  // 6. Duplikat nazwiska w tej samej drużynie
+  // 6. Duplikat
   const dupes = state.athletes.filter(a =>
     a.id !== athlete.id &&
     a.team === athlete.team &&
     a.name.toLowerCase() === athlete.name.toLowerCase()
   );
   if (dupes.length > 0) {
-    warnings.push({ code: 'dupe', msg: 'Duplikat — zawodnik o tym samym nazwisku jest już w tej drużynie' });
+    warnings.push({ code: 'dupe', msg: 'Duplikat — zawodnik o tym samym nazwisku jest już w tej drużynie.' });
   }
 
   return warnings;
@@ -2305,40 +2325,61 @@ function getAthleteWarnings(athlete) {
 
 function warningBadge(warnings) {
   if (!warnings.length) return '<td style="width:20px;"></td>';
-  const msgs = warnings.map(w => w.msg).join('\n');
-  const color = warnings.some(w => ['gender','dupe','noteam'].includes(w.code)) ? 'var(--red)' : 'var(--orange)';
-  return '<td style="width:20px;text-align:center;cursor:help;" title="' + esc(msgs) + '">' +
-    '<span style="color:' + color + ';font-size:14px;" title="' + esc(msgs) + '">⚠</span></td>';
+  const hasRed = warnings.some(w => ['gender','dupe','noteam'].includes(w.code));
+  const color  = hasRed ? 'var(--red)' : 'var(--orange)';
+  const titles = warnings.map(w => {
+    const icon = w.code === 'gender' ? '⚠ Płeć: ' : w.code === 'solo' ? '⚠ Drużyna: ' : w.code === 'team_m' ? '⚠ Skład: ' : w.code === 'noteam' ? '⚠ Brak drużyny: ' : w.code === 'name' ? '⚠ Nazwa: ' : '⚠ ';
+    return icon + w.msg;
+  }).join('\n\n');
+  return '<td style="width:20px;text-align:center;cursor:help;" title="' + esc(titles) + '">' +
+    '<span style="color:' + color + ';font-size:14px;">⚠</span></td>';
 }
 
 function renderAthletes() {
   const tbody = document.getElementById('athletes-tbody');
   const empty = document.getElementById('athletes-empty');
+  const filterGender = document.getElementById('filter-gender')?.value || 'all';
   const males   = state.athletes.filter(a => a.gender === 'M').sort((a,b) => parseBibForSort(a.bib) - parseBibForSort(b.bib));
   const females = state.athletes.filter(a => a.gender === 'K').sort((a,b) => parseBibForSort(a.bib) - parseBibForSort(b.bib));
-  const all = [...males, ...females];
+  let all = [...males, ...females];
+  if (filterGender === 'M') all = males;
+  else if (filterGender === 'K') all = females;
+
   if (all.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
 
-  // liczba alarmów do statboxu
-  const totalWarnings = all.filter(a => getAthleteWarnings(a).length > 0).length;
+  // Liczba alarmów — czerwony kwadrat gdy > 0
+  const allAthletes = [...males, ...females];
+  const totalWarnings = allAthletes.filter(a => getAthleteWarnings(a).length > 0).length;
   const warnEl = document.getElementById('stat-warnings');
   if (warnEl) {
     warnEl.textContent = totalWarnings;
-    warnEl.parentElement.style.borderColor = totalWarnings > 0 ? 'rgba(232,148,77,.4)' : 'var(--border)';
+    const box = warnEl.closest('.stat-box') || warnEl.parentElement;
+    if (totalWarnings > 0) {
+      box.style.borderColor  = 'var(--red)';
+      box.style.background   = 'rgba(224,85,85,.08)';
+      box.style.animation    = 'none';
+      warnEl.style.color     = 'var(--red)';
+      warnEl.style.fontWeight = '900';
+    } else {
+      box.style.borderColor  = 'var(--border)';
+      box.style.background   = '';
+      warnEl.style.color     = '';
+      warnEl.style.fontWeight = '';
+    }
   }
 
   let html = '';
   let lastGender = null;
   all.forEach((a, i) => {
-    if (a.gender !== lastGender) {
+    if (filterGender === 'all' && a.gender !== lastGender) {
       lastGender = a.gender;
       const label = a.gender === 'M' ? 'Mężczyźni' : 'Kobiety';
       html += '<tr><td colspan="7" style="background:var(--bg3);font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:' + (a.gender==='M'?'var(--male)':'var(--female)') + ';padding:6px 10px;font-weight:700;">' + label + '</td></tr>';
     }
     const warnings = getAthleteWarnings(a);
     const hasWarn  = warnings.length > 0;
-    html += '<tr class="' + (hasWarn ? '' : '') + (a.pk ? 'pk-row' : '') + '" style="' + (hasWarn ? 'background:rgba(232,148,77,.04);' : '') + '">';
+    html += '<tr class="' + (a.pk ? 'pk-row' : '') + '" style="' + (hasWarn ? 'background:rgba(232,148,77,.04);' : '') + '">';
     html += '<td class="mono text-muted" style="font-size:12px;">' + (i+1) + '</td>';
     html += warningBadge(warnings);
     html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
@@ -2358,6 +2399,22 @@ function renderAthletes() {
 // ═══════════════════════════════════════════════════
 // EDYCJA ZAWODNIKA
 // ═══════════════════════════════════════════════════
+function setGenderFilter(v) {
+  document.getElementById('filter-gender').value = v;
+  ['all','M','K'].forEach(g => {
+    const btn = document.getElementById('fg-' + g);
+    if (!btn) return;
+    const isActive = g === v;
+    btn.style.background = isActive ? 'var(--accent)' : 'var(--bg3)';
+    btn.style.color      = isActive ? '#111' : (g === 'M' ? 'var(--male)' : g === 'K' ? 'var(--female)' : 'var(--text2)');
+  });
+  renderAthletes();
+}
+
+function toggleIgnoreGender() {
+  // zapamiętuje wybór — zapisuje do athlete po kliknięciu Zapisz
+}
+
 function openEditModal(id) {
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
@@ -2367,6 +2424,23 @@ function openEditModal(id) {
   document.getElementById('edit-gender').value = a.gender;
   document.getElementById('edit-team').value   = a.team;
   document.getElementById('edit-bib').value    = a.bib || '';
+
+  // Pokaż ostrzeżenia
+  const warnings = getAthleteWarnings(a);
+  const warnSection = document.getElementById('edit-warnings-section');
+  const warnList    = document.getElementById('edit-warnings-list');
+  const ignoreWrap  = document.getElementById('edit-ignore-gender-wrap');
+  const ignoreChk   = document.getElementById('edit-ignore-gender');
+  if (warnings.length > 0) {
+    warnSection.style.display = 'block';
+    warnList.innerHTML = warnings.map(w => '• ' + w.msg).join('<br>');
+    const hasGender = warnings.some(w => w.code === 'gender');
+    ignoreWrap.style.display = hasGender ? 'block' : 'none';
+    ignoreChk.checked = (a.ignoredWarnings || []).includes('gender');
+  } else {
+    warnSection.style.display = 'none';
+  }
+
   document.getElementById('modal-edit').classList.add('open');
   setTimeout(() => document.getElementById('edit-rank').focus(), 50);
 }
@@ -2393,6 +2467,17 @@ function saveEditAthlete() {
     a.name   = name;
     a.gender = gender;
     a.team   = team;
+
+    // Zatwierdzone ostrzeżenia płci
+    const ignoreChk = document.getElementById('edit-ignore-gender');
+    if (ignoreChk) {
+      const ignored = a.ignoredWarnings || [];
+      if (ignoreChk.checked && !ignored.includes('gender')) {
+        a.ignoredWarnings = [...ignored, 'gender'];
+      } else if (!ignoreChk.checked) {
+        a.ignoredWarnings = ignored.filter(x => x !== 'gender');
+      }
+    }
 
     if (newBib && String(newBib) !== String(a.bib)) {
       const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));

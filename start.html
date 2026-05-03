@@ -582,13 +582,21 @@ function openModal(presetType) {
 
 function closeModal() { document.getElementById('modal-new').classList.remove('open'); }
 
+function generateSlotId() {
+  // UUID v4 — globalnie unikalne, niemożliwe do kolizji między komputerami
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
 function createSlot() {
   const city = document.getElementById('new-city').value.trim();
   const name = document.getElementById('new-name').value.trim();
   const date = document.getElementById('new-date').value;
   if (!city) { document.getElementById('new-city').focus(); return; }
   const ids   = getSlotIds();
-  const newId = ids.length > 0 ? Math.max(...ids) + 1 : 1;
+  const newId = generateSlotId();
   const slot  = { id: newId, type: selectedType, city, name, date, created: new Date().toISOString(), _updated: new Date().toISOString() };
   saveSlot(slot);
   saveSlotIds([...ids, newId]);
