@@ -506,21 +506,23 @@ tr:last-child > td { border-bottom: none; }
       <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 2 — Dobór wg wyników</div>
       <div class="text-muted mt-4" style="font-size:12px;">Najlepsi biegną ostatni · zmiana torów obowiązkowa</div>
     </div>
-    <div class="flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2StartList('M')">🖨 Lista M</button>
-        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2StartList('K')">🖨 Lista K</button>
-      </div>
-      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2JudgeList('M')">📋 Sędz. M</button>
-        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2JudgeList('K')">📋 Sędz. K</button>
-      </div>
-      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmBuildSeries2('M')">⚙ Generuj M</button>
-        <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmBuildSeries2('K')">⚙ Generuj K</button>
+    <div class="flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-direction:column;align-items:flex-end;">
+      <div style="display:flex;gap:6px;">
+        <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+          <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2StartList('M')">🖨 Lista M</button>
+          <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2StartList('K')">🖨 Lista K</button>
+        </div>
+        <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+          <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2JudgeList('M')">📋 Sędz. M</button>
+          <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2JudgeList('K')">📋 Sędz. K</button>
+        </div>
+        <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+          <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmBuildSeries2('M')">⚙ Generuj M</button>
+          <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmBuildSeries2('K')">⚙ Generuj K</button>
+        </div>
       </div>
       <button id="s2-edit-toggle-btn" class="btn btn-sm" onclick="toggleS2EditMode()"
-        style="color:var(--text3);border-color:var(--border2);font-size:11px;" title="Awaryjna ręczna edycja par Serii 2">🔒 Edycja awaryjna</button>
+        style="color:var(--text3);border-color:var(--border2);font-size:11px;align-self:flex-end;" title="Awaryjna ręczna edycja par Serii 2">🔒 Edycja awaryjna par</button>
     </div>
   </div>
 
@@ -529,7 +531,7 @@ tr:last-child > td { border-bottom: none; }
   <div id="s2-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
     <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S2</strong> — zmiany naruszają regulaminowe parowanie wg wyników S1.
     Użyj tylko gdy zmiana jest konieczna (np. kontuzja zawodnika). Kliknięcie <em>Generuj</em> przywróci prawidłowe pary.
-    <button onclick="toggleS2EditMode()" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
+    <button onclick="disableS2EditMode()" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
   </div>
 
   <!-- Wyszukiwarka S2 -->
@@ -1077,14 +1079,8 @@ tr:last-child > td { border-bottom: none; }
       <div style="font-size:11px;color:var(--text3);margin-top:4px;">Jeśli numer istnieje u innego zawodnika — numery zostaną zamienione automatycznie.</div>
     </div>
     <div id="edit-warnings-section" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);">
-      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:6px;">⚠ Ostrzeżenia</div>
-      <div id="edit-warnings-list" style="font-size:12px;color:var(--text2);line-height:1.7;"></div>
-      <div id="edit-ignore-gender-wrap" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(232,148,77,.2);">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text2);">
-          <input type="checkbox" id="edit-ignore-gender" onchange="toggleIgnoreGender()" />
-          Zatwierdź — płeć jest poprawna mimo sugerowanego imienia
-        </label>
-      </div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:8px;">⚠ Ostrzeżenia</div>
+      <div id="edit-warnings-list"></div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-edit')">Anuluj</button>
@@ -1168,6 +1164,26 @@ tr:last-child > td { border-bottom: none; }
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-team-draw')">Anuluj</button>
       <button class="btn btn-primary" id="team-draw-confirm-btn" onclick="doTeamDraw()">⚙ Generuj</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDYCJA AWARYJNA S2 ═══ -->
+<div class="modal-overlay" id="modal-s2-edit">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title" style="color:var(--red);">🔓 Edycja awaryjna — Seria 2</div>
+    <div style="background:rgba(224,85,85,.07);border:1px solid rgba(224,85,85,.25);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;line-height:1.7;font-size:13px;color:var(--text2);">
+      <div style="font-weight:700;color:var(--red);margin-bottom:8px;">⚠ Uwaga — naruszenie regulaminu</div>
+      Ręczna edycja par w Serii 2 <strong>narusza zasadę doboru wg wyników</strong> z Serii 1.<br>
+      Pary dobrane algorytmem zapewniają równą rywalizację — zmiany mogą być zakwestionowane przez sędziego głównego.
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(224,85,85,.2);font-size:12px;color:var(--text3);">
+        Używaj tylko w sytuacjach awaryjnych: kontuzja zawodnika, pomyłka organizacyjna, brak toru.<br>
+        Kliknięcie <strong>⚙ Generuj</strong> w każdej chwili przywraca regulaminowe pary.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-s2-edit')">Anuluj</button>
+      <button class="btn btn-danger" onclick="enableS2EditMode()">Rozumiem — włącz edycję</button>
     </div>
   </div>
 </div>
@@ -1809,6 +1825,7 @@ function renderTeamOrderSection(series) {
     html += '<div class="pair-header"><span class="pair-num">' + p.pairNum + '</span>';
     if (p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
     if (isLast && !p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA</span>';
+    if (p._manual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);padding:2px 7px;border-radius:2px;" title="Para dobrana ręcznie — poza regulaminowym algorytmem">⚠ ręczna</span>';
     html += '</div>';
     html += '<div class="pair-athletes">';
     // L zawsze po lewej, P po prawej
@@ -2276,38 +2293,38 @@ function getFirstName(athlete) {
   return words[0] ? words[0].toLowerCase() : '';
 }
 
-function getAthleteWarnings(athlete) {
+function getAthleteWarnings(athlete, includeIgnored) {
   const warnings = [];
   const ignored  = athlete.ignoredWarnings || [];
   const firstName = getFirstName(athlete);
 
-  // 1. Podejrzana płeć
-  if (!ignored.includes('gender')) {
-    if (firstName && FEMALE_NAMES.has(firstName) && athlete.gender === 'M') {
-      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje kobietę, ale płeć ustawiona jako M. Jeśli to błąd — zmień płeć. Jeśli poprawne — zatwierdź w edycji zawodnika.' });
-    }
-    if (firstName && MALE_NAMES.has(firstName) && athlete.gender === 'K') {
-      warnings.push({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje mężczyznę, ale płeć ustawiona jako K. Jeśli to błąd — zmień płeć. Jeśli poprawne — zatwierdź w edycji zawodnika.' });
-    }
+  function add(w) {
+    if (!includeIgnored && ignored.includes(w.code)) return;
+    warnings.push(w);
   }
 
+  // 1. Podejrzana płeć
+  if (firstName && FEMALE_NAMES.has(firstName) && athlete.gender === 'M') {
+    add({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje kobietę, ale płeć ustawiona jako M.' });
+  }
+  if (firstName && MALE_NAMES.has(firstName) && athlete.gender === 'K') {
+    add({ code: 'gender', msg: 'Imię "' + firstName + '" sugeruje mężczyznę, ale płeć ustawiona jako K.' });
+  }
   // 2. Jedyny zawodnik w drużynie
-  if (!ignored.includes('solo')) {
-    const teamCount = state.athletes.filter(a => a.team === athlete.team).length;
-    if (teamCount === 1 && athlete.team) {
-      warnings.push({ code: 'solo', msg: 'Jedyny zawodnik w drużynie "' + athlete.team + '" — prawdopodobnie błędna nazwa drużyny.' });
-    }
+  const teamCount = state.athletes.filter(a => a.team === athlete.team).length;
+  if (teamCount === 1 && athlete.team) {
+    add({ code: 'solo', msg: 'Jedyny zawodnik w drużynie "' + athlete.team + '" — prawdopodobnie błędna nazwa drużyny.' });
   }
 
   // 3. Brak drużyny
   if (!athlete.team || !athlete.team.trim()) {
-    warnings.push({ code: 'noteam', msg: 'Brak przypisanej drużyny.' });
+    add({ code: 'noteam', msg: 'Brak przypisanej drużyny.' });
   }
 
   // 5. Niepełne imię i nazwisko
   const parts = (athlete.name || '').trim().split(/\s+/);
   if (parts.length < 2) {
-    warnings.push({ code: 'name', msg: 'Niepełne imię i nazwisko — wpisz imię i nazwisko.' });
+    add({ code: 'name', msg: 'Niepełne imię i nazwisko — wpisz imię i nazwisko.' });
   }
 
   // 6. Duplikat
@@ -2317,7 +2334,7 @@ function getAthleteWarnings(athlete) {
     a.name.toLowerCase() === athlete.name.toLowerCase()
   );
   if (dupes.length > 0) {
-    warnings.push({ code: 'dupe', msg: 'Duplikat — zawodnik o tym samym nazwisku jest już w tej drużynie.' });
+    add({ code: 'dupe', msg: 'Duplikat — zawodnik o tym samym nazwisku jest już w tej drużynie.' });
   }
 
   return warnings;
@@ -2399,21 +2416,16 @@ function renderAthletes() {
 // ═══════════════════════════════════════════════════
 // EDYCJA ZAWODNIKA
 // ═══════════════════════════════════════════════════
-function setGenderFilter(v) {
-  document.getElementById('filter-gender').value = v;
-  ['all','M','K'].forEach(g => {
-    const btn = document.getElementById('fg-' + g);
-    if (!btn) return;
-    const isActive = g === v;
-    btn.style.background = isActive ? 'var(--accent)' : 'var(--bg3)';
-    btn.style.color      = isActive ? '#111' : (g === 'M' ? 'var(--male)' : g === 'K' ? 'var(--female)' : 'var(--text2)');
-  });
-  renderAthletes();
-}
+function toggleIgnoreGender() { /* nieużywana — zastąpiona przez dynamiczne checkboxy */ }
 
-function toggleIgnoreGender() {
-  // zapamiętuje wybór — zapisuje do athlete po kliknięciu Zapisz
-}
+// Etykiety dla kodów ostrzeżeń — do zatwierdzenia w modalu edycji
+const WARN_LABELS = {
+  gender:  'Płeć jest poprawna mimo sugerowanego imienia',
+  solo:    'Drużyna jest celowo jednoosobowa (np. zawodnik indywidualny)',
+  name:    'Imię i nazwisko jest poprawne (np. pseudonim, jedno słowo)',
+  noteam:  'Brak drużyny jest celowy',
+  dupe:    'Duplikat nazwiska jest celowy (np. dwaj bracia)',
+};
 
 function openEditModal(id) {
   const a = state.athletes.find(x => x.id === id);
@@ -2425,24 +2437,55 @@ function openEditModal(id) {
   document.getElementById('edit-team').value   = a.team;
   document.getElementById('edit-bib').value    = a.bib || '';
 
-  // Pokaż ostrzeżenia
-  const warnings = getAthleteWarnings(a);
-  const warnSection = document.getElementById('edit-warnings-section');
-  const warnList    = document.getElementById('edit-warnings-list');
-  const ignoreWrap  = document.getElementById('edit-ignore-gender-wrap');
-  const ignoreChk   = document.getElementById('edit-ignore-gender');
-  if (warnings.length > 0) {
-    warnSection.style.display = 'block';
-    warnList.innerHTML = warnings.map(w => '• ' + w.msg).join('<br>');
-    const hasGender = warnings.some(w => w.code === 'gender');
-    ignoreWrap.style.display = hasGender ? 'block' : 'none';
-    ignoreChk.checked = (a.ignoredWarnings || []).includes('gender');
+  // Ostrzeżenia — aktywne (bez zatwierdzonych) + zatwierdzone jako info
+  const allWarnings      = getAthleteWarnings(a, true); // wszystkie łącznie z zatwierdzonymi
+  const activeWarnings   = getAthleteWarnings(a, false); // tylko niezatwierdzone
+  const ignored          = a.ignoredWarnings || [];
+  const dismissedCodes   = allWarnings.filter(w => ignored.includes(w.code)).map(w => w.code);
+
+  const section = document.getElementById('edit-warnings-section');
+  const list    = document.getElementById('edit-warnings-list');
+
+  if (allWarnings.length === 0) {
+    section.style.display = 'none';
   } else {
-    warnSection.style.display = 'none';
+    section.style.display = 'block';
+    let html = '';
+    allWarnings.forEach(w => {
+      const isDismissed = ignored.includes(w.code);
+      const canDismiss  = !!WARN_LABELS[w.code];
+      html += '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(232,148,77,.15);">';
+      // Wiersz ostrzeżenia
+      html += '<div style="font-size:12px;color:' + (isDismissed ? 'var(--text3)' : 'var(--text2)') + ';margin-bottom:' + (canDismiss ? '5px' : '0') + ';">';
+      html += (isDismissed ? '✓ <em>' : '⚠ ') + esc(w.msg) + (isDismissed ? '</em>' : '');
+      if (isDismissed) html += ' <span style="font-size:10px;color:var(--text3);">[zatwierdzone]</span>';
+      html += '</div>';
+      // Checkbox zatwierdzenia
+      if (canDismiss) {
+        html += '<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;color:var(--text3);">';
+        html += '<input type="checkbox" data-warn-code="' + w.code + '" class="warn-dismiss-chk"' + (isDismissed ? ' checked' : '') + ' />';
+        html += esc(WARN_LABELS[w.code]);
+        html += '</label>';
+      }
+      html += '</div>';
+    });
+    list.innerHTML = html;
   }
 
   document.getElementById('modal-edit').classList.add('open');
   setTimeout(() => document.getElementById('edit-rank').focus(), 50);
+}
+
+function setGenderFilter(v) {
+  document.getElementById('filter-gender').value = v;
+  ['all','M','K'].forEach(g => {
+    const btn = document.getElementById('fg-' + g);
+    if (!btn) return;
+    const isActive = g === v;
+    btn.style.background = isActive ? 'var(--accent)' : 'var(--bg3)';
+    btn.style.color      = isActive ? '#111' : (g === 'M' ? 'var(--male)' : g === 'K' ? 'var(--female)' : 'var(--text2)');
+  });
+  renderAthletes();
 }
 
 function saveEditAthlete() {
@@ -2468,16 +2511,12 @@ function saveEditAthlete() {
     a.gender = gender;
     a.team   = team;
 
-    // Zatwierdzone ostrzeżenia płci
-    const ignoreChk = document.getElementById('edit-ignore-gender');
-    if (ignoreChk) {
-      const ignored = a.ignoredWarnings || [];
-      if (ignoreChk.checked && !ignored.includes('gender')) {
-        a.ignoredWarnings = [...ignored, 'gender'];
-      } else if (!ignoreChk.checked) {
-        a.ignoredWarnings = ignored.filter(x => x !== 'gender');
-      }
-    }
+    // Zatwierdzone ostrzeżenia — czytaj wszystkie checkboxy
+    const newIgnored = [];
+    document.querySelectorAll('.warn-dismiss-chk').forEach(chk => {
+      if (chk.checked) newIgnored.push(chk.dataset.warnCode);
+    });
+    a.ignoredWarnings = newIgnored;
 
     if (newBib && String(newBib) !== String(a.bib)) {
       const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));
@@ -2876,36 +2915,36 @@ let _s2EditMode = false;
 
 function toggleS2EditMode() {
   if (!_s2EditMode) {
-    // Próba odblokowania — pokaż ostrzeżenie
-    if (!confirm(
-      '⚠ EDYCJA AWARYJNA SERII 2\n\n' +
-      'Ta opcja pozwala ręcznie zamienić zawodników w parach.\n' +
-      'Narusza to regulaminowe parowanie wg wyników Serii 1.\n\n' +
-      'Użyj TYLKO w wyjątkowych sytuacjach (kontuzja, pomyłka organizacyjna).\n\n' +
-      'Kliknięcie "Generuj M/K" w każdej chwili przywróci poprawne pary.\n\n' +
-      'Czy chcesz włączyć edycję awaryjną?'
-    )) return;
-    _s2EditMode = true;
+    // Pokaż modal ostrzeżenia
+    document.getElementById('modal-s2-edit').classList.add('open');
   } else {
-    _s2EditMode = false;
-    cancelSwapMode(); // anuluj ewentualną aktywną zamianę
+    disableS2EditMode();
   }
+}
 
+function enableS2EditMode() {
+  closeModal('modal-s2-edit');
+  _s2EditMode = true;
   const btn  = document.getElementById('s2-edit-toggle-btn');
   const warn = document.getElementById('s2-edit-warning');
-  if (_s2EditMode) {
-    btn.textContent = '🔓 Edycja awaryjna AKTYWNA';
-    btn.style.color       = 'var(--red)';
-    btn.style.borderColor = 'rgba(224,85,85,.4)';
-    btn.style.background  = 'rgba(224,85,85,.08)';
-    warn.style.display = 'block';
-  } else {
-    btn.textContent = '🔒 Edycja awaryjna';
-    btn.style.color       = 'var(--text3)';
-    btn.style.borderColor = 'var(--border2)';
-    btn.style.background  = '';
-    warn.style.display = 'none';
-  }
+  btn.textContent      = '🔓 Edycja awaryjna AKTYWNA';
+  btn.style.color      = 'var(--red)';
+  btn.style.borderColor= 'rgba(224,85,85,.4)';
+  btn.style.background = 'rgba(224,85,85,.08)';
+  warn.style.display   = 'block';
+  renderSeries2View();
+}
+
+function disableS2EditMode() {
+  _s2EditMode = false;
+  cancelSwapMode();
+  const btn  = document.getElementById('s2-edit-toggle-btn');
+  const warn = document.getElementById('s2-edit-warning');
+  btn.textContent      = '🔒 Edycja awaryjna par';
+  btn.style.color      = 'var(--text3)';
+  btn.style.borderColor= 'var(--border2)';
+  btn.style.background = '';
+  warn.style.display   = 'none';
   renderSeries2View();
 }
 
@@ -3016,6 +3055,7 @@ function renderPairsHTML(containerId, pairs, isS2) {
       html += '</div>';
     }
     if (isLast && !isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA PARA</span>';
+    if (p._manual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);padding:2px 7px;border-radius:2px;" title="Para dobrana ręcznie — poza regulaminowym algorytmem">⚠ ręczna</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
     if (hasTime) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
     if (isS2 && p._info) html += '<button onclick="showPairInfo(this)" data-info=\'' + JSON.stringify(p._info).replace(/'/g,'&#39;') + '\' style="font-size:11px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:2px 8px;cursor:pointer;line-height:1.4;" title="Dlaczego ta kolejność?">ℹ</button>';
@@ -4895,6 +4935,13 @@ function handleAthleteClick(el) {
 
   const a1 = state.athletes.find(x => x.id === _swapSource.athleteId);
   const a2 = state.athletes.find(x => x.id === targetId);
+
+  // Oznacz obie pary jako nieregulaminowe jeśli to S2
+  if (series === 's2') {
+    srcPair._manual = true;
+    tgtPair._manual = true;
+  }
+
   cancelSwapMode();
   save();
   if (series === 's2') renderSeries2View(); else renderSeries1View();
