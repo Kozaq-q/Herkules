@@ -1395,6 +1395,35 @@ window.addEventListener('beforeunload', () => {
 
 // Real-time — odświeżanie gdy ktoś inny wpisze dane
 let _realtimeChannel = null;
+let _applyingRemote = false; // flaga zapobiega pętli: remote → save → remote → ...
+
+function _applyRemoteState(newStateJson) {
+  if (_applyingRemote) return;
+  try {
+    const incoming = JSON.parse(newStateJson);
+    // Jeśli mamy niezapisane lokalne zmiany które są nowsze — nie nadpisuj
+    if (_saveTimer && state._savedAt && incoming._savedAt) {
+      if (new Date(state._savedAt) > new Date(incoming._savedAt)) return;
+    }
+    _applyingRemote = true;
+    state = incoming;
+    ensureStateDefaults();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Odśwież aktywną zakładkę
+    const activePage = document.querySelector('.page.active');
+    const id = activePage ? activePage.id : '';
+    if      (id === 'page-zawodnicy')    { renderAthletes(); updateStats(); }
+    else if (id === 'page-seria1')       renderSeries1View();
+    else if (id === 'page-seria2')       renderSeries2View();
+    else if (id === 'page-wyniki')       renderResults();
+    else if (id === 'page-druzynowy')    renderTeamView();
+    else if (id === 'page-klasyfikacja') renderKlasyfikacja();
+    const el = document.getElementById('header-autosave');
+    if (el) { el.textContent = '↓ SYNC'; setTimeout(() => { el.textContent = '● zapisano'; }, 2000); }
+  } catch(e) { console.error('Realtime parse error:', e); }
+  finally { setTimeout(() => { _applyingRemote = false; }, 100); }
+}
+
 function startRealtimeSync() {
   if (_realtimeChannel) return;
   const db = getSupabase();
@@ -1403,71 +1432,35 @@ function startRealtimeSync() {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
       (payload) => {
-        // Ignoruj własne zmiany (porównaj timestamp)
-        const incomingTime = new Date(payload.new?.updated_at || 0).getTime();
-        const localTime    = new Date(_lastSyncTime).getTime();
-        if (incomingTime <= localTime) return;
-
-        // Sprawdź czy nie mamy niezapisanych zmian nowszych niż przychodzące
-        const localStateTime = state._savedAt ? new Date(state._savedAt).getTime() : 0;
-        if (localStateTime > incomingTime + 2000) {
-          // Lokalny stan jest nowszy — poczekaj, nasze scheduleSave() wygra
-          console.warn('Realtime: lokalny stan nowszy — ignoruję przychodzące');
-          return;
+        if (payload.new && payload.new.state_json) {
+          _applyRemoteState(payload.new.state_json);
         }
-
-        try {
-          state = JSON.parse(payload.new.state_json);
-          ensureStateDefaults();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-          // Odśwież aktywną zakładkę
-          const activePage = document.querySelector('.page.active');
-          const id = activePage ? activePage.id : '';
-          if      (id === 'page-zawodnicy')   { renderAthletes(); updateStats(); }
-          else if (id === 'page-seria1')      renderSeries1View();
-          else if (id === 'page-seria2')      renderSeries2View();
-          else if (id === 'page-wyniki')      renderResults();
-          else if (id === 'page-druzynowy')   renderTeamView();
-          else if (id === 'page-klasyfikacja') renderKlasyfikacja();
-          _lastSyncTime = Date.now();
-          const el = document.getElementById('header-autosave');
-          if (el) { el.textContent = '↓ SYNC'; setTimeout(() => { el.textContent = '● zapisano'; }, 2000); }
-        } catch(e) { console.error('Realtime parse error:', e); }
       }
     )
     .subscribe();
 }
 
-// Fallback polling co 15s gdy WebSocket się rozłączy
-let _lastSyncTime = Date.now();
+// Fallback polling co 10s — działa zawsze, niezależnie od Realtime
+let _lastSyncTime = 0;
 let _pollTimer = null;
 function startPolling() {
   if (_pollTimer) return;
   _pollTimer = setInterval(async () => {
-    if (Date.now() - _lastSyncTime < 30000) return; // realtime działa — nie polluj
     try {
       const db = getSupabase();
       const { data } = await db
         .from('osf_state')
-        .select('state_json')
+        .select('state_json, updated_at')
         .eq('slot_id', STORAGE_KEY)
         .single();
-      if (data) {
-        state = JSON.parse(data.state_json);
-        ensureStateDefaults();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        const activePage = document.querySelector('.page.active');
-        const id = activePage ? activePage.id : '';
-        if      (id === 'page-zawodnicy')   { renderAthletes(); updateStats(); }
-        else if (id === 'page-seria1')      renderSeries1View();
-        else if (id === 'page-seria2')      renderSeries2View();
-        else if (id === 'page-wyniki')      renderResults();
-        else if (id === 'page-druzynowy')   renderTeamView();
-        else if (id === 'page-klasyfikacja') renderKlasyfikacja();
-        _lastSyncTime = Date.now();
+      if (data && data.state_json) {
+        // Nie nadpisuj jeśli mamy niezapisane lokalne zmiany
+        if (!_saveTimer) {
+          _applyRemoteState(data.state_json);
+        }
       }
     } catch(e) {}
-  }, 15000);
+  }, 10000);
 }
 
 function save() {
