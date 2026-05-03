@@ -131,7 +131,9 @@ tr:last-child > td { border-bottom: none; }
 .stat-label { font-size: 11px; color: var(--text3); margin-top: 4px; letter-spacing: 0.5px; }
 
 /* ─── RANK ─── */
-/* rank-1/2/3 — wyróżnienie tylko przez emoji, bez tła */
+.rank-1 { color: #FFD700; font-weight: 900; }
+.rank-2 { color: #C0C0C0; font-weight: 900; }
+.rank-3 { color: #CD7F32; font-weight: 900; }
 
 /* ─── GENDER BADGE ─── */
 .gender-M { background: rgba(91,155,213,.15); color: var(--male); border: 1px solid rgba(91,155,213,.35); padding: 2px 8px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display: inline-block; }
@@ -1999,13 +2001,17 @@ function teamStartListHTML(series) {
     html += '</div>';
 
     html += '<table style="width:100%;border-collapse:collapse;"><thead><tr>';
-    html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#222;color:#fff;border-right:3px solid #fff;">';
-    html += '&#9632; TOR L \u00a0\u2014\u00a0 <span style="text-transform:uppercase;">' + esc(itemL.team) + '</span>' + (okL?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
+    if (itemL) {
+      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#222;color:#fff;border-right:3px solid #fff;">';
+      html += '&#9632; TOR L &nbsp;&mdash;&nbsp; <span style="text-transform:uppercase;">' + esc(itemL.team) + '</span>' + (okL?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
+    } else {
+      html += '<th style="width:50%;background:#e0e0e0;color:#aaa;padding:7px 12px;">&#9632; TOR L &nbsp;&mdash;&nbsp; —</th>';
+    }
     if (itemP) {
       html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#333;color:#fff;">';
-      html += '&#9633; TOR P \u00a0\u2014\u00a0 <span style="text-transform:uppercase;">' + esc(itemP.team) + '</span>' + (okP?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
+      html += '&#9633; TOR P &nbsp;&mdash;&nbsp; <span style="text-transform:uppercase;">' + esc(itemP.team) + '</span>' + (okP?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
     } else {
-      html += '<th style="background:#e0e0e0;color:#aaa;padding:7px 12px;">\u2014</th>';
+      html += '<th style="width:50%;background:#e0e0e0;color:#aaa;padding:7px 12px;">&mdash;</th>';
     }
     html += '</tr></thead><tbody>';
 
@@ -2059,25 +2065,41 @@ function teamJudgeListHTML(series) {
     html += '</div>';
     html += '<table style="width:100%;border-collapse:collapse;">';
     html += '<tr>';
-    html += '<td style="width:50%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:middle;">';
-    html += '<div style="display:flex;align-items:center;gap:10px;">';
-    html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;flex-shrink:0;">L</div>';
-    html += '<div>';
-    html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL ? itemL.team : '—') + '</div>';
-    if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1L + '</div>';
+    // Lewa kolumna — drużyna L
+    html += '<td style="width:40%;padding:10px 14px;border:1px solid #ccc;text-align:right;vertical-align:middle;">';
+    if (itemL) {
+      html += '<div style="display:inline-flex;align-items:center;gap:10px;">';
+      html += '<div>';
+      html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL.team) + '</div>';
+      if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1L + '</div>';
+      html += '</div>';
+      html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;">L</div>';
+      html += '</div>';
+    } else {
+      html += '<div style="color:#ccc;font-style:italic;">—</div>';
+    }
+    html += '</td>';
+    // Środkowa kolumna — obie kratki obok siebie
+    html += '<td style="width:20%;padding:10px 8px;border-top:1px solid #ccc;border-bottom:1px solid #ccc;text-align:center;vertical-align:middle;">';
+    html += '<div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Czas</div>';
+    html += '<div style="display:flex;gap:6px;justify-content:center;align-items:center;">';
+    html += '<div style="width:68px;height:34px;border:2px solid #000;background:#fff;"></div>';
+    html += '<div style="width:68px;height:34px;border:2px solid #000;background:#fff;"></div>';
     html += '</div>';
-    html += '<div style="margin-left:auto;flex-shrink:0;"><div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;text-align:center;">Czas</div><div style="width:72px;height:32px;border:2px solid #000;background:#fff;"></div></div>';
+    html += '<div style="display:flex;gap:6px;justify-content:center;font-size:9px;color:#aaa;margin-top:3px;">';
+    html += '<div style="width:68px;text-align:center;">L</div>';
+    html += '<div style="width:68px;text-align:center;">P</div>';
     html += '</div>';
     html += '</td>';
-    html += '<td style="width:50%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:middle;">';
+    // Prawa kolumna — drużyna P
+    html += '<td style="width:40%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:middle;">';
     if (itemP) {
-      html += '<div style="display:flex;align-items:center;gap:10px;">';
-      html += '<div style="display:inline-block;background:#333;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;flex-shrink:0;">P</div>';
+      html += '<div style="display:inline-flex;align-items:center;gap:10px;">';
+      html += '<div style="display:inline-block;background:#333;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;">P</div>';
       html += '<div>';
       html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemP.team) + '</div>';
       if (s1P) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1P + '</div>';
       html += '</div>';
-      html += '<div style="margin-left:auto;flex-shrink:0;"><div style="font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;text-align:center;">Czas</div><div style="width:72px;height:32px;border:2px solid #000;background:#fff;"></div></div>';
       html += '</div>';
     } else {
       html += '<div style="color:#ccc;font-style:italic;">SOLO</div>';
@@ -3449,53 +3471,79 @@ function buildSeries2(gender) {
       }
     });
 
-    // Podziel na dwie kolejki: ci którzy potrzebują L w S2, ci którzy potrzebują P
-    // Każda kolejka posortowana: brak czasu/DSQ → najwolniejsi → najszybsi
-    const needL = pool.filter(p => p.s2lane === 'L'); // w S1 byli na P
-    const needP = pool.filter(p => p.s2lane === 'P'); // w S1 byli na L
+    // Podziel na dwie kolejki wg wymaganego toru w S2
+    // Każda kolejka niezależnie sortowana: brak czasu → najwolniejsi → najszybsi
+    const needL = pool.filter(p => p.s2lane === 'L');
+    const needP = pool.filter(p => p.s2lane === 'P');
 
-    // Globalna kolejność wg samego czasu (bez podziału na tory)
+    function sortQueue(q) {
+      return q.sort((a, b) => {
+        if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+        if (a.s1time === Infinity) return -1;
+        if (b.s1time === Infinity) return 1;
+        return b.s1time - a.s1time; // najwolniejsi pierwsi
+      });
+    }
+    sortQueue(needL);
+    sortQueue(needP);
+
+    // Globalna kolejność wg czasu (dla _info)
     const globalRank = new Map();
     pool.forEach((p, i) => globalRank.set(p.athlete.id, i + 1));
     const total = pool.length;
 
-    const pairs = [];
+    // Paruj i-ty z needL z i-tym z needP
+    // Solo (nadwyżka dłuższej kolejki) — wstaw NA WŁAŚCIWEJ POZYCJI w kolejności globalnej
     const minLen = Math.min(needL.length, needP.length);
+    const maxLen = Math.max(needL.length, needP.length);
+    const longerQ = needL.length > needP.length ? needL : needP;
+    const soloLane = needL.length > needP.length ? 'L' : 'P';
+
+    // Buduj listę pozycji: para lub solo, w kolejności globalnej
+    // Para i startuje na pozycji max(globalRank[L[i]], globalRank[P[i]])
+    // Solo k startuje na pozycji globalRank[solo[k]]
+    const entries = [];
 
     for (let i = 0; i < minLen; i++) {
-      const a = needL[i];
-      const b = needP[i];
-      const aGlobal = globalRank.get(a.athlete.id);
-      const bGlobal = globalRank.get(b.athlete.id);
-      pairs.push({
-        pairNum: 0, gender,
-        aId: a.athlete.id, aLane: 'L',
-        bId: b.athlete.id, bLane: 'P',
-        _info: {
-          aTime:     a.s1time === Infinity ? null : a.s1time,
-          bTime:     b.s1time === Infinity ? null : b.s1time,
-          aQueuePos: i + 1, aQueueLen: needL.length, aGlobal,
-          bQueuePos: i + 1, bQueueLen: needP.length, bGlobal,
-          total
+      const a = needL[i], b = needP[i];
+      const globalPos = Math.min(globalRank.get(a.athlete.id), globalRank.get(b.athlete.id));
+      entries.push({
+        type: 'pair', globalPos,
+        pair: {
+          pairNum: 0, gender,
+          aId: a.athlete.id, aLane: 'L',
+          bId: b.athlete.id, bLane: 'P',
+          _info: {
+            aTime:     a.s1time === Infinity ? null : a.s1time,
+            bTime:     b.s1time === Infinity ? null : b.s1time,
+            aQueuePos: i + 1, aQueueLen: needL.length,
+            bQueuePos: i + 1, bQueueLen: needP.length,
+            aGlobal: globalRank.get(a.athlete.id),
+            bGlobal: globalRank.get(b.athlete.id),
+            total
+          }
         }
       });
     }
 
-    // Pozostałe bez pary (nadwyżka jednej strony) — solo
-    const soloItems = needL.length > needP.length
-      ? needL.slice(minLen)
-      : needP.slice(minLen);
+    // Solo — wstaw wg pozycji globalnej
+    for (let k = minLen; k < maxLen; k++) {
+      const s = longerQ[k];
+      entries.push({
+        type: 'solo', globalPos: globalRank.get(s.athlete.id),
+        pair: {
+          pairNum: 0, gender,
+          aId: s.athlete.id, aLane: soloLane,
+          bId: null, bLane: soloLane === 'L' ? 'P' : 'L'
+        }
+      });
+    }
 
-    const soloPairs = soloItems.map(p => ({
-      pairNum: 0, gender,
-      aId: p.athlete.id, aLane: p.s2lane,
-      bId: null, bLane: null,
-      _solo: true
-    }));
+    // Posortuj wg globalPos (wolniejsi/brak czasu → pierwsi)
+    entries.sort((a, b) => a.globalPos - b.globalPos);
 
-    // Solo na początku (najsłabsi), potem pary normalne
-    const ordered = [...soloPairs, ...pairs];
-    ordered.forEach((p, i) => { p.pairNum = i + 1; delete p._solo; });
+    // Przenumeruj
+    const ordered = entries.map((e, i) => { e.pair.pairNum = i + 1; return e.pair; });
     return ordered;
   }
 
@@ -3658,7 +3706,7 @@ function renderResultsForGender(gender, tbodyId) {
       }
     }
     html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
-    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;">' +
+    html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' +
       (myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'') + rankDisp + '</td>';
     html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
@@ -3708,9 +3756,19 @@ function pairTableRowsStartList(pairs) {
   let html = '';
   pairs.forEach((p, idx) => {
     const aIsL = p.aLane === 'L';
-    const athL = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
-    const athP = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
     const isSolo = !p.aId || !p.bId;
+    // Dla SOLO: wyznacz zawodnika i jego rzeczywisty tor
+    let athL, athP;
+    if (isSolo) {
+      const soloId  = p.aId || p.bId;
+      const soloAth = state.athletes.find(x => x.id === soloId);
+      const soloLane = p.aId ? (p.aLane || 'L') : (p.bLane || 'P');
+      athL = soloLane === 'L' ? soloAth : null;
+      athP = soloLane === 'P' ? soloAth : null;
+    } else {
+      athL = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
+      athP = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
+    }
     const rowBg = idx % 2 === 0 ? '' : 'background:#f7f7f7;';
     const isLast = idx === pairs.length - 1;
 
@@ -3750,13 +3808,29 @@ function pairTableRowsJudge(pairs, showS1) {
   let html = '';
   pairs.forEach((p, idx) => {
     const aIsL  = p.aLane === 'L';
-    const athL  = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
-    const athP  = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
+    // Dla SOLO: zawodnik może być w slocie a lub b — wyznacz na podstawie rzeczywistego toru
+    let athL, athP;
+    if (isSolo) {
+      const soloId  = p.aId || p.bId;
+      const soloAth = state.athletes.find(x => x.id === soloId);
+      athL = soloLane === 'L' ? soloAth : null;
+      athP = soloLane === 'P' ? soloAth : null;
+    } else {
+      athL = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
+      athP = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
+    }
     const s1L   = athL ? getTime(athL.id, 's1') : '';
     const s1P   = athP ? getTime(athP.id, 's1') : '';
     const isSolo = !p.aId || !p.bId;
     const isLast = idx === pairs.length - 1;
     const rowBg  = idx % 2 === 0 ? '' : 'background:#fafafa;';
+
+    // Wyznacz rzeczywisty tor dla SOLO (zawodnik może być w slocie a lub b)
+    let soloLane = 'L';
+    if (isSolo) {
+      if (p.aId) soloLane = p.aLane || 'L';
+      else if (p.bId) soloLane = p.bLane || 'P';
+    }
 
     // Separator przed każdą parą (oprócz pierwszej)
     if (idx > 0) html += '<tr class="pair-sep"><td colspan="4"></td></tr>';
@@ -3778,7 +3852,6 @@ function pairTableRowsJudge(pairs, showS1) {
     // Środek — komórki czasu z oznaczeniami L/P
     html += '<td class="time-wrap">';
     if (isSolo) {
-      const soloLane = p.aLane; // rzeczywisty tor solo-zawodnika
       if (soloLane === 'L') {
         html += '<div class="time-pair"><span class="lane-badge-L">L</span><div class="time-cell"></div></div>';
       } else {
@@ -3934,14 +4007,11 @@ const RESULTS_PDF_CSS = `
   .team-cell { padding: 8px 10px; font-size: 10px; color: #444; }
   .time-cell { padding: 8px 10px; font-family: monospace; font-size: 11px; text-align: center; }
   .best-cell { padding: 8px 10px; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; border-left: 2px solid #000; }
-  /* TOP 3 — wszystko białe, czarne tło */
-  tr.top1 td, tr.top2 td, tr.top3 td { color: #fff !important; border-bottom: 1px solid #666; }
-  tr.top1 td { background: #000 !important; }
-  tr.top1 .rank-cell::before { content: "1 "; }
-  tr.top2 td { background: #222 !important; }
-  tr.top2 .rank-cell::before { content: "2 "; }
-  tr.top3 td { background: #333 !important; }
-  tr.top3 .rank-cell::before { content: "3 "; }
+  /* TOP 3 — czarne tło, biały tekst */
+  tr.top1 td { background: #000 !important; color: #fff !important; border-bottom: 1px solid #666; }
+  tr.top2 td { background: #222 !important; color: #fff !important; border-bottom: 1px solid #666; }
+  tr.top3 td { background: #333 !important; color: #fff !important; border-bottom: 1px solid #666; }
+  tr.top1 .team-cell, tr.top2 .team-cell, tr.top3 .team-cell { color: #fff !important; }
   tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
   tr.top1 .dsq, tr.top2 .dsq, tr.top3 .dsq { color: #ccc !important; }
   tr.top1 .dsq-label, tr.top2 .dsq-label, tr.top3 .dsq-label { color: #ccc !important; }
@@ -3975,7 +4045,8 @@ function printResultsGender(gender) {
     const s1d = r.s1dsq ? '<span class="dsq">' + (r.s1||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">' + (r.s2||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     html += '<tr class="' + topCls + '">';
-    html += '<td class="rank-cell">' + (noBest ? '—' : rank) + '</td>';
+    const rankEmoji = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
+    html += '<td class="rank-cell">' + rankEmoji + (noBest ? '—' : rank) + '</td>';
     html += '<td class="name-cell">' + esc(displayName(r.athlete)) + ' <span style="font-size:9px;opacity:.6;">' + r.athlete.bib + '</span></td>';
     html += '<td class="team-cell">' + esc(r.athlete.team) + '</td>';
     html += '<td class="time-cell">' + s1d + '</td>';
@@ -4528,8 +4599,9 @@ function _printInd(gender) {
     const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
     const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
+    const rankEmojiInd = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (noBest ? '—' : rank) + '</td>' +
+      '<td class="rank-col">' + rankEmojiInd + (noBest ? '—' : rank) + '</td>' +
       '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
@@ -4603,7 +4675,7 @@ function printBiegDruz() {
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     const rankTxt = r.rank || (r.dsq ? 'DSQ' : '—');
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + rankTxt + '</td>' +
+      '<td class="rank-col">' + (posIdx===1?'🥇':posIdx===2?'🥈':posIdx===3?'🥉':'') + rankTxt + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
       '<td class="c mono">' + s2d + '</td>' +
@@ -4650,7 +4722,7 @@ function printKlasyfikacjaPDF() {
     const rank = i + 1;
     const topCls = rank===1?' top1':rank===2?' top2':rank===3?' top3':'';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + rank + '</td>' +
+      '<td class="rank-col">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') + rank + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c">' + r.indPts + '</td>' +
       '<td class="c">' + r.teamPts + '</td>' +
@@ -4668,7 +4740,7 @@ function printKlasyfikacjaPDF() {
     const rk = r.rank;
     const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (r.rank||'—') + '</td>' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
       '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + (r.best||'—') + '</td>' +
@@ -4686,7 +4758,7 @@ function printKlasyfikacjaPDF() {
     const rk = r.rank;
     const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (r.rank||'—') + '</td>' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + (r.best||'—') + '</td>' +
       '<td class="r bold">' + r.pts + '</td>' +
