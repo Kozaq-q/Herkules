@@ -1893,12 +1893,30 @@ function buildTeamSeries1() {
   // Najlepsza (ostatni idx) zawsze w parze
   const isOdd = eligible.length % 2 !== 0;
 
-  const order = eligible.map((item, idx) => {
-    const lane = isOdd
-      ? (idx === 0 ? 'L' : (idx % 2 === 1 ? 'L' : 'P'))
-      : (idx % 2 === 0 ? 'L' : 'P');
-    return { team: item.team, lane, startNum: idx + 1, sum: item.sum, count: item.athletes.length };
-  });
+  // Buduj order[] — solo (najsłabsza) jako PIERWSZA para (idx 0) z null jako partner
+  // Renderer: for i+=2 → i=0: order[0]=solo, order[1]=next (jeśli null → isSolo)
+  // Żeby solo był PIERWSZY a nie OSTATNI, musimy go umieścić TAK żeby order[1] nie istniało
+  // Rozwiązanie: solo na KOŃCU (idx N-1 gdy nieparzyste), ale startNum=1 żeby startował pierwszy
+  // ALBO: solo na idx=0, a order ma parzystą liczbę elementów dzięki null-placeholder
+  const order = [];
+  if (isOdd) {
+    // Solo: pierwsza drużyna (najsłabsza) — wstawiana jako osobna para z null-partnerem
+    const soloItem = eligible[0];
+    order.push({ team: soloItem.team, lane: 'L', startNum: 1, sum: soloItem.sum, count: soloItem.athletes.length, _solo: true });
+    order.push(null); // null = brak partnera → renderer rozpozna jako solo
+    // Pary: od idx=1 w eligible (kolejne drużyny parują się po 2)
+    for (let idx = 1; idx < eligible.length; idx++) {
+      const item = eligible[idx];
+      const pairIdx = idx - 1; // pozycja w parach (0=pierwsza para, 1=druga para...)
+      const lane = pairIdx % 2 === 0 ? 'L' : 'P';
+      order.push({ team: item.team, lane, startNum: idx + 1, sum: item.sum, count: item.athletes.length });
+    }
+  } else {
+    eligible.forEach((item, idx) => {
+      const lane = idx % 2 === 0 ? 'L' : 'P';
+      order.push({ team: item.team, lane, startNum: idx + 1, sum: item.sum, count: item.athletes.length });
+    });
+  }
 
   state.teamOrder.s1 = order;
   state.teamOrder.s2 = [];
@@ -1938,22 +1956,40 @@ function buildTeamSeries2() {
 
   // Obowiązkowa zmiana toru: każda drużyna dostaje tor przeciwny niż w S1
   const isOdd = withTimes.length % 2 !== 0;
-  // Przy nieparzystej — solo (najwolniejsza, idx 0) też musi zmienić tor
-  const order = withTimes.map((item, idx) => {
-    const oppositeLane = item.lane === 'L' ? 'P' : 'L';
-    return {
-      team:     item.team,
-      lane:     oppositeLane,
-      startNum: idx + 1,
-      sum:      item.sum,
-      count:    item.count
-    };
-  });
+  const s1LaneMap = {};
+  withTimes.forEach(item => { if (item.team) s1LaneMap[item.team] = item.lane; });
 
-  // Przelicz tory naprzemiennie zachowując zmianę: L→P i P→L
-  // Kolejność w parach (idx 0+1, 2+3...) - tor z opposite jest już ustawiony
-  // Tylko upewnij się że w każdej parze są oba tory
-  recalcLanesWithOpposite(order, withTimes);
+  const order = [];
+  if (isOdd) {
+    // Solo: pierwsza drużyna (najsłabsza/bez czasu) — z null-partnerem
+    const soloItem = withTimes[0];
+    const soloOppLane = (s1LaneMap[soloItem.team] || 'L') === 'L' ? 'P' : 'L';
+    order.push({ team: soloItem.team, lane: soloOppLane, startNum: 1, sum: soloItem.sum, count: soloItem.count, _solo: true });
+    order.push(null);
+    // Pary od idx=1
+    for (let idx = 1; idx < withTimes.length; idx++) {
+      const item = withTimes[idx];
+      const oppLane = (s1LaneMap[item.team] || 'L') === 'L' ? 'P' : 'L';
+      order.push({ team: item.team, lane: oppLane, startNum: idx + 1, sum: item.sum, count: item.count });
+    }
+    // Upewnij każdą parę (poza solo) że ma L i P
+    for (let i = 2; i < order.length - 1; i += 2) {
+      if (order[i] && order[i+1] && order[i].lane === order[i+1].lane) {
+        order[i+1].lane = order[i+1].lane === 'L' ? 'P' : 'L';
+      }
+    }
+  } else {
+    withTimes.forEach((item, idx) => {
+      const oppLane = (s1LaneMap[item.team] || 'L') === 'L' ? 'P' : 'L';
+      order.push({ team: item.team, lane: oppLane, startNum: idx + 1, sum: item.sum, count: item.count });
+    });
+    // Upewnij każdą parę że ma L i P
+    for (let i = 0; i < order.length - 1; i += 2) {
+      if (order[i].lane === order[i+1].lane) {
+        order[i+1].lane = order[i+1].lane === 'L' ? 'P' : 'L';
+      }
+    }
+  }
 
   state.teamOrder.s2 = order;
   // Generowanie S2 resetuje tryb edycji awaryjnej S2
@@ -2068,10 +2104,13 @@ function renderTeamOrderSection(series) {
   }
 
   // Grupuj po pary (L + P obok siebie)
+  // null w order[] = placeholder dla solo (brak partnera)
   const pairs = [];
   for (let i = 0; i < order.length; i += 2) {
-    const isSolo = !order[i+1];
-    pairs.push({ a: order[i], aIdx: i, b: order[i+1]||null, bIdx: i+1, isSolo, pairNum: Math.floor(i/2)+1 });
+    const aSlot = order[i]   || null;
+    const bSlot = order[i+1] || null;
+    const isSolo = !bSlot || bSlot === null;
+    pairs.push({ a: aSlot, aIdx: i, b: bSlot, bIdx: i+1, isSolo, pairNum: Math.floor(i/2)+1 });
   }
 
   let html = '';
