@@ -361,17 +361,41 @@ function showApp() {
     showSyncStatus(ok ? 'ok' : 'error');
   });
 
-  // Polling co 5s — zawsze aktywny, niezależnie od Realtime
+  // Polling co 8s — zawsze aktywny, niezależnie od Realtime
   setInterval(() => {
     syncSlotsFromCloud().then(ok => { if (ok) render(); });
-  }, 5000);
+  }, 8000);
 
-  // Supabase Realtime — natychmiastowe odświeżenie (bonus, jeśli tabela ma włączone Replication)
+  // Supabase Realtime — natychmiastowe odświeżenie per typ zdarzenia
   try {
     getSB()
       .channel('herkules_slots_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'herkules_slots' }, () => {
-        syncSlotsFromCloud().then(ok => { if (ok) render(); });
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'herkules_slots' }, payload => {
+        // Usuń lokalnie natychmiast — nie czekaj na sync (który mógłby przywrócić slot)
+        const id = payload.old && payload.old.slot_id;
+        if (id) {
+          ['herkules_slot_', 'zawody_slot_', 'osf_slot_'].forEach(p => localStorage.removeItem(p + id));
+          _cacheSlotIds(getCachedSlotIds().filter(x => x !== String(id)));
+          render();
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'herkules_slots' }, payload => {
+        // Nowy slot — pobierz i dodaj do cache
+        try {
+          const slot = JSON.parse(payload.new.slot_json);
+          _cacheSlot(slot);
+          const ids = getCachedSlotIds();
+          if (!ids.includes(String(slot.id))) _cacheSlotIds([...ids, slot.id]);
+          render();
+        } catch(e) {}
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'herkules_slots' }, payload => {
+        // Zaktualizowany slot — nadpisz cache
+        try {
+          const slot = JSON.parse(payload.new.slot_json);
+          _cacheSlot(slot);
+          render();
+        } catch(e) {}
       })
       .subscribe(status => {
         const dot = document.getElementById('sync-dot');
@@ -379,11 +403,11 @@ function showApp() {
         if (status === 'SUBSCRIBED') {
           if (dot) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (dot) { dot.style.background = 'var(--orange)'; lbl.textContent = 'poll 5s'; }
+          if (dot) { dot.style.background = 'var(--orange)'; lbl.textContent = 'poll 8s'; }
         }
       });
   } catch(e) {
-    console.warn('Realtime niedostępny, działa polling 5s:', e);
+    console.warn('Realtime niedostępny, działa polling 8s:', e);
   }
 }
 
@@ -520,27 +544,11 @@ async function syncSlotsFromCloud() {
       try {
         const slot = JSON.parse(row.slot_json);
         cloudIds.push(String(slot.id));
-        _cacheSlot(slot); // nadpisz cache bez porównywania czasów
+        _cacheSlot(slot);
       } catch(e) {}
     });
 
-    // Wypchnij lokalne sloty nieznane chmurze (offline / pre-Supabase)
-    const localIds = getCachedSlotIds();
-    const cloudIdSet = new Set(cloudIds);
-    for (const id of localIds) {
-      if (!cloudIdSet.has(String(id))) {
-        const slot = getSlot(id);
-        if (slot) {
-          slot._updated = slot._updated || new Date().toISOString();
-          const { error: e2 } = await getSB().from(SB_TABLE).upsert({
-            slot_id: String(id), slot_json: JSON.stringify(slot), updated_at: slot._updated
-          }, { onConflict: 'slot_id' });
-          if (!e2) cloudIds.push(String(id));
-        }
-      }
-    }
-
-    // Indeks = tylko to co jest w chmurze (+ offline które właśnie wypchnęliśmy)
+    // Indeks = dokładnie to co jest w Supabase — nic nie dodajemy
     _cacheSlotIds(cloudIds);
     return true;
   } catch(e) { console.warn('syncSlotsFromCloud exception:', e); showSyncStatus('error'); return false; }
