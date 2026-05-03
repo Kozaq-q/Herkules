@@ -1693,7 +1693,8 @@ function teamBestTime(team) {
 }
 
 function saveTeamTime(input) {
-  // oninput — zapisz surową wartość, bez normalizacji
+  // oninput — tylko lokalny state, bez nadpisywania input.value
+  // Wysyłka do Supabase przez scheduleSave (debounce 300ms)
   const team   = input.dataset.team;
   const series = input.dataset.series;
   if (!state.teamTimes[team]) state.teamTimes[team] = {};
@@ -3383,14 +3384,13 @@ function normalizeTime(t) {
 }
 
 function saveTime(input) {
-  // Wywoływane przez oninput — NIE normalizujemy, nie nadpisujemy input.value
-  // Zapisujemy surową wartość żeby nie przerywać wpisywania
+  // Wywoływane przez oninput — tylko lokalny state, nie nadpisujemy input.value
+  // Wysyłka następuje dopiero w commitTime przy onblur/Enter
   const id  = parseInt(input.dataset.id);
   const ser = input.dataset.series;
-  const raw = input.value; // surowa, bez trim/replace — user jeszcze pisze
   if (!state.times[id]) state.times[id] = {};
-  state.times[id][ser] = raw;
-  scheduleSave(); // debounce 300ms — nie natychmiast
+  state.times[id][ser] = input.value;
+  scheduleSave();
 }
 
 function commitTime(input) {
