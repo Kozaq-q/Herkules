@@ -791,8 +791,7 @@ tr:last-child > td { border-bottom: none; }
           <textarea id="osf-setup-notes" rows="3" placeholder="np. Tor mokry, czas od komendy START..." oninput="saveSetup()" style="resize:vertical;font-size:13px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-family:var(--font-b);"></textarea>
         </div>
         <div style="margin-top:10px;">
-          <button class="btn btn-sm btn-primary" onclick="syncSetupToPanel()">↑ Synchronizuj z panelem głównym</button>
-          <span id="sync-status" style="font-size:11px;color:var(--green);margin-left:10px;font-family:var(--font-m);display:none;">✓ Zsynchronizowano</span>
+          <span id="sync-status" style="font-size:11px;color:var(--green);margin-left:0;font-family:var(--font-m);display:none;">✓ Zsynchronizowano z panelem</span>
         </div>
       </div>
 
@@ -1567,24 +1566,40 @@ async function finishContest() {
   try {
     const panelId = SLOT_ID;
     if (panelId && panelId !== '0') {
-      const slotRaw = localStorage.getItem('herkules_slot_' + panelId);
-      if (slotRaw) {
-        const slot = JSON.parse(slotRaw);
-        slot.done    = true;
-        slot.doneAt  = new Date().toISOString();
-        slot._updated = slot.doneAt;
-        localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
-        // Czekamy na Supabase przed przekierowaniem
-        try {
-          await getSupabase().from('herkules_slots').upsert({
-            slot_id:    String(panelId),
-            slot_json:  JSON.stringify(slot),
-            updated_at: slot._updated
-          }, { onConflict: 'slot_id' });
-        } catch(e) { console.warn('Supabase finishContest error:', e); }
+      // Pobierz aktualny slot z Supabase (nie localStorage — może być nieaktualny)
+      let slot = null;
+      try {
+        const { data } = await getSupabase().from('herkules_slots').select('slot_json').eq('slot_id', String(panelId)).single();
+        if (data && data.slot_json) slot = JSON.parse(data.slot_json);
+      } catch(e) {}
+      // Fallback: localStorage lub zbuduj ze state
+      if (!slot) {
+        const slotRaw = localStorage.getItem('herkules_slot_' + panelId);
+        slot = slotRaw ? JSON.parse(slotRaw) : null;
       }
+      // Ostatni fallback: zbuduj ze state (zawsze dostępny)
+      if (!slot) {
+        slot = {
+          id:   panelId,
+          type: 'osf',
+          city: (state.contest && state.contest.city) || (state.setup && state.setup.city) || '',
+          name: (state.contest && state.contest.name) || (state.setup && state.setup.name) || '',
+          date: (state.contest && state.contest.date) || (state.setup && state.setup.date) || '',
+          created: new Date().toISOString()
+        };
+      }
+      slot.done     = true;
+      slot.doneAt   = new Date().toISOString();
+      slot._updated = slot.doneAt;
+      localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
+      // Await — czekamy na Supabase przed przekierowaniem
+      await getSupabase().from('herkules_slots').upsert({
+        slot_id:    String(panelId),
+        slot_json:  JSON.stringify(slot),
+        updated_at: slot._updated
+      }, { onConflict: 'slot_id' });
     }
-  } catch(e) {}
+  } catch(e) { console.warn('finishContest error:', e); }
   window.location.href = 'start.html';
 }
 
@@ -4114,6 +4129,7 @@ function saveSetup() {
   if (headerEl) headerEl.textContent = (c.name ? c.name + ' · ' : '') + c.city + (c.date ? ' · ' + c.date : '');
 
   save();
+  syncSetupToPanel(); // automatyczna synchronizacja — bez konieczności klikania przycisku
 }
 
 function setAccentColor(color) {
@@ -4127,26 +4143,38 @@ function setAccentColor(color) {
 }
 
 async function syncSetupToPanel() {
-  // Zaktualizuj slot w panelu głównym
+  if (!SLOT_ID || SLOT_ID === '0') return;
   try {
-    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
-    if (slotRaw) {
-      const slot = JSON.parse(slotRaw);
-      if (state.setup.name) slot.name = state.setup.name;
-      if (state.setup.city) slot.city = state.setup.city;
-      if (state.setup.date) slot.date = state.setup.date;
-      slot._updated = new Date().toISOString();
-      localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
-      // Czekamy na Supabase
-      try {
-        await getSupabase().from('herkules_slots').upsert({
-          slot_id:    String(SLOT_ID),
-          slot_json:  JSON.stringify(slot),
-          updated_at: slot._updated
-        }, { onConflict: 'slot_id' });
-      } catch(e) { console.warn('Supabase syncSetupToPanel error:', e); }
+    // Pobierz aktualny slot z Supabase (działa na każdym urządzeniu)
+    let slot = null;
+    try {
+      const { data } = await getSupabase().from('herkules_slots').select('slot_json').eq('slot_id', String(SLOT_ID)).single();
+      if (data && data.slot_json) slot = JSON.parse(data.slot_json);
+    } catch(e) {}
+    // Fallback: localStorage
+    if (!slot) {
+      const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+      slot = slotRaw ? JSON.parse(slotRaw) : null;
     }
-  } catch(e) {}
+    // Ostatni fallback: zbuduj ze state
+    if (!slot) {
+      slot = { id: SLOT_ID, type: 'osf', city: '', name: '', date: '', created: new Date().toISOString() };
+    }
+    // Zaktualizuj nazwę/miasto/datę z aktualnego state
+    if (state.setup && state.setup.name) slot.name = state.setup.name;
+    if (state.setup && state.setup.city) slot.city = state.setup.city;
+    if (state.setup && state.setup.date) slot.date = state.setup.date;
+    if (state.contest && state.contest.name && !slot.name) slot.name = state.contest.name;
+    if (state.contest && state.contest.city && !slot.city) slot.city = state.contest.city;
+    if (state.contest && state.contest.date && !slot.date) slot.date = state.contest.date;
+    slot._updated = new Date().toISOString();
+    localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+    await getSupabase().from('herkules_slots').upsert({
+      slot_id:    String(SLOT_ID),
+      slot_json:  JSON.stringify(slot),
+      updated_at: slot._updated
+    }, { onConflict: 'slot_id' });
+  } catch(e) { console.warn('syncSetupToPanel error:', e); }
   const el = document.getElementById('sync-status');
   if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2000); }
 }

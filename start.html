@@ -362,27 +362,29 @@ function showApp() {
   });
 
   // Supabase Realtime — natychmiastowe odświeżenie gdy ktokolwiek zmieni dane
+  let realtimeOk = false;
   try {
     getSB()
       .channel('herkules_slots_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'herkules_slots' }, payload => {
-        // Ktoś na innym urządzeniu zmienił/dodał/usunął zawody — pobierz i odśwież
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'herkules_slots' }, () => {
         syncSlotsFromCloud().then(ok => { if (ok) render(); });
       })
       .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          const dot = document.getElementById('sync-dot');
-          const lbl = document.getElementById('sync-label');
-          if (dot) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
-        }
+        realtimeOk = (status === 'SUBSCRIBED');
+        const dot = document.getElementById('sync-dot');
+        const lbl = document.getElementById('sync-label');
+        if (dot && realtimeOk) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
+        if (dot && status === 'CHANNEL_ERROR') { dot.style.background = 'var(--red)'; lbl.textContent = 'offline'; }
       });
   } catch(e) {
-    console.warn('Realtime niedostępny, używam pollingu:', e);
+    console.warn('Realtime niedostępny:', e);
   }
 
-  // Polling co 15s jako fallback gdy Realtime nie działa
+  // Polling tylko gdy Realtime nie działa (np. tabela bez replication)
   setInterval(() => {
-    syncSlotsFromCloud().then(ok => { if (ok) render(); });
+    if (!realtimeOk) {
+      syncSlotsFromCloud().then(ok => { if (ok) render(); });
+    }
   }, 15000);
 }
 
