@@ -410,6 +410,7 @@ function saveSlotIds(ids) { localStorage.setItem(SLOTS_KEY, JSON.stringify(ids))
 function getSlot(id)      { try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; } }
 
 function saveSlot(slot) {
+  slot._updated = new Date().toISOString();
   localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot));
   // Zapisz metadane slotu do Supabase (nie dane zawodów — te są w osf_state)
   getSB().from(SB_TABLE).upsert({
@@ -537,9 +538,9 @@ function slotCardHTML(slot) {
       '</div>' +
     '</div>' +
     '<div class="slot-actions">' +
-      '<button class="btn ' + openCls + '" onclick="openSlot(' + slot.id + ')">→ Otwórz</button>' +
-      (done ? '<button class="btn btn-green" onclick="reactivateSlot(' + slot.id + ', event)">↺ Wznów</button>' : '') +
-      '<button class="btn btn-danger" onclick="removeSlot(' + slot.id + ', event)">✕ Usuń</button>' +
+      '<button class="btn ' + openCls + '" data-action="open" data-id="' + slot.id + '">→ Otwórz</button>' +
+      (done ? '<button class="btn btn-green" data-action="reactivate" data-id="' + slot.id + '">↺ Wznów</button>' : '') +
+      '<button class="btn btn-danger" data-action="remove" data-id="' + slot.id + '">✕ Usuń</button>' +
     '</div>' +
   '</div>';
 }
@@ -670,6 +671,16 @@ function formatDate() {
   const months = ['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
   return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 }
+
+document.getElementById('main-content').addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id     = btn.dataset.id;
+  const action = btn.dataset.action;
+  if (action === 'open')        { openSlot(id); }
+  else if (action === 'reactivate') { reactivateSlot(id, e); }
+  else if (action === 'remove')     { removeSlot(id, e); }
+});
 
 document.getElementById('modal-new').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 document.getElementById('modal-password').addEventListener('click', function(e) { if (e.target === this) closePasswordModal(); });
