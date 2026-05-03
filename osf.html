@@ -1394,42 +1394,60 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ── Aplikuj stan przychodzący z innego urządzenia ────────────────────
+// Kolejka odroczonego rendera — gdy user ma focus w input, render czeka
+let _remoteRenderTimer = null;
+
 function _applyRemoteState(stateJson) {
   try {
     const incoming = JSON.parse(stateJson);
     // Ignoruj własne zapisy (Realtime echo naszego upsert)
     if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
-    // Ignoruj jeśli my właśnie piszemy — nasz stan jest nowszy
+    // Jeśli właśnie zapisujemy, nasz stan jest aktualniejszy — pomiń
     if (_isSaving) return;
+
+    // Zapisz state — zawsze, niezależnie od focusa
     state = incoming;
     ensureStateDefaults();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    // Odśwież aktywny widok
-    const activePage = document.querySelector('.page.active');
-    const id = activePage ? activePage.id : '';
-    if      (id === 'page-zawodnicy')    { renderAthletes(); updateStats(); }
-    else if (id === 'page-seria1')       renderSeries1View();
-    else if (id === 'page-seria2')       renderSeries2View();
-    else if (id === 'page-wyniki')       renderResults();
-    else if (id === 'page-druzynowy')    renderTeamView();
-    else if (id === 'page-klasyfikacja') renderKlasyfikacja();
-    else if (id === 'page-setup')        renderSetupPage();
-    // Zawsze odśwież header (nazwa zawodów mogła się zmienić)
+
+    // Odśwież header i kolor — bezpieczne, nie dotykają inputów
     const c = state.contest || {};
     const headerEl = document.getElementById('header-contest-name');
     if (headerEl) headerEl.textContent = (c.name ? c.name + ' · ' : '') + (c.city || '') + (c.date ? ' · ' + c.date : '');
-    // Odśwież kolor akcentu
     if (state.setup && state.setup.accentColor) {
       document.documentElement.style.setProperty('--orange', state.setup.accentColor);
     }
-    // Sygnalizacja w UI
-    const el = document.getElementById('header-autosave');
-    if (el) {
-      el.textContent = '↓ SYNC';
-      el.style.color = 'var(--accent)';
-      setTimeout(() => { if (el) { el.textContent = '● zsync'; el.style.color = 'var(--green)'; } }, 1000);
+    const syncEl = document.getElementById('header-autosave');
+    if (syncEl) {
+      syncEl.textContent = '↓ SYNC';
+      syncEl.style.color = 'var(--accent)';
+      setTimeout(() => { if (syncEl) { syncEl.textContent = '● zsync'; syncEl.style.color = 'var(--green)'; } }, 1000);
     }
+
+    // Rerenderuj widok — ale tylko jeśli user nie wpisuje czegoś w tym momencie
+    clearTimeout(_remoteRenderTimer);
+    _remoteRenderTimer = setTimeout(_tryRemoteRender, 0);
   } catch(e) { console.error('Remote state parse error:', e); }
+}
+
+function _tryRemoteRender() {
+  // Jeśli aktywny element to input/textarea — odrocz o 800ms i sprawdź znowu
+  const active = document.activeElement;
+  const userTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+  if (userTyping) {
+    _remoteRenderTimer = setTimeout(_tryRemoteRender, 800);
+    return;
+  }
+  // Wolna droga — rerenderuj
+  const activePage = document.querySelector('.page.active');
+  const id = activePage ? activePage.id : '';
+  if      (id === 'page-zawodnicy')    { renderAthletes(); updateStats(); }
+  else if (id === 'page-seria1')       renderSeries1View();
+  else if (id === 'page-seria2')       renderSeries2View();
+  else if (id === 'page-wyniki')       renderResults();
+  else if (id === 'page-druzynowy')    renderTeamView();
+  else if (id === 'page-klasyfikacja') renderKlasyfikacja();
+  else if (id === 'page-setup')        renderSetupPage();
 }
 
 // ── Realtime WebSocket (główny kanał, ~200ms latencja) ────────────────
@@ -1579,7 +1597,7 @@ function resetContest() {
   window.location.href = 'start.html';
 }
 
-function finishContest() {
+async function finishContest() {
   if (!confirm('Oznaczyć te zawody jako zakończone i wrócić do panelu?\n\nDane pozostają zapisane i dostępne.')) return;
   try {
     const panelId = SLOT_ID;
@@ -1587,18 +1605,18 @@ function finishContest() {
       const slotRaw = localStorage.getItem('herkules_slot_' + panelId);
       if (slotRaw) {
         const slot = JSON.parse(slotRaw);
-        slot.done    = true;
-        slot.doneAt  = new Date().toISOString();
+        slot.done     = true;
+        slot.doneAt   = new Date().toISOString();
         slot._updated = slot.doneAt;
         localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
-        // Sync do Supabase
+        // Czekaj na zapis do Supabase zanim nawigujesz — inaczej request jest anulowany
         try {
-          getSupabase().from('herkules_slots').upsert({
+          await getSupabase().from('herkules_slots').upsert({
             slot_id:    String(panelId),
             slot_json:  JSON.stringify(slot),
             updated_at: slot._updated
           }, { onConflict: 'slot_id' });
-        } catch(e) {}
+        } catch(e) { console.warn('finishContest Supabase error:', e); }
       }
     }
   } catch(e) {}
@@ -3298,50 +3316,51 @@ function parseTime(t) {
 }
 
 // Konwertuje dowolny format czasu na sekundy (liczba zmiennoprzecinkowa)
-// Akceptuje: 1:20  1:20.5  1.20  1,20  80  80.5  120.50
+// Akceptuje: 62.12  62,12  1:02.12  1:02,12  45  45.3
 function timeToSeconds(t) {
   if (!t) return null;
   t = t.trim().replace(',', '.'); // zamień przecinek na kropkę
 
-  // Format M:SS lub M:SS.ss
+  // Format M:SS lub M:SS.ss (np. 1:02.12) — przelicz na sekundy
   const colonMatch = t.match(/^(\d+):(\d{1,2})(?:\.(\d+))?$/);
   if (colonMatch) {
     const mins = parseInt(colonMatch[1]);
     const secs = parseInt(colonMatch[2]);
     const frac = colonMatch[3] ? parseFloat('0.' + colonMatch[3]) : 0;
-    if (secs >= 60) return null; // nieprawidłowe
+    if (secs >= 60) return null;
     return mins * 60 + secs + frac;
   }
 
-  // Format dziesiętny: 80.5 lub 80 (same sekundy)
+  // Format dziesiętny: 62.12 lub 62 (same sekundy, bez limitu)
   const decMatch = t.match(/^(\d+)(?:\.(\d+))?$/);
   if (decMatch) {
-    const secs = parseFloat(t);
-    return secs;
+    return parseFloat(t);
   }
 
   return null;
 }
 
-// Normalizuje czas do formatu M:SS.ss (zawsze z minutami i dwoma miejscami po przecinku)
+// Normalizuje czas do formatu SS.ss — zawsze same sekundy, 2 miejsca po przecinku
+// Np: "1:02.12" → "62.12",  "45,3" → "45.30",  "62" → "62.00"
 function normalizeTime(t) {
   if (!t) return '';
+  t = t.trim().replace(',', '.'); // zabezpieczenie przecinka
   const sec = timeToSeconds(t);
-  if (sec === null || sec < 0) return t; // nie rozpoznano — zwróć oryginał
-  const mins  = Math.floor(sec / 60);
-  const secs  = sec % 60;
-  const secsStr = secs.toFixed(2).padStart(5, '0'); // np. "03.50"
-  return mins + ':' + secsStr;
+  if (sec === null || sec < 0) return ''; // nieprawidłowy format
+  return sec.toFixed(2); // np. 62.12, 45.30
 }
 
 function saveTime(input) {
   const id     = parseInt(input.dataset.id);
   const series = input.dataset.series;
-  const val    = input.value.trim();
+  const raw    = input.value.trim().replace(',', '.'); // zabezpieczenie przecinka
+  // Normalizuj natychmiast do SS.ss przy zapisie
+  const norm   = raw ? (normalizeTime(raw) || raw) : '';
+  if (norm !== input.value) input.value = norm;
   if (!state.times[id]) state.times[id] = {};
-  state.times[id][series] = val;
+  state.times[id][series] = norm;
   saveImmediate();
-  input.classList.toggle('is-best', !!val && isPersonalBest(id, series, val));
+  input.classList.toggle('is-best', !!norm && isPersonalBest(id, series, norm));
 }
 
 function normalizeTimeInput(input) {
@@ -3824,20 +3843,7 @@ function pairTableRowsStartList(pairs) {
 function pairTableRowsJudge(pairs, showS1) {
   let html = '';
   pairs.forEach((p, idx) => {
-    const aIsL  = p.aLane === 'L';
-    // Dla SOLO: zawodnik może być w slocie a lub b — wyznacz na podstawie rzeczywistego toru
-    let athL, athP;
-    if (isSolo) {
-      const soloId  = p.aId || p.bId;
-      const soloAth = state.athletes.find(x => x.id === soloId);
-      athL = soloLane === 'L' ? soloAth : null;
-      athP = soloLane === 'P' ? soloAth : null;
-    } else {
-      athL = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
-      athP = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
-    }
-    const s1L   = athL ? getTime(athL.id, 's1') : '';
-    const s1P   = athP ? getTime(athP.id, 's1') : '';
+    const aIsL   = p.aLane === 'L';
     const isSolo = !p.aId || !p.bId;
     const isLast = idx === pairs.length - 1;
     const rowBg  = idx % 2 === 0 ? '' : 'background:#fafafa;';
@@ -3848,6 +3854,20 @@ function pairTableRowsJudge(pairs, showS1) {
       if (p.aId) soloLane = p.aLane || 'L';
       else if (p.bId) soloLane = p.bLane || 'P';
     }
+
+    // Wyznacz zawodników na torach L i P
+    let athL, athP;
+    if (isSolo) {
+      const soloId  = p.aId || p.bId;
+      const soloAth = state.athletes.find(x => x.id === soloId);
+      athL = soloLane === 'L' ? soloAth : null;
+      athP = soloLane === 'P' ? soloAth : null;
+    } else {
+      athL = aIsL ? state.athletes.find(x => x.id === p.aId) : (p.bId ? state.athletes.find(x => x.id === p.bId) : null);
+      athP = aIsL ? (p.bId ? state.athletes.find(x => x.id === p.bId) : null) : state.athletes.find(x => x.id === p.aId);
+    }
+    const s1L = athL ? getTime(athL.id, 's1') : '';
+    const s1P = athP ? getTime(athP.id, 's1') : '';
 
     // Separator przed każdą parą (oprócz pierwszej)
     if (idx > 0) html += '<tr class="pair-sep"><td colspan="4"></td></tr>';
@@ -4641,8 +4661,8 @@ function printBiegDruz() {
   const rows = teams.map(team => {
     const athletes = getTeamAthletes(team);
     const ok = athletes.length >= TEAM_MIN_VAL();
-    const s1 = getTeamTime(team,'s1'); const s1dsq = state.teamDisq && state.teamDisq['s1_'+team];
-    const s2 = getTeamTime(team,'s2'); const s2dsq = state.teamDisq && state.teamDisq['s2_'+team];
+    const s1 = getTeamTime(team,'s1'); const s1dsq = isTeamDisq(team,'s1');
+    const s2 = getTeamTime(team,'s2'); const s2dsq = isTeamDisq(team,'s2');
     const best = teamBestTimeEffective(team);
     const bestSec = parseTime(best);
     return { team, ok, s1, s2, s1dsq, s2dsq, best, bestSec };
@@ -4693,7 +4713,7 @@ function printBiegDruz() {
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
     const rankTxt = r.rank || (r.dsq ? 'DSQ' : '—');
     html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (posIdx===1?'🥇':posIdx===2?'🥈':posIdx===3?'🥉':'') + rankTxt + '</td>' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + rankTxt + '</td>' +
       '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
       '<td class="c mono">' + s2d + '</td>' +

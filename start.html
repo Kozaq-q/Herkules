@@ -557,9 +557,9 @@ function slotCardHTML(slot) {
       '</div>' +
     '</div>' +
     '<div class="slot-actions">' +
-      '<button class="btn ' + openCls + '" onclick="openSlot(' + slot.id + ')">→ Otwórz</button>' +
-      (done ? '<button class="btn btn-green" onclick="reactivateSlot(' + slot.id + ', event)">↺ Wznów</button>' : '') +
-      '<button class="btn btn-danger" onclick="removeSlot(' + slot.id + ', event)">✕ Usuń</button>' +
+      '<button class="btn ' + openCls + '" onclick="openSlot(\'' + slot.id + '\')">→ Otwórz</button>' +
+      (done ? '<button class="btn btn-green" onclick="reactivateSlot(\'' + slot.id + '\', event)">↺ Wznów</button>' : '') +
+      '<button class="btn btn-danger" onclick="removeSlot(\'' + slot.id + '\', event)">✕ Usuń</button>' +
     '</div>' +
   '</div>';
 }
