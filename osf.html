@@ -642,6 +642,9 @@ tr:last-child > td { border-bottom: none; }
     </div>
   </div>
 
+  <!-- Podium top 3 -->
+  <div id="klas-podium" style="display:none;margin-bottom:16px;"></div>
+
   <!-- Tabela główna -->
   <div class="card">
     <div class="table-wrap">
@@ -2096,10 +2099,10 @@ function teamStartListHTML(series) {
     const okP = itemP ? (topP.length + restP.length) >= TEAM_MIN_VAL() : true;
 
     html += '<div style="margin-bottom:20px;page-break-inside:avoid;">';
-    html += '<div style="background:#000;color:#fff;padding:7px 14px;display:flex;align-items:center;gap:14px;">';
-    html += '<span style="font-size:16px;font-weight:bold;min-width:28px;">' + pairNum + '.</span>';
-    if (isSolo) html += '<span style="font-size:10px;background:#444;padding:2px 6px;letter-spacing:1px;">SOLO</span>';
-    if (isLast && !isSolo) html += '<span style="font-size:10px;background:#444;padding:2px 6px;letter-spacing:1px;">OSTATNIA PARA</span>';
+    html += '<div style="border-top:2px solid #000;border-bottom:1px solid #000;padding:5px 14px;display:flex;align-items:center;gap:14px;">';
+    html += '<span style="font-size:16px;font-weight:900;min-width:28px;">' + pairNum + '.</span>';
+    if (isSolo) html += '<span style="font-size:10px;border:1px solid #000;padding:1px 6px;letter-spacing:1px;font-weight:700;">SOLO</span>';
+    if (isLast && !isSolo) html += '<span style="font-size:10px;border:1px solid #000;padding:1px 6px;letter-spacing:1px;font-weight:700;">OSTATNIA PARA</span>';
     if (series === 's2' && !isSolo) {
       html += '<span style="margin-left:auto;font-size:10px;opacity:.7;">S1: L=' + (itemL?getTeamTime(itemL.team,'s1')||'\u2014':'\u2014') + ' \u00b7 P=' + (itemP?getTeamTime(itemP.team,'s1')||'\u2014':'\u2014') + '</span>';
     }
@@ -2107,16 +2110,16 @@ function teamStartListHTML(series) {
 
     html += '<table style="width:100%;border-collapse:collapse;"><thead><tr>';
     if (itemL) {
-      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#222;color:#fff;border-right:3px solid #fff;">';
+      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;border-bottom:2px solid #000;border-right:2px solid #000;color:#000;">';
       html += '&#9632; TOR L &nbsp;&mdash;&nbsp; <span style="text-transform:uppercase;">' + esc(itemL.team) + '</span>' + (okL?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
     } else {
-      html += '<th style="width:50%;background:#e0e0e0;color:#aaa;padding:7px 12px;">&#9632; TOR L &nbsp;&mdash;&nbsp; —</th>';
+      html += '<th style="width:50%;padding:7px 12px;border-bottom:2px solid #000;border-right:2px solid #000;color:#999;">&#9632; TOR L &nbsp;&mdash;&nbsp; —</th>';
     }
     if (itemP) {
-      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;background:#333;color:#fff;">';
+      html += '<th style="width:50%;padding:7px 12px;text-align:left;font-size:13px;font-weight:900;border-bottom:2px solid #000;color:#000;">';
       html += '&#9633; TOR P &nbsp;&mdash;&nbsp; <span style="text-transform:uppercase;">' + esc(itemP.team) + '</span>' + (okP?'':' <span style="font-weight:400;font-size:10px;color:#f88;">[DSQ]</span>') + '</th>';
     } else {
-      html += '<th style="width:50%;background:#e0e0e0;color:#aaa;padding:7px 12px;">&mdash;</th>';
+      html += '<th style="width:50%;padding:7px 12px;border-bottom:2px solid #000;color:#999;">&mdash;</th>';
     }
     html += '</tr></thead><tbody>';
 
@@ -2164,9 +2167,9 @@ function teamJudgeListHTML(series) {
     const s1P = (series === 's2' && itemP) ? (getTeamTime(itemP.team,'s1')||'\u2014') : '';
 
     html += '<div style="margin-bottom:18px;page-break-inside:avoid;">';
-    html += '<div style="background:#000;color:#fff;padding:6px 14px;font-weight:bold;font-size:15px;display:flex;align-items:center;gap:12px;">';
+    html += '<div style="border-top:2px solid #000;border-bottom:1px solid #000;padding:5px 14px;font-weight:900;font-size:15px;display:flex;align-items:center;gap:12px;">';
     html += '<span>' + pairNum + '.</span>';
-    if (isSolo) html += '<span style="font-size:10px;background:#444;padding:1px 6px;font-weight:400;">SOLO</span>';
+    if (isSolo) html += '<span style="font-size:10px;border:1px solid #000;padding:1px 6px;font-weight:700;letter-spacing:1px;">SOLO</span>';
     html += '</div>';
     html += '<table style="width:100%;border-collapse:collapse;">';
     html += '<tr>';
@@ -2178,7 +2181,7 @@ function teamJudgeListHTML(series) {
       html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemL.team) + '</div>';
       if (s1L) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1L + '</div>';
       html += '</div>';
-      html += '<div style="display:inline-block;background:#000;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;">L</div>';
+      html += '<div style="display:inline-block;border:2px solid #000;color:#000;padding:2px 8px;font-size:11px;font-weight:900;letter-spacing:1px;">L</div>';
       html += '</div>';
     } else {
       html += '<div style="color:#ccc;font-style:italic;">—</div>';
@@ -2200,7 +2203,7 @@ function teamJudgeListHTML(series) {
     html += '<td style="width:40%;padding:10px 14px;border:1px solid #ccc;text-align:left;vertical-align:middle;">';
     if (itemP) {
       html += '<div style="display:inline-flex;align-items:center;gap:10px;">';
-      html += '<div style="display:inline-block;background:#333;color:#fff;padding:2px 8px;font-size:11px;font-weight:bold;letter-spacing:1px;">P</div>';
+      html += '<div style="display:inline-block;border:2px solid #555;color:#555;padding:2px 8px;font-size:11px;font-weight:900;letter-spacing:1px;">P</div>';
       html += '<div>';
       html += '<div style="font-size:15px;font-weight:bold;">' + esc(itemP.team) + '</div>';
       if (s1P) html += '<div style="font-size:10px;color:#888;margin-top:2px;">S1: ' + s1P + '</div>';
@@ -3879,19 +3882,16 @@ function renderResultsForGender(gender, tbodyId) {
 // PDF PRINT
 // ═══════════════════════════════════════════════════
 const PDF_CSS = `
-  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }
-  h1 { font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
-  h2 { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px; }
-  .sub { font-size: 11px; color: #555; margin-bottom: 16px; }
+  @page { size: A4; margin: 12mm 14mm; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 0; }
+  h1 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 3px; border-bottom: 3px solid #000; padding-bottom: 6px; }
+  h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin: 16px 0 6px; border-bottom: 1px solid #000; padding-bottom: 3px; color: #000; }
+  .sub { font-size: 10px; color: #666; margin-bottom: 14px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  th { background: #222; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; text-align: left; }
-  td { padding: 5px 8px; border-bottom: 1px solid #ddd; font-size: 11px; }
-  tr:nth-child(even) td { background: #f5f5f5; }
-  .lane-L { background: #dce8f5; color: #1a5276; font-weight: bold; padding: 1px 5px; border-radius: 2px; }
-  .lane-P { background: #d5f5e3; color: #1a7245; font-weight: bold; padding: 1px 5px; border-radius: 2px; }
+  th { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; border-bottom: 2px solid #000; text-align: left; font-weight: 700; color: #000; }
+  td { padding: 5px 8px; border-bottom: 1px solid #ccc; font-size: 11px; }
   .pair-section { page-break-inside: avoid; margin-bottom: 12px; }
-  .pair-header { font-weight: bold; font-size: 11px; background: #f0f0f0; padding: 4px 8px; }
-  @media print { body { margin: 10mm; } }
+  @media print { body { margin: 0; } }
 `;
 
 function pdfHeader() {
@@ -4027,13 +4027,14 @@ function pairTableRowsJudge(pairs, showS1) {
 }
 
 const PAIRS_PDF_CSS = `
-  body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:12px;}
-  h1{font-size:16px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;}
-  h2{font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1.5px;margin:14px 0 4px;padding:4px 8px;background:#000;color:#fff;}
+  @page{size:A4;margin:8mm 10mm;}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:0;}
+  h1{font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;border-bottom:3px solid #000;padding-bottom:5px;}
+  h2{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:14px 0 4px;padding:3px 0;border-bottom:1px solid #000;color:#000;}
   .sub{font-size:9px;color:#666;margin-bottom:10px;}
 
   table{width:100%;border-collapse:collapse;margin-bottom:10px;}
-  th{font-size:9px;text-transform:uppercase;letter-spacing:1px;padding:6px 8px;border-bottom:2px solid #000;text-align:left;font-weight:bold;background:#000;color:#fff;}
+  th{font-size:9px;text-transform:uppercase;letter-spacing:1px;padding:6px 8px;border-top:2px solid #000;border-bottom:2px solid #000;text-align:left;font-weight:700;color:#000;}
   th.pair-num{width:28px;text-align:center;}
   th.vs-cell{width:22px;}
   th.time-wrap{width:120px;text-align:center;}
@@ -4041,39 +4042,37 @@ const PAIRS_PDF_CSS = `
   td{padding:0;vertical-align:middle;}
   .pair-row td{border-bottom:1px solid #ddd;}
   .pair-row.last td{border-bottom:2px solid #000;}
-  .pair-row:nth-child(odd) td{background:#fff;}
-  .pair-row:nth-child(even) td{background:#f5f5f5;}
 
-  td.pair-num{text-align:center;font-weight:bold;font-size:14px;width:28px;border-right:2px solid #000;padding:8px 4px;color:#333;}
-  td.pair-num .last-badge{font-size:8px;color:#333;display:block;}
-  td.lane-cell{padding:8px 12px;width:43%;}
-  td.lane-L-cell{border-right:1px solid #bbb;}
-  td.lane-P-cell{border-left:1px solid #bbb;}
-  td.vs-cell{text-align:center;font-size:9px;color:#aaa;width:22px;padding:0 2px;}
+  td.pair-num{text-align:center;font-weight:900;font-size:14px;width:28px;border-right:2px solid #000;padding:8px 4px;color:#000;}
+  td.pair-num .last-badge{font-size:8px;color:#555;display:block;}
+  td.lane-cell{padding:7px 12px;width:43%;}
+  td.lane-L-cell{border-right:1px solid #999;}
+  td.lane-P-cell{border-left:1px solid #999;}
+  td.vs-cell{text-align:center;font-size:9px;color:#888;width:22px;padding:0 2px;}
 
-  /* Lista startowa — nazwy */
-  .lane-L{display:inline-block;background:#000;color:#fff;font-weight:bold;padding:2px 6px;border-radius:2px;font-size:10px;vertical-align:middle;margin-right:4px;}
-  .lane-P{display:inline-block;background:#555;color:#fff;font-weight:bold;padding:2px 6px;border-radius:2px;font-size:10px;vertical-align:middle;margin-right:4px;}
-  strong{font-size:13px;}
-  .bib{font-size:9px;color:#666;font-style:italic;}
-  .team{font-size:10px;color:#444;margin-left:22px;display:inline-block;}
-  .solo{color:#aaa;font-style:italic;font-size:11px;}
+  /* Oznaczenia torów — ramka zamiast tła */
+  .lane-L{display:inline-block;border:2px solid #000;color:#000;font-weight:900;padding:1px 5px;border-radius:2px;font-size:10px;vertical-align:middle;margin-right:4px;letter-spacing:1px;}
+  .lane-P{display:inline-block;border:2px solid #555;color:#555;font-weight:900;padding:1px 5px;border-radius:2px;font-size:10px;vertical-align:middle;margin-right:4px;letter-spacing:1px;}
+  strong{font-size:13px;font-weight:700;}
+  .bib{font-size:9px;color:#888;font-style:italic;}
+  .team{font-size:10px;color:#555;margin-left:22px;display:inline-block;}
+  .solo{color:#888;font-style:italic;font-size:11px;}
 
-  /* Lista sędziowska — horizontal */
-  td.athlete-left{padding:12px 10px 12px 12px;text-align:right;width:42%;}
-  td.athlete-right{padding:12px 12px 12px 10px;text-align:left;width:42%;}
-  td.time-wrap{text-align:center;width:22%;padding:8px 4px;border-left:2px solid #000;border-right:2px solid #000;background:#fff;}
+  /* Lista sędziowska */
+  td.athlete-left{padding:10px 10px 10px 12px;text-align:right;width:42%;}
+  td.athlete-right{padding:10px 12px 10px 10px;text-align:left;width:42%;}
+  td.time-wrap{text-align:center;width:22%;padding:8px 4px;border-left:2px solid #000;border-right:2px solid #000;}
   .time-cell{width:54px;height:28px;border:2px solid #000;background:#fff;display:inline-block;vertical-align:middle;}
   .time-pair{display:flex;gap:4px;justify-content:center;align-items:center;}
-  .athlete-name{font-weight:bold;font-size:14px;display:block;line-height:1.2;}
-  .athlete-team{font-size:10px;color:#555;display:block;margin-top:3px;font-style:italic;}
+  .athlete-name{font-weight:700;font-size:14px;display:block;line-height:1.2;}
+  .athlete-team{font-size:10px;color:#666;display:block;margin-top:3px;}
   .athlete-s1{font-family:monospace;font-size:10px;color:#666;display:block;margin-top:2px;}
-  .lane-badge-L{display:inline-block;background:#000;color:#fff;font-weight:bold;padding:3px 7px;border-radius:2px;font-size:11px;margin-left:6px;vertical-align:middle;letter-spacing:1px;}
-  .lane-badge-P{display:inline-block;background:#555;color:#fff;font-weight:bold;padding:3px 7px;border-radius:2px;font-size:11px;margin-right:6px;vertical-align:middle;letter-spacing:1px;}
-  /* Większy odstęp między parami */
-  .pair-row td { border-bottom: 1px solid #ccc; }
-  .pair-sep td { border-bottom: 4px solid #000; padding: 0; height: 6px; background: #fff; }
-  .pair-row:last-child td { border-bottom: 2px solid #000; }
+  /* Oznaczenia L/P w liście sędziowskiej — ramka */
+  .lane-badge-L{display:inline-block;border:2px solid #000;color:#000;font-weight:900;padding:2px 7px;border-radius:2px;font-size:11px;margin-left:6px;vertical-align:middle;letter-spacing:1px;}
+  .lane-badge-P{display:inline-block;border:2px solid #555;color:#555;font-weight:900;padding:2px 7px;border-radius:2px;font-size:11px;margin-right:6px;vertical-align:middle;letter-spacing:1px;}
+  .pair-row td{border-bottom:1px solid #ccc;}
+  .pair-sep td{border-bottom:3px solid #000;padding:0;height:5px;}
+  .pair-row:last-child td{border-bottom:2px solid #000;}
 
   @media print{@page{size:A4;margin:8mm}body{margin:0;padding:8px;}}
 `;
@@ -4143,30 +4142,29 @@ function printS2JudgeList(gender) {
 }
 
 const RESULTS_PDF_CSS = `
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 14px; }
-  h1 { font-size: 17px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px; }
-  h2 { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 10px; padding: 5px 8px; background: #000; color: #fff; }
-  .sub { font-size: 9px; color: #555; margin-bottom: 12px; }
+  @page { size: A4; margin: 10mm 12mm; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; }
+  h1 { font-size: 17px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px; border-bottom: 3px solid #000; padding-bottom: 5px; }
+  h2 { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin: 14px 0 6px; border-bottom: 1px solid #000; padding-bottom: 3px; color: #000; }
+  .sub { font-size: 9px; color: #666; margin-bottom: 12px; }
   table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  th { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; border-bottom: 2px solid #000; text-align: left; font-weight: bold; background: #000; color: #fff; }
+  th { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 8px; border-top: 2px solid #000; border-bottom: 2px solid #000; text-align: left; font-weight: 700; color: #000; }
   td { padding: 0; vertical-align: middle; border-bottom: 1px solid #ddd; }
-  tr:nth-child(even) td { background: #f8f8f8; }
-  .rank-cell { width: 36px; text-align: center; font-weight: bold; font-size: 15px; border-right: 2px solid #000; padding: 8px 4px; }
-  .name-cell { padding: 8px 10px; font-size: 12px; font-weight: bold; }
-  .team-cell { padding: 8px 10px; font-size: 10px; color: #444; }
-  .time-cell { padding: 8px 10px; font-family: monospace; font-size: 11px; text-align: center; }
-  .best-cell { padding: 8px 10px; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; border-left: 2px solid #000; }
-  /* TOP 3 — czarne tło, biały tekst */
-  tr.top1 td { background: #000 !important; color: #fff !important; border-bottom: 1px solid #666; }
-  tr.top2 td { background: #222 !important; color: #fff !important; border-bottom: 1px solid #666; }
-  tr.top3 td { background: #333 !important; color: #fff !important; border-bottom: 1px solid #666; }
-  tr.top1 .team-cell, tr.top2 .team-cell, tr.top3 .team-cell { color: #fff !important; }
-  tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
-  tr.top1 .dsq, tr.top2 .dsq, tr.top3 .dsq { color: #ccc !important; }
-  tr.top1 .dsq-label, tr.top2 .dsq-label, tr.top3 .dsq-label { color: #ccc !important; }
-  .dsq { text-decoration: line-through; color: #888; font-size: 10px; }
-  .dsq-label { font-size: 9px; color: #888; margin-left: 4px; }
-  @media print { @page { size: A4; margin: 10mm; } body { margin: 0; padding: 8px; } }
+  .rank-cell { width: 40px; text-align: center; font-weight: 900; font-size: 15px; border-right: 2px solid #000; padding: 8px 4px; color: #000; }
+  .name-cell { padding: 7px 10px; font-size: 12px; font-weight: 700; color: #000; }
+  .team-cell { padding: 7px 10px; font-size: 10px; color: #555; }
+  .time-cell { padding: 7px 10px; font-family: monospace; font-size: 11px; text-align: center; color: #000; }
+  .best-cell { padding: 7px 10px; font-family: monospace; font-size: 14px; font-weight: 900; text-align: center; border-left: 2px solid #000; color: #000; }
+  /* TOP 3 — pogrubienie i podkreślenie zamiast tła */
+  tr.top1 .rank-cell { font-size: 18px; }
+  tr.top1 .name-cell { font-size: 13px; }
+  tr.top1 .best-cell { font-size: 16px; }
+  tr.top1 td, tr.top2 td, tr.top3 td { border-bottom: 1px solid #bbb; }
+  tr.top1 td { border-top: 2px solid #000; }
+  tr.top3 td { border-bottom: 2px solid #000; }
+  .dsq { text-decoration: line-through; color: #999; font-size: 10px; }
+  .dsq-label { font-size: 9px; color: #999; margin-left: 4px; }
+  @media print { body { margin: 0; } }
 `;
 
 function printResultsGender(gender) {
@@ -4565,6 +4563,49 @@ function renderKlasyfikacja() {
   const N_team = rankedTeams.filter(r => r.rank !== null).length;
   const mult   = getMultiplier();
 
+  // ── Podium top 3 ──────────────────────────────────
+  const podiumEl = document.getElementById('klas-podium');
+  if (podiumEl) {
+    const top3 = result.slice(0, 3);
+    if (top3.length >= 2) {
+      // Układ podium: 2. po lewej, 1. pośrodku (wyższy), 3. po prawej
+      const places = [
+        top3[1] ? { r: top3[1], place: 2, medal: '🥈', height: '110px', label: '2. miejsce' } : null,
+        top3[0] ? { r: top3[0], place: 1, medal: '🥇', height: '140px', label: '1. miejsce' } : null,
+        top3[2] ? { r: top3[2], place: 3, medal: '🥉', height: '90px',  label: '3. miejsce' } : null,
+      ].filter(Boolean);
+
+      const borderColors = { 1: 'var(--accent)', 2: 'var(--text3)', 3: 'var(--orange)' };
+      const rankColors   = { 1: 'var(--accent)', 2: 'var(--text2)', 3: 'var(--orange)' };
+
+      podiumEl.style.display = 'flex';
+      podiumEl.style.cssText = 'display:flex;gap:4px;align-items:flex-end;margin-bottom:16px;';
+      podiumEl.innerHTML = places.map(p => {
+        if (!p) return '<div style="flex:1;"></div>';
+        const r = p.r;
+        const isFirst = p.place === 1;
+        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;">' +
+          // Etykieta miejsca nad słupkiem
+          '<div style="font-family:var(--font-m);font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">' + p.label + '</div>' +
+          // Karta zawodnika
+          '<div style="width:100%;background:var(--bg2);border:' + (isFirst ? '2px' : '1px') + ' solid ' + borderColors[p.place] + ';border-radius:var(--radius);padding:' + (isFirst ? '20px 16px' : '14px 12px') + ';text-align:center;">' +
+            '<div style="font-size:' + (isFirst ? '40px' : '30px') + ';line-height:1;margin-bottom:8px;">' + p.medal + '</div>' +
+            '<div style="font-family:var(--font-h);font-size:' + (isFirst ? '22px' : '18px') + ';font-weight:800;color:var(--text1);line-height:1.2;margin-bottom:4px;">' + esc(r.team) + '</div>' +
+            '<div style="font-family:var(--font-h);font-size:' + (isFirst ? '32px' : '26px') + ';font-weight:900;color:' + rankColors[p.place] + ';line-height:1;margin-top:8px;">' + r.total + '</div>' +
+            '<div style="font-size:9px;color:var(--text3);margin-top:2px;letter-spacing:1px;">PKT</div>' +
+            '<div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:var(--font-m);">' + r.indPts + ' + ' + r.teamPts + '</div>' +
+          '</div>' +
+          // Słupek podium
+          '<div style="width:100%;height:' + p.height + ';background:var(--bg3);border:1px solid ' + borderColors[p.place] + ';border-top:none;display:flex;align-items:center;justify-content:center;">' +
+            '<div style="font-family:var(--font-h);font-size:' + (isFirst ? '48px' : '36px') + ';font-weight:900;color:' + borderColors[p.place] + ';opacity:.3;">' + p.place + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } else {
+      podiumEl.style.display = 'none';
+    }
+  }
+
   // Formuły
   const fInd  = document.getElementById('klas-formula-ind');
   const fTeam = document.getElementById('klas-formula-team');
@@ -4624,65 +4665,63 @@ function renderKlasyfikacja() {
 }
 
 const PREMIUM_PDF_CSS = `
-  @page { size: A4 portrait; margin: 0; }
+  @page { size: A4 portrait; margin: 10mm 12mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; color: #000; background: #fff; width: 210mm; min-height: 297mm; padding: 12mm 14mm 10mm; }
+  body { font-family: Arial, sans-serif; color: #000; background: #fff; }
 
   .doc-header { border-bottom: 4px solid #000; padding-bottom: 8px; margin-bottom: 14px; display: flex; align-items: flex-end; justify-content: space-between; }
   .doc-title { font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; line-height: 1; }
   .doc-subtitle { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #555; margin-top: 4px; }
-  .doc-meta { font-size: 9px; color: #888; text-align: right; line-height: 1.6; }
+  .doc-meta { font-size: 9px; color: #777; text-align: right; line-height: 1.6; }
 
   table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #000; color: #fff; }
-  thead th { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; padding: 8px 10px; text-align: left; }
+  thead th { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; padding: 7px 10px; text-align: left; border-top: 2px solid #000; border-bottom: 2px solid #000; color: #000; }
   thead th.r { text-align: right; }
   thead th.c { text-align: center; }
 
-  tbody tr { border-bottom: 1px solid #e0e0e0; }
-  tbody tr:nth-child(even):not(.top1):not(.top2):not(.top3) td { background: #f7f7f7; }
-  tbody td { padding: 9px 10px; font-size: 12px; vertical-align: middle; }
+  tbody tr { border-bottom: 1px solid #ddd; }
+  tbody td { padding: 8px 10px; font-size: 12px; vertical-align: middle; color: #000; }
   tbody td.r { text-align: right; }
   tbody td.c { text-align: center; }
 
-  .rank-col { width: 52px; text-align: center; font-weight: 900; font-size: 16px; border-right: 3px solid #000; padding: 9px 6px; }
+  .rank-col { width: 52px; text-align: center; font-weight: 900; font-size: 16px; border-right: 2px solid #000; padding: 8px 6px; color: #000; }
   .mono { font-family: monospace; }
-  .small { font-size: 10px; color: #555; }
+  .small { font-size: 10px; color: #666; }
   .bold { font-weight: 700; }
-  .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
-
-  /* TOP 3 — wszystko białe, czarne tło */
-  tr.top1 td, tr.top2 td, tr.top3 td { color: #fff !important; }
-  tr.top1 td { background: #000 !important; border-bottom: 1px solid #444; }
-  tr.top2 td { background: #1a1a1a !important; border-bottom: 1px solid #444; }
-  tr.top3 td { background: #333 !important; border-bottom: 1px solid #555; }
-  tr.top1 span, tr.top2 span, tr.top3 span { color: #fff !important; }
-  tr.top1 .rank-col, tr.top2 .rank-col, tr.top3 .rank-col { border-right-color: #555; }
-  .small { font-size: 10px; color: #555; }
-  tr.top1 .small, tr.top2 .small, tr.top3 .small { color: #ccc !important; }
-  .bib { font-size: 9px; color: #aaa; margin-left: 4px; }
-  tr.top1 .bib, tr.top2 .bib, tr.top3 .bib { color: #ccc !important; }
+  .bib { font-size: 9px; color: #999; margin-left: 4px; }
   .medal { font-size: 18px; display: block; line-height: 1; }
 
-  .dsq { text-decoration: line-through; opacity: .5; }
-  .dsq-label { font-size: 9px; margin-left: 3px; opacity: .7; }
+  /* TOP 3 — grubsza czcionka i ramki zamiast tła */
+  tr.top1 td { border-top: 2px solid #000; }
+  tr.top3 td { border-bottom: 2px solid #000; }
+  tr.top1 .rank-col { font-size: 20px; }
+  tr.top1 .bold { font-size: 13px; }
+  tr.top1 .mono { font-size: 14px; }
+  tr.top1 td, tr.top2 td, tr.top3 td { border-bottom: 1px solid #bbb; }
 
-  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; background: #000; color: #fff; padding: 5px 10px; margin: 16px 0 0; }
+  .dsq { text-decoration: line-through; color: #999; }
+  .dsq-label { font-size: 9px; margin-left: 3px; color: #999; }
 
-  /* Duże wyróżnienie top3 — tryb "pełna strona" */
-  .podium-block { display: flex; gap: 0; border: 3px solid #000; margin-bottom: 16px; overflow: hidden; }
-  .podium-place { flex: 1; padding: 16px 14px; border-right: 2px solid #000; }
-  .podium-place:last-child { border-right: none; }
-  .podium-place.p1 { background: #000; color: #fff; flex: 1.15; }
-  .podium-place.p2 { background: #1a1a1a; color: #fff; }
-  .podium-place.p3 { background: #333; color: #fff; }
-  .podium-rank { font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
-  .podium-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; line-height: 1.2; }
-  .podium-team { font-size: 10px; opacity: .7; margin-bottom: 6px; }
-  .podium-time { font-family: monospace; font-size: 20px; font-weight: 900; letter-spacing: 1px; }
-  .podium-pts { font-size: 10px; opacity: .7; margin-top: 3px; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #000; padding: 4px 0 3px; margin: 16px 0 0; color: #000; }
 
-  @media print { body { padding: 10mm 12mm 8mm; } }
+  /* Podium — kolejność bloków: p2 (lewy), p1 (środkowy, wyższy), p3 (prawy) */
+  .podium-block { display: flex; gap: 0; margin-bottom: 16px; align-items: flex-end; }
+  .podium-place { flex: 1; padding: 12px 12px; border: 1px solid #ccc; border-right: none; }
+  .podium-place:last-child { border-right: 1px solid #ccc; }
+  /* 1. miejsce — środkowy, wyższy, grubsza ramka */
+  .podium-place.p1 { flex: 1.2; border: 2px solid #000; padding: 20px 16px; border-right: 2px solid #000; }
+  /* 2. i 3. miejsce — niższe */
+  .podium-place.p2, .podium-place.p3 { padding-bottom: 12px; }
+  .podium-rank { font-size: 28px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .podium-place.p1 .podium-rank { font-size: 36px; }
+  .podium-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; line-height: 1.2; color: #000; }
+  .podium-place.p1 .podium-name { font-size: 16px; }
+  .podium-team { font-size: 10px; color: #666; margin-bottom: 6px; }
+  .podium-time { font-family: monospace; font-size: 17px; font-weight: 900; letter-spacing: 1px; color: #000; }
+  .podium-place.p1 .podium-time { font-size: 22px; }
+  .podium-pts { font-size: 10px; color: #666; margin-top: 3px; }
+
+  @media print { body { } }
 `;
 
 function _pdfHeader(title, subtitle) {
@@ -4714,15 +4753,18 @@ function _printInd(gender) {
   const medals = ['🥇','🥈','🥉'];
   let rank = 1;
 
-  // Podium top3
+  // Podium top3 — kolejność: 2. po lewej, 1. pośrodku, 3. po prawej
   const top3 = ranked.filter(r => r.bestSec !== Infinity).slice(0,3);
   let podium = '';
-  if (top3.length) {
+  if (top3.length >= 2) {
+    const podiumOrder = [top3[1]||null, top3[0]||null, top3[2]||null]; // 2, 1, 3
+    const podiumCls   = ['p2', 'p1', 'p3'];
+    const podiumMedal = ['🥈','🥇','🥉'];
     podium = '<div class="podium-block">';
-    top3.forEach((r, i) => {
-      const cls = 'p' + (i+1);
-      podium += '<div class="podium-place ' + cls + '">' +
-        '<div class="podium-rank">' + medals[i] + '</div>' +
+    podiumOrder.forEach((r, i) => {
+      if (!r) { podium += '<div class="podium-place ' + podiumCls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + podiumCls[i] + '">' +
+        '<div class="podium-rank">' + podiumMedal[i] + '</div>' +
         '<div class="podium-name">' + esc(displayName(r.athlete)) + '</div>' +
         '<div class="podium-team">' + esc(r.athlete.team) + '</div>' +
         '<div class="podium-time">' + (r.best||'—') + '</div>' +
@@ -4791,16 +4833,19 @@ function printBiegDruz() {
     return { ...r, rank, dsq, noBest };
   });
 
-  // Podium
+  // Podium — kolejność: 2. po lewej, 1. pośrodku, 3. po prawej
   const top3 = ranked.filter(r => r.rank && r.rank <= 3);
   let podium = '';
-  if (top3.length) {
+  if (top3.length >= 2) {
+    const p1 = top3.find(r => r.rank===1), p2 = top3.find(r => r.rank===2), p3 = top3.find(r => r.rank===3)||null;
+    const podiumOrder = [p2, p1, p3];
+    const podiumCls   = ['p2','p1','p3'];
+    const podiumMedal = ['🥈','🥇','🥉'];
     podium = '<div class="podium-block">';
-    top3.forEach(r => {
-      const i = r.rank - 1;
-      const cls = 'p' + r.rank;
-      podium += '<div class="podium-place ' + cls + '">' +
-        '<div class="podium-rank">' + medals[i] + '</div>' +
+    podiumOrder.forEach((r, i) => {
+      if (!r) { podium += '<div class="podium-place ' + podiumCls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + podiumCls[i] + '">' +
+        '<div class="podium-rank">' + podiumMedal[i] + '</div>' +
         '<div class="podium-name">' + esc(r.team) + '</div>' +
         '<div class="podium-time">' + (r.best||'—') + '</div>' +
         '</div>';
@@ -4844,14 +4889,18 @@ function printKlasyfikacjaPDF() {
   const N_team = rankedTeams.filter(r => r.rank !== null).length;
   const medals = ['🥇','🥈','🥉'];
 
-  // Podium klasyfikacji końcowej
+  // Podium klasyfikacji — kolejność: 2. po lewej, 1. pośrodku, 3. po prawej
   const top3 = result.slice(0,3);
   let podium = '';
-  if (top3.length) {
+  if (top3.length >= 2) {
+    const podiumOrder = [top3[1]||null, top3[0]||null, top3[2]||null];
+    const podiumCls   = ['p2','p1','p3'];
+    const podiumMedal = ['🥈','🥇','🥉'];
     podium = '<div class="podium-block">';
-    top3.forEach((r, i) => {
-      podium += '<div class="podium-place p' + (i+1) + '">' +
-        '<div class="podium-rank">' + medals[i] + '</div>' +
+    podiumOrder.forEach((r, i) => {
+      if (!r) { podium += '<div class="podium-place ' + podiumCls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + podiumCls[i] + '">' +
+        '<div class="podium-rank">' + podiumMedal[i] + '</div>' +
         '<div class="podium-name">' + esc(r.team) + '</div>' +
         '<div class="podium-pts">' + r.indPts + ' + ' + r.teamPts + ' pkt</div>' +
         '<div class="podium-time">' + r.total + ' PKT</div>' +
