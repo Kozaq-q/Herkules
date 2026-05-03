@@ -3325,39 +3325,61 @@ function parseTime(t) {
   return sec === null ? Infinity : sec;
 }
 
-// Konwertuje dowolny format czasu na sekundy (liczba zmiennoprzecinkowa)
-// Akceptuje: 62.12  62,12  1:02.12  1:02,12  45  45.3
+// Konwertuje dowolny format czasu na sekundy.
+// Agresywnie czyści brudne wejście — usuwa litery, spacje, nadmiarowe znaki.
+// Akceptuje m.in: 62.12  62,12  62-12  62.  .12  1:02.12  45  45.3  62.123
 function timeToSeconds(t) {
   if (!t) return null;
-  t = t.trim().replace(',', '.'); // zamień przecinek na kropkę
+  t = t.trim();
 
-  // Format M:SS lub M:SS.ss (np. 1:02.12) — przelicz na sekundy
-  const colonMatch = t.match(/^(\d+):(\d{1,2})(?:\.(\d+))?$/);
-  if (colonMatch) {
-    const mins = parseInt(colonMatch[1]);
-    const secs = parseInt(colonMatch[2]);
-    const frac = colonMatch[3] ? parseFloat('0.' + colonMatch[3]) : 0;
-    if (secs >= 60) return null;
-    return mins * 60 + secs + frac;
+  // Zamień wszystkie separatory dziesiętne (przecinek, myślnik) na kropkę
+  t = t.replace(/,/g, '.').replace(/-/g, '.');
+
+  // Usuń wszystko co nie jest cyfrą, kropką lub dwukropkiem
+  t = t.replace(/[^\d.:]/g, '');
+
+  // Sprowadź wielokrotne kropki do jednej (np. "62..12" → "62.12", "1.02.12" → "102.12")
+  // Zachowaj dwukropek jako separator minut jeśli jest
+  if (t.includes(':')) {
+    // Format M:SS lub M:SS.ss — usuń nadmiarowe kropki w każdym członie
+    const parts = t.split(':');
+    const mins = parts[0].replace(/\./g, '');
+    const rest = parts.slice(1).join('').replace(/\.(?=.*\.)/g, ''); // zostaw ostatnią kropkę
+    t = mins + ':' + rest;
+    const colonMatch = t.match(/^(\d+):(\d{1,2})(?:\.(\d+))?$/);
+    if (colonMatch) {
+      const mins2 = parseInt(colonMatch[1]);
+      const secs  = parseInt(colonMatch[2]);
+      const frac  = colonMatch[3] ? parseFloat('0.' + colonMatch[3]) : 0;
+      if (secs >= 60) return null;
+      return mins2 * 60 + secs + frac;
+    }
+    return null;
   }
 
-  // Format dziesiętny: 62.12 lub 62 (same sekundy, bez limitu)
-  const decMatch = t.match(/^(\d+)(?:\.(\d+))?$/);
-  if (decMatch) {
-    return parseFloat(t);
+  // Usuń nadmiarowe kropki — zostaw tylko pierwszą
+  const firstDot = t.indexOf('.');
+  if (firstDot !== -1) {
+    t = t.slice(0, firstDot + 1) + t.slice(firstDot + 1).replace(/\./g, '');
   }
 
-  return null;
+  // Obsłuż przypadek samej części dziesiętnej: ".12" → "0.12"
+  if (t.startsWith('.')) t = '0' + t;
+
+  // Usuń samotną kropkę na końcu: "62." → "62"
+  if (t.endsWith('.')) t = t.slice(0, -1);
+
+  if (!t || !/^\d+(\.\d+)?$/.test(t)) return null;
+  return parseFloat(t);
 }
 
-// Normalizuje czas do formatu SS.ss — zawsze same sekundy, 2 miejsca po przecinku
-// Np: "1:02.12" → "62.12",  "45,3" → "45.30",  "62" → "62.00"
+// Normalizuje czas do formatu SS.ss — zawsze same sekundy, 2 miejsca po przecinku.
+// Np: "1:02.12"→"62.12"  "45,3"→"45.30"  "62."→"62.00"  "62-12"→"62.12"  ".5"→"0.50"
 function normalizeTime(t) {
   if (!t) return '';
-  t = t.trim().replace(',', '.'); // zabezpieczenie przecinka
   const sec = timeToSeconds(t);
-  if (sec === null || sec < 0) return ''; // nieprawidłowy format
-  return sec.toFixed(2); // np. 62.12, 45.30
+  if (sec === null || sec < 0) return '';
+  return sec.toFixed(2);
 }
 
 function saveTime(input) {
