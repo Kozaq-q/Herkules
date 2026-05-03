@@ -294,7 +294,8 @@ tr:last-child > td { border-bottom: none; }
   </div>
   <div class="header-right">
     <span class="header-contest-name" id="header-contest-name"></span>
-    <span class="header-autosave" id="header-autosave">● zapisano</span>
+    <span class="header-autosave" id="header-autosave">● łączenie...</span>
+    <span id="rt-status" style="font-family:var(--font-m);font-size:10px;margin-left:8px;padding:2px 6px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);">RT: ...</span>
     <div style="position:relative;display:flex;gap:0;">
       <button class="btn btn-sm" onclick="openProjektor()" title="Otwórz projektor" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-right:none;border-radius:var(--radius) 0 0 var(--radius);">📺 Projektor</button>
       <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-radius:0 var(--radius) var(--radius) 0;padding:0 8px;">⚙</button>
@@ -1305,48 +1306,43 @@ function getSupabase() {
   return _supabaseClient;
 }
 
-// Debounced save — czeka 300ms po ostatniej zmianie przed wysłaniem
+// Debounced save — czeka 1.5s po ostatniej zmianie przed wysłaniem
 let _saveTimer = null;
 let _isSaving = false;
+let _lastSavedJson = '';
 
 function scheduleSave() {
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    _saveTimer = null;
-    saveToSupabase();
-  }, 300);
+  _saveTimer = setTimeout(() => { _saveTimer = null; saveToSupabase(); }, 300);
+}
+
+function saveImmediate() {
+  clearTimeout(_saveTimer);
+  _saveTimer = null;
+  if (_isSaving) { scheduleSave(); return; }
+  saveToSupabase();
 }
 
 async function saveToSupabase() {
-  if (_isSaving) {
-    scheduleSave();
-    return;
-  }
+  if (_isSaving) { scheduleSave(); return; }
   _isSaving = true;
   try {
     const db = getSupabase();
     const now = new Date().toISOString();
     state._savedAt = now;
     const stateJson = JSON.stringify(state);
-    _lastPollJson = stateJson; // aktualizuj cache pollingu — nie aplikuj własnych zmian
-    const payload = {
-      slot_id:    STORAGE_KEY,
-      state_json: stateJson,
-      updated_at: now
-    };
+    _lastSavedJson = stateJson;
+    const payload = { slot_id: STORAGE_KEY, state_json: stateJson, updated_at: now };
     const { error } = await db.from('osf_state').upsert(payload, { onConflict: 'slot_id' });
     const el = document.getElementById('header-autosave');
     if (error) {
       console.error('Supabase save error:', error);
       if (el) el.textContent = '⚠ BŁĄD SYNC';
     } else {
-      if (el) el.textContent = '● zapisano';
+      if (el) { el.textContent = '● zapisano'; el.style.color = ''; }
     }
-  } catch(e) {
-    console.error('Supabase save exception:', e);
-  } finally {
-    _isSaving = false;
-  }
+  } catch(e) { console.error('Supabase save exception:', e); }
+  finally { _isSaving = false; }
 }
 
 async function loadFromSupabase() {
@@ -1392,9 +1388,9 @@ async function loadFromSupabase() {
 
 // Zabezpieczenie przed utratą danych przy zamknięciu zakładki
 window.addEventListener('beforeunload', () => {
-  if (_saveTimer || _isSaving) {
+  if (_saveTimer) {
     clearTimeout(_saveTimer);
-    _saveTimer = null;
+    // Próba synchronicznego wysłania (best-effort, przeglądarka może to uciąć)
     const payload = JSON.stringify({
       slot_id:    STORAGE_KEY,
       state_json: JSON.stringify(state),
@@ -1405,22 +1401,19 @@ window.addEventListener('beforeunload', () => {
           SUPABASE_URL + '/rest/v1/osf_state',
           new Blob([payload], { type: 'application/json' })
         )
-      : saveToSupabase();
+      : saveToSupabase(); // fallback async
   }
 });
 
-// Real-time — odświeżanie gdy ktoś inny wpisze dane
-let _realtimeChannel = null;
+// ── Aplikuj stan z zewnątrz (Realtime lub polling) ───────────────────
 let _applyingRemote = false;
-
 function _applyRemoteState(stateJson) {
   if (_applyingRemote) return;
-  // Nie nadpisuj jeśli właśnie trwa nasz zapis — za chwilę nasz stan wygra
-  if (_isSaving || _immediateTimer || _immediatePending) return;
+  if (_isSaving) return; // nasz zapis w toku — wygra jako późniejszy
+  if (stateJson === _lastSavedJson) return; // to nasze własne dane — ignoruj
   _applyingRemote = true;
   try {
-    const incoming = JSON.parse(stateJson);
-    state = incoming;
+    state = JSON.parse(stateJson);
     ensureStateDefaults();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     const activePage = document.querySelector('.page.active');
@@ -1432,54 +1425,46 @@ function _applyRemoteState(stateJson) {
     else if (id === 'page-druzynowy')    renderTeamView();
     else if (id === 'page-klasyfikacja') renderKlasyfikacja();
     const el = document.getElementById('header-autosave');
-    if (el) { el.textContent = '↓ SYNC'; el.style.color = 'var(--green)'; setTimeout(() => { el.textContent = '● zapisano'; el.style.color = ''; }, 2000); }
-  } catch(e) { console.error('Realtime parse error:', e); }
-  finally { setTimeout(() => { _applyingRemote = false; }, 50); }
+    if (el) { el.textContent = '↓ SYNC'; el.style.color = 'var(--accent)'; setTimeout(() => { if (el) { el.textContent = '● zapisano'; el.style.color = ''; } }, 1500); }
+  } catch(e) { console.error('Remote state parse error:', e); }
+  finally { setTimeout(() => { _applyingRemote = false; }, 100); }
 }
 
+// ── Realtime ──────────────────────────────────────────────────────────
+let _realtimeChannel = null;
 function startRealtimeSync() {
   if (_realtimeChannel) return;
   const db = getSupabase();
+  const rtEl = document.getElementById('rt-status');
+  if (rtEl) rtEl.textContent = 'RT: łączę...';
   _realtimeChannel = db
-    .channel('osf_state_changes_' + STORAGE_KEY)
+    .channel('osf_rt_' + STORAGE_KEY)
     .on('postgres_changes',
-      { event: '*', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
+      { event: 'UPDATE', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
       (payload) => {
-        if (payload.new && payload.new.state_json) {
-          _applyRemoteState(payload.new.state_json);
-        }
+        if (rtEl) { rtEl.textContent = 'RT: ↓'; rtEl.style.color = 'var(--accent)'; setTimeout(() => { if (rtEl) { rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)'; } }, 800); }
+        if (payload.new && payload.new.state_json) _applyRemoteState(payload.new.state_json);
       }
     )
     .subscribe((status) => {
-      const el = document.getElementById('header-autosave');
-      if (status === 'SUBSCRIBED') {
-        if (el) { el.textContent = '● live'; el.style.color = 'var(--green)'; }
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        if (el) { el.textContent = '⚠ offline (poll 5s)'; el.style.color = 'var(--orange)'; }
-        // Próba reconnect
-        setTimeout(() => {
-          _realtimeChannel = null;
-          startRealtimeSync();
-        }, 5000);
+      if (!rtEl) return;
+      if (status === 'SUBSCRIBED')     { rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)'; }
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        rtEl.textContent = 'RT: błąd'; rtEl.style.color = 'var(--red)';
+        setTimeout(() => { _realtimeChannel = null; startRealtimeSync(); }, 5000);
       }
     });
 }
 
-// Polling co 2s — niezawodny fallback gdy Realtime nie działa
+// ── Polling co 2s — fallback gdy Realtime nie działa ─────────────────
 let _pollTimer = null;
 let _lastPollJson = '';
 function startPolling() {
   if (_pollTimer) return;
   _pollTimer = setInterval(async () => {
-    // Nie nadpisuj jeśli właśnie trwa nasz własny zapis
-    if (_isSaving || _immediateTimer || _immediatePending) return;
+    if (_isSaving) return;
     try {
-      const db = getSupabase();
-      const { data } = await db
-        .from('osf_state')
-        .select('state_json')
-        .eq('slot_id', STORAGE_KEY)
-        .single();
+      const { data } = await getSupabase().from('osf_state').select('state_json').eq('slot_id', STORAGE_KEY).single();
       if (!data || !data.state_json) return;
       if (data.state_json !== _lastPollJson) {
         _lastPollJson = data.state_json;
@@ -1492,44 +1477,7 @@ function startPolling() {
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   document.getElementById('header-autosave').textContent = '● zapisano';
-  scheduleSave(); // wyślij też do Supabase z debouncingiem
-}
-
-// Natychmiastowy zapis do Supabase — używany przy wpisywaniu wyników
-// Throttle 200ms: wysyła natychmiast, ale kolejny zapis czeka max 200ms
-let _immediateTimer = null;
-let _immediatePending = false;
-
-function saveImmediate() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  clearTimeout(_saveTimer); // anuluj debounce — przejął kontrolę saveImmediate
-  _saveTimer = null;
-
-  if (_isSaving) {
-    // Trwa zapis — zaplanuj zapis po jego zakończeniu
-    _immediatePending = true;
-    return;
-  }
-  if (_immediateTimer) {
-    // Throttle aktywny — zaplanuj zapis po wygaśnięciu
-    _immediatePending = true;
-    return;
-  }
-
-  // Wyślij natychmiast
-  _doImmediateSave();
-}
-
-async function _doImmediateSave() {
-  _immediateTimer = setTimeout(() => {
-    _immediateTimer = null;
-    if (_immediatePending) {
-      _immediatePending = false;
-      _doImmediateSave(); // wyślij zaległe zmiany
-    }
-  }, 200);
-
-  await saveToSupabase();
+  scheduleSave();
 }
 
 function ensureStateDefaults() {
@@ -1718,8 +1666,9 @@ function saveTeamTime(input) {
   const val    = input.value.trim();
   if (!state.teamTimes[team]) state.teamTimes[team] = {};
   state.teamTimes[team][series] = val;
-  saveImmediate(); // natychmiast do Supabase
+  saveImmediate();
   renderTeamResults();
+  // Odśwież klasyfikację jeśli aktywna
   if (document.getElementById('page-klasyfikacja') &&
       document.getElementById('page-klasyfikacja').classList.contains('active')) {
     renderKlasyfikacja();
@@ -3376,7 +3325,7 @@ function saveTime(input) {
   const val    = input.value.trim();
   if (!state.times[id]) state.times[id] = {};
   state.times[id][series] = val;
-  saveImmediate(); // natychmiast do Supabase
+  saveImmediate();
   input.classList.toggle('is-best', !!val && isPersonalBest(id, series, val));
 }
 
@@ -3386,12 +3335,13 @@ function normalizeTimeInput(input) {
   const norm = normalizeTime(val);
   if (norm && norm !== val) {
     input.value = norm;
+    // zaktualizuj też w state
     if (input.dataset.id) {
       const id     = parseInt(input.dataset.id);
       const series = input.dataset.series;
       if (!state.times[id]) state.times[id] = {};
       state.times[id][series] = norm;
-      saveImmediate();
+      save();
       input.classList.toggle('is-best', isPersonalBest(id, series, norm));
     }
     if (input.dataset.team) {
@@ -3399,9 +3349,10 @@ function normalizeTimeInput(input) {
       const series = input.dataset.series;
       if (!state.teamTimes[team]) state.teamTimes[team] = {};
       state.teamTimes[team][series] = norm;
-      saveImmediate();
+      save();
     }
   } else if (!norm && val) {
+    // nieprawidłowy format — podświetl na czerwono
     input.style.borderColor = 'var(--red)';
     setTimeout(() => { input.style.borderColor = ''; }, 1500);
   }
