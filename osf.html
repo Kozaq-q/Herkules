@@ -1693,16 +1693,26 @@ function teamBestTime(team) {
 }
 
 function saveTeamTime(input) {
+  // oninput — zapisz surową wartość, bez normalizacji
   const team   = input.dataset.team;
   const series = input.dataset.series;
-  const val    = input.value.trim();
   if (!state.teamTimes[team]) state.teamTimes[team] = {};
-  state.teamTimes[team][series] = val;
+  state.teamTimes[team][series] = input.value;
+  scheduleSave();
+}
+
+function commitTeamTime(input) {
+  // onblur / Enter — normalizuj i zapisz finalnie
+  const team   = input.dataset.team;
+  const series = input.dataset.series;
+  const raw    = input.value.trim().replace(',', '.');
+  const norm   = raw ? (normalizeTime(raw) || raw) : '';
+  input.value  = norm;
+  if (!state.teamTimes[team]) state.teamTimes[team] = {};
+  state.teamTimes[team][series] = norm;
   saveImmediate();
-  renderTeamResults();
-  // Odśwież klasyfikację jeśli aktywna
-  if (document.getElementById('page-klasyfikacja') &&
-      document.getElementById('page-klasyfikacja').classList.contains('active')) {
+  rerenderTeamTime(input);
+  if (document.getElementById('page-klasyfikacja')?.classList.contains('active')) {
     renderKlasyfikacja();
   }
 }
@@ -1882,7 +1892,7 @@ function renderTeamOrderSection(series) {
     if (series === 's2' && s1t) h += ' <span style="font-family:var(--font-m);font-size:11px;color:' + (s1dsq ? 'var(--red)' : 'var(--text3)') + ';">· S1: ' + (s1dsq ? 'DSQ' : s1t) + '</span>';
     h += '</div>';
     h += '<div style="display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation();">';
-    const inputStyle = tdsq ? ' style="flex:1;color:var(--red);background:rgba(224,85,85,.08);border-color:var(--red);" disabled' : ' style="flex:1;" onchange="saveTeamTime(this);rerenderTeamTime(this)" oninput="saveTeamTime(this);rerenderTeamTime(this)" onblur="normalizeTimeInput(this)"';
+    const inputStyle = tdsq ? ' style="flex:1;color:var(--red);background:rgba(224,85,85,.08);border-color:var(--red);" disabled' : ' style="flex:1;" oninput="saveTeamTime(this)" onblur="commitTeamTime(this)" onkeydown="if(event.key===\'Enter\'||event.key===\'Tab\'){event.preventDefault();commitTeamTime(this);this.blur();}"';
     h += '<input class="qe-time' + (best ? ' is-best' : '') + '" type="text" value="' + (t||'') + '" placeholder="0:00.00" data-team="' + esc(item.team) + '" data-series="' + series + '"' + inputStyle + ' />';
     const dsqStyle = 'font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 7px;border:1px solid ' + (tdsq ? 'var(--red)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (tdsq ? 'var(--red)' : 'var(--bg3)') + ';color:' + (tdsq ? '#fff' : 'var(--text3)') + ';cursor:pointer;white-space:nowrap;';
     h += '<button onclick="event.stopPropagation();toggleTeamDisq(\'' + esc(item.team) + '\',\'' + series + '\')" style="' + dsqStyle + '">' + (tdsq ? '✓ Cofnij DSQ' : 'DSQ') + '</button>';
@@ -3252,9 +3262,9 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
     '<div style="display:flex;gap:4px;align-items:center;" onclick="event.stopPropagation();">' +
     '<input class="qe-time' + (isBest ? ' is-best' : '') + '" type="text" value="' + (time||'') + '" placeholder="0:00.00"' +
     ' data-id="' + a.id + '" data-series="' + series + '" data-pairnum="' + (pairNum||0) + '" data-gender="' + g + '"' +
-    ' onchange="saveTime(this);rerenderPairTime(this);if(this.value.trim()&&+this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,this.dataset.gender,+this.dataset.pairnum)"' +
-    ' oninput="saveTime(this);rerenderPairTime(this)"' +
-    ' onblur="normalizeTimeInput(this);if(this.value.trim()&&+this.dataset.pairnum>0)autoLockPairOnTime(this.dataset.series,this.dataset.gender,+this.dataset.pairnum)"' +
+    ' oninput="saveTime(this)"' +
+    ' onblur="commitTime(this)"' +
+    ' onkeydown="if(event.key===\'Enter\'||event.key===\'Tab\'){event.preventDefault();commitTime(this);this.blur();}"' +
     ' style="flex:1;' + (dsq ? 'text-decoration:line-through;color:var(--text3);' : '') + '"' +
     (dsq ? ' disabled' : '') + ' />' +
     '<button onclick="toggleDisq(' + a.id + ',\'' + series + '\')" ' +
@@ -3303,7 +3313,7 @@ function renderQETable(tbodyId, gender, series) {
     html += '<td class="qe-team">' + esc(r.athlete.team) + '</td>';
     html += '<td><span class="lane-badge lane-' + r.lane + '">' + r.lane + '</span></td>';
     html += '<td class="mono text-muted" style="font-size:12px;">' + r.pairNum + '</td>';
-    html += '<td><input class="qe-time' + (isBest ? ' is-best' : '') + '" type="text" value="' + (t||'') + '" placeholder="0:00.0" data-id="' + id + '" data-series="' + series + '" onchange="saveTime(this)" oninput="saveTime(this)" /></td>';
+    html += '<td><input class="qe-time' + (isBest ? ' is-best' : '') + '" type="text" value="' + (t||'') + '" placeholder="0:00.0" data-id="' + id + '" data-series="' + series + '" oninput="saveTime(this)" onblur="commitTime(this)" onkeydown="if(event.key==='Enter'||event.key==='Tab'){event.preventDefault();commitTime(this);this.blur();}" /></td>';
     html += '</tr>';
   });
   tbody.innerHTML = html;
@@ -3351,16 +3361,29 @@ function normalizeTime(t) {
 }
 
 function saveTime(input) {
-  const id     = parseInt(input.dataset.id);
-  const series = input.dataset.series;
-  const raw    = input.value.trim().replace(',', '.'); // zabezpieczenie przecinka
-  // Normalizuj natychmiast do SS.ss przy zapisie
-  const norm   = raw ? (normalizeTime(raw) || raw) : '';
-  if (norm !== input.value) input.value = norm;
+  // Wywoływane przez oninput — NIE normalizujemy, nie nadpisujemy input.value
+  // Zapisujemy surową wartość żeby nie przerywać wpisywania
+  const id  = parseInt(input.dataset.id);
+  const ser = input.dataset.series;
+  const raw = input.value; // surowa, bez trim/replace — user jeszcze pisze
   if (!state.times[id]) state.times[id] = {};
-  state.times[id][series] = norm;
+  state.times[id][ser] = raw;
+  scheduleSave(); // debounce 300ms — nie natychmiast
+}
+
+function commitTime(input) {
+  // Wywoływane przez onblur / Enter / Tab — tu normalizujemy i zapisujemy finalnie
+  const id  = parseInt(input.dataset.id);
+  const ser = input.dataset.series;
+  const raw = input.value.trim().replace(',', '.');
+  const norm = raw ? (normalizeTime(raw) || raw) : '';
+  input.value = norm;
+  if (!state.times[id]) state.times[id] = {};
+  state.times[id][ser] = norm;
   saveImmediate();
-  input.classList.toggle('is-best', !!norm && isPersonalBest(id, series, norm));
+  input.classList.toggle('is-best', !!norm && isPersonalBest(id, ser, norm));
+  rerenderPairTime(input);
+  if (norm && +input.dataset.pairnum > 0) autoLockPairOnTime(ser, input.dataset.gender, +input.dataset.pairnum);
 }
 
 function normalizeTimeInput(input) {
