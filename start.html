@@ -446,54 +446,49 @@ function saveSlot(slot) {
   });
 }
 
-function deleteSlot(id) {
+async function deleteSlot(id) {
+  // 1. Usuń lokalnie
   localStorage.removeItem('herkules_slot_' + id);
   localStorage.removeItem('zawody_slot_' + id);
   localStorage.removeItem('osf_slot_' + id);
   saveSlotIds(getSlotIds().filter(x => x !== id));
-  // Usuń z Supabase
-  getSB().from(SB_TABLE).delete().eq('slot_id', String(id)).then(({ error }) => {
-    if (error) console.warn('Supabase deleteSlot error:', error.message);
-  });
+  // 2. Usuń z Supabase — to rozgłosi event do wszystkich urządzeń
+  const { error } = await getSB().from(SB_TABLE).delete().eq('slot_id', String(id));
+  if (error) console.warn('Supabase deleteSlot error:', error.message);
 }
 
-// Wczytaj sloty z Supabase i scal z localStorage
+// Wczytaj sloty z Supabase — CHMURA JEST JEDYNYM ŹRÓDŁEM PRAWDY
+// Lokalne cache jest tylko lustrem chmury, nigdy nie nadpisuje jej
 async function syncSlotsFromCloud() {
   try {
     const { data, error } = await getSB().from(SB_TABLE).select('slot_id, slot_json, updated_at').order('updated_at', { ascending: true });
     if (error) {
-      // Tabela może nie istnieć jeszcze — nie blokuj inicjalizacji
-      console.warn('Supabase sync error (tabela herkules_slots może nie istnieć):', error.message);
+      console.warn('Supabase sync error:', error.message);
       return;
     }
-    if (!data || !data.length) return;
 
-    const localIds = new Set(getSlotIds().map(String));
+    // Zbierz ID które są w chmurze
     const cloudIds = [];
-
-    data.forEach(row => {
+    (data || []).forEach(row => {
       try {
         const slot = JSON.parse(row.slot_json);
         const id   = slot.id;
         cloudIds.push(id);
-        // Scal: chmura wygrywa jeśli lokalny slot nie istnieje
-        const localSlot = getSlot(id);
-        if (!localSlot) {
-          localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
-        } else {
-          // Jeśli chmura jest nowsza — nadpisz
-          const cloudTime = new Date(row.updated_at).getTime();
-          const localTime = localSlot._updated ? new Date(localSlot._updated).getTime() : 0;
-          if (cloudTime > localTime) {
-            localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
-          }
-        }
+        // Chmura zawsze wygrywa — nadpisz cache lokalny
+        localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
       } catch(e) {}
     });
 
-    // Scala indeks ID — unia localnych i chmury
-    const allIds = [...new Set([...getSlotIds(), ...cloudIds])];
-    saveSlotIds(allIds);
+    // Usuń z lokalnego cache sloty których nie ma już w chmurze
+    const prevIds = getSlotIds();
+    prevIds.forEach(id => {
+      if (!cloudIds.includes(id) && !cloudIds.includes(String(id))) {
+        localStorage.removeItem('herkules_slot_' + id);
+      }
+    });
+
+    // Indeks = dokładnie to co w chmurze
+    saveSlotIds(cloudIds);
   } catch(e) { console.warn('syncSlotsFromCloud exception:', e); }
 }
 
@@ -668,7 +663,7 @@ function reactivateSlot(id, e) {
   saveSlot(slot); render();
 }
 
-function removeSlot(id, e) {
+async function removeSlot(id, e) {
   e.stopPropagation();
   const slot = getSlot(id);
   if (!slot) return;
@@ -678,7 +673,8 @@ function removeSlot(id, e) {
     if (input !== null) alert('Nieprawidłowe potwierdzenie. Zawody nie zostały usunięte.');
     return;
   }
-  deleteSlot(id); render();
+  await deleteSlot(id);
+  render();
 }
 
 // ═══════════════════════════════════

@@ -232,31 +232,34 @@ async function boot(s) {
   startClock();
   startRealtime();
 
-  // Polling co 5s jako fallback gdy WebSocket padnie lub Realtime zgubi event
-  let _lastProjState = '';
+  // Polling co 2s jako fallback gdy WebSocket padnie lub Realtime zgubi event
+  // Porównuje updated_at zamiast całego JSON — lekki i niezawodny
+  let _lastUpdatedAt = '';
   setInterval(async () => {
     try {
       const { data } = await getDB().from('osf_state').select('state_json, updated_at').eq('slot_id', slotId).single();
-      if (!data || !data.state_json) return;
-      if (data.state_json !== _lastProjState) {
-        _lastProjState = data.state_json;
-        state = JSON.parse(data.state_json);
-        softRender();
-        flashSync();
+      if (!data) return;
+      if (data.updated_at && data.updated_at !== _lastUpdatedAt) {
+        _lastUpdatedAt = data.updated_at;
+        if (data.state_json) {
+          state = JSON.parse(data.state_json);
+          softRender();
+          flashSync();
+        }
       }
     } catch(e) {
       console.warn('Projektor poll error:', e);
     }
-  }, 5000);
+  }, 2000);
 
-  // Reconnect realtime co 30s jeśli połączenie zerwane
+  // Reconnect realtime co 5s jeśli połączenie zerwane
   setInterval(() => {
     const dot = document.getElementById('sync-dot');
     if (dot && dot.classList.contains('off')) {
-      if (rtChannel) { getDB().removeChannel(rtChannel); rtChannel = null; }
+      if (rtChannel) { try { getDB().removeChannel(rtChannel); } catch(e) {} rtChannel = null; }
       startRealtime();
     }
-  }, 30000);
+  }, 5000);
 }
 
 // ═══════════════════════════════════════════════
@@ -298,15 +301,26 @@ function startRealtime() {
     .subscribe((status) => {
       const dot = document.getElementById('sync-dot');
       const lbl = document.getElementById('sync-label');
-      if (status === 'SUBSCRIBED') { dot.classList.remove('off'); lbl.textContent = 'LIVE'; }
-      else { dot.classList.add('off'); lbl.textContent = 'OFFLINE'; }
+      if (status === 'SUBSCRIBED') {
+        if (dot) dot.classList.remove('off');
+        if (lbl) lbl.textContent = 'LIVE';
+      } else {
+        if (dot) dot.classList.add('off');
+        if (lbl) lbl.textContent = 'OFFLINE';
+        // Próba reconnectu po 3s
+        setTimeout(() => {
+          if (rtChannel) { try { getDB().removeChannel(rtChannel); } catch(e) {} rtChannel = null; }
+          startRealtime();
+        }, 3000);
+      }
     });
 }
 
 function flashSync() {
   const lbl = document.getElementById('sync-label');
+  if (!lbl) return;
   lbl.textContent = '↓ SYNC';
-  setTimeout(() => { lbl.textContent = 'LIVE'; }, 1500);
+  setTimeout(() => { if (lbl) lbl.textContent = 'LIVE'; }, 1500);
 }
 
 function startClock() {

@@ -1342,10 +1342,11 @@ async function saveToSupabase() {
     if (error) {
       console.error('Supabase save error:', error);
       if (el) { el.textContent = '⚠ BŁĄD SYNC'; el.style.color = 'var(--red)'; }
+      _myWriteTag = ''; // zapis nieudany — kolejny update z chmury może przejść
     } else {
       if (el) { el.textContent = '● zsync'; el.style.color = 'var(--green)'; }
     }
-  } catch(e) { console.error('Supabase save exception:', e); }
+  } catch(e) { console.error('Supabase save exception:', e); _myWriteTag = ''; }
   finally    { _isSaving = false; }
 }
 
@@ -1412,6 +1413,15 @@ function _applyRemoteState(stateJson) {
     else if (id === 'page-wyniki')       renderResults();
     else if (id === 'page-druzynowy')    renderTeamView();
     else if (id === 'page-klasyfikacja') renderKlasyfikacja();
+    else if (id === 'page-setup')        renderSetupPage();
+    // Zawsze odśwież header (nazwa zawodów mogła się zmienić)
+    const c = state.contest || {};
+    const headerEl = document.getElementById('header-contest-name');
+    if (headerEl) headerEl.textContent = (c.name ? c.name + ' · ' : '') + (c.city || '') + (c.date ? ' · ' + c.date : '');
+    // Odśwież kolor akcentu
+    if (state.setup && state.setup.accentColor) {
+      document.documentElement.style.setProperty('--orange', state.setup.accentColor);
+    }
     // Sygnalizacja w UI
     const el = document.getElementById('header-autosave');
     if (el) {
@@ -4074,6 +4084,7 @@ function printResultsPDF() {
 function openPrint(bodyContent, css) {
   const useCss = css || PDF_CSS;
   const w = window.open('', '_blank');
+  if (!w) { alert('Zezwól na otwieranie wyskakujących okien dla tej strony, aby drukować.'); return; }
   w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>OSF — Wydruk</title><style>' + useCss + '</style></head><body>' + bodyContent + '</body></html>');
   w.document.close();
   w.focus();
