@@ -446,19 +446,28 @@ function _cacheSlot(slot) {
   localStorage.setItem('herkules_slot_' + slot.id, JSON.stringify(slot));
 }
 function _cacheSlotIds(ids) {
-  localStorage.setItem(SLOTS_KEY, JSON.stringify([...new Set(ids.map(String))]));
+  const clean = [...new Set(ids.map(String))];
+  localStorage.setItem(SLOTS_KEY, JSON.stringify(clean));
+  // Wyczyść stare klucze żeby nie wracały usunięte sloty
+  localStorage.removeItem('herkules_slots_cache');
+  localStorage.removeItem('herkules_slots');
 }
 function getSlot(id) {
   try { return JSON.parse(localStorage.getItem('herkules_slot_' + id)); } catch(e) { return null; }
 }
 function getCachedSlotIds() {
-  // Zbierz IDs ze wszystkich wersji klucza (migracja starych urządzeń)
-  const keys = ['herkules_slots_v2', 'herkules_slots_cache', 'herkules_slots'];
-  const ids = new Set();
-  keys.forEach(k => {
-    try { (JSON.parse(localStorage.getItem(k)) || []).forEach(id => ids.add(String(id))); } catch(e) {}
-  });
-  return [...ids];
+  // Przy pierwszym uruchomieniu: migruj ze starych kluczy do nowego
+  const legacy = ['herkules_slots_cache', 'herkules_slots'];
+  const v2 = JSON.parse(localStorage.getItem(SLOTS_KEY) || '[]');
+  if (v2.length === 0) {
+    // Tylko przy pustym v2 sprawdź stare klucze (jednorazowa migracja)
+    const ids = new Set(v2.map(String));
+    legacy.forEach(k => {
+      try { (JSON.parse(localStorage.getItem(k)) || []).forEach(id => ids.add(String(id))); } catch(e) {}
+    });
+    return [...ids];
+  }
+  return v2.map(String);
 }
 
 // ── pobierz slot z Supabase (zawsze aktualny) ─────────────────────────
