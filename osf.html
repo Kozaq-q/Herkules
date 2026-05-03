@@ -2088,10 +2088,10 @@ function renderTeamOrderSection(series) {
     if (p.isSolo) {
       const soloLane  = p.a ? p.a.lane : 'L';
       const otherLane = soloLane === 'L' ? 'P' : 'L';
-      const emptyIdx  = soloLane === 'L' ? p.aIdx + 1 : p.aIdx;
+      // data-idx = indeks SOLO w order[] (p.aIdx), data-lane = tor pustego miejsca
       const emptySoloSlot =
         '<div class="pair-athlete team-empty-slot" ' +
-        'data-series="' + series + '" data-idx="' + emptyIdx + '" data-lane="' + otherLane + '" ' +
+        'data-series="' + series + '" data-idx="' + p.aIdx + '" data-lane="' + otherLane + '" ' +
         'onclick="handleTeamEmptySlotClick(this)" ' +
         'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:90px;' +
         'border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;">' +
@@ -5547,53 +5547,66 @@ function handleTeamClick(el) {
   const tgtName = el.dataset.teamName;
   const tgtIdx  = parseInt(el.dataset.teamIdx);
   const series  = el.dataset.series;
-  if (tgtName === _teamSwapSource.teamName) { cancelTeamSwap(); return; }
-  if (series !== _teamSwapSource.series) { showToast('Można zamieniać drużyny tylko w tej samej serii', 'warning'); return; }
-  const order   = state.teamOrder[series];
-  const srcIdx  = _teamSwapSource.idx;
-  const srcLane = order[srcIdx].lane;
-  const tgtLane = order[tgtIdx].lane;
-  const n1 = order[srcIdx].team, n2 = order[tgtIdx].team;
-  order[srcIdx] = { ...order[srcIdx], team: n2, lane: srcLane };
-  order[tgtIdx] = { ...order[tgtIdx], team: n1, lane: tgtLane };
-  recalcLanes(order);
+  if (tgtName === _teamSwapSource.teamName && tgtIdx === _teamSwapSource.idx) { cancelTeamSwap(); return; }
+  if (series !== _teamSwapSource.series) { showToast('Można zamieniać tylko w tej samej serii', 'warning'); return; }
+
+  const order  = state.teamOrder[series];
+  const srcIdx = _teamSwapSource.idx;
+
+  // Zamiana SLOTÓW w całości — tor zostaje przypisany do pozycji, nie do drużyny
+  // Czyli slot[srcIdx] i slot[tgtIdx] zamieniają się miejscami (razem z torami)
+  const srcSlot = { ...order[srcIdx] };
+  const tgtSlot = { ...order[tgtIdx] };
+  // Zachowaj tory pozycji — zamień tylko drużynę
+  order[srcIdx] = { ...srcSlot, team: tgtSlot.team, sum: tgtSlot.sum, count: tgtSlot.count };
+  order[tgtIdx] = { ...tgtSlot, team: srcSlot.team, sum: srcSlot.sum, count: srcSlot.count };
+  // NIE wywołujemy recalcLanes — tory pozostają jak były
+
+  const n1 = srcSlot.team, n2 = tgtSlot.team;
   cancelTeamSwap();
   save();
   renderTeamView();
-  showToast('↔ Zamieniono: ' + n1 + ' ↔ ' + n2, 'success');
+  showToast('↔ Zamieniono: ' + (n1||'pusty') + ' ↔ ' + (n2||'pusty'), 'success');
 }
 
 function handleTeamEmptySlotClick(el) {
-  const series  = el.dataset.series;
-  const soloIdx = parseInt(el.dataset.idx);
-  const newLane = el.dataset.lane;
-  const order   = state.teamOrder[series];
+  const series   = el.dataset.series;
+  const soloIdx  = parseInt(el.dataset.idx); // indeks SOLO w order[]
+  const newLane  = el.dataset.lane;           // tor pustego miejsca (L lub P)
+  const order    = state.teamOrder[series];
+  const soloItem = order[soloIdx];
+  if (!soloItem) return;
 
   if (_teamSwapSource && _teamSwapSource.series === series) {
-    // Tryb pick — przenieś zaznaczoną drużynę do pustego slotu
-    const srcIdx   = _teamSwapSource.idx;
-    const srcItem  = { ...order[srcIdx] };
-    const emptyIdx = soloIdx + 1;
-    // Wstaw drużynę do pustego miejsca z nowym torem
-    order.splice(emptyIdx, 0, { ...srcItem, lane: newLane, startNum: emptyIdx + 1 });
-    // Usuń ze starego miejsca (indeks mógł się przesunąć)
-    const newSrcIdx = order.findIndex((item, i) => i !== emptyIdx && item && item.team === srcItem.team);
-    if (newSrcIdx >= 0) order.splice(newSrcIdx, 1);
-    order.forEach((item, i) => { if (item) item.startNum = i + 1; });
-    recalcLanes(order);
+    // Tryb zamiany — wrzuć zaznaczoną drużynę na tor pustego miejsca
+    // Realizujemy to jako: SOLO dostaje tor newLane, zaznaczona drużyna dostaje stary tor solo
+    const srcIdx    = _teamSwapSource.idx;
+    const srcItem   = order[srcIdx];
+    const oldSoloLane = soloItem.lane;
+
+    if (srcIdx === soloIdx) {
+      // Kliknięcie na własny pusty tor = zmień tor solo
+      order[soloIdx] = { ...soloItem, lane: newLane };
+    } else {
+      // Zamień: zaznaczona drużyna → tor pustego miejsca, solo → tor zaznaczonej
+      order[soloIdx] = { ...soloItem, lane: newLane };
+      order[srcIdx]  = { ...srcItem,  lane: oldSoloLane };
+      // Zamień też drużyny między slotami
+      const tmpTeam = soloItem.team;
+      order[soloIdx] = { ...order[soloIdx], team: srcItem.team, sum: srcItem.sum, count: srcItem.count };
+      order[srcIdx]  = { ...order[srcIdx],  team: tmpTeam,     sum: soloItem.sum, count: soloItem.count };
+    }
     const n = _teamSwapSource.teamName;
     cancelTeamSwap();
     save();
     renderTeamView();
-    showToast('→ Przeniesiono ' + n + ' na Tor ' + newLane, 'success');
+    showToast('→ ' + n + ' na Tor ' + newLane, 'success');
   } else {
-    // Bez pick-mode — zmień tor SOLO drużyny
-    const soloItem = order[soloIdx];
-    if (!soloItem) return;
+    // Bez trybu zamiany — kliknięcie pustego toru = zmień tor SOLO na przeciwny
     order[soloIdx] = { ...soloItem, lane: newLane };
     save();
     renderTeamView();
-    showToast('↔ Zmieniono tor: ' + soloItem.team + ' → Tor ' + newLane, 'success');
+    showToast('↔ Zmieniono tor: ' + (soloItem.team||'') + ' → Tor ' + newLane, 'success');
   }
 }
 
