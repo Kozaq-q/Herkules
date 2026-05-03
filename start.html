@@ -351,20 +351,39 @@ function showApp() {
   document.getElementById('main-content').style.display  = '';
   document.getElementById('header-date').textContent = formatDate();
 
-  // Pokaż od razu to co jest w cache (może być puste na nowym urządzeniu)
+  // Pokaż od razu to co jest w cache
   render();
 
-  // Sync z Supabase — pobierz wszystkie zawody ze wszystkich urządzeń
+  // Pełny sync przy starcie
   showSyncStatus('syncing');
   syncSlotsFromCloud().then(ok => {
     render();
     showSyncStatus(ok ? 'ok' : 'error');
   });
 
-  // Polling co 20s — wykrywa nowe zawody założone na innych urządzeniach
+  // Supabase Realtime — natychmiastowe odświeżenie gdy ktokolwiek zmieni dane
+  try {
+    getSB()
+      .channel('herkules_slots_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'herkules_slots' }, payload => {
+        // Ktoś na innym urządzeniu zmienił/dodał/usunął zawody — pobierz i odśwież
+        syncSlotsFromCloud().then(ok => { if (ok) render(); });
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          const dot = document.getElementById('sync-dot');
+          const lbl = document.getElementById('sync-label');
+          if (dot) { dot.style.background = 'var(--green)'; lbl.textContent = 'live'; }
+        }
+      });
+  } catch(e) {
+    console.warn('Realtime niedostępny, używam pollingu:', e);
+  }
+
+  // Polling co 15s jako fallback gdy Realtime nie działa
   setInterval(() => {
     syncSlotsFromCloud().then(ok => { if (ok) render(); });
-  }, 20000);
+  }, 15000);
 }
 
 function openChangePassword() {
@@ -743,6 +762,13 @@ document.getElementById('modal-new').addEventListener('click', function(e) { if 
 document.getElementById('modal-password').addEventListener('click', function(e) { if (e.target === this) closePasswordModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closePasswordModal(); } });
 document.getElementById('login-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// Gdy użytkownik wraca do zakładki (np. po pracy w osf.html) — od razu sync
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isLoggedIn()) {
+    syncSlotsFromCloud().then(ok => { if (ok) render(); });
+  }
+});
 
 // BOOT
 if (isLoggedIn()) { showApp(); }
