@@ -1489,6 +1489,43 @@ function save() {
   scheduleSave(); // wyślij też do Supabase z debouncingiem
 }
 
+// Natychmiastowy zapis do Supabase — używany przy wpisywaniu wyników
+// Throttle 200ms: wysyła natychmiast, ale kolejny zapis czeka max 200ms
+let _immediateTimer = null;
+let _immediatePending = false;
+
+function saveImmediate() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  clearTimeout(_saveTimer); // anuluj debounce — przejął kontrolę saveImmediate
+  _saveTimer = null;
+
+  if (_isSaving) {
+    // Trwa zapis — zaplanuj zapis po jego zakończeniu
+    _immediatePending = true;
+    return;
+  }
+  if (_immediateTimer) {
+    // Throttle aktywny — zaplanuj zapis po wygaśnięciu
+    _immediatePending = true;
+    return;
+  }
+
+  // Wyślij natychmiast
+  _doImmediateSave();
+}
+
+async function _doImmediateSave() {
+  _immediateTimer = setTimeout(() => {
+    _immediateTimer = null;
+    if (_immediatePending) {
+      _immediatePending = false;
+      _doImmediateSave(); // wyślij zaległe zmiany
+    }
+  }, 200);
+
+  await saveToSupabase();
+}
+
 function ensureStateDefaults() {
   if (!state) state = {};
   if (!state.contest)    state.contest    = { name: '', city: '', date: '' };
@@ -1675,9 +1712,8 @@ function saveTeamTime(input) {
   const val    = input.value.trim();
   if (!state.teamTimes[team]) state.teamTimes[team] = {};
   state.teamTimes[team][series] = val;
-  save();
+  saveImmediate(); // natychmiast do Supabase
   renderTeamResults();
-  // Odśwież klasyfikację jeśli aktywna
   if (document.getElementById('page-klasyfikacja') &&
       document.getElementById('page-klasyfikacja').classList.contains('active')) {
     renderKlasyfikacja();
@@ -3334,7 +3370,7 @@ function saveTime(input) {
   const val    = input.value.trim();
   if (!state.times[id]) state.times[id] = {};
   state.times[id][series] = val;
-  save();
+  saveImmediate(); // natychmiast do Supabase
   input.classList.toggle('is-best', !!val && isPersonalBest(id, series, val));
 }
 
@@ -3344,13 +3380,12 @@ function normalizeTimeInput(input) {
   const norm = normalizeTime(val);
   if (norm && norm !== val) {
     input.value = norm;
-    // zaktualizuj też w state
     if (input.dataset.id) {
       const id     = parseInt(input.dataset.id);
       const series = input.dataset.series;
       if (!state.times[id]) state.times[id] = {};
       state.times[id][series] = norm;
-      save();
+      saveImmediate();
       input.classList.toggle('is-best', isPersonalBest(id, series, norm));
     }
     if (input.dataset.team) {
@@ -3358,10 +3393,9 @@ function normalizeTimeInput(input) {
       const series = input.dataset.series;
       if (!state.teamTimes[team]) state.teamTimes[team] = {};
       state.teamTimes[team][series] = norm;
-      save();
+      saveImmediate();
     }
   } else if (!norm && val) {
-    // nieprawidłowy format — podświetl na czerwono
     input.style.borderColor = 'var(--red)';
     setTimeout(() => { input.style.borderColor = ''; }, 1500);
   }
