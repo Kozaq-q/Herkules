@@ -779,76 +779,96 @@ tr:last-child > td { border-bottom: none; }
 
 <!-- ═══ TAB: DRUŻYNOWY ═══ -->
 <div class="page" id="page-druzynowy">
-  <div class="flex-between mb-12">
-    <div>
-      <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Bieg Drużynowy</div>
-      <div class="text-muted mt-4" style="font-size:12px;">Tylko mężczyźni · 9 zawodników (min. 8) · liczy się czas 8. zawodnika · 2 serie</div>
+
+  <!-- Nagłówek — jeden rząd -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <div style="font-family:var(--font-h);font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-right:4px;">Drużynowy</div>
+    <!-- Generuj S1/S2 -->
+    <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s1')" style="font-weight:700;">⚙ Generuj S1</button>
+    <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s2')" style="font-weight:700;">⚙ Generuj S2</button>
+    <!-- Wydruki -->
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="togglePrintPanel('dr')" title="Wydruki" style="font-size:15px;padding:4px 10px;">🖨</button>
+      <div id="print-panel-dr" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px;width:240px;box-shadow:0 4px 20px rgba(0,0,0,.7);">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Wydruki</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button onclick="printTeamS1StartList();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+            <div style="font-size:16px;">📄</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Lista S1</div>
+          </button>
+          <button onclick="printTeamS2StartList();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+            <div style="font-size:16px;">📄</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Lista S2</div>
+          </button>
+          <button onclick="printTeamS1JudgeList();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+            <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Sędz. S1</div>
+          </button>
+          <button onclick="printTeamS2JudgeList();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+            <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Sędz. S2</div>
+          </button>
+          <button onclick="printTeamResults();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;grid-column:span 2;">
+            <div style="font-size:16px;">🏆</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Wyniki drużynowe</div>
+          </button>
+        </div>
+      </div>
     </div>
+    <!-- Separator -->
+    <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>
+    <!-- Edycja awaryjna + SOLO — szare, drugorzędne -->
+    <button id="dr-s1-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode('s1')"
+      style="color:var(--text3);border-color:var(--border2);font-size:11px;">🔒 Edycja S1</button>
+    <button id="dr-s2-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode('s2')"
+      style="color:var(--text3);border-color:var(--border2);font-size:11px;">🔒 Edycja S2</button>
+    <button id="dr-s1-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s1')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO S1</button>
+    <button id="dr-s2-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s2')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO S2</button>
   </div>
 
   <div id="dr-alert-no-times" class="alert alert-warning" style="display:none;">
     Brak czasów z biegu indywidualnego. Najpierw uzupełnij wyniki Serii 1 i 2 w zakładkach indywidualnych.
   </div>
+
+  <!-- Pasek zamiany drużyn -->
   <div id="team-swap-cancel-bar" style="display:none;position:fixed;top:96px;left:0;right:0;z-index:200;background:var(--bg2);border-bottom:2px solid var(--orange);box-shadow:0 4px 16px rgba(0,0,0,.6);padding:10px 20px;font-size:13px;font-weight:600;color:var(--orange);align-items:center;gap:12px;">
     <span id="team-swap-cancel-info" style="flex:1;">Wybierz drużynę do zamiany</span>
     <button onclick="cancelTeamSwap()" style="background:rgba(232,148,77,.15);border:1px solid rgba(232,148,77,.4);border-radius:var(--radius);color:var(--orange);font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;">✕ Anuluj zamianę</button>
   </div>
 
-  <!-- SERIA 1 DRUŻYNOWA -->
-  <div class="card mb-12">
-    <div class="flex-between mb-12">
-      <div class="card-title" style="margin-bottom:0;">Seria 1 — kolejność startów</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-direction:column;align-items:flex-end;">
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-sm" onclick="printTeamS1StartList()">🖨 Lista startowa</button>
-          <button class="btn btn-sm" onclick="printTeamS1JudgeList()">🖨 Lista sędziowska</button>
-          <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s1')">⚙ Generuj kolejność S1</button>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button id="dr-s1-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode('s1')"
-            style="color:var(--text3);border-color:var(--border2);font-size:11px;" title="Awaryjna ręczna edycja kolejności S1">🔒 Edycja awaryjna</button>
-          <button id="dr-s1-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s1')" style="display:none;color:var(--accent);border-color:rgba(232,212,77,.3);font-size:11px;" title="Dodaj drużynę SOLO">+ SOLO</button>
-        </div>
-      </div>
-    </div>
-    <div id="dr-s1-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
-      <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S1</strong> — kolejność wyznaczona ręcznie. Kliknięcie <em>Generuj kolejność S1</em> przywróci regulaminową kolejność.
+  <!-- Zakładki S1 / S2 -->
+  <div id="dr-inner-tabs" style="display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;margin-bottom:14px;align-items:flex-end;">
+    <button id="dr-tab-s1" onclick="switchDrTab('s1')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--accent);background:rgba(232,212,77,.08);color:var(--accent);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      Seria 1
+    </button>
+    <button id="dr-tab-s2" onclick="switchDrTab('s2')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      Seria 2
+    </button>
+  </div>
+
+  <!-- Sekcja S1 -->
+  <div id="dr-section-s1">
+    <div id="dr-s1-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.5);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
+      <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S1</strong> — kolejność wyznaczona ręcznie. Kliknięcie <em>Generuj S1</em> przywróci regulaminową kolejność.
       <button onclick="disableTeamEditMode('s1')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
     </div>
     <div id="dr-alert-s1" class="alert alert-info" style="display:none;"></div>
     <div id="dr-s1-teams"></div>
   </div>
 
-  <!-- SERIA 2 DRUŻYNOWA -->
-  <div class="card mb-12">
-    <div class="flex-between mb-12">
-      <div class="card-title" style="margin-bottom:0;">Seria 2 — kolejność startów</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-direction:column;align-items:flex-end;">
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-sm" onclick="printTeamS2StartList()">🖨 Lista startowa</button>
-          <button class="btn btn-sm" onclick="printTeamS2JudgeList()">🖨 Lista sędziowska</button>
-          <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s2')">⚙ Generuj kolejność S2</button>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <button id="dr-s2-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode('s2')"
-            style="color:var(--text3);border-color:var(--border2);font-size:11px;" title="Awaryjna ręczna edycja kolejności S2 — zachowaj zmianę toru!">🔒 Edycja awaryjna</button>
-          <button id="dr-s2-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s2')" style="display:none;color:var(--accent);border-color:rgba(232,212,77,.3);font-size:11px;" title="Dodaj drużynę SOLO">+ SOLO</button>
-        </div>
-      </div>
-    </div>
-    <div id="dr-s2-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
-      <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S2</strong> — zachowaj obowiązkową zmianę torów (każda drużyna musi biec na innym torze niż w S1). Kliknięcie <em>Generuj kolejność S2</em> przywróci regulaminową kolejność.
-      <button onclick="disableTeamEditMode('s2')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
+  <!-- Sekcja S2 -->
+  <div id="dr-section-s2" style="display:none;">
+    <div id="dr-s2-edit-warning" style="display:none;background:rgba(224,85,85,.15);border:3px solid var(--red);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.7;">
+      <strong style="color:var(--red);font-size:13px;">⚠ EDYCJA AWARYJNA S2</strong><br>
+      Każda drużyna <strong>musi biec na innym torze niż w S1</strong> — to wymóg regulaminowy.<br>
+      Ręczna zmiana kolejności może naruszyć tę zasadę. Sprawdź tory po każdej zmianie.<br>
+      <button onclick="disableTeamEditMode('s2')" style="margin-top:8px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:4px 14px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zakończ edycję awaryjną</button>
     </div>
     <div id="dr-alert-s2" class="alert alert-info" style="display:none;"></div>
     <div id="dr-s2-teams"></div>
   </div>
 
-  <!-- WYNIKI DRUŻYNOWE -->
-  <div class="card">
+  <!-- Wyniki drużynowe -->
+  <div class="card" style="margin-top:16px;">
     <div class="flex-between mb-12">
       <div class="card-title" style="margin-bottom:0;">Wyniki drużynowe</div>
-      <button class="btn btn-sm" onclick="printTeamResults()">🖨 Drukuj wyniki</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -2447,6 +2467,25 @@ function recalcLanesWithOpposite(order, s1order) {
 // ═══════════════════════════════════════════════════
 // BIEG DRUŻYNOWY — render
 // ═══════════════════════════════════════════════════
+let _drActiveTab = 's1';
+
+function switchDrTab(tab) {
+  _drActiveTab = tab;
+  const s1 = document.getElementById('dr-section-s1');
+  const s2 = document.getElementById('dr-section-s2');
+  const t1 = document.getElementById('dr-tab-s1');
+  const t2 = document.getElementById('dr-tab-s2');
+  if (!s1 || !s2) return;
+
+  const activeStyle   = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--accent);background:rgba(232,212,77,.08);color:var(--accent);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+
+  s1.style.display = tab === 's1' ? '' : 'none';
+  s2.style.display = tab === 's2' ? '' : 'none';
+  if (t1) t1.style.cssText = tab === 's1' ? activeStyle : inactiveStyle;
+  if (t2) t2.style.cssText = tab === 's2' ? activeStyle : inactiveStyle;
+}
+
 function renderTeamView() {
   const hasAnyTime = state.athletes.some(a => bestTime(a.id));
   document.getElementById('dr-alert-no-times').style.display = hasAnyTime ? 'none' : 'block';
@@ -2454,6 +2493,7 @@ function renderTeamView() {
   renderTeamOrderSection('s1');
   renderTeamOrderSection('s2');
   renderTeamResults();
+  switchDrTab(_drActiveTab);
 }
 
 function renderTeamOrderSection(series) {
@@ -2541,9 +2581,29 @@ function renderTeamOrderSection(series) {
   let html = '';
   const total = pairs.length;
   pairs.forEach(function(p, idx) {
-    const isLast = idx === total - 1;
+    const isLast    = idx === total - 1;
+    const isFirstP  = p.pairNum === 1;
+    const isLastP   = p.pairNum === total;
     html += '<div class="pair-card' + (isLast&&!p.isSolo ? ' last-pair' : '') + '">';
     html += '<div class="pair-header"><span class="pair-num">' + p.pairNum + '</span>';
+
+    // Strzałki ↑↓ + pole pozycji — tylko w trybie edycji awaryjnej
+    if (_teamEditMode[series]) {
+      html += '<div style="display:flex;align-items:center;gap:2px;margin-right:4px;">';
+      html += '<button onclick="moveTeamPair(\'' + series + '\',' + p.pairNum + ',-1)" ' +
+        'style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--red);border-radius:var(--radius) 0 0 var(--radius);color:var(--red);cursor:pointer;opacity:' + (isFirstP ? '.2' : '1') + ';"' +
+        (isFirstP ? ' disabled' : '') + '>↑</button>';
+      html += '<input type="number" min="1" max="' + total + '" value="' + p.pairNum + '"' +
+        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();jumpTeamPairTo(\'' + series + '\',' + p.pairNum + ',parseInt(this.value));this.blur();}"' +
+        ' onblur="if(parseInt(this.value)!==' + p.pairNum + ')jumpTeamPairTo(\'' + series + '\',' + p.pairNum + ',parseInt(this.value));"' +
+        ' onclick="event.stopPropagation();this.select();"' +
+        ' style="width:36px;text-align:center;font-size:11px;font-family:var(--font-m);padding:0 2px;line-height:1.7;background:var(--bg3);border:1px solid var(--red);border-left:none;border-right:none;color:var(--red);cursor:text;-moz-appearance:textfield;" />';
+      html += '<button onclick="moveTeamPair(\'' + series + '\',' + p.pairNum + ',+1)" ' +
+        'style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--red);border-radius:0 var(--radius) var(--radius) 0;color:var(--red);cursor:pointer;opacity:' + (isLastP ? '.2' : '1') + ';"' +
+        (isLastP ? ' disabled' : '') + '>↓</button>';
+      html += '</div>';
+    }
+
     if (p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
     if (isLast && !p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA</span>';
     if (p._manual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);padding:2px 7px;border-radius:2px;" title="Para dobrana ręcznie — poza regulaminowym algorytmem">⚠ ręczna</span>';
@@ -6076,6 +6136,41 @@ function doTeamDraw() {
 // PICK-MODE — zamiana drużyn w kolejności
 // ═══════════════════════════════════════════════════
 let _teamSwapSource = null;
+
+function moveTeamPair(series, pairNum, dir) {
+  const order = state.teamOrder[series];
+  // Para = 2 elementy w order (idx = (pairNum-1)*2)
+  const pairStart = (pairNum - 1) * 2;
+  const swapStart = pairStart + dir * 2;
+  if (swapStart < 0 || swapStart >= order.length) return;
+  // Zamień dwie pary miejscami (każda para to 2 elementy)
+  const tmp0 = order[pairStart];
+  const tmp1 = order[pairStart + 1];
+  order[pairStart]     = order[swapStart];
+  order[pairStart + 1] = order[swapStart + 1];
+  order[swapStart]     = tmp0;
+  order[swapStart + 1] = tmp1;
+  // Zaktualizuj startNum
+  order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+  save();
+  renderTeamView();
+}
+
+function jumpTeamPairTo(series, fromPairNum, toPos) {
+  if (!toPos || isNaN(toPos)) return;
+  const order = state.teamOrder[series];
+  const totalPairs = Math.ceil(order.length / 2);
+  const fromIdx = (fromPairNum - 1) * 2;
+  const toIdx   = (Math.max(1, Math.min(totalPairs, toPos)) - 1) * 2;
+  if (fromIdx === toIdx) { renderTeamView(); return; }
+  // Wytnij parę i wstaw w nowe miejsce
+  const pair = order.splice(fromIdx, 2);
+  const insertAt = fromIdx < toIdx ? toIdx - 2 : toIdx;
+  order.splice(insertAt, 0, ...pair);
+  order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+  save();
+  renderTeamView();
+}
 
 function activateTeamSwap(teamName, idx, series) {
   if (_teamSwapSource && _teamSwapSource.teamName === teamName && _teamSwapSource.series === series) {
