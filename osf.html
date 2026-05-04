@@ -711,12 +711,33 @@ tr:last-child > td { border-bottom: none; }
       <div style="font-family:var(--font-h);font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--accent);">🏆 Klasyfikacja Zespołowa</div>
       <div class="text-muted mt-4" style="font-size:12px;">Bieg indywidualny M + Bieg drużynowy · Kobiety nie liczą się do klasyfikacji zespołowej</div>
     </div>
-    <div class="flex">
-      <button class="btn btn-sm" onclick="printIndM()" style="margin-right:6px;">🖨 Wyniki M</button>
-      <button class="btn btn-sm" onclick="printIndK()" style="margin-right:6px;">🖨 Wyniki K</button>
-      <button class="btn btn-sm" onclick="printIndM36()" style="margin-right:6px;color:var(--blue);border-color:rgba(96,168,232,.4);">🖨 Wyniki M36+</button>
-      <button class="btn btn-sm" onclick="printBiegDruz()" style="margin-right:6px;">🖨 Bieg drużynowy</button>
-      <button class="btn btn-sm" onclick="printKlasyfikacjaPDF()">🖨 Klasyfikacja</button>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <!-- Wydruki zbiorcze — popup -->
+      <div style="position:relative;">
+        <button class="btn btn-sm" onclick="togglePrintPanel('klas')" style="font-size:15px;padding:4px 10px;" title="Wydruki">🖨</button>
+        <div id="print-panel-klas" style="display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px;width:200px;box-shadow:0 4px 20px rgba(0,0,0,.7);">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Wydruki</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <button onclick="printIndM();togglePrintPanel('klas')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+              <div style="font-size:16px;">♂</div><div style="font-size:11px;font-weight:700;color:var(--male);margin-top:3px;">Wyniki M</div>
+            </button>
+            <button onclick="printIndK();togglePrintPanel('klas')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+              <div style="font-size:16px;">♀</div><div style="font-size:11px;font-weight:700;color:var(--female);margin-top:3px;">Wyniki K</div>
+            </button>
+            <button onclick="printIndM36();togglePrintPanel('klas')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+              <div style="font-size:16px;">🎖️</div><div style="font-size:11px;font-weight:700;color:var(--blue);margin-top:3px;">M36+</div>
+            </button>
+            <button onclick="printBiegDruz();togglePrintPanel('klas')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+              <div style="font-size:16px;">🏃</div><div style="font-size:11px;font-weight:700;color:var(--orange);margin-top:3px;">Drużynowy</div>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Klasyfikacja zespołowa — na zewnątrz, złoty -->
+      <button class="btn btn-sm" onclick="printKlasyfikacjaPDF()"
+        style="color:#c8a800;border-color:rgba(200,168,0,.4);background:rgba(200,168,0,.08);font-weight:700;">
+        🏆 Klasyfikacja
+      </button>
     </div>
   </div>
 
@@ -7477,83 +7498,252 @@ function downloadTemplateCSV() {
 
 function downloadTemplateXLSX() {
   if (typeof XLSX === 'undefined') { alert('Biblioteka Excel nie jest załadowana — spróbuj za chwilę.'); return; }
+
+  const contestName = state.contest?.name || 'Zawody OSF';
+  const contestCity = state.contest?.city || '';
+  const contestDate = state.contest?.date || '';
+  const contestMeta = [contestCity, contestDate].filter(Boolean).join('  ·  ');
+
   const wb = XLSX.utils.book_new();
 
-  // Arkusz główny z danymi
-  const data = [TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE];
-  const ws = XLSX.utils.aoa_to_sheet(data);
-
-  // Szerokości kolumn
-  ws['!cols'] = [{ wch: 5 }, { wch: 38 }, { wch: 8 }, { wch: 28 }, { wch: 8 }, { wch: 8 }];
-
-  // Freeze header row
-  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-
-  // Styl nagłówka — ciemne tło, biały tekst
-  const headerStyle = {
-    font:      { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
-    fill:      { fgColor: { rgb: '1a2535' } },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-    border: {
-      bottom: { style: 'medium', color: { rgb: '3a6fa8' } }
-    }
+  // ── KOLORY I STYLE ──────────────────────────────
+  const C = {
+    navy:    '0d1b2a',   // ciemny granat — nagłówek bloku info
+    steel:   '1c3a5a',   // stalowy — nagłówek tabeli
+    steelL:  '2a5080',   // jaśniejszy stalowy — akcent
+    gold:    'c8a000',   // złoty — akcenty OSF
+    goldL:   'fdf3c0',   // jasny złoty — tło nagłówka
+    blue:    '1a5fa8',   // niebieski — M36+
+    blueL:   'ddeeff',   // jasny niebieski — tło M36+
+    red:     'a81a1a',   // czerwony — PK
+    redL:    'ffeaea',   // jasny czerwony — tło PK
+    maleC:   '1a5fa8',   // kolor M
+    femaleC: '993388',   // kolor K
+    maleL:   'ddeeff',   // tło M
+    femaleL: 'f9e5f5',   // tło K
+    white:   'FFFFFF',
+    offWhite:'f8f9fa',
+    light:   'edf0f4',
+    mid:     'c8d0dc',
+    dark:    '344050',
+    gray:    '6b7a8d',
+    grayL:   'f2f4f7',
   };
-  const colKeys = ['A','B','C','D','E','F'];
-  colKeys.forEach(c => {
-    const cell = ws[c + '1'];
-    if (cell) cell.s = headerStyle;
+
+  function style(overrides) {
+    return Object.assign({
+      font:      { name: 'Calibri', sz: 11, color: { rgb: C.dark } },
+      alignment: { vertical: 'center' },
+      border: {
+        top:    { style: 'thin', color: { rgb: C.mid } },
+        bottom: { style: 'thin', color: { rgb: C.mid } },
+        left:   { style: 'thin', color: { rgb: C.mid } },
+        right:  { style: 'thin', color: { rgb: C.mid } },
+      }
+    }, overrides);
+  }
+
+  // Wiersz 1: Blok tytułowy OSF — scalony A1:F1
+  // Wiersz 2: Nazwa zawodów — scalony A2:F2
+  // Wiersz 3: Meta (miasto, data) — scalony A3:F3
+  // Wiersz 4: pusty separator
+  // Wiersz 5: Instrukcja skrócona — scalony A5:F5
+  // Wiersz 6: Nagłówki kolumn
+  // Wiersz 7+: dane
+
+  const HDR_ROW = 6; // wiersz nagłówka tabeli (1-based)
+  const DATA_START = 7;
+
+  // Buduj arkusz z pustą macierzą (wypełnimy ręcznie)
+  const aoa = [
+    ['OSF — LISTA STARTOWA', '', '', '', '', ''],     // row 1
+    [contestName, '', '', '', '', ''],                           // row 2
+    [contestMeta, '', '', '', '', ''],                           // row 3
+    ['', '', '', '', '', ''],                                    // row 4 separator
+    ['Wypełnij tabelę poniżej. Kolumny M36+ i PK: wpisz wartość = aktywne, zostaw puste = nieaktywne. Nr startowy przydzielany automatycznie.', '', '', '', '', ''],  // row 5
+    ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna / Jednostka', 'M36+', 'PK'],  // row 6
+    ...TEMPLATE_EXAMPLE.map((r, i) => [i+1, r[1], r[2], r[3], r[4], r[5] || '']),
+  ];
+
+  // Dodaj 80 pustych wierszy dla wpisywania
+  for (let i = TEMPLATE_EXAMPLE.length + 1; i <= 80; i++) {
+    aoa.push([i, '', '', '', '', '']);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // ── SZEROKOŚCI I WYSOKOŚCI ──────────────────────
+  ws['!cols'] = [
+    { wch: 5  },   // Lp
+    { wch: 42 },   // Nazwisko
+    { wch: 7  },   // Płeć
+    { wch: 30 },   // Drużyna
+    { wch: 9  },   // M36+
+    { wch: 9  },   // PK
+  ];
+
+  const totalRows = aoa.length;
+  ws['!rows'] = Array(totalRows).fill(null).map((_, i) => {
+    if (i === 0) return { hpt: 36 };  // tytuł OSF
+    if (i === 1) return { hpt: 22 };  // nazwa zawodów
+    if (i === 2) return { hpt: 18 };  // meta
+    if (i === 3) return { hpt: 8  };  // separator
+    if (i === 4) return { hpt: 30 };  // instrukcja
+    if (i === 5) return { hpt: 28 };  // nagłówek tabeli
+    return { hpt: 22 };               // dane
   });
 
-  // Styl wierszy przykładowych
-  const rowStyle      = { font: { sz: 11 }, alignment: { vertical: 'center' } };
-  const m36CellStyle  = { font: { bold: true, color: { rgb: '1a5fa8' }, sz: 11 }, alignment: { horizontal: 'center' } };
-  const pkCellStyle   = { font: { bold: true, color: { rgb: 'a81a1a' }, sz: 11 }, alignment: { horizontal: 'center' } };
-  const numCellStyle  = { font: { color: { rgb: '888888' }, sz: 10 }, alignment: { horizontal: 'center' } };
-  const genderMStyle  = { font: { bold: true, color: { rgb: '3a6fa8' }, sz: 11 }, alignment: { horizontal: 'center' } };
-  const genderKStyle  = { font: { bold: true, color: { rgb: 'b03a80' }, sz: 11 }, alignment: { horizontal: 'center' } };
+  // ── SCALANIE ────────────────────────────────────
+  ws['!merges'] = [
+    { s: { r:0, c:0 }, e: { r:0, c:5 } },  // tytuł
+    { s: { r:1, c:0 }, e: { r:1, c:5 } },  // nazwa zawodów
+    { s: { r:2, c:0 }, e: { r:2, c:5 } },  // meta
+    { s: { r:3, c:0 }, e: { r:3, c:5 } },  // separator
+    { s: { r:4, c:0 }, e: { r:4, c:5 } },  // instrukcja
+  ];
 
-  for (let r = 2; r <= data.length; r++) {
+  // ── FREEZE ──────────────────────────────────────
+  ws['!freeze'] = { xSplit: 0, ySplit: HDR_ROW };
+
+  // ── STYLE WIERSZY TYTUŁOWYCH ────────────────────
+
+  // Wiersz 1 — OSF HERKULES
+  ws['A1'].s = {
+    font:      { name: 'Calibri', bold: true, sz: 18, color: { rgb: C.gold } },
+    fill:      { fgColor: { rgb: C.navy } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+
+  // Wiersz 2 — nazwa zawodów
+  ws['A2'].s = {
+    font:      { name: 'Calibri', bold: true, sz: 13, color: { rgb: C.white } },
+    fill:      { fgColor: { rgb: C.steel } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+
+  // Wiersz 3 — meta
+  ws['A3'].s = {
+    font:      { name: 'Calibri', sz: 11, color: { rgb: C.goldL }, italic: true },
+    fill:      { fgColor: { rgb: C.steelL } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+  };
+
+  // Wiersz 4 — separator (ciemne tło bez treści)
+  ws['A4'].s = { fill: { fgColor: { rgb: C.navy } } };
+
+  // Wiersz 5 — instrukcja
+  ws['A5'].s = {
+    font:      { name: 'Calibri', sz: 10, color: { rgb: C.steelL }, italic: true },
+    fill:      { fgColor: { rgb: C.grayL } },
+    alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
+    border: {
+      left:   { style: 'medium', color: { rgb: C.steelL } },
+      right:  { style: 'thin', color: { rgb: C.mid } },
+      top:    { style: 'thin', color: { rgb: C.mid } },
+      bottom: { style: 'thin', color: { rgb: C.mid } },
+    }
+  };
+
+  // Wiersz 6 — nagłówki kolumn
+  const colKeys = ['A','B','C','D','E','F'];
+  const hdrLabels = ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna / Jednostka', 'M36+', 'PK'];
+  colKeys.forEach((c, ci) => {
+    const ref = c + HDR_ROW;
+    if (!ws[ref]) ws[ref] = { t: 's', v: hdrLabels[ci] };
+    ws[ref].s = {
+      font:      { name: 'Calibri', bold: true, sz: 11, color: { rgb: C.white } },
+      fill:      { fgColor: { rgb: C.steel } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
+      border: {
+        top:    { style: 'medium', color: { rgb: C.steelL } },
+        bottom: { style: 'medium', color: { rgb: C.gold } },
+        left:   { style: 'thin',   color: { rgb: C.steelL } },
+        right:  { style: 'thin',   color: { rgb: C.steelL } },
+      }
+    };
+  });
+
+  // Wiersz 6 — specjalne kolory dla E i F (M36+ i PK)
+  ws['E' + HDR_ROW].s = Object.assign({}, ws['E' + HDR_ROW].s, {
+    fill: { fgColor: { rgb: C.blue } },
+    font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: C.white } },
+  });
+  ws['F' + HDR_ROW].s = Object.assign({}, ws['F' + HDR_ROW].s, {
+    fill: { fgColor: { rgb: C.red } },
+    font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: C.white } },
+  });
+
+  // ── STYLE WIERSZY DANYCH ────────────────────────
+  for (let r = DATA_START; r <= aoa.length; r++) {
+    const isEven = (r - DATA_START) % 2 === 0;
+    const rowBg  = isEven ? C.white : C.offWhite;
+    const isExample = r < DATA_START + TEMPLATE_EXAMPLE.length;
+
     colKeys.forEach((c, ci) => {
       const ref  = c + r;
+      if (!ws[ref]) ws[ref] = { t: 's', v: '' };
       const cell = ws[ref];
-      if (!cell) return;
-      if (ci === 0) cell.s = numCellStyle;
-      else if (ci === 2) cell.s = cell.v === 'M' ? genderMStyle : genderKStyle;
-      else if (ci === 4 && cell.v) cell.s = m36CellStyle;
-      else if (ci === 5 && cell.v) cell.s = pkCellStyle;
-      else cell.s = rowStyle;
+      const val  = String(cell.v || '');
+
+      const baseBorder = {
+        top:    { style: 'thin', color: { rgb: C.mid } },
+        bottom: { style: 'thin', color: { rgb: C.mid } },
+        left:   { style: 'thin', color: { rgb: C.mid } },
+        right:  { style: 'thin', color: { rgb: C.mid } },
+      };
+
+      if (ci === 0) {
+        // Lp
+        cell.s = { font: { name:'Calibri', sz:10, color:{rgb:C.gray} }, fill: { fgColor:{rgb:C.grayL} }, alignment:{horizontal:'center',vertical:'center'}, border: baseBorder };
+      } else if (ci === 2) {
+        // Płeć
+        const isM = val === 'M';
+        const isK = val === 'K';
+        cell.s = {
+          font:      { name:'Calibri', bold: true, sz:11, color:{rgb: isM ? C.maleC : isK ? C.femaleC : C.dark} },
+          fill:      { fgColor:{rgb: isM ? C.maleL : isK ? C.femaleL : rowBg} },
+          alignment: { horizontal:'center', vertical:'center' },
+          border:    baseBorder
+        };
+      } else if (ci === 4) {
+        // M36+
+        cell.s = val
+          ? { font:{name:'Calibri',bold:true,sz:10,color:{rgb:C.blue}}, fill:{fgColor:{rgb:C.blueL}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder }
+          : { font:{name:'Calibri',sz:10,color:{rgb:C.mid}}, fill:{fgColor:{rgb:rowBg}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder };
+      } else if (ci === 5) {
+        // PK
+        cell.s = val
+          ? { font:{name:'Calibri',bold:true,sz:10,color:{rgb:C.red}}, fill:{fgColor:{rgb:C.redL}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder }
+          : { font:{name:'Calibri',sz:10,color:{rgb:C.mid}}, fill:{fgColor:{rgb:rowBg}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder };
+      } else {
+        // Imię/nazwisko, drużyna
+        cell.s = {
+          font:      { name:'Calibri', sz:11, color:{rgb: isExample ? C.dark : C.gray} },
+          fill:      { fgColor:{rgb:rowBg} },
+          alignment: { vertical:'center', wrapText: false },
+          border:    baseBorder
+        };
+      }
     });
   }
 
-  // Wysokość wiersza nagłówkowego
-  ws['!rows'] = [{ hpt: 28 }];
+  // Lewa linia akcentująca kolumny kategorii
+  for (let r = DATA_START; r <= aoa.length; r++) {
+    const eRef = 'E' + r;
+    if (ws[eRef] && ws[eRef].s) {
+      ws[eRef].s.border = Object.assign({}, ws[eRef].s.border, {
+        left: { style: 'medium', color: { rgb: C.blue } }
+      });
+    }
+    const fRef = 'F' + r;
+    if (ws[fRef] && ws[fRef].s) {
+      ws[fRef].s.border = Object.assign({}, ws[fRef].s.border, {
+        left: { style: 'thin', color: { rgb: C.mid } }
+      });
+    }
+  }
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
-
-  // Arkusz instrukcji
-  const wsInfo = XLSX.utils.aoa_to_sheet([
-    ['OSF — Lista startowa · Instrukcja'],
-    [''],
-    ['Kolumna', 'Opis', 'Przykład'],
-    ['Lp', 'Liczba porządkowa (1, 2, 3...)', '1'],
-    ['Stopień / Imię i Nazwisko', 'Stopień wojskowy + imię i nazwisko w jednej komórce', 'sierż. KOWALSKI Jan'],
-    ['Płeć', 'Wpisz M (mężczyzna) lub K (kobieta)', 'M'],
-    ['Drużyna', 'Nazwa jednostki lub drużyny', 'JW 1234'],
-    ['M36+', 'Wpisz M36+ jeśli zawodnik należy do kategorii wiekowej. Zostaw puste jeśli nie.', 'M36+'],
-    ['PK', 'Wpisz PK jeśli zawodnik startuje Poza Konkurencją. Zostaw puste jeśli nie.', 'PK'],
-    [''],
-    ['Uwagi:'],
-    ['· Nr startowy jest przydzielany automatycznie wg kolejności na liście.'],
-    ['· W kolumnach M36+ i PK cokolwiek wpisane = aktywne. Puste = nieaktywne.'],
-    ['· Nie zmieniaj nazw kolumn — system rozpoznaje je automatycznie.'],
-  ]);
-  wsInfo['!cols'] = [{ wch: 30 }, { wch: 55 }, { wch: 22 }];
-  const titleStyle = { font: { bold: true, sz: 14, color: { rgb: '1a2535' } } };
-  if (wsInfo['A1']) wsInfo['A1'].s = titleStyle;
-  const hdrStyle2 = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '3a6fa8' } } };
-  ['A3','B3','C3'].forEach(ref => { if (wsInfo[ref]) wsInfo[ref].s = hdrStyle2; });
-  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrukcja');
-
+  XLSX.utils.book_append_sheet(wb, ws, 'Lista startowa');
   XLSX.writeFile(wb, 'osf_lista_startowa.xlsx');
 }
 
