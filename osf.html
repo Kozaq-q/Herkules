@@ -4027,9 +4027,8 @@ function buildSeries2(gender) {
   const genders = gender ? [gender] : ['M', 'K'];
   function buildForGender(gender) {
     const gPairs = state.s1pairs.filter(p => p.gender === gender);
-    // collect athletes with their S1 lane and time
-    let pool = [];
     const skipSet = new Set(state.s2skip || []);
+    let pool = [];
     gPairs.forEach(p => {
       const a = state.athletes.find(x => x.id === p.aId);
       if (a && !skipSet.has(a.id)) {
@@ -4047,112 +4046,74 @@ function buildSeries2(gender) {
       }
     });
 
-    // Oznacz kto był solo w S1 (brak pary = biegł sam)
-    const soloInS1 = new Set();
-    gPairs.forEach(p => { if (!p.bId) soloInS1.add(p.aId); });
+    if (!pool.length) return [];
 
-    // Sort: brak czasu i solo z S1 → NA POCZĄTKU (najsłabsi)
-    // Potem najwolniejsi → najszybsi (najlepsi na końcu)
-    pool.sort((a, b) => {
-      const aNoTime = a.s1time === Infinity;
-      const bNoTime = b.s1time === Infinity;
-      // brak czasu zawsze na początku
-      if (aNoTime && bNoTime) return 0;
-      if (aNoTime) return -1;
-      if (bNoTime) return 1;
-      return b.s1time - a.s1time; // slowest first (will start first)
-    });
-
-    // Required lane in S2 = opposite of S1 (chyba że ignoreLaneRule)
+    // Wymagane tory S2 (zmiana obowiązkowa)
     pool.forEach(p => {
-      if (state.setup && state.setup.ignoreLaneRule) {
-        p.s2lane = Math.random() < 0.5 ? 'L' : 'P'; // losowy tor
-      } else {
-        p.s2lane = p.s1lane === 'L' ? 'P' : 'L'; // obowiązkowa zmiana
-      }
+      p.s2lane = (state.setup && state.setup.ignoreLaneRule)
+        ? (Math.random() < 0.5 ? 'L' : 'P')
+        : (p.s1lane === 'L' ? 'P' : 'L');
     });
 
-    // Podziel na dwie kolejki wg wymaganego toru w S2
-    // Każda kolejka niezależnie sortowana: brak czasu → najwolniejsi → najszybsi
-    const needL = pool.filter(p => p.s2lane === 'L');
-    const needP = pool.filter(p => p.s2lane === 'P');
+    // Sortuj globalnie: brak czasu pierwsi, potem najwolniejsi → najszybsi
+    pool.sort((a, b) => {
+      if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+      if (a.s1time === Infinity) return -1;
+      if (b.s1time === Infinity) return 1;
+      return b.s1time - a.s1time;
+    });
 
-    function sortQueue(q) {
-      return q.sort((a, b) => {
-        if (a.s1time === Infinity && b.s1time === Infinity) return 0;
-        if (a.s1time === Infinity) return -1;
-        if (b.s1time === Infinity) return 1;
-        return b.s1time - a.s1time; // najwolniejsi pierwsi
-      });
-    }
-    sortQueue(needL);
-    sortQueue(needP);
-
-    // Globalna kolejność wg czasu (dla _info)
-    const globalRank = new Map();
-    pool.forEach((p, i) => globalRank.set(p.athlete.id, i + 1));
-    const total = pool.length;
-
-    // Paruj i-ty z needL z i-tym z needP.
-    // Solo (nadwyżka dłuższej kolejki) to NAJWOLNIEJSI — idą na POCZĄTEK (pierwsi w kolejce).
-    // Dlatego: wyciągnij solo z POCZĄTKU dłuższej kolejki, resztę paruj normalnie.
-    const minLen = Math.min(needL.length, needP.length);
-    const maxLen = Math.max(needL.length, needP.length);
-    const soloLane = needL.length > needP.length ? 'L' : 'P';
-    const longerQ  = needL.length > needP.length ? needL : needP;
-    const shorterQ = needL.length > needP.length ? needP : needL;
-
-    // Wyciągnij solo z POCZĄTKU dłuższej kolejki (najwolniejsi/brak czasu)
-    const soloItems = longerQ.slice(0, maxLen - minLen);
-    const pairedFromLonger = longerQ.slice(maxLen - minLen);
-
-    // Ustal która lista jest L a która P po wyciągnięciu solo
-    const pairedL = soloLane === 'L' ? pairedFromLonger : shorterQ;
-    const pairedP = soloLane === 'P' ? pairedFromLonger : shorterQ;
-
-    const entries = [];
-
-    for (let i = 0; i < minLen; i++) {
-      const a = pairedL[i], b = pairedP[i];
-      const globalPos = Math.min(globalRank.get(a.athlete.id), globalRank.get(b.athlete.id));
-      entries.push({
-        type: 'pair', globalPos,
-        pair: {
-          pairNum: 0, gender,
-          aId: a.athlete.id, aLane: 'L',
-          bId: b.athlete.id, bLane: 'P',
-          _info: {
-            aTime:     a.s1time === Infinity ? null : a.s1time,
-            bTime:     b.s1time === Infinity ? null : b.s1time,
-            aQueuePos: i + 1, aQueueLen: pairedL.length,
-            bQueuePos: i + 1, bQueueLen: pairedP.length,
-            aGlobal: globalRank.get(a.athlete.id),
-            bGlobal: globalRank.get(b.athlete.id),
-            total
-          }
-        }
-      });
+    // Wyciągaj najsłabszych jako solo aż kolejki L i P będą równe
+    // Zasada toru jest bezwzględna — nigdy nie parujemy dwóch z tym samym torem
+    const solos = [];
+    let remaining = [...pool];
+    while (true) {
+      const nL = remaining.filter(p => p.s2lane === 'L').length;
+      const nP = remaining.filter(p => p.s2lane === 'P').length;
+      if (nL === nP) break;
+      // Wyciągnij najsłabszego z dłuższej kolejki
+      const longerLane = nL > nP ? 'L' : 'P';
+      const fromLonger = remaining.filter(p => p.s2lane === longerLane);
+      // fromLonger jest posortowana globalnie → [0] = najwolniejszy z tej kolejki
+      const soloCandidate = fromLonger[0];
+      solos.push(soloCandidate);
+      remaining = remaining.filter(p => p !== soloCandidate);
     }
 
-    // Solo — najwolniejsi/brak czasu, wstawiamy na początku
-    for (let k = 0; k < soloItems.length; k++) {
-      const s = soloItems[k];
-      entries.push({
-        type: 'solo', globalPos: globalRank.get(s.athlete.id),
-        pair: {
-          pairNum: 0, gender,
-          aId: s.athlete.id, aLane: soloLane,
-          bId: null, bLane: soloLane === 'L' ? 'P' : 'L'
-        }
-      });
+    // Teraz remaining ma równe L i P — paruj i-ty L z i-tym P
+    const pairL = remaining.filter(p => p.s2lane === 'L');
+    const pairP = remaining.filter(p => p.s2lane === 'P');
+    const pairs = pairL.map((a, i) => ({ L: a, P: pairP[i] }));
+
+    // Sortuj pary: para z najwolniejszym zawodnikiem startuje pierwsza
+    pairs.sort((a, b) => {
+      const worst = p => p.s1time === Infinity ? Infinity : p.s1time;
+      const aW = Math.max(worst(a.L), worst(a.P));
+      const bW = Math.max(worst(b.L), worst(b.P));
+      if (aW === Infinity && bW === Infinity) return 0;
+      if (aW === Infinity) return -1;
+      if (bW === Infinity) return 1;
+      return bW - aW;
+    });
+
+    // Sortuj solos: najwolniejsi pierwsi
+    solos.sort((a, b) => {
+      if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+      if (a.s1time === Infinity) return -1;
+      if (b.s1time === Infinity) return 1;
+      return b.s1time - a.s1time;
+    });
+
+    // Buduj wynik: solo zawsze przed parami
+    const result = [];
+    for (const s of solos) {
+      result.push({ pairNum: 0, gender, aId: s.athlete.id, aLane: s.s2lane, bId: null, bLane: s.s2lane === 'L' ? 'P' : 'L' });
     }
-
-    // Posortuj wg globalPos (wolniejsi/brak czasu → pierwsi)
-    entries.sort((a, b) => a.globalPos - b.globalPos);
-
-    // Przenumeruj
-    const ordered = entries.map((e, i) => { e.pair.pairNum = i + 1; return e.pair; });
-    return ordered;
+    for (const pr of pairs) {
+      result.push({ pairNum: 0, gender, aId: pr.L.athlete.id, aLane: 'L', bId: pr.P.athlete.id, bLane: 'P' });
+    }
+    result.forEach((p, i) => { p.pairNum = i + 1; });
+    return result;
   }
 
   const newPairs = [];
