@@ -4283,63 +4283,75 @@ function buildSeries2(gender) {
         : (p.s1lane === 'L' ? 'P' : 'L');
     });
 
-    // Sortuj globalnie: brak czasu pierwsi, potem najwolniejsi → najszybsi
-    pool.sort((a, b) => {
-      if (a.s1time === Infinity && b.s1time === Infinity) return 0;
-      if (a.s1time === Infinity) return -1;
-      if (b.s1time === Infinity) return 1;
-      return b.s1time - a.s1time;
-    });
+    // Oddziel PK od normalnych — PK biegną na początku, parowane tylko między sobą
+    const pkPool   = pool.filter(p => p.athlete.pk);
+    const normPool = pool.filter(p => !p.athlete.pk);
 
-    // Wyciągaj najsłabszych jako solo aż kolejki L i P będą równe
-    // Zasada toru jest bezwzględna — nigdy nie parujemy dwóch z tym samym torem
-    const solos = [];
-    let remaining = [...pool];
-    while (true) {
-      const nL = remaining.filter(p => p.s2lane === 'L').length;
-      const nP = remaining.filter(p => p.s2lane === 'P').length;
-      if (nL === nP) break;
-      // Wyciągnij najsłabszego z dłuższej kolejki
-      const longerLane = nL > nP ? 'L' : 'P';
-      const fromLonger = remaining.filter(p => p.s2lane === longerLane);
-      // fromLonger jest posortowana globalnie → [0] = najwolniejszy z tej kolejki
-      const soloCandidate = fromLonger[0];
-      solos.push(soloCandidate);
-      remaining = remaining.filter(p => p !== soloCandidate);
+    // Funkcja budująca pary z puli z zachowaniem zasady toru
+    function buildPairsFromPool(subPool) {
+      subPool.sort((a, b) => {
+        if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+        if (a.s1time === Infinity) return -1;
+        if (b.s1time === Infinity) return 1;
+        return b.s1time - a.s1time;
+      });
+      const solosOut = [];
+      let rem = [...subPool];
+      while (true) {
+        const nL = rem.filter(p => p.s2lane === 'L').length;
+        const nP = rem.filter(p => p.s2lane === 'P').length;
+        if (nL === nP) break;
+        const longerLane = nL > nP ? 'L' : 'P';
+        const candidate  = rem.filter(p => p.s2lane === longerLane)[0];
+        solosOut.push(candidate);
+        rem = rem.filter(p => p !== candidate);
+      }
+      const pairsL = rem.filter(p => p.s2lane === 'L');
+      const pairsP = rem.filter(p => p.s2lane === 'P');
+      return { solos: solosOut, pairs: pairsL.map((a, i) => ({ L: a, P: pairsP[i] })) };
     }
 
-    // Teraz remaining ma równe L i P — paruj i-ty L z i-tym P
-    const pairL = remaining.filter(p => p.s2lane === 'L');
-    const pairP = remaining.filter(p => p.s2lane === 'P');
-    const pairs = pairL.map((a, i) => ({ L: a, P: pairP[i] }));
+    // Buduj pary PK i normalne osobno
+    const pkResult   = buildPairsFromPool(pkPool);
+    const normResult = buildPairsFromPool(normPool);
 
-    // Sortuj pary: para z najwolniejszym zawodnikiem startuje pierwsza
-    pairs.sort((a, b) => {
-      const worst = p => p.s1time === Infinity ? Infinity : p.s1time;
-      const aW = Math.max(worst(a.L), worst(a.P));
-      const bW = Math.max(worst(b.L), worst(b.P));
-      if (aW === Infinity && bW === Infinity) return 0;
-      if (aW === Infinity) return -1;
-      if (bW === Infinity) return 1;
-      return bW - aW;
-    });
+    // Zmienne dla dalszego kodu — używamy normPool dla głównej logiki
+    const solos    = normResult.solos;
+    const remaining = []; // nie używane dalej, zastąpione przez normResult.pairs
 
-    // Sortuj solos: najwolniejsi pierwsi
-    solos.sort((a, b) => {
-      if (a.s1time === Infinity && b.s1time === Infinity) return 0;
-      if (a.s1time === Infinity) return -1;
-      if (b.s1time === Infinity) return 1;
-      return b.s1time - a.s1time;
-    });
-
-    // Buduj wynik: solo zawsze przed parami
-    const result = [];
-    for (const s of solos) {
-      result.push({ pairNum: 0, gender, aId: s.athlete.id, aLane: s.s2lane, bId: null, bLane: s.s2lane === 'L' ? 'P' : 'L' });
+    // Funkcja zamieniająca {solos, pairs} → entries do wynikowej tablicy
+    function buildEntries(soloList, pairList) {
+      // Sortuj pary: najwolniejsza para pierwsza
+      pairList.sort((a, b) => {
+        const worst = p => p.s1time === Infinity ? Infinity : p.s1time;
+        const aW = Math.max(worst(a.L), worst(a.P));
+        const bW = Math.max(worst(b.L), worst(b.P));
+        if (aW === Infinity && bW === Infinity) return 0;
+        if (aW === Infinity) return -1;
+        if (bW === Infinity) return 1;
+        return bW - aW;
+      });
+      // Sortuj solos: najwolniejsi pierwsi
+      soloList.sort((a, b) => {
+        if (a.s1time === Infinity && b.s1time === Infinity) return 0;
+        if (a.s1time === Infinity) return -1;
+        if (b.s1time === Infinity) return 1;
+        return b.s1time - a.s1time;
+      });
+      const entries = [];
+      for (const s of soloList) {
+        entries.push({ pairNum: 0, gender, aId: s.athlete.id, aLane: s.s2lane, bId: null, bLane: s.s2lane === 'L' ? 'P' : 'L' });
+      }
+      for (const pr of pairList) {
+        entries.push({ pairNum: 0, gender, aId: pr.L.athlete.id, aLane: 'L', bId: pr.P.athlete.id, bLane: 'P' });
+      }
+      return entries;
     }
-    for (const pr of pairs) {
-      result.push({ pairNum: 0, gender, aId: pr.L.athlete.id, aLane: 'L', bId: pr.P.athlete.id, bLane: 'P' });
-    }
+
+    // PK pierwsi, normalni po nich
+    const pkEntries   = buildEntries(pkResult.solos,   pkResult.pairs);
+    const normEntries = buildEntries(normResult.solos, normResult.pairs);
+    const result = [...pkEntries, ...normEntries];
     result.forEach((p, i) => { p.pairNum = i + 1; });
     return result;
   }
