@@ -659,7 +659,7 @@ tr:last-child > td { border-bottom: none; }
   <div class="grid-2" style="gap:20px;">
     <div>
       <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--male);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--male);">
-        Mężczyźni
+        ♂ M Open
       </div>
       <div class="table-wrap">
         <table>
@@ -7514,20 +7514,20 @@ function downloadTemplateXLSX() {
     gold:    'c8a000',   // złoty — akcenty OSF
     goldL:   'fdf3c0',   // jasny złoty — tło nagłówka
     blue:    '1a5fa8',   // niebieski — M36+
-    blueL:   'ddeeff',   // jasny niebieski — tło M36+
+    blueL:   'cce0ff',   // jasny niebieski — tło M36+
     red:     'a81a1a',   // czerwony — PK
-    redL:    'ffeaea',   // jasny czerwony — tło PK
+    redL:    'ffd6d6',   // jasny czerwony — tło PK
     maleC:   '1a5fa8',   // kolor M
     femaleC: '993388',   // kolor K
-    maleL:   'ddeeff',   // tło M
-    femaleL: 'f9e5f5',   // tło K
+    maleL:   'cce0ff',   // tło M
+    femaleL: 'f5d6ee',   // tło K
     white:   'FFFFFF',
-    offWhite:'f8f9fa',
-    light:   'edf0f4',
-    mid:     'c8d0dc',
-    dark:    '344050',
-    gray:    '6b7a8d',
-    grayL:   'f2f4f7',
+    offWhite:'e8edf4',   // wyraźniejszy kontrast naprzemiennych wierszy
+    light:   'dce4f0',
+    mid:     'b0bcc8',
+    dark:    '1a2535',
+    gray:    '5a6a7a',
+    grayL:   'dce4f0',   // ciemniejszy pasek Lp
   };
 
   function style(overrides) {
@@ -7551,8 +7551,8 @@ function downloadTemplateXLSX() {
   // Wiersz 6: Nagłówki kolumn
   // Wiersz 7+: dane
 
-  const HDR_ROW = 6; // wiersz nagłówka tabeli (1-based)
-  const DATA_START = 7;
+  const HDR_ROW = 5; // wiersz nagłówka tabeli (1-based)
+  const DATA_START = 6;
 
   // Buduj arkusz z pustą macierzą (wypełnimy ręcznie)
   const aoa = [
@@ -7560,7 +7560,6 @@ function downloadTemplateXLSX() {
     [contestName, '', '', '', '', ''],                           // row 2
     [contestMeta, '', '', '', '', ''],                           // row 3
     ['', '', '', '', '', ''],                                    // row 4 separator
-    ['Wypełnij tabelę poniżej. Kolumny M36+ i PK: wpisz wartość = aktywne, zostaw puste = nieaktywne. Nr startowy przydzielany automatycznie.', '', '', '', '', ''],  // row 5
     ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna / Jednostka', 'M36+', 'PK'],  // row 6
     ...TEMPLATE_EXAMPLE.map((r, i) => [i+1, r[1], r[2], r[3], r[4], r[5] || '']),
   ];
@@ -7588,8 +7587,7 @@ function downloadTemplateXLSX() {
     if (i === 1) return { hpt: 22 };  // nazwa zawodów
     if (i === 2) return { hpt: 18 };  // meta
     if (i === 3) return { hpt: 8  };  // separator
-    if (i === 4) return { hpt: 30 };  // instrukcja
-    if (i === 5) return { hpt: 28 };  // nagłówek tabeli
+    if (i === 4) return { hpt: 28 };  // nagłówek tabeli
     return { hpt: 22 };               // dane
   });
 
@@ -7599,7 +7597,6 @@ function downloadTemplateXLSX() {
     { s: { r:1, c:0 }, e: { r:1, c:5 } },  // nazwa zawodów
     { s: { r:2, c:0 }, e: { r:2, c:5 } },  // meta
     { s: { r:3, c:0 }, e: { r:3, c:5 } },  // separator
-    { s: { r:4, c:0 }, e: { r:4, c:5 } },  // instrukcja
   ];
 
   // ── FREEZE ──────────────────────────────────────
@@ -7631,20 +7628,7 @@ function downloadTemplateXLSX() {
   // Wiersz 4 — separator (ciemne tło bez treści)
   ws['A4'].s = { fill: { fgColor: { rgb: C.navy } } };
 
-  // Wiersz 5 — instrukcja
-  ws['A5'].s = {
-    font:      { name: 'Calibri', sz: 10, color: { rgb: C.steelL }, italic: true },
-    fill:      { fgColor: { rgb: C.grayL } },
-    alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
-    border: {
-      left:   { style: 'medium', color: { rgb: C.steelL } },
-      right:  { style: 'thin', color: { rgb: C.mid } },
-      top:    { style: 'thin', color: { rgb: C.mid } },
-      bottom: { style: 'thin', color: { rgb: C.mid } },
-    }
-  };
-
-  // Wiersz 6 — nagłówki kolumn
+  // Wiersz 5 — nagłówki kolumn
   const colKeys = ['A','B','C','D','E','F'];
   const hdrLabels = ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna / Jednostka', 'M36+', 'PK'];
   colKeys.forEach((c, ci) => {
