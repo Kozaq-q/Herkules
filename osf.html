@@ -949,6 +949,7 @@ tr:last-child > td { border-bottom: none; }
         </div>
         <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
         <span id="import-file-name" style="font-size:11px;color:var(--text3);font-family:var(--font-m);"></span>
+        <span id="sync-status" style="display:none;"></span>
       </div>
 
       <!-- Zarządzanie zawodami — kafelki -->
@@ -991,9 +992,9 @@ tr:last-child > td { border-bottom: none; }
             ⚠ Opcje poniżej wpływają na działanie całej aplikacji. Używaj ostrożnie.
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="openResetModal('results')">↺ Reset wyników</button>
-            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="openResetModal('pairs')">↺ Reset list startowych</button>
+            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="resetResults()">↺ Usuń wszystkie wyniki</button>
             <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);justify-content:flex-start;" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
+            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="clearAthletes()">🗑 Wyczyść listę zawodników</button>
           </div>
         </div>
       </div>
@@ -6281,6 +6282,23 @@ function updatePairingRulesSummary() {
 // Stara funkcja syncSetupToPanel — teraz synchronizacja jest automatyczna
 // Zostawiamy pustą dla kompatybilności
 function syncSetupToPanel() {}
+
+function resetResults() {
+  if (!confirm('Usunąć wszystkie wpisane czasy (indywidualne i drużynowe)?\nListy startowe i pary pozostają bez zmian.')) return;
+  state.times     = {};
+  state.teamTimes = {};
+  state.teamDisq  = {};
+  saveImmediate();
+  // Odśwież aktywny widok
+  const activePage = document.querySelector('.page.active');
+  const id = activePage ? activePage.id : '';
+  if (id === 'page-seria1') renderSeries1View();
+  else if (id === 'page-seria2') renderSeries2View();
+  else if (id === 'page-wyniki') renderResults();
+  else if (id === 'page-druzynowy') renderTeamView();
+  else if (id === 'page-klasyfikacja') renderKlasyfikacja();
+  showToast('✓ Wszystkie wyniki usunięte', 'success');
+}
 
 function openDrawPanel() {
   // Sprawdź ostrzeżenia
