@@ -567,54 +567,62 @@ tr:last-child > td { border-bottom: none; }
 
 <!-- ═══ TAB: SERIA 2 ═══ -->
 <div class="page" id="page-seria2">
-  <div class="flex-between mb-12">
-    <div>
-      <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 2 — Dobór wg wyników</div>
-      <div class="text-muted mt-4" style="font-size:12px;">Najlepsi biegną ostatni · zmiana torów obowiązkowa</div>
+
+  <!-- Nagłówek — jeden rząd -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <div style="font-family:var(--font-h);font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-right:4px;">Seria 2</div>
+    <!-- Generuj M i K -->
+    <div style="display:flex;gap:0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--accent);opacity:.9;">
+      <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);font-weight:700;" onclick="confirmBuildSeries2('M')">⚙ Generuj M</button>
+      <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;font-weight:700;" onclick="confirmBuildSeries2('K')">⚙ Generuj K</button>
     </div>
-    <div class="flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-direction:column;align-items:flex-end;">
-      <div style="display:flex;gap:6px;">
-        <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-          <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2StartList('M')">🖨 Lista M</button>
-          <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2StartList('K')">🖨 Lista K</button>
-        </div>
-        <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-          <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS2JudgeList('M')">📋 Sędz. M</button>
-          <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS2JudgeList('K')">📋 Sędz. K</button>
-        </div>
-        <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-          <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;border-right:1px solid rgba(255,255,255,.2);" onclick="confirmBuildSeries2('M')">⚙ Generuj M</button>
-          <button class="btn btn-sm btn-primary" style="border:none;border-radius:0;" onclick="confirmBuildSeries2('K')">⚙ Generuj K</button>
+    <!-- Wydruki -->
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="togglePrintPanel('s2')" title="Wydruki S2" style="font-size:15px;padding:4px 10px;">🖨</button>
+      <div id="print-panel-s2" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px;width:220px;box-shadow:0 4px 20px rgba(0,0,0,.7);">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Wydruki S2</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button onclick="printS2StartList('M');togglePrintPanel('s2')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--male)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📄</div><div style="font-size:11px;font-weight:700;color:var(--male);margin-top:3px;">Lista M</div>
+          </button>
+          <button onclick="printS2StartList('K');togglePrintPanel('s2')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--female)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📄</div><div style="font-size:11px;font-weight:700;color:var(--female);margin-top:3px;">Lista K</div>
+          </button>
+          <button onclick="printS2JudgeList('M');togglePrintPanel('s2')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--male)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--male);margin-top:3px;">Sędz. M</div>
+          </button>
+          <button onclick="printS2JudgeList('K');togglePrintPanel('s2')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--female)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--female);margin-top:3px;">Sędz. K</div>
+          </button>
         </div>
       </div>
-      <button id="s2-edit-toggle-btn" class="btn btn-sm" onclick="toggleS2EditMode()"
-        style="color:var(--text3);border-color:var(--border2);font-size:11px;align-self:flex-end;" title="Awaryjna ręczna edycja par Serii 2">🔒 Edycja awaryjna par</button>
-      <button id="s2-add-solo-btn" class="btn btn-sm" onclick="openAddSoloModal('s2')" style="display:none;color:var(--accent);border-color:rgba(232,212,77,.3);font-size:11px;align-self:flex-end;" title="Dodaj pusty slot SOLO">+ SOLO</button>
     </div>
+    <!-- Separator -->
+    <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>
+    <!-- Kto startuje -->
+    <button id="s2-startlist-btn" class="btn btn-sm" onclick="openS2StartlistModal()"
+      style="display:none;color:var(--accent);border-color:rgba(232,212,77,.3);font-size:11px;">👥 Kto startuje</button>
+    <!-- Edycja awaryjna -->
+    <button id="s2-edit-toggle-btn" class="btn btn-sm" onclick="toggleS2EditMode()"
+      style="color:var(--text3);border-color:var(--border2);font-size:11px;" title="Awaryjna ręczna edycja par S2">🔒 Edycja awaryjna</button>
+    <button id="s2-add-solo-btn" class="btn btn-sm" onclick="openAddSoloModal('s2')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;" title="Dodaj pusty slot SOLO">+ SOLO</button>
   </div>
 
   <div id="s2-alert" class="alert alert-warning" style="display:none;"></div>
 
-  <!-- Przycisk otwierający modal -->
-  <button id="s2-startlist-btn" class="btn btn-sm" onclick="openS2StartlistModal()"
-    style="display:none;margin-bottom:12px;color:var(--accent);border-color:rgba(232,212,77,.3);font-size:12px;">
-    👥 Kto startuje w S2?
-  </button>
-
   <div id="s2-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
     <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S2</strong> — zmiany naruszają regulaminowe parowanie wg wyników S1.
-    Użyj tylko gdy zmiana jest konieczna (np. kontuzja zawodnika). Kliknięcie <em>Generuj</em> przywróci prawidłowe pary.
     <button onclick="disableS2EditMode()" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
   </div>
 
   <!-- Wyszukiwarka S2 -->
-  <div id="s2-search-wrap" style="display:none;margin-bottom:12px;">
+  <div id="s2-search-wrap" style="display:none;margin-bottom:8px;">
     <input type="text" id="s2-search" placeholder="🔍  Szukaj zawodnika..." oninput="filterPairs('s2')"
-      style="width:100%;max-width:340px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 12px;font-family:var(--font-b);font-size:13px;" />
+      style="width:100%;max-width:320px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 12px;font-family:var(--font-b);font-size:13px;" />
   </div>
 
-  <!-- Zakładki wewnętrzne M / K -->
-  <div id="s2-inner-tabs" style="display:none;margin-bottom:14px;display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;">
+  <!-- Zakładki M / K -->
+  <div id="s2-inner-tabs" style="display:none;margin-bottom:14px;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;">
     <button id="s2-tab-M" onclick="switchS2Tab('M')"
       style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
       ♂ Mężczyźni
@@ -1298,36 +1306,26 @@ tr:last-child > td { border-bottom: none; }
 
 <!-- ═══ MODAL: KTO STARTUJE W S2 ═══ -->
 <div class="modal-overlay" id="modal-s2-startlist">
-  <div class="modal" style="max-width:560px;max-height:80vh;display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0;">
-      <div class="modal-title" style="margin-bottom:0;">👥 Kto startuje w Serii 2?</div>
-      <div style="display:flex;gap:6px;align-items:center;">
+  <div class="modal" style="max-width:600px;max-height:85vh;display:flex;flex-direction:column;">
+    <!-- Nagłówek z breadcrumb -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-shrink:0;">
+      <button id="sl-back-btn" onclick="showS2Teams()" style="display:none;background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 10px;font-size:12px;color:var(--text3);cursor:pointer;">← Drużyny</button>
+      <div class="modal-title" id="sl-modal-title" style="margin:0;flex:1;">👥 Kto startuje w S2?</div>
+      <div style="display:flex;gap:6px;">
         <button class="btn btn-sm" onclick="setAllS2Start(true)" style="font-size:11px;">✓ Wszyscy</button>
         <button class="btn btn-sm" onclick="setAllS2Start(false)" style="font-size:11px;color:var(--text3);">✗ Nikt</button>
       </div>
     </div>
-    <!-- Sortowanie -->
-    <div style="display:flex;gap:4px;margin-bottom:10px;flex-shrink:0;">
-      <span style="font-size:10px;color:var(--text3);align-self:center;margin-right:4px;">Sortuj:</span>
-      <button id="sl-sort-az"     onclick="setS2Sort('az')"     class="btn btn-sm" style="font-size:10px;padding:2px 8px;">A–Z</button>
-      <button id="sl-sort-team"   onclick="setS2Sort('team')"   class="btn btn-sm" style="font-size:10px;padding:2px 8px;color:var(--text3);">Drużyna</button>
-      <div style="width:1px;background:var(--border2);margin:0 2px;"></div>
-      <button id="sl-filter-all"  onclick="setS2Filter('all')"  class="btn btn-sm" style="font-size:10px;padding:2px 8px;">M+K</button>
-      <button id="sl-filter-m"    onclick="setS2Filter('M')"    class="btn btn-sm" style="font-size:10px;padding:2px 8px;color:var(--text3);">♂ M</button>
-      <button id="sl-filter-k"    onclick="setS2Filter('K')"    class="btn btn-sm" style="font-size:10px;padding:2px 8px;color:var(--text3);">♀ K</button>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;flex-shrink:0;">
+      Odznaczeni nie wchodzą do parowania S2 — wynik S1 zostaje w punktacji.
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;flex-shrink:0;">
-      Odznaczeni nie wchodzą do parowania S2 — ich wynik S1 zostaje w punktacji.
-    </div>
-    <!-- Wyszukiwarka -->
-    <input type="text" id="s2-startlist-search" placeholder="🔍  Szukaj po nazwisku lub drużynie..."
-      oninput="filterS2Startlist()"
-      style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);
-             color:var(--text1);padding:8px 12px;font-family:var(--font-b);font-size:13px;
-             margin-bottom:12px;flex-shrink:0;" />
-    <!-- Lista przewijalna -->
-    <div style="overflow-y:auto;flex:1;min-height:0;">
-      <div id="s2-startlist-M" style="margin-bottom:8px;"></div>
+    <!-- Widok: Drużyny -->
+    <div id="sl-view-teams" style="overflow-y:auto;flex:1;min-height:0;"></div>
+    <!-- Widok: Zawodnicy drużyny -->
+    <div id="sl-view-athletes" style="display:none;overflow-y:auto;flex:1;min-height:0;"></div>
+    <!-- Stare kontenery M/K potrzebne dla kompatybilności z setAllS2Start -->
+    <div style="display:none;">
+      <div id="s2-startlist-M"></div>
       <div id="s2-startlist-K"></div>
     </div>
     <div class="modal-footer" style="flex-shrink:0;margin-top:14px;">
@@ -6106,9 +6104,108 @@ function _updateLockAllBtn(series) {
 // ═══════════════════════════════════════
 function openS2StartlistModal() {
   if (!state.s2skip) state.s2skip = [];
-  document.getElementById('s2-startlist-search').value = '';
-  _buildS2StartlistModal('');
   document.getElementById('modal-s2-startlist').classList.add('open');
+  showS2Teams();
+}
+
+function showS2Teams() {
+  // Widok 1: kafelki drużyn
+  const backBtn   = document.getElementById('sl-back-btn');
+  const titleEl   = document.getElementById('sl-modal-title');
+  const teamsView = document.getElementById('sl-view-teams');
+  const athView   = document.getElementById('sl-view-athletes');
+  if (backBtn)   backBtn.style.display = 'none';
+  if (titleEl)   titleEl.textContent = '👥 Kto startuje w S2?';
+  if (athView)   athView.style.display = 'none';
+  if (teamsView) teamsView.style.display = '';
+
+  // Zbierz drużyny z S1
+  const teams = [...new Set(
+    state.s1pairs.flatMap(p => {
+      const ids = [p.aId, p.bId].filter(Boolean);
+      return ids.map(id => {
+        const a = state.athletes.find(x => x.id === id);
+        return a ? a.team : null;
+      }).filter(Boolean);
+    })
+  )].sort((a, b) => a.localeCompare(b, 'pl'));
+
+  if (!teams.length) {
+    teamsView.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);">Brak zawodników w S1</div>';
+    return;
+  }
+
+  teamsView.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">' +
+    teams.map(team => {
+      // Licz ilu zawodników z tej drużyny nie startuje
+      const teamAthletes = getTeamAthleteIdsFromS1(team);
+      const skipping = teamAthletes.filter(id => state.s2skip && state.s2skip.includes(id)).length;
+      const total    = teamAthletes.length;
+      const allSkip  = skipping === total;
+      const someSkip = skipping > 0 && skipping < total;
+      return '<button data-t="' + esc(team) + '" onclick="showS2TeamAthletes(this.dataset.t)" ' +
+        'style="background:' + (allSkip ? 'rgba(224,85,85,.08)' : someSkip ? 'rgba(232,212,77,.05)' : 'var(--bg3)') + ';' +
+        'border:1px solid ' + (allSkip ? 'rgba(224,85,85,.4)' : someSkip ? 'rgba(232,212,77,.3)' : 'var(--border2)') + ';' +
+        'border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;width:100%;">' +
+        '<div style="font-family:var(--font-b);font-size:13px;font-weight:700;color:var(--text1);margin-bottom:4px;word-break:break-word;">' + esc(team) + '</div>' +
+        '<div style="font-size:11px;color:' + (allSkip ? 'var(--red)' : someSkip ? 'var(--accent)' : 'var(--text3)') + ';">' +
+          (skipping === 0 ? 'Wszyscy startują' : skipping + ' nie startuje') +
+        '</div>' +
+        '</button>';
+    }).join('') + '</div>';
+}
+
+function getTeamAthleteIdsFromS1(team) {
+  const ids = [];
+  state.s1pairs.forEach(p => {
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      const a = state.athletes.find(x => x.id === id);
+      if (a && a.team === team && !ids.includes(id)) ids.push(id);
+    });
+  });
+  return ids;
+}
+
+function showS2TeamAthletes(team) {
+  const backBtn   = document.getElementById('sl-back-btn');
+  const titleEl   = document.getElementById('sl-modal-title');
+  const teamsView = document.getElementById('sl-view-teams');
+  const athView   = document.getElementById('sl-view-athletes');
+  if (backBtn)   { backBtn.style.display = ''; }
+  if (titleEl)   titleEl.textContent = team;
+  if (teamsView) teamsView.style.display = 'none';
+  if (athView)   athView.style.display = '';
+
+  const ids      = getTeamAthleteIdsFromS1(team);
+  const athletes = ids.map(id => state.athletes.find(x => x.id === id)).filter(Boolean)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pl'));
+
+  athView.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">' +
+    athletes.map(a => {
+      const skips = !!(state.s2skip && state.s2skip.includes(a.id));
+      return '<button data-t="' + esc(team) + '" onclick="toggleS2SkipTile(' + a.id + ', this.dataset.t)" ' +
+        'style="background:' + (skips ? 'rgba(224,85,85,.08)' : 'var(--bg3)') + ';' +
+        'border:2px solid ' + (skips ? 'var(--red)' : 'var(--border2)') + ';' +
+        'border-radius:var(--radius);padding:16px 12px;cursor:pointer;text-align:center;width:100%;transition:all .1s;">' +
+        '<div style="font-family:var(--font-b);font-size:14px;font-weight:700;' +
+          'color:' + (skips ? 'var(--text3)' : 'var(--text1)') + ';' +
+          'text-decoration:' + (skips ? 'line-through' : 'none') + ';' +
+          'line-height:1.3;margin-bottom:6px;word-break:break-word;">' + esc(a.name) + '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:' + (skips ? 'var(--red)' : 'var(--green)') + ';">' +
+          (skips ? '✗ NIE STARTUJE' : '✓ STARTUJE') +
+        '</div>' +
+        '</button>';
+    }).join('') + '</div>';
+}
+
+function toggleS2SkipTile(id, team) {
+  if (!state.s2skip) state.s2skip = [];
+  const idx = state.s2skip.indexOf(id);
+  if (idx === -1) state.s2skip.push(id);
+  else state.s2skip.splice(idx, 1);
+  save();
+  showS2TeamAthletes(team); // odśwież widok zawodników
+  // Odśwież też widok drużyn w tle (żeby liczniki były aktualne po powrocie)
 }
 
 let _s2SortMode   = 'az';   // 'az' | 'team'
