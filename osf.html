@@ -1881,54 +1881,41 @@ function openDupModal() {
     const athlete = state.athletes.find(x => x.id === d.athleteId);
     const aName   = athlete ? esc(athlete.name) : '#' + d.athleteId;
     const pairs   = d.series === 's1' ? state.s1pairs : state.s2pairs;
+    const serLabel = d.series === 's1' ? 'S1' : 'S2';
 
-    // Para 1 (zostaje) - partner
-    const p1       = pairs.find(p => p.pairNum === d.firstPairNum  && p.gender === d.firstGender);
-    const p1partId = p1 ? (p1.aId === d.athleteId ? p1.bId : p1.aId) : null;
-    const p1part   = p1partId ? state.athletes.find(x => x.id === p1partId) : null;
+    function partnerName(pairNum, gender) {
+      const p = pairs.find(x => x.pairNum === pairNum && x.gender === gender);
+      if (!p) return '—';
+      const partId = p.aId === d.athleteId ? p.bId : p.aId;
+      const part   = partId ? state.athletes.find(x => x.id === partId) : null;
+      return part ? esc(part.name) : 'solo';
+    }
 
-    // Para 2 (duplikat) - partner
-    const p2       = pairs.find(p => p.pairNum === d.secondPairNum && p.gender === d.secondGender);
-    const p2partId = p2 ? (p2.aId === d.athleteId ? p2.bId : p2.aId) : null;
-    const p2part   = p2partId ? state.athletes.find(x => x.id === p2partId) : null;
+    function pairTile(pairNum, gender, isFirst) {
+      const partner = partnerName(pairNum, gender);
+      const borderColor = isFirst ? 'var(--border2)' : 'var(--red)';
+      const badge = isFirst
+        ? '<span style="font-size:10px;color:var(--green);">✓ zostaje</span>'
+        : '<button onclick="fixOneDuplicate(' + i + ',\'only\',' + JSON.stringify(d) + ')" ' +
+            'style="font-size:11px;font-weight:700;padding:5px 12px;background:var(--red);color:#fff;' +
+            'border:none;border-radius:var(--radius);cursor:pointer;white-space:nowrap;">Usuń z tej</button>';
+      return '<div style="flex:1;border:2px solid ' + borderColor + ';border-radius:var(--radius);' +
+             'padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0;">' +
+        '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;">' + serLabel + ' · Para ' + pairNum + '</div>' +
+        '<div style="font-size:15px;font-weight:800;color:var(--text1);line-height:1.2;word-break:break-word;">' + aName + '</div>' +
+        '<div style="font-size:13px;color:var(--text3);">+ ' + partner + '</div>' +
+        '<div style="margin-top:2px;">' + badge + '</div>' +
+      '</div>';
+    }
 
-    // Czytelna etykieta serii
-    const serLabel = d.series === 's1' ? 'Seria 1' : 'Seria 2';
-
-    return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-      <!-- Nagłówek -->
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
-        <span style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:1px;text-transform:uppercase;">${serLabel}</span>
-        <span style="font-size:15px;font-weight:800;color:var(--text1);">${aName}</span>
-        <span style="font-size:11px;color:var(--text3);">pojawia się w dwóch parach</span>
-      </div>
-      <!-- Dwie pary z przyciskami -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;">
-        <!-- Para 1 — zostaje, brak akcji -->
-        <div style="padding:12px 14px;border-right:1px solid var(--border);opacity:.7;">
-          <div style="font-size:10px;color:var(--green);font-weight:700;margin-bottom:6px;">✓ Para ${d.firstPairNum}</div>
-          <div style="font-size:13px;font-weight:700;color:var(--text1);">${aName}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${p1part ? esc(p1part.name) : '— solo —'}</div>
-        </div>
-        <!-- Para 2 — do usunięcia, dwa przyciski -->
-        <div style="padding:12px 14px;background:rgba(224,85,85,.04);">
-          <div style="font-size:10px;color:var(--red);font-weight:700;margin-bottom:6px;">✕ Para ${d.secondPairNum} — usuń:</div>
-          <button onclick="fixOneDuplicate(${i},\'only\',${JSON.stringify(d)})"
-            style="width:100%;padding:6px 8px;margin-bottom:4px;background:var(--bg2);border:1px solid var(--border2);
-                   border-radius:var(--radius);cursor:pointer;text-align:left;font-size:12px;color:var(--text1);">
-            tylko <strong>${aName}</strong>
-            <span style="display:block;font-size:10px;color:var(--text3);margin-top:1px;">${p2part ? esc(p2part.name) + ' zostaje solo' : 'para znika'}</span>
-          </button>
-          ${p2part ? `<button onclick="fixOneDuplicate(${i},'pair',${JSON.stringify(d)})"
-            style="width:100%;padding:6px 8px;background:var(--bg2);border:1px solid var(--border2);
-                   border-radius:var(--radius);cursor:pointer;text-align:left;font-size:12px;color:var(--text1);">
-            całą parę ${d.secondPairNum}
-            <span style="display:block;font-size:10px;color:var(--text3);margin-top:1px;">${esc(p2part.name)} wraca do puli</span>
-          </button>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+    return '<div style="padding:4px 0;">' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Wybierz <strong>którą parę</strong> usunąć ' + aName.split(' ').pop() + ':</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        pairTile(d.firstPairNum,  d.firstGender,  true) +
+        pairTile(d.secondPairNum, d.secondGender, false) +
+      '</div>' +
+    '</div>';
+  }).join('<div style="border-top:1px solid var(--border);margin:12px 0;"></div>');
 
   document.getElementById('modal-duplicates').classList.add('open');
 }
