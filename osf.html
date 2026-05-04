@@ -828,15 +828,16 @@ tr:last-child > td { border-bottom: none; }
 <div class="page" id="page-setup">
   <div class="grid-2" style="gap:16px;">
 
-    <!-- LEWA KOLUMNA: Personalizacja + Informacje + Bieg drużynowy + Parowanie -->
+    <!-- LEWA KOLUMNA -->
     <div>
-      <!-- Personalizacja -->
+
+      <!-- Informacje ogólne + kolor akcentu -->
       <div class="card mb-12">
-        <div class="card-title">🎨 Personalizacja</div>
-        <div class="form-group">
-          <label>Kolor akcentu zawodów</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;" id="osf-accent-picker">
-            <button class="osf-swatch" data-color="#e8944d" style="background:#e8944d;" title="Pomarańczowy (domyślny OSF)"></button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-title" style="margin:0;">📋 Informacje o zawodach</div>
+          <!-- Kolory akcentu inline -->
+          <div style="display:flex;gap:6px;align-items:center;" id="osf-accent-picker">
+            <button class="osf-swatch" data-color="#e8944d" style="background:#e8944d;" title="Pomarańczowy"></button>
             <button class="osf-swatch" data-color="#e8d44d" style="background:#e8d44d;" title="Złoty"></button>
             <button class="osf-swatch" data-color="#4caf82" style="background:#4caf82;" title="Zielony"></button>
             <button class="osf-swatch" data-color="#5b9bd5" style="background:#5b9bd5;" title="Niebieski"></button>
@@ -844,18 +845,13 @@ tr:last-child > td { border-bottom: none; }
             <button class="osf-swatch" data-color="#c084fc" style="background:#c084fc;" title="Fioletowy"></button>
           </div>
         </div>
-      </div>
-
-      <!-- Informacje ogólne -->
-      <div class="card mb-12">
-        <div class="card-title">📋 Informacje ogólne</div>
         <div class="form-group">
           <label>Nazwa zawodów</label>
           <input type="text" id="osf-setup-name" placeholder="np. OSF 18. Dywizji Zmechanizowanej" oninput="saveSetup()" />
         </div>
         <div class="grid-2">
           <div class="form-group">
-            <label>Miasto / lokalizacja</label>
+            <label>Miasto</label>
             <input type="text" id="osf-setup-city" placeholder="np. Warszawa" oninput="saveSetup()" />
           </div>
           <div class="form-group">
@@ -868,135 +864,141 @@ tr:last-child > td { border-bottom: none; }
           <input type="text" id="osf-setup-org" placeholder="np. 18. DZ" oninput="saveSetup()" />
         </div>
         <div class="form-group">
-          <label>Notatki / uwagi dla sędziów</label>
-          <textarea id="osf-setup-notes" rows="3" placeholder="np. Tor mokry, czas od komendy START..." oninput="saveSetup()" style="resize:vertical;font-size:13px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-family:var(--font-b);"></textarea>
-        </div>
-        <div style="margin-top:10px;">
-          <button class="btn btn-sm btn-primary" onclick="syncSetupToPanel()">↑ Synchronizuj z panelem głównym</button>
-          <span id="sync-status" style="font-size:11px;color:var(--green);margin-left:10px;font-family:var(--font-m);display:none;">✓ Zsynchronizowano</span>
+          <label>Notatki dla sędziów</label>
+          <textarea id="osf-setup-notes" rows="2" placeholder="np. Tor mokry, czas od komendy START..." oninput="saveSetup()" style="resize:vertical;font-size:13px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-family:var(--font-b);"></textarea>
         </div>
       </div>
 
       <!-- Bieg drużynowy -->
       <div class="card mb-12">
-        <div class="card-title">🏃 Bieg drużynowy — regulamin</div>
-        <div class="alert alert-info mb-12" style="font-size:12px;">
-          Liczba zawodników N decyduje jednocześnie o: czasie liczonym do wyniku (N-ty zawodnik na mecie), minimalnym składzie wymaganym do startu (poniżej N → DSQ) oraz o tym, ilu najlepszych z biegu indywidualnego decyduje o kolejności w Serii 1.
+        <div class="card-title">🏃 Bieg drużynowy</div>
+        <!-- Dwie duże liczby + ikony ? -->
+        <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:16px;">
+          <div style="flex:1;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;text-align:center;position:relative;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">N zawodników</div>
+              <button onclick="toggleSetupTip('tip-n')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
+            </div>
+            <input type="number" id="osf-team-count" min="1" max="20" value="8" oninput="saveSetup()"
+              style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--orange);text-align:center;width:80px;background:none;border:none;outline:none;" />
+            <div id="tip-n" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
+              N-ty zawodnik na mecie wyznacza wynik drużyny.<br>
+              Suma N najlepszych z biegu ind. decyduje o kolejności w S1.<br>
+              Drużyna z mniej niż N zawodnikami M → DSQ.
+            </div>
+          </div>
+          <div style="flex:1;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;text-align:center;position:relative;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Min. skład</div>
+              <button onclick="toggleSetupTip('tip-min')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
+            </div>
+            <input type="number" id="osf-team-min-start" min="1" max="20" value="8" oninput="saveSetup()"
+              style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--red);text-align:center;width:80px;background:none;border:none;outline:none;" />
+            <div id="tip-min" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
+              Minimalna liczba zawodników M w drużynie, żeby mogła startować w biegu drużynowym.<br>
+              Poniżej tego progu → DSQ, brak pary, brak punktów.
+            </div>
+          </div>
         </div>
-        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
-          <div class="form-group" style="margin:0;">
-            <label>Liczba zawodników N</label>
-            <input type="number" id="osf-team-count" min="1" max="20" value="8"
-              oninput="saveSetup()"
-              style="font-family:var(--font-m);font-size:36px;font-weight:800;color:var(--orange);text-align:center;width:100px;" />
-            <div class="text-muted" style="font-size:11px;margin-top:4px;">Domyślnie: 8</div>
-          </div>
-          <div class="form-group" style="margin:0;">
-            <label>Min. skład do startu</label>
-            <input type="number" id="osf-team-min-start" min="1" max="20" value="8"
-              oninput="saveSetup()"
-              style="font-family:var(--font-m);font-size:36px;font-weight:800;color:var(--red);text-align:center;width:100px;" />
-            <div class="text-muted" style="font-size:11px;margin-top:4px;">Poniżej → DSQ</div>
-          </div>
-          <div style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.9;">
-            <div>⏱ Liczy się czas <strong style="color:var(--text2);">N-tego</strong> zawodnika na mecie</div>
-            <div>📊 Do kolejności S1 brana suma <strong style="color:var(--text2);">N</strong> najlepszych z biegu ind.</div>
-            <div>⛔ Drużyna z mniej niż <strong style="color:var(--red);">Min.</strong> zawodnikami M → DSQ, brak pary, brak pkt</div>
-          </div>
+        <!-- Mnożnik -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Mnożnik</div>
+          <button onclick="toggleSetupTip('tip-mult')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;">?</button>
+          <button class="btn btn-sm" onclick="setMultiplier(2)" id="mult-btn-2">× 2</button>
+          <button class="btn btn-sm" onclick="setMultiplier(3)" id="mult-btn-3">× 3</button>
+          <button class="btn btn-sm" onclick="setMultiplier(4)" id="mult-btn-4">× 4</button>
+          <button class="btn btn-sm" onclick="setMultiplier(5)" id="mult-btn-5">× 5</button>
+          <input type="number" id="osf-team-multiplier" min="1" max="20" value="3"
+            oninput="saveSetup();updateMultiplierButtons()"
+            style="font-family:var(--font-m);font-size:18px;font-weight:800;color:var(--accent);text-align:center;width:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:3px;" />
         </div>
-        <div class="form-group mt-12">
-          <label>Mnożnik punktowy biegu drużynowego (N × ?)</label>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
-            <button class="btn btn-sm" onclick="setMultiplier(2)" id="mult-btn-2">× 2</button>
-            <button class="btn btn-sm" onclick="setMultiplier(3)" id="mult-btn-3">× 3</button>
-            <button class="btn btn-sm" onclick="setMultiplier(4)" id="mult-btn-4">× 4</button>
-            <button class="btn btn-sm" onclick="setMultiplier(5)" id="mult-btn-5">× 5</button>
-            <input type="number" id="osf-team-multiplier" min="1" max="20" value="3"
-              oninput="saveSetup();updateMultiplierButtons()"
-              style="font-family:var(--font-m);font-size:20px;font-weight:800;color:var(--accent);text-align:center;width:80px;" />
-          </div>
-          <div class="text-muted" style="font-size:11px;margin-top:4px;">Domyślnie: 3 · Pula = N drużyn × mnożnik</div>
+        <div id="tip-mult" style="display:none;font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;border-top:1px solid var(--border);padding-top:10px;">
+          Pula punktów za bieg drużynowy = liczba drużyn × mnożnik.<br>
+          Przykład: 8 drużyn × 3 = 24 pkt dla zwycięzcy.
         </div>
       </div>
 
-      <!-- Parowanie S1 -->
+      <!-- Reguły parowania — jeden przycisk -->
       <div class="card">
-        <div class="card-title">🎲 Reguły parowania — Seria 1</div>
-        <div class="alert alert-warning mb-12" style="font-size:12px;">
-          Domyślnie algorytm stara się zawsze sparować zawodników z <strong>różnych drużyn</strong> i respektuje wymóg toru (L/P z numeru bib). Poniższe opcje aktywuj tylko gdy struktura startujących to wymusza.
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="card-title" style="margin:0;">🎲 Parowanie S1</div>
+          <button class="btn btn-sm" onclick="openPairingRulesModal()" style="color:var(--text3);border-color:var(--border2);font-size:11px;">⚙ Ustawienia zaawansowane</button>
         </div>
-        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;">
-          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;">Tryb fallback — ta sama drużyna</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Gdy na danym torze pozostaną tylko zawodnicy z jednej drużyny i nie ma partnera z innej — zezwól na parowanie wewnątrzdrużynowe.</div>
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
-            <input type="checkbox" id="osf-allow-same-team-pair" onchange="saveSetup()" />
-            <span>Zezwól na parowanie wewnątrz tej samej drużyny</span>
-          </label>
-        </div>
-        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">
-          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:4px;">Tryb "nikt nie biega sam" — sparuj pozostałych</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Gdy po sparowaniu zostanie kilku zawodników bez pary — dobierz ich ze sobą nawet jeśli mają ten sam wymagany tor.</div>
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
-            <input type="checkbox" id="osf-allow-solo-pair" onchange="saveSetup()" />
-            <span>Sparuj zawodników bez pary ignorując wymóg toru</span>
-          </label>
-        </div>
-        <div class="alert alert-info mt-12" style="font-size:11px;">
-          💡 Algorytm Serii 2 zawsze respektuje obowiązkową zmianę toru — powyższe opcje dotyczą wyłącznie Serii 1.
-        </div>
-
-        <div style="border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:12px 14px;margin-top:10px;background:rgba(232,148,77,.04);">
-          <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">Tryb uproszczony — brak zasady toru</div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Wyłącza zasadę że nieparzysty numer bib = tor L, parzysty = tor P. Obowiązuje we wszystkich biegach — S1 i S2 dla obu płci oraz bieg drużynowy. W S2 zmiana toru nadal jest obowiązkowa.</div>
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);">
-            <input type="checkbox" id="osf-ignore-lane-rule" onchange="saveSetup()" />
-            <span>Pomiń zasadę toru z numeru startowego</span>
-          </label>
-        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px;line-height:1.6;" id="pairing-rules-summary"></div>
       </div>
     </div>
 
-    <!-- PRAWA KOLUMNA: Import + Zarządzanie -->
+    <!-- PRAWA KOLUMNA -->
     <div>
+
       <!-- Import listy startowej -->
       <div class="card mb-12">
         <div class="card-title">📥 Import listy startowej</div>
-
-        <!-- Status importu -->
-        <div id="import-status-box" style="display:none;padding:10px 14px;border-radius:var(--radius);margin-bottom:14px;font-size:12px;"></div>
-
-        <div style="margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Pobierz szablon</div>
-          <div class="flex">
-            <button class="btn btn-sm" onclick="downloadTemplateXLSX()">↓ Excel (.xlsx)</button>
-            <button class="btn btn-sm" onclick="downloadTemplateODS()">↓ LibreOffice (.ods)</button>
-            <button class="btn btn-sm" onclick="downloadTemplateCSV()">↓ CSV</button>
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:6px;">Kolumny: <span class="mono">Stopień · Imię i Nazwisko · M/K · Drużyna · Nr startowy</span></div>
+        <div id="import-status-box" style="display:none;padding:10px 14px;border-radius:var(--radius);margin-bottom:12px;font-size:12px;"></div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <button class="btn btn-sm" onclick="openImportModal()" style="flex:1;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;height:auto;">
+            <span style="font-size:20px;">↑</span>
+            <span style="font-size:11px;font-weight:700;">Wgraj plik</span>
+            <span style="font-size:10px;color:var(--text3);">.xlsx / .ods / .csv</span>
+          </button>
+          <button class="btn btn-sm" onclick="openTemplateModal()" style="flex:1;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;height:auto;">
+            <span style="font-size:20px;">↓</span>
+            <span style="font-size:11px;font-weight:700;">Pobierz szablon</span>
+            <span style="font-size:10px;color:var(--text3);">Excel / LibreOffice / CSV</span>
+          </button>
         </div>
-
-        <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Wgraj plik (.xlsx / .ods / .csv)</div>
-          <button class="btn btn-sm btn-primary" onclick="document.getElementById('import-file-config').click()">↑ Wybierz plik</button>
-          <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
-          <span id="import-file-name" style="font-size:11px;color:var(--text3);margin-left:10px;font-family:var(--font-m);"></span>
-        </div>
+        <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
+        <span id="import-file-name" style="font-size:11px;color:var(--text3);font-family:var(--font-m);"></span>
       </div>
 
-      <!-- Zarządzanie zawodami -->
-      <div class="card">
-        <div class="card-title">🔧 Zarządzanie zawodami</div>
-        <div class="flex" style="flex-direction:column;gap:10px;align-items:flex-start;">
-          <button class="btn btn-sm" onclick="exportData()">⬇ Backup (pobierz JSON)</button>
-          <button class="btn btn-sm" onclick="document.getElementById('import-json-input').click()">↑ Przywróć z backupu (JSON)</button>
+      <!-- Zarządzanie zawodami — kafelki -->
+      <div class="card mb-12">
+        <div class="card-title">🔧 Zarządzanie</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <!-- Backup -->
+          <button onclick="exportData()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
+            onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:22px;margin-bottom:5px;">⬇</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2);">Backup</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;">pobierz JSON</div>
+          </button>
+          <!-- Przywróć -->
+          <button onclick="document.getElementById('import-json-input').click()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
+            onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:22px;margin-bottom:5px;">↑</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text2);">Przywróć</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;">wgraj backup</div>
+          </button>
           <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(event)" />
-          <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);" onclick="clearAthletes()">🗑 Wyczyść listę zawodników</button>
-          <button class="btn btn-sm" style="color:var(--green);border-color:rgba(76,175,130,.4);background:rgba(76,175,130,.08);" onclick="finishContest()">✓ Zakończ zawody i wróć do panelu</button>
-          <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
+          <!-- Zakończ zawody -->
+          <button onclick="finishContest()" style="background:rgba(76,175,130,.08);border:1px solid rgba(76,175,130,.35);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;transition:border-color .15s;grid-column:span 2;"
+            onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='rgba(76,175,130,.35)'">
+            <div style="font-size:22px;margin-bottom:5px;">✓</div>
+            <div style="font-size:12px;font-weight:700;color:var(--green);">Zakończ zawody</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;">wróć do panelu</div>
+          </button>
         </div>
       </div>
-    </div>
 
+      <!-- Zaawansowane — akordeon -->
+      <div class="card">
+        <button onclick="toggleAdvanced()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
+          <div class="card-title" style="margin:0;color:var(--text3);">⚠ Zaawansowane</div>
+          <span id="advanced-arrow" style="color:var(--text3);font-size:12px;">▶</span>
+        </button>
+        <div id="advanced-panel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+          <div style="font-size:11px;color:var(--orange);margin-bottom:12px;line-height:1.6;">
+            ⚠ Opcje poniżej wpływają na działanie całej aplikacji. Używaj ostrożnie.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="openResetModal('results')">↺ Reset wyników</button>
+            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="openResetModal('pairs')">↺ Reset list startowych</button>
+            <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);justify-content:flex-start;" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -1313,6 +1315,67 @@ tr:last-child > td { border-bottom: none; }
     </div>
     <div class="modal-footer" style="flex-shrink:0;margin-top:14px;">
       <button class="btn btn-primary" onclick="closeModal('modal-s2-startlist')">Gotowe</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: REGUŁY PAROWANIA ═══ -->
+<div class="modal-overlay" id="modal-pairing-rules">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title">⚙ Reguły parowania — Seria 1</div>
+    <div style="background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.6;">
+      Domyślne ustawienia działają poprawnie dla większości zawodów.<br>
+      <strong style="color:var(--orange);">Zmieniaj tylko gdy algorytm nie może ułożyć par.</strong>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
+        <input type="checkbox" id="osf-allow-same-team-pair" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text2);">Parowanie wewnątrz drużyny</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Gdy zostają sami zawodnicy jednej drużyny — zezwól na parowanie wewnątrzdrużynowe.</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
+        <input type="checkbox" id="osf-allow-solo-pair" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text2);">Sparuj wszystkich (ignoruj wymóg toru)</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Gdy po sparowaniu zostają osoby bez pary — dobierz je ze sobą, nawet jeśli mają ten sam wymagany tor.</div>
+        </div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(232,148,77,.04);border-radius:var(--radius);border:1px solid rgba(232,148,77,.25);">
+        <input type="checkbox" id="osf-ignore-lane-rule" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--orange);">Pomiń zasadę toru</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Wyłącza zasadę bib parzysty/nieparzysty = tor P/L. Dotyczy S1, S2 i biegu drużynowego.</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-pairing-rules')">Gotowe</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: SZABLON IMPORTU ═══ -->
+<div class="modal-overlay" id="modal-template">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title">↓ Pobierz szablon listy startowej</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6;">
+      Kolumny: <span class="mono" style="color:var(--text2);">Stopień · Imię i Nazwisko · M/K · Drużyna · Nr startowy</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn" onclick="downloadTemplateXLSX();closeModal('modal-template')" style="justify-content:flex-start;gap:10px;">
+        <span style="font-size:16px;">📊</span> Excel (.xlsx)
+      </button>
+      <button class="btn" onclick="downloadTemplateODS();closeModal('modal-template')" style="justify-content:flex-start;gap:10px;">
+        <span style="font-size:16px;">📄</span> LibreOffice (.ods)
+      </button>
+      <button class="btn" onclick="downloadTemplateCSV();closeModal('modal-template')" style="justify-content:flex-start;gap:10px;">
+        <span style="font-size:16px;">📋</span> CSV
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-template')">Anuluj</button>
     </div>
   </div>
 </div>
@@ -4619,6 +4682,7 @@ function renderSetupPage() {
   document.querySelectorAll('.osf-swatch').forEach(sw => {
     sw.classList.toggle('active', sw.dataset.color === color);
   });
+  updatePairingRulesSummary();
 }
 
 function saveSetup() {
@@ -6168,6 +6232,55 @@ function moveS2Pair(gender, pairNum, dir) {
   save();
   renderSeries2View();
 }
+
+// ═══ SETUP — FUNKCJE POMOCNICZE ═══
+
+function toggleSetupTip(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleAdvanced() {
+  const panel = document.getElementById('advanced-panel');
+  const arrow = document.getElementById('advanced-arrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+function openPairingRulesModal() {
+  document.getElementById('modal-pairing-rules').classList.add('open');
+}
+
+function openImportModal() {
+  document.getElementById('import-file-config').click();
+}
+
+function openTemplateModal() {
+  document.getElementById('modal-template').classList.add('open');
+}
+
+function updatePairingRulesSummary() {
+  const el = document.getElementById('pairing-rules-summary');
+  if (!el) return;
+  const s = state.setup || {};
+  const parts = [];
+  if (!s.allowSameTeamPair && !s.allowSoloPair && !s.ignoreLaneRule) {
+    el.textContent = 'Ustawienia domyślne — algorytm działa regulaminowo.';
+    el.style.color = 'var(--text3)';
+    return;
+  }
+  if (s.allowSameTeamPair) parts.push('parowanie wewnątrz drużyny');
+  if (s.allowSoloPair)     parts.push('ignorowanie wymogu toru');
+  if (s.ignoreLaneRule)    parts.push('brak zasady toru z bib');
+  el.innerHTML = '⚠ Aktywne: <span style="color:var(--orange);">' + parts.join(', ') + '</span>';
+  el.style.color = '';
+}
+
+// Stara funkcja syncSetupToPanel — teraz synchronizacja jest automatyczna
+// Zostawiamy pustą dla kompatybilności
+function syncSetupToPanel() {}
 
 function openDrawPanel() {
   // Sprawdź ostrzeżenia
