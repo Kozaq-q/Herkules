@@ -3751,21 +3751,10 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
       'background:var(--bg3);color:' + (series==='s2'?'var(--red)':'var(--text3)') + ';cursor:pointer;line-height:1.5;flex-shrink:0;" title="Zamień zawodnika">↔</button>'
     : '';
 
-  // Przycisk ✕ — w prawym górnym rogu karty, osobna zmienna
-  const locked = isPairLocked(series, g, pairNum);
-  const removeBtn = ''; // renderowany osobno w rogu karty
-
-  // Przycisk usuwania z S1 — prawy górny róg, z potwierdzeniem inline
+  const locked    = isPairLocked(series, g, pairNum);
   const canRemove = (series === 's1' && pairNum && !locked);
-  const removeCornerBtn = canRemove
-    ? '<button onclick="event.stopPropagation();confirmRemoveFromS1(' + a.id + ',' + pairNum + ',\'' + g + '\', this)" ' +
-      'style="position:absolute;top:4px;right:4px;background:none;border:none;' +
-      'color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;line-height:1;opacity:.4;" ' +
-      'title="Usuń z S1">✕</button>'
-    : '';
 
-  return '<div class="pair-athlete"' + pickAttr + ' style="position:relative;' + (dsq ? 'opacity:.6;' : '') + '">' +
-    removeCornerBtn +
+  return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
     '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">' +
     '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
@@ -3795,6 +3784,13 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
     'title="' + (dsq ? 'Cofnij dyskwalifikację' : 'Dyskwalifikuj') + '">' +
     (dsq ? '✕ DSQ' : 'DSQ') +
     '</button>' +
+    (canRemove
+      ? '<button onclick="event.stopPropagation();removeFromS1WithConfirm(' + a.id + ',' + pairNum + ',\'' + g + '\')" ' +
+        'style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 7px;' +
+        'border:1px solid var(--border2);border-radius:var(--radius);' +
+        'background:var(--bg3);color:var(--text3);cursor:pointer;white-space:nowrap;opacity:.7;" ' +
+        'title="Usuń z S1">− S1</button>'
+      : '') +
     '</div>' +
     '</div>';
 }
@@ -6247,17 +6243,12 @@ function setAllS2Start(starts) {
 // ═══════════════════════════════════════
 // ZMIANA KOLEJNOŚCI PAR S2 (strzałki)
 // ═══════════════════════════════════════
-function confirmRemoveFromS1(athleteId, pairNum, gender, btn) {
-  // Zamień przycisk ✕ na inline "Usuń? [Tak] [Nie]"
-  const orig = btn.outerHTML;
-  btn.outerHTML =
-    '<span style="position:absolute;top:3px;right:3px;display:flex;align-items:center;gap:3px;font-size:10px;">' +
-    '<span style="color:var(--text3);">Usuń?</span>' +
-    '<button onclick="event.stopPropagation();removeFromS1(' + athleteId + ',' + pairNum + ',\'' + gender + '\')" ' +
-      'style="background:var(--red);color:#fff;border:none;border-radius:3px;padding:1px 5px;cursor:pointer;font-size:10px;font-weight:700;">Tak</button>' +
-    '<button onclick="event.stopPropagation();renderSeries1View()" ' +
-      'style="background:var(--bg3);color:var(--text3);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;cursor:pointer;font-size:10px;">Nie</button>' +
-    '</span>';
+
+function removeFromS1WithConfirm(athleteId, pairNum, gender) {
+  const a = state.athletes.find(x => x.id === athleteId);
+  if (!a) return;
+  if (!confirm('Usunąć ' + displayName(a) + ' z Serii 1?\nZawodnik wróci do puli dostępnych.')) return;
+  removeFromS1(athleteId, pairNum, gender);
 }
 
 function removeFromS1(athleteId, pairNum, gender) {
