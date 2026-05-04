@@ -783,13 +783,12 @@ tr:last-child > td { border-bottom: none; }
   <!-- Nagłówek — jeden rząd -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
     <div style="font-family:var(--font-h);font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-right:4px;">Drużynowy</div>
-    <!-- Generuj S1/S2 -->
-    <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s1')" style="font-weight:700;">⚙ Generuj S1</button>
-    <button class="btn btn-sm btn-primary" onclick="openTeamDrawPanel('s2')" style="font-weight:700;">⚙ Generuj S2</button>
+    <!-- Generuj — kontekstowo dla aktywnej zakładki -->
+    <button class="btn btn-sm btn-primary" id="dr-generate-btn" onclick="openTeamDrawPanel(_drActiveTab)" style="font-weight:700;">⚙ Generuj</button>
     <!-- Wydruki -->
     <div style="position:relative;">
       <button class="btn btn-sm" onclick="togglePrintPanel('dr')" title="Wydruki" style="font-size:15px;padding:4px 10px;">🖨</button>
-      <div id="print-panel-dr" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px;width:240px;box-shadow:0 4px 20px rgba(0,0,0,.7);">
+      <div id="print-panel-dr" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px;width:220px;box-shadow:0 4px 20px rgba(0,0,0,.7);">
         <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Wydruki</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
           <button onclick="printTeamS1StartList();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
@@ -805,20 +804,18 @@ tr:last-child > td { border-bottom: none; }
             <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Sędz. S2</div>
           </button>
           <button onclick="printTeamResults();togglePrintPanel('dr')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;grid-column:span 2;">
-            <div style="font-size:16px;">🏆</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Wyniki drużynowe</div>
+            <div style="font-size:16px;">🏆</div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:3px;">Wyniki</div>
           </button>
         </div>
       </div>
     </div>
     <!-- Separator -->
     <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>
-    <!-- Edycja awaryjna + SOLO — szare, drugorzędne -->
-    <button id="dr-s1-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode('s1')"
-      style="color:var(--text3);border-color:var(--border2);font-size:11px;">🔒 Edycja S1</button>
-    <button id="dr-s2-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode('s2')"
-      style="color:var(--text3);border-color:var(--border2);font-size:11px;">🔒 Edycja S2</button>
-    <button id="dr-s1-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s1')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO S1</button>
-    <button id="dr-s2-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s2')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO S2</button>
+    <!-- Edycja awaryjna — kontekstowa -->
+    <button id="dr-edit-btn" class="btn btn-sm" onclick="toggleTeamEditMode(_drActiveTab)"
+      style="color:var(--text3);border-color:var(--border2);font-size:11px;">🔒 Edycja awaryjna</button>
+    <button id="dr-s1-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s1')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO</button>
+    <button id="dr-s2-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s2')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO</button>
   </div>
 
   <div id="dr-alert-no-times" class="alert alert-warning" style="display:none;">
@@ -831,35 +828,44 @@ tr:last-child > td { border-bottom: none; }
     <button onclick="cancelTeamSwap()" style="background:rgba(232,148,77,.15);border:1px solid rgba(232,148,77,.4);border-radius:var(--radius);color:var(--orange);font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;">✕ Anuluj zamianę</button>
   </div>
 
-  <!-- Seria 1 -->
-  <div class="card mb-12">
-    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;">Seria 1</div>
+  <!-- Zakładki S1 / S2 / Wyniki -->
+  <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:14px;align-items:flex-end;">
+    <button id="dr-tab-s1" onclick="switchDrTab('s1')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--accent);background:rgba(232,212,77,.08);color:var(--accent);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      Seria 1
+    </button>
+    <button id="dr-tab-s2" onclick="switchDrTab('s2')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      Seria 2
+    </button>
+    <button id="dr-tab-wyniki" onclick="switchDrTab('wyniki')"
+      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
+      🏆 Wyniki
+    </button>
+  </div>
+
+  <!-- Sekcja S1 -->
+  <div id="dr-section-s1">
     <div id="dr-s1-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.5);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
-      <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S1</strong> — kolejność wyznaczona ręcznie. Kliknięcie <em>Generuj S1</em> przywróci regulaminową kolejność.
-      <button onclick="disableTeamEditMode('s1')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
+      <strong style="color:var(--red);">⚠ Edycja awaryjna S1</strong> — kolejność wyznaczona ręcznie. Kliknięcie <em>Generuj</em> przywróci regulaminową kolejność.
+      <button onclick="disableTeamEditMode('s1')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj</button>
     </div>
     <div id="dr-alert-s1" class="alert alert-info" style="display:none;"></div>
     <div id="dr-s1-teams"></div>
   </div>
 
-  <!-- Seria 2 -->
-  <div class="card mb-12">
-    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;">Seria 2</div>
+  <!-- Sekcja S2 -->
+  <div id="dr-section-s2" style="display:none;">
     <div id="dr-s2-edit-warning" style="display:none;background:rgba(224,85,85,.15);border:3px solid var(--red);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.7;">
-      <strong style="color:var(--red);font-size:13px;">⚠ EDYCJA AWARYJNA S2</strong><br>
-      Każda drużyna <strong>musi biec na innym torze niż w S1</strong> — to wymóg regulaminowy.<br>
-      Ręczna zmiana kolejności może naruszyć tę zasadę. Sprawdź tory po każdej zmianie.<br>
-      <button onclick="disableTeamEditMode('s2')" style="margin-top:8px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:4px 14px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zakończ edycję awaryjną</button>
+      <strong style="color:var(--red);">⚠ Edycja awaryjna S2</strong> — każda drużyna musi biec na <strong>innym torze niż w S1</strong>. Sprawdź tory po każdej zmianie.
+      <button onclick="disableTeamEditMode('s2')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj</button>
     </div>
     <div id="dr-alert-s2" class="alert alert-info" style="display:none;"></div>
     <div id="dr-s2-teams"></div>
   </div>
 
-  <!-- Wyniki drużynowe -->
-  <div class="card" style="margin-top:16px;">
-    <div class="flex-between mb-12">
-      <div class="card-title" style="margin-bottom:0;">Wyniki drużynowe</div>
-    </div>
+  <!-- Sekcja Wyniki -->
+  <div id="dr-section-wyniki" style="display:none;">
     <div class="table-wrap">
       <table>
         <thead><tr>
@@ -2457,6 +2463,44 @@ function recalcLanesWithOpposite(order, s1order) {
 // ═══════════════════════════════════════════════════
 // BIEG DRUŻYNOWY — render
 // ═══════════════════════════════════════════════════
+let _drActiveTab = 's1';
+
+function switchDrTab(tab) {
+  _drActiveTab = tab;
+  const tabs    = { s1: 'dr-tab-s1', s2: 'dr-tab-s2', wyniki: 'dr-tab-wyniki' };
+  const sections= { s1: 'dr-section-s1', s2: 'dr-section-s2', wyniki: 'dr-section-wyniki' };
+  const accent  = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--accent);background:rgba(232,212,77,.08);color:var(--accent);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  const inactive= 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  Object.keys(tabs).forEach(t => {
+    const tabEl = document.getElementById(tabs[t]);
+    const secEl = document.getElementById(sections[t]);
+    if (tabEl) tabEl.style.cssText = t === tab ? accent : inactive;
+    if (secEl) secEl.style.display = t === tab ? '' : 'none';
+  });
+
+  // Kontekstowe przyciski nagłówka
+  const genBtn  = document.getElementById('dr-generate-btn');
+  const editBtn = document.getElementById('dr-edit-btn');
+  const s1solo  = document.getElementById('dr-s1-solo-btn');
+  const s2solo  = document.getElementById('dr-s2-solo-btn');
+
+  // Generuj i Edycja — tylko dla S1 i S2
+  if (genBtn)  genBtn.style.display  = tab === 'wyniki' ? 'none' : '';
+  if (editBtn) editBtn.style.display = tab === 'wyniki' ? 'none' : '';
+
+  // SOLO — tylko w trybie edycji aktywnej zakładki
+  if (s1solo) s1solo.style.display = (tab === 's1' && _teamEditMode['s1']) ? '' : 'none';
+  if (s2solo) s2solo.style.display = (tab === 's2' && _teamEditMode['s2']) ? '' : 'none';
+
+  // Zaktualizuj stan przycisku edycji
+  if (editBtn && tab !== 'wyniki') {
+    const isEdit = _teamEditMode[tab];
+    editBtn.style.color       = isEdit ? 'var(--red)' : 'var(--text3)';
+    editBtn.style.borderColor = isEdit ? 'rgba(224,85,85,.4)' : 'var(--border2)';
+    editBtn.textContent       = isEdit ? '🔓 Edytujesz' : '🔒 Edycja awaryjna';
+  }
+}
+
 function renderTeamView() {
   const hasAnyTime = state.athletes.some(a => bestTime(a.id));
   document.getElementById('dr-alert-no-times').style.display = hasAnyTime ? 'none' : 'block';
@@ -2464,6 +2508,7 @@ function renderTeamView() {
   renderTeamOrderSection('s1');
   renderTeamOrderSection('s2');
   renderTeamResults();
+  switchDrTab(_drActiveTab);
 }
 
 function renderTeamOrderSection(series) {
@@ -3760,25 +3805,17 @@ function enableTeamEditMode() {
   const series = _teamEditPendingSeries;
   closeModal('modal-team-edit');
   _teamEditMode[series] = true;
-  const btn  = document.getElementById('dr-' + series + '-edit-btn');
   const warn = document.getElementById('dr-' + series + '-edit-warning');
-  const solo = document.getElementById('dr-' + series + '-solo-btn');
-  if (btn)  { btn.textContent = '🔓 Edycja AKTYWNA'; btn.style.color = 'var(--red)'; btn.style.borderColor = 'rgba(224,85,85,.4)'; btn.style.background = 'rgba(224,85,85,.08)'; }
   if (warn) warn.style.display = 'block';
-  if (solo) solo.style.display = '';
-  renderTeamView();
+  renderTeamView(); // switchDrTab wewnątrz zaktualizuje przyciski
 }
 
 function disableTeamEditMode(series) {
   _teamEditMode[series] = false;
-  const btn  = document.getElementById('dr-' + series + '-edit-btn');
   const warn = document.getElementById('dr-' + series + '-edit-warning');
-  const solo = document.getElementById('dr-' + series + '-solo-btn');
-  if (btn)  { btn.textContent = '🔒 Edycja awaryjna'; btn.style.color = 'var(--text3)'; btn.style.borderColor = 'var(--border2)'; btn.style.background = ''; }
   if (warn) warn.style.display = 'none';
-  if (solo) solo.style.display = 'none';
   cancelTeamSwap();
-  renderTeamView();
+  renderTeamView(); // switchDrTab wewnątrz zaktualizuje przyciski
 }
 
 function openTeamSoloModal(series) {
