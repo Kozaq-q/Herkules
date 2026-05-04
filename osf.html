@@ -3660,10 +3660,11 @@ function renderPairsHTML(containerId, pairs, isS2) {
         ' style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--border2);border-radius:var(--radius) 0 0 var(--radius);color:' + arrowColor + ';cursor:pointer;opacity:' + (isFirstP ? '.2' : '1') + ';"' +
         (isFirstP ? ' disabled' : '') + '>↑</button>';
       // Pole liczbowe — wpisz numer pozycji i naciśnij Enter
+      // onblur tylko gdy wartość różni się od aktualnej (zapobiega nieskończonej pętli przy rerenderze)
       html += '<input type="number" min="1" max="' + pairs.length + '" value="' + p.pairNum + '"' +
         ' title="Wpisz numer pozycji i naciśnij Enter"' +
         ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();' + jumpFunc + '(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value));this.blur();}"' +
-        ' onblur="' + jumpFunc + '(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value))"' +
+        ' onblur="if(parseInt(this.value)!==' + p.pairNum + ')' + jumpFunc + '(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value));"' +
         ' onclick="event.stopPropagation();this.select();"' +
         ' style="width:36px;text-align:center;font-size:11px;font-family:var(--font-m);padding:0 2px;line-height:1.7;' +
         'background:var(--bg3);border:1px solid var(--border2);border-left:none;border-right:none;' +
