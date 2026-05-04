@@ -714,6 +714,7 @@ tr:last-child > td { border-bottom: none; }
     <div class="flex">
       <button class="btn btn-sm" onclick="printIndM()" style="margin-right:6px;">🖨 Wyniki M</button>
       <button class="btn btn-sm" onclick="printIndK()" style="margin-right:6px;">🖨 Wyniki K</button>
+      <button class="btn btn-sm" onclick="printIndM36()" style="margin-right:6px;color:var(--blue);border-color:rgba(96,168,232,.4);">🖨 Wyniki M36+</button>
       <button class="btn btn-sm" onclick="printBiegDruz()" style="margin-right:6px;">🖨 Bieg drużynowy</button>
       <button class="btn btn-sm" onclick="printKlasyfikacjaPDF()">🖨 Klasyfikacja</button>
     </div>
@@ -5816,6 +5817,70 @@ function _printInd(gender) {
   openPrint(html, PREMIUM_PDF_CSS);
 }
 
+function printIndM36() {
+  const m36athletes = state.athletes.filter(a => a.gender === 'M' && a.m36 && !a.pk);
+  if (!m36athletes.length) { alert('Brak zawodników w kategorii M36+.'); return; }
+
+  const ranked = m36athletes.map(a => ({
+    athlete: a,
+    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+  })).sort((a,b) => a.bestSec - b.bestSec);
+
+  // Podium top3 — format identyczny jak _printInd
+  const top3 = ranked.filter(r => r.bestSec !== Infinity).slice(0,3);
+  let podium = '';
+  if (top3.length >= 2) {
+    const podiumOrder = [top3[1]||null, top3[0]||null, top3[2]||null];
+    const podiumCls   = ['p2', 'p1', 'p3'];
+    const podiumMedal = ['🥈','🥇','🥉'];
+    podium = '<div class="podium-block">';
+    podiumOrder.forEach((r, i) => {
+      if (!r) { podium += '<div class="podium-place ' + podiumCls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + podiumCls[i] + '">' +
+        '<div class="podium-rank">' + podiumMedal[i] + '</div>' +
+        '<div class="podium-name">' + esc(displayName(r.athlete)) + '</div>' +
+        '<div class="podium-team">' + esc(r.athlete.team) + '</div>' +
+        '<div class="podium-time">' + (r.best||'—') + '</div>' +
+        '</div>';
+    });
+    podium += '</div>';
+  }
+
+  let html = _pdfHeader('OSF', 'Bieg Indywidualny — Kategoria M36+');
+  html += podium;
+  html += '<div class="section-title">Pełna klasyfikacja M36+ — ' + ranked.length + ' zawodników</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc M36+</th>' +
+    '<th>Zawodnik</th>' +
+    '<th>Drużyna</th>' +
+    '<th class="c">Seria 1</th>' +
+    '<th class="c">Seria 2</th>' +
+    '<th class="c">Wynik</th>' +
+    '</tr></thead><tbody>';
+
+  let rank = 1;
+  ranked.forEach(r => {
+    const noBest = r.bestSec === Infinity;
+    const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
+    const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
+    const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
+    const medal = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + medal + (noBest ? '—' : rank) + '</td>' +
+      '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
+      '<td class="small">' + esc(r.athlete.team) + '</td>' +
+      '<td class="c mono">' + s1d + '</td>' +
+      '<td class="c mono">' + s2d + '</td>' +
+      '<td class="c mono bold">' + (r.best||'—') + '</td>' +
+      '</tr>';
+    if (!noBest) rank++;
+  });
+  html += '</tbody></table>';
+  openPrint(html, PREMIUM_PDF_CSS);
+}
+
 function printBiegDruz() {
   const N = TEAM_COUNT();
   const mult = getMultiplier();
@@ -7396,35 +7461,109 @@ document.addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════
 // TEMPLATE DOWNLOAD
 // ═══════════════════════════════════════════════════
-const TEMPLATE_HEADERS = ['Lp', 'Stopień', 'Imię i Nazwisko', 'Płeć (M/K)', 'Drużyna', 'Nr startowy', 'M36+'];
+const TEMPLATE_HEADERS = ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna', 'M36+', 'PK'];
 const TEMPLATE_EXAMPLE = [
-  [1, 'sierż. KOWALSKI Jan',       'M', 'JW 1234', 1, ''],
-  [2, 'kpr. NOWAK Anna',           'K', 'JW 1234', 2, ''],
-  [3, 'st.szer. WIŚNIEWSKI Piotr', 'M', 'JW 5678', 3, 'M36+'],
+  [1, 'sierż. KOWALSKI Jan',        'M', 'JW 1234',  '',     ''  ],
+  [2, 'kpr. NOWAK Anna',            'K', 'JW 1234',  '',     ''  ],
+  [3, 'st.szer. WIŚNIEWSKI Piotr',  'M', 'JW 5678',  'M36+', ''  ],
+  [4, 'szer. ZAJĄC Tomasz',         'M', 'JW 5678',  '',     'PK'],
 ];
 
 function downloadTemplateCSV() {
   const lines = [TEMPLATE_HEADERS.join(';'), ...TEMPLATE_EXAMPLE.map(r => r.join(';'))];
   const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  triggerDownload(URL.createObjectURL(blob), 'osf_lista_startowa_template.csv');
+  triggerDownload(URL.createObjectURL(blob), 'osf_lista_startowa.csv');
 }
 
 function downloadTemplateXLSX() {
   if (typeof XLSX === 'undefined') { alert('Biblioteka Excel nie jest załadowana — spróbuj za chwilę.'); return; }
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
-  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 8 }];
+
+  // Arkusz główny z danymi
+  const data = [TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Szerokości kolumn
+  ws['!cols'] = [{ wch: 5 }, { wch: 38 }, { wch: 8 }, { wch: 28 }, { wch: 8 }, { wch: 8 }];
+
+  // Freeze header row
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  // Styl nagłówka — ciemne tło, biały tekst
+  const headerStyle = {
+    font:      { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+    fill:      { fgColor: { rgb: '1a2535' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: {
+      bottom: { style: 'medium', color: { rgb: '3a6fa8' } }
+    }
+  };
+  const colKeys = ['A','B','C','D','E','F'];
+  colKeys.forEach(c => {
+    const cell = ws[c + '1'];
+    if (cell) cell.s = headerStyle;
+  });
+
+  // Styl wierszy przykładowych
+  const rowStyle      = { font: { sz: 11 }, alignment: { vertical: 'center' } };
+  const m36CellStyle  = { font: { bold: true, color: { rgb: '1a5fa8' }, sz: 11 }, alignment: { horizontal: 'center' } };
+  const pkCellStyle   = { font: { bold: true, color: { rgb: 'a81a1a' }, sz: 11 }, alignment: { horizontal: 'center' } };
+  const numCellStyle  = { font: { color: { rgb: '888888' }, sz: 10 }, alignment: { horizontal: 'center' } };
+  const genderMStyle  = { font: { bold: true, color: { rgb: '3a6fa8' }, sz: 11 }, alignment: { horizontal: 'center' } };
+  const genderKStyle  = { font: { bold: true, color: { rgb: 'b03a80' }, sz: 11 }, alignment: { horizontal: 'center' } };
+
+  for (let r = 2; r <= data.length; r++) {
+    colKeys.forEach((c, ci) => {
+      const ref  = c + r;
+      const cell = ws[ref];
+      if (!cell) return;
+      if (ci === 0) cell.s = numCellStyle;
+      else if (ci === 2) cell.s = cell.v === 'M' ? genderMStyle : genderKStyle;
+      else if (ci === 4 && cell.v) cell.s = m36CellStyle;
+      else if (ci === 5 && cell.v) cell.s = pkCellStyle;
+      else cell.s = rowStyle;
+    });
+  }
+
+  // Wysokość wiersza nagłówkowego
+  ws['!rows'] = [{ hpt: 28 }];
+
   XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
-  XLSX.writeFile(wb, 'osf_lista_startowa_template.xlsx');
+
+  // Arkusz instrukcji
+  const wsInfo = XLSX.utils.aoa_to_sheet([
+    ['OSF — Lista startowa · Instrukcja'],
+    [''],
+    ['Kolumna', 'Opis', 'Przykład'],
+    ['Lp', 'Liczba porządkowa (1, 2, 3...)', '1'],
+    ['Stopień / Imię i Nazwisko', 'Stopień wojskowy + imię i nazwisko w jednej komórce', 'sierż. KOWALSKI Jan'],
+    ['Płeć', 'Wpisz M (mężczyzna) lub K (kobieta)', 'M'],
+    ['Drużyna', 'Nazwa jednostki lub drużyny', 'JW 1234'],
+    ['M36+', 'Wpisz M36+ jeśli zawodnik należy do kategorii wiekowej. Zostaw puste jeśli nie.', 'M36+'],
+    ['PK', 'Wpisz PK jeśli zawodnik startuje Poza Konkurencją. Zostaw puste jeśli nie.', 'PK'],
+    [''],
+    ['Uwagi:'],
+    ['· Nr startowy jest przydzielany automatycznie wg kolejności na liście.'],
+    ['· W kolumnach M36+ i PK cokolwiek wpisane = aktywne. Puste = nieaktywne.'],
+    ['· Nie zmieniaj nazw kolumn — system rozpoznaje je automatycznie.'],
+  ]);
+  wsInfo['!cols'] = [{ wch: 30 }, { wch: 55 }, { wch: 22 }];
+  const titleStyle = { font: { bold: true, sz: 14, color: { rgb: '1a2535' } } };
+  if (wsInfo['A1']) wsInfo['A1'].s = titleStyle;
+  const hdrStyle2 = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '3a6fa8' } } };
+  ['A3','B3','C3'].forEach(ref => { if (wsInfo[ref]) wsInfo[ref].s = hdrStyle2; });
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Instrukcja');
+
+  XLSX.writeFile(wb, 'osf_lista_startowa.xlsx');
 }
 
 function downloadTemplateODS() {
   if (typeof XLSX === 'undefined') { alert('Biblioteka nie jest załadowana — spróbuj za chwilę.'); return; }
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
-  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 8 }];
+  ws['!cols'] = [{ wch: 5 }, { wch: 38 }, { wch: 8 }, { wch: 28 }, { wch: 8 }, { wch: 8 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
-  XLSX.writeFile(wb, 'osf_lista_startowa_template.ods', { bookType: 'ods' });
+  XLSX.writeFile(wb, 'osf_lista_startowa.ods', { bookType: 'ods' });
 }
 
 function triggerDownload(url, filename) {
@@ -7475,42 +7614,69 @@ function importFromFile(e) {
 
 function parseImportRows(raw) {
   if (!raw.length) return [];
-  // Znajdź wiersz nagłówkowy
+
+  // Znajdź wiersz nagłówkowy (pierwsze 5 wierszy)
   let headerIdx = 0;
-  for (let i = 0; i < Math.min(4, raw.length); i++) {
+  for (let i = 0; i < Math.min(5, raw.length); i++) {
     const row = raw[i].map(c => String(c).toLowerCase());
-    if (row.some(c => c.includes('nazwisko') || c.includes('płeć') || c.includes('plec') || c.includes('m/k'))) {
-      headerIdx = i; break;
-    }
+    if (row.some(c =>
+      c.includes('nazwisko') || c.includes('imię') || c.includes('imi') ||
+      c.includes('płeć') || c.includes('plec') || c.includes('m/k') ||
+      c.includes('stopień') || c.includes('stopien')
+    )) { headerIdx = i; break; }
   }
-  const headers = raw[headerIdx].map(c => String(c).toLowerCase().trim());
+
+  const headers = raw[headerIdx].map(c => String(c).toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')); // strip diacritics for matching
+
+  // Mapowanie kolumn — elastyczne dopasowanie
+  function findCol(...patterns) {
+    return headers.findIndex(h => patterns.some(p => h.includes(p)));
+  }
+
   const col = {
-    rank:   headers.findIndex(h => h.includes('stopień') || h.includes('stopien') || h.includes('rank') || h.includes('tytuł') || h.includes('tytul')),
-    name:   headers.findIndex(h => h.includes('nazwisko') || h.includes('imię') || h.includes('imi')),
-    gender: headers.findIndex(h => h.includes('płeć') || h.includes('plec') || h.includes('m/k') || h.includes('k/m')),
-    team:   headers.findIndex(h => h.includes('drużyna') || h.includes('druzyna') || h.includes('jednostka')),
-    bib:    headers.findIndex(h => h.includes('nr') || h.includes('numer') || h.includes('startowy')),
-    m36:    headers.findIndex(h => h.includes('m36') || h === 'm36+' || h.includes('weteran') || h.includes('masters')),
+    // Stopień + imię i nazwisko — teraz w jednej kolumnie LUB osobno (wsteczna kompatybilność)
+    name:   findCol('imie', 'imię', 'nazwisko', 'stopien', 'stopień', 'zawodnik'),
+    gender: findCol('plec', 'płeć', 'm/k', 'k/m', 'gender', 'sex'),
+    team:   findCol('druzyna', 'drużyna', 'jednostka', 'team', 'oddzial', 'oddział'),
+    bib:    findCol('nr start', 'numer start', 'startowy', 'bib'),
+    m36:    findCol('m36', 'weteran', 'masters', 'senior'),
+    pk:     findCol('pk', 'poza konkur', 'poza_konkur'),
   };
-  if (col.rank   < 0) col.rank   = -1; // opcjonalna
+
+  // Fallbacki pozycyjne jeśli nagłówek nierozpoznany
   if (col.name   < 0) col.name   = 1;
   if (col.gender < 0) col.gender = 2;
   if (col.team   < 0) col.team   = 3;
-  if (col.bib    < 0) col.bib    = 4;
+  // bib, m36, pk mogą zostać -1
+
   const result = [];
   for (let i = headerIdx + 1; i < raw.length; i++) {
     const row = raw[i];
     if (!row || !row.length) continue;
-    const rank   = col.rank >= 0 ? String(row[col.rank] || '').trim() : '';
+
     const name   = String(row[col.name]   || '').trim();
     const gender = String(row[col.gender] || '').trim().toUpperCase();
     const team   = String(row[col.team]   || '').trim();
-    const bibRaw = row[col.bib];
-    const m36Raw = col.m36 >= 0 ? String(row[col.m36] || '').trim().toUpperCase() : '';
-    const m36    = m36Raw === 'M36+' || m36Raw === 'X' || m36Raw === 'TAK' || m36Raw === '1' || m36Raw === 'TRUE';
+
     if (!name) continue;
-    if (gender !== 'M' && gender !== 'K') continue;
-    result.push({ rank, name, gender, team, bib: bibRaw ? parseInt(bibRaw) : null, m36 });
+    // Akceptuj M/K — jeśli jest błąd płci, pomiń wiersz
+    const gNorm = gender === 'M' || gender === 'MĘŻCZYZNA' || gender === 'MEZCZYZNA' ? 'M'
+                : gender === 'K' || gender === 'KOBIETA' ? 'K' : null;
+    if (!gNorm) continue;
+
+    // Nr startowy (opcjonalny — system przydziela wg kolejności)
+    const bibRaw = col.bib >= 0 ? row[col.bib] : null;
+
+    // M36+ — COKOLWIEK wpisane = aktywne, puste = nieaktywne
+    const m36Raw = col.m36 >= 0 ? String(row[col.m36] || '').trim() : '';
+    const m36    = m36Raw.length > 0 && gNorm === 'M';
+
+    // PK — COKOLWIEK wpisane = aktywne, puste = nieaktywne
+    const pkRaw  = col.pk >= 0 ? String(row[col.pk] || '').trim() : '';
+    const pk     = pkRaw.length > 0;
+
+    result.push({ name, gender: gNorm, team, bib: bibRaw ? parseInt(bibRaw) : null, m36, pk });
   }
   return result;
 }
@@ -7533,7 +7699,7 @@ function applyImportRows(rows) {
   }
 
   newRows.forEach(r => {
-    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: false, m36: r.m36 || false });
+    state.athletes.push({ id: nextId(), rank: '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: r.pk || false, m36: r.m36 || false });
   });
   assignBibs();
   save();
