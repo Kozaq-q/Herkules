@@ -1826,44 +1826,58 @@ function save() {
 }
 
 // Decyzje operatora dla każdego duplikatu: 'remove' | 'empty' | null
-let _dupDecisions = {};
+// ═══ DUPLIKATY PAR ═══
+// Stan aktualnie wyświetlanego duplikatu
+let _currentDup = null;
 
-function detectPairDuplicates(series) {
+function getPairInfo(series, pairNum, gender) {
   const pairs = series === 's1' ? state.s1pairs : state.s2pairs;
-  const seen  = new Map();
-  const dups  = [];
-  pairs.forEach(p => {
-    ['aId', 'bId'].forEach(slot => {
-      const id = p[slot];
-      if (!id) return;
-      if (seen.has(id)) {
-        dups.push({
-          athleteId:    id,
-          series,
-          firstPairNum: seen.get(id).pairNum,
-          firstGender:  seen.get(id).gender,
-          secondPairNum:p.pairNum,
-          secondGender: p.gender,
-          secondSlot:   slot
-        });
-      } else {
-        seen.set(id, { pairNum: p.pairNum, gender: p.gender });
-      }
+  return pairs.find(p => p.pairNum === pairNum && p.gender === gender) || null;
+}
+
+function athleteName(id) {
+  if (!id) return null;
+  const a = state.athletes.find(x => x.id === id);
+  return a ? a.name : null;
+}
+
+function detectAllDuplicates() {
+  const result = [];
+  ['s1', 's2'].forEach(series => {
+    const pairs = series === 's1' ? state.s1pairs : state.s2pairs;
+    const seen  = new Map(); // athleteId → {pairNum, gender}
+    pairs.forEach(p => {
+      [p.aId, p.bId].filter(Boolean).forEach(id => {
+        if (seen.has(id)) {
+          // Проверяем дубликат целой пары
+          const first  = seen.get(id);
+          const p1     = getPairInfo(series, first.pairNum,  first.gender);
+          const p2     = getPairInfo(series, p.pairNum, p.gender);
+          const isWholePair = p1 && p2 &&
+            ((p1.aId === p2.aId && p1.bId === p2.bId) ||
+             (p1.aId === p2.bId && p1.bId === p2.aId));
+          result.push({
+            series,
+            athleteId:    id,
+            isWholePair,
+            p1Num: first.pairNum,  p1Gender: first.gender,
+            p2Num: p.pairNum,      p2Gender: p.gender,
+          });
+        } else {
+          seen.set(id, { pairNum: p.pairNum, gender: p.gender });
+        }
+      });
     });
   });
-  return dups;
+  return result;
 }
 
 function checkAndWarnDuplicates() {
-  const allDups = [...detectPairDuplicates('s1'), ...detectPairDuplicates('s2')];
-  const bar = document.getElementById('dup-warning-bar');
+  const dups = detectAllDuplicates();
+  const bar  = document.getElementById('dup-warning-bar');
   if (!bar) return;
-  if (allDups.length) {
-    bar.style.display = 'flex';
-    bar.dataset.dups  = JSON.stringify(allDups);
-  } else {
-    bar.style.display = 'none';
-  }
+  if (dups.length) { bar.style.display = 'flex'; }
+  else             { bar.style.display = 'none'; }
 }
 
 function hideDupWarning() {
@@ -1872,75 +1886,132 @@ function hideDupWarning() {
 }
 
 function openDupModal() {
-  const bar  = document.getElementById('dup-warning-bar');
-  const dups = JSON.parse((bar && bar.dataset.dups) || '[]');
-  const list = document.getElementById('dup-modal-list');
-  if (!list) return;
-
-  // Prosty nagłówek
-  let html = '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">' +
-    'Z której pary usunąć zawodnika? Kliknij numer pary.</div>';
-
-  html += dups.map((d, i) => {
-    const athlete  = state.athletes.find(x => x.id === d.athleteId);
-    const aName    = athlete ? esc(athlete.name) : '#' + d.athleteId;
-    const serLabel = d.series === 's1' ? 'S1' : 'S2';
-
-    function mkBtn(pairNum, gender) {
-      const dd = JSON.stringify({ ...d, secondPairNum: pairNum, secondGender: gender });
-      return '<button onclick="fixOneDuplicate(' + i + ',\'only\',' + dd + ')" ' +
-        'style="padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);' +
-        'border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:700;color:var(--text2);">' +
-        serLabel + ' · ' + pairNum +
-        '</button>';
-    }
-
-    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">' +
-      '<div style="flex:1;font-size:14px;font-weight:700;color:var(--text1);">' + aName + '</div>' +
-      mkBtn(d.firstPairNum,  d.firstGender) +
-      mkBtn(d.secondPairNum, d.secondGender) +
-    '</div>';
-  }).join('');
-
-  list.innerHTML = html;
+  const dups = detectAllDuplicates();
+  if (!dups.length) { hideDupWarning(); return; }
+  // Pokaż pierwszy duplikat
+  _showDup(dups[0], dups.length);
   document.getElementById('modal-duplicates').classList.add('open');
 }
 
-function fixOneDuplicate(idx, decision, d) {
-  // d.secondPairNum/secondGender = para z której usuwamy zawodnika
-  const pairs  = d.series === 's1' ? state.s1pairs : state.s2pairs;
-  const target = pairs.find(p => p.pairNum === d.secondPairNum && p.gender === d.secondGender);
-  if (!target) { closeModal('modal-duplicates'); return; }
+function _showDup(d, totalLeft) {
+  _currentDup = d;
+  const list = document.getElementById('dup-modal-list');
+  if (!list) return;
 
-  // Usuń zawodnika ze slotu — partner zostaje solo
+  const series  = d.series.toUpperCase();
+  const p1      = getPairInfo(d.series, d.p1Num, d.p1Gender);
+  const p2      = getPairInfo(d.series, d.p2Num, d.p2Gender);
+  const athlete = state.athletes.find(x => x.id === d.athleteId);
+  const aName   = athlete ? athlete.name : '?';
+
+  function pairCard(pNum, pGender, pair, isFocus) {
+    const partId   = pair ? (pair.aId === d.athleteId ? pair.bId : pair.aId) : null;
+    const partName = athleteName(partId) || 'solo';
+    const border   = isFocus ? '2px solid var(--accent)' : '1px solid var(--border2)';
+    const btn      = isFocus
+      ? '<button data-pnum="' + pNum + '" data-pgender="' + pGender + '" onclick="_removeDupFromPair(this)" ' +
+          'style="width:100%;padding:8px;background:var(--red);color:#fff;border:none;' +
+          'border-radius:var(--radius);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;">' +
+          'Usuń z tej pary' +
+        '</button>'
+      : '';
+    return '<div style="flex:1;border:' + border + ';border-radius:var(--radius);padding:14px;min-width:0;">' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">' + series + ' · Para ' + pNum + '</div>' +
+      '<div style="font-size:15px;font-weight:800;color:var(--text1);margin-bottom:4px;word-break:break-word;">' + esc(aName) + '</div>' +
+      '<div style="font-size:13px;color:var(--text2);">+ ' + esc(partName) + '</div>' +
+      btn +
+    '</div>';
+  }
+
+  if (d.isWholePair) {
+    // Duplikat całej pary
+    const p1a = athleteName(p1 && p1.aId), p1b = athleteName(p1 && p1.bId);
+    const p2a = athleteName(p2 && p2.aId), p2b = athleteName(p2 && p2.bId);
+    list.innerHTML =
+      '<div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Identyczna para pojawia się dwa razy. Którą usunąć?</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button data-pnum="' + d.p1Num + '" data-pgender="' + d.p1Gender + '" onclick="_removeWholePair(this)" ' +
+          'style="flex:1;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;">' +
+          '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">' + series + ' · Para ' + d.p1Num + '</div>' +
+          '<div style="font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px;">' + esc(p1a||'?') + '</div>' +
+          '<div style="font-size:13px;color:var(--text2);">+ ' + esc(p1b||'solo') + '</div>' +
+          '<div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--red);">Usuń tę ✕</div>' +
+        '</button>' +
+        '<button data-pnum="' + d.p2Num + '" data-pgender="' + d.p2Gender + '" onclick="_removeWholePair(this)" ' +
+          'style="flex:1;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;">' +
+          '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">' + series + ' · Para ' + d.p2Num + '</div>' +
+          '<div style="font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px;">' + esc(p2a||'?') + '</div>' +
+          '<div style="font-size:13px;color:var(--text2);">+ ' + esc(p2b||'solo') + '</div>' +
+          '<div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--red);">Usuń tę ✕</div>' +
+        '</button>' +
+      '</div>';
+  } else {
+    // Ta sama osoba w dwóch różnych parach
+    list.innerHTML =
+      '<div style="font-size:13px;color:var(--text2);margin-bottom:16px;">' +
+        '<strong>' + esc(aName) + '</strong> jest w dwóch parach. Z której go usunąć?' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        pairCard(d.p1Num, d.p1Gender, p1, true) +
+        pairCard(d.p2Num, d.p2Gender, p2, true) +
+      '</div>';
+  }
+
+  if (totalLeft > 1) {
+    list.innerHTML += '<div style="font-size:11px;color:var(--text3);margin-top:14px;text-align:center;">' +
+      'Pozostało jeszcze ' + (totalLeft - 1) + ' duplikatów do naprawienia.' +
+    '</div>';
+  }
+}
+
+function _removeDupFromPair(btn) {
+  const d       = _currentDup;
+  if (!d) return;
+  const pNum    = parseInt(btn.dataset.pnum);
+  const pGender = btn.dataset.pgender;
+  const pairs   = d.series === 's1' ? state.s1pairs : state.s2pairs;
+  const target  = pairs.find(p => p.pairNum === pNum && p.gender === pGender);
+  if (!target) return;
+
+  // Usuń zawodnika — partner zostaje solo
   if (target.aId === d.athleteId) target.aId = null;
-  else if (target.bId === d.athleteId) target.bId = null;
-  // Normalizuj: zostający → slot a
+  else target.bId = null;
   const remId   = target.aId || target.bId;
   const remLane = target.aId ? target.aLane : target.bLane;
   if (remId) {
     target.aId = remId; target.aLane = remLane;
     target.bId = null;  target.bLane = remLane === 'L' ? 'P' : 'L';
   } else {
-    const ix = pairs.indexOf(target);
-    if (ix >= 0) pairs.splice(ix, 1);
+    pairs.splice(pairs.indexOf(target), 1);
   }
-  pairs.filter(p => p.gender === d.secondGender).forEach((p, i) => { p.pairNum = i + 1; });
+  pairs.filter(p => p.gender === pGender).forEach((p, i) => { p.pairNum = i + 1; });
+  _afterFix();
+}
 
+function _removeWholePair(btn) {
+  const d       = _currentDup;
+  if (!d) return;
+  const pNum    = parseInt(btn.dataset.pnum);
+  const pGender = btn.dataset.pgender;
+  const pairs   = d.series === 's1' ? state.s1pairs : state.s2pairs;
+  const idx     = pairs.findIndex(p => p.pairNum === pNum && p.gender === pGender);
+  if (idx >= 0) pairs.splice(idx, 1);
+  pairs.filter(p => p.gender === pGender).forEach((p, i) => { p.pairNum = i + 1; });
+  _afterFix();
+}
+
+function _afterFix() {
   saveImmediate();
-  closeModal('modal-duplicates');
-
-  const remaining = [...detectPairDuplicates('s1'), ...detectPairDuplicates('s2')];
-  if (remaining.length) {
-    const bar = document.getElementById('dup-warning-bar');
-    if (bar) bar.dataset.dups = JSON.stringify(remaining);
-    setTimeout(openDupModal, 150);
-  } else {
-    hideDupWarning();
-    showToast('✓ Naprawiono', 'success');
-  }
   if (state.s1pairs.length) renderSeries1View();
   if (state.s2pairs.length) renderSeries2View();
+  const remaining = detectAllDuplicates();
+  if (remaining.length) {
+    _showDup(remaining[0], remaining.length);
+  } else {
+    closeModal('modal-duplicates');
+    hideDupWarning();
+    showToast('✓ Wszystkie duplikaty naprawione', 'success');
+  }
 }
 
 function ensureStateDefaults() {
