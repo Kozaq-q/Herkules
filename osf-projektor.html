@@ -155,6 +155,78 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 /* ── NO DATA ── */
 .no-data { text-align: center; padding: 48px 16px; color: var(--text3); font-family: var(--font-b); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
 
+/* ── LISTA STARTOWA ── */
+#startlist-main {
+  display: flex; flex-direction: column; overflow: hidden;
+  height: calc(100vh - 60px); background: var(--bg);
+}
+.sl-gender-block { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.sl-gender-block + .sl-gender-block { border-top: 2px solid var(--border2); }
+.sl-section-header {
+  padding: 10px 24px; flex-shrink: 0;
+  font-family: var(--font-b); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  border-bottom: 2px solid;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sl-section-header.ind-m { color: var(--male);   border-color: var(--male);   background: rgba(96,168,232,.07); }
+.sl-section-header.ind-k { color: var(--female); border-color: var(--female); background: rgba(224,96,176,.07); }
+.sl-scroll-viewport { flex: 1; overflow: hidden; position: relative; min-height: 0; }
+.sl-scroll-track    { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
+
+/* Wiersze par */
+.sl-pair-row {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  min-height: 0;
+}
+.sl-pair-row.even { background: var(--bg2); }
+.sl-pair-row.odd  { background: var(--bg3); }
+.sl-pair-num {
+  font-family: var(--font-h); font-weight: 700; color: var(--text3);
+  text-align: center; padding: 12px 8px;
+  width: 56px; min-width: 56px; flex-shrink: 0;
+  border-right: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+}
+.sl-athlete {
+  flex: 1; padding: 10px 14px;
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0; overflow: hidden;
+}
+.sl-athlete.lane-L { border-right: 1px solid var(--border2); }
+.sl-athlete-name {
+  font-family: var(--font-b); font-weight: 700;
+  line-height: 1.25;
+  white-space: normal; word-break: break-word;
+}
+.sl-athlete-sub {
+  font-family: var(--font-b); font-size: 11px; font-weight: 400;
+  color: var(--text3); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sl-lane-badge {
+  font-family: var(--font-h); font-weight: 700; font-size: 11px;
+  letter-spacing: 1px; padding: 2px 8px; border-radius: 3px;
+  margin-bottom: 4px; display: inline-block; width: fit-content;
+}
+.sl-lane-badge.L { color: var(--male);   border: 1px solid var(--male);   background: rgba(96,168,232,.12); }
+.sl-lane-badge.P { color: var(--female); border: 1px solid var(--female); background: rgba(224,96,176,.12); }
+.sl-vs {
+  width: 48px; min-width: 48px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-h); font-size: 12px; font-weight: 700;
+  color: var(--text3); letter-spacing: 1px;
+  border-left: 1px solid var(--border2);
+  border-right: 1px solid var(--border2);
+}
+.sl-solo-badge {
+  font-family: var(--font-h); font-size: 10px; font-weight: 700;
+  letter-spacing: 1.5px; color: var(--orange);
+  border: 1px solid rgba(240,144,80,.4); padding: 2px 7px; border-radius: 3px;
+  margin-left: 8px;
+}
+
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
@@ -185,6 +257,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   <div id="proj-progress" style="display:none;"></div>
 
   <div id="proj-main"></div>
+  <div id="startlist-main" style="display:none;"></div>
 
 </div>
 
@@ -765,6 +838,154 @@ function _renderSection(id, { html, count }) {
     track.style.transform = 'translateY(0)';
   }
 }
+// ═══════════════════════════════════════════════════
+// TRYB LISTY STARTOWEJ
+// ═══════════════════════════════════════════════════
+
+const _slScrollRAFs = {};
+
+function renderStartlist() {
+  if (!state) return;
+  const cfg2     = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
+  const series   = cfg2.slSeries  || 's1';
+  const gender   = cfg2.slGender  || 'both';
+  const speed    = cfg2.scrollSpeed || 0;
+  const pairs    = series === 's1' ? (state.s1pairs || []) : (state.s2pairs || []);
+  const athletes = state.athletes || [];
+  const main     = document.getElementById('startlist-main');
+  if (!main) return;
+
+  const genders = gender === 'both' ? ['M', 'K'] : [gender];
+
+  // Zatrzymaj stare scrolle
+  Object.keys(_slScrollRAFs).forEach(k => {
+    if (_slScrollRAFs[k]) cancelAnimationFrame(_slScrollRAFs[k]);
+    delete _slScrollRAFs[k];
+  });
+
+  main.innerHTML = '';
+
+  genders.forEach(g => {
+    const gPairs = pairs.filter(p => p.gender === g).sort((a,b) => a.pairNum - b.pairNum);
+    if (!gPairs.length && gender === 'both') return; // pomiń pustą płeć
+
+    const block = document.createElement('div');
+    block.className = 'sl-gender-block';
+    block.style.flex = gender === 'both' ? '1' : '1';
+
+    const color     = g === 'M' ? 'var(--male)' : 'var(--female)';
+    const gLabel    = g === 'M' ? '♂ Mężczyźni' : '♀ Kobiety';
+    const sLabel    = series === 's1' ? 'Seria 1' : 'Seria 2';
+    block.innerHTML = `<div class="sl-section-header ind-${g.toLowerCase()}">
+      <span>${gLabel} — ${sLabel}</span>
+      <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;">${gPairs.filter(p=>p.aId).length} par</span>
+    </div>`;
+
+    const vp = document.createElement('div');
+    vp.className = 'sl-scroll-viewport';
+    vp.id = 'sl-vp-' + g;
+
+    const track = document.createElement('div');
+    track.className = 'sl-scroll-track';
+    track.id = 'sl-track-' + g;
+
+    const html = buildStartlistRows(gPairs, athletes, series);
+    vp.appendChild(track);
+    block.appendChild(vp);
+    main.appendChild(block);
+
+    _renderSlSection(g, html, speed, vp);
+  });
+}
+
+function buildStartlistRows(pairs, athletes, series) {
+  if (!pairs.length) return '<div class="no-data">Brak par — wygeneruj listę startową</div>';
+
+  // Dynamiczny rozmiar czcionki wg liczby par
+  const N        = pairs.length;
+  const nameSize = N > 20 ? 14 : N > 14 ? 16 : N > 9 ? 18 : 20;
+  const subSize  = 11;
+  const numSize  = N > 20 ? 18 : N > 14 ? 20 : 22;
+
+  return pairs.map((p, idx) => {
+    const a = p.aId ? athletes.find(x => x.id === p.aId) : null;
+    const b = p.bId ? athletes.find(x => x.id === p.bId) : null;
+    const isSolo = !b;
+    const altCls = idx % 2 === 0 ? 'even' : 'odd';
+
+    const laneA = p.aLane || 'L';
+    const laneB = p.bLane || 'P';
+
+    // Zawodnik L i P
+    const [athL, laneL, athP, laneP] = laneA === 'L'
+      ? [a, laneA, b, laneB]
+      : [b, laneB, a, laneA];
+
+    function athleteHTML(ath, lane, side) {
+      if (!ath) {
+        return `<div class="sl-athlete lane-${lane}" style="opacity:.3;">
+          <div class="sl-lane-badge ${lane}">${lane}</div>
+          <div class="sl-athlete-name" style="font-size:${nameSize}px;color:var(--text3);">—</div>
+        </div>`;
+      }
+      const nameLen = (ath.name || '').length;
+      const fs = nameLen > 22 ? Math.max(11, nameSize - 3)
+               : nameLen > 16 ? Math.max(12, nameSize - 1)
+               : nameSize;
+      const s1time = series === 's2' ? (state.times && state.times[ath.id] && state.times[ath.id].s1) || '' : '';
+      return `<div class="sl-athlete lane-${lane}">
+        <div class="sl-lane-badge ${lane}">${lane}</div>
+        <div class="sl-athlete-name" style="font-size:${fs}px;">${esc(ath.name)}</div>
+        <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${s1time ? ' · S1: ' + s1time : ''}</div>
+      </div>`;
+    }
+
+    const soloLabel = isSolo ? `<span class="sl-solo-badge">SOLO</span>` : '';
+
+    return `<div class="sl-pair-row ${altCls}">
+      <div class="sl-pair-num" style="font-size:${numSize}px;">${p.pairNum}${soloLabel}</div>
+      ${athleteHTML(athL, 'L', 'left')}
+      ${isSolo ? '' : '<div class="sl-vs">VS</div>'}
+      ${isSolo ? '<div style="flex:1;"></div>' : athleteHTML(athP, 'P', 'right')}
+    </div>`;
+  }).join('');
+}
+
+function _renderSlSection(id, html, speed, vp) {
+  const track = document.getElementById('sl-track-' + id);
+  if (!track) return;
+
+  if (_slScrollRAFs[id]) { cancelAnimationFrame(_slScrollRAFs[id]); delete _slScrollRAFs[id]; }
+
+  if (speed > 0) {
+    track.innerHTML = html;
+    track.style.transform = 'translateY(0)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const vpH   = vp.offsetHeight;
+      const oneH  = track.offsetHeight;
+      if (oneH <= 0) return;
+      const copies = Math.max(3, Math.ceil((vpH * 2.5) / oneH) + 1);
+      track.innerHTML = Array(copies).fill(html).join('');
+      const segH = track.offsetHeight / copies;
+      let pos = 0, lastT = null;
+      function step(now) {
+        if (!lastT) lastT = now;
+        const dt = Math.min(now - lastT, 50);
+        lastT = now;
+        pos += speed * dt / 1000;
+        if (pos >= segH) pos -= segH;
+        track.style.transform = `translateY(-${pos}px)`;
+        _slScrollRAFs[id] = requestAnimationFrame(step);
+      }
+      _slScrollRAFs[id] = requestAnimationFrame(step);
+    }));
+  } else {
+    track.innerHTML = html;
+    track.style.transform = 'translateY(0)';
+  }
+}
+
+
 </script>
 </body>
 </html>
