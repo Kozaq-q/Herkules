@@ -315,104 +315,92 @@ tr:last-child > td { border-bottom: none; }
           </div>
         </div>
       </div>
-      <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:18px 20px;width:340px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.8);">
-        <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px;">⚙ Ustawienia projektora</div>
+      <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:16px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.9);">
 
-        <div class="form-group">
-          <label>Tytuł wyświetlany na projektorze</label>
-          <input type="text" id="ps-custom-title" placeholder="np. Zawody OSF — 1 Brygada" oninput="saveProjSettings()" />
-          <div style="font-size:10px;color:var(--text3);margin-top:3px;">Puste = tytuł z zawodów</div>
+        <!-- Nagłówek -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;">⚙ Projektor</div>
+          <button onclick="toggleProjSettings()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:0;">×</button>
         </div>
 
-        <div class="form-group">
-          <label style="margin-bottom:6px;display:block;">Wyświetlane sekcje</label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
-            <input type="checkbox" id="ps-show-ind-m" onchange="saveProjSettings()" checked />
-            <span>Wyniki indywidualne — Mężczyźni</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
-            <input type="checkbox" id="ps-show-ind-k" onchange="saveProjSettings()" checked />
-            <span>Wyniki indywidualne — Kobiety</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
-            <input type="checkbox" id="ps-show-team" onchange="saveProjSettings()" checked />
-            <span>Bieg drużynowy</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="ps-show-klas" onchange="saveProjSettings()" checked />
-            <span>Klasyfikacja zespołowa</span>
-          </label>
-        </div>
-
-        <div class="form-group">
-          <label style="margin-bottom:6px;display:block;">Serie przy zawodnikach</label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
-            <input type="checkbox" id="ps-show-s1" onchange="saveProjSettings()" checked />
-            <span>Pokaż Serię 1</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="ps-show-s2" onchange="saveProjSettings()" checked />
-            <span>Pokaż Serię 2</span>
-          </label>
-          <div style="font-size:10px;color:var(--text3);margin-top:4px;">Najlepszy wynik zawsze widoczny</div>
-        </div>
-
-        <div class="form-group">
-          <label>Liczba wyświetlanych pozycji (0 = wszystkie)</label>
-          <input type="number" id="ps-top-n" min="0" max="100" value="0" oninput="saveProjSettings()" style="font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
-        </div>
-
-        <div class="form-group">
-          <label>Scrollowanie wyników</label>
-          <select id="ps-scroll-speed" onchange="saveProjSettings()">
-            <option value="0">Wyłączone</option>
-            <option value="15">Wolne (15 px/s)</option>
-            <option value="30">Średnie (30 px/s)</option>
-            <option value="60">Szybkie (60 px/s)</option>
-            <option value="100">Bardzo szybkie (100 px/s)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="ps-show-progress" onchange="saveProjSettings()" checked />
-            <span>Pasek postępu zawodów</span>
-          </label>
-        </div>
-
-        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
-          <div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;margin-bottom:10px;">📋 Projektor list startowych</div>
-          <div class="form-group">
-            <label style="margin-bottom:6px;display:block;">Seria</label>
-            <div style="display:flex;gap:6px;">
-              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);cursor:pointer;font-size:12px;">
-                <input type="radio" name="ps-startlist-series" value="s1" id="ps-sl-s1" onchange="saveProjSettings()" checked /> Seria 1
-              </label>
-              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);cursor:pointer;font-size:12px;">
-                <input type="radio" name="ps-startlist-series" value="s2" id="ps-sl-s2" onchange="saveProjSettings()" /> Seria 2
-              </label>
-            </div>
+        <!-- WYNIKI — otwórz -->
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Wyniki</div>
+        <button onclick="openProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;margin-bottom:12px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+          <span style="font-size:22px;">📊</span>
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--accent);">Otwórz projektor wyników</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;">M · K · Drużynowy · Klasyfikacja</div>
           </div>
-          <div class="form-group">
-            <label style="margin-bottom:6px;display:block;">Płeć</label>
-            <div style="display:flex;gap:6px;">
-              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);cursor:pointer;font-size:12px;">
-                <input type="radio" name="ps-startlist-gender" value="both" id="ps-sl-both" onchange="saveProjSettings()" checked /> Obydwie
-              </label>
-              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);cursor:pointer;font-size:12px;">
-                <input type="radio" name="ps-startlist-gender" value="M" id="ps-sl-m" onchange="saveProjSettings()" /> ♂ M
-              </label>
-              <label style="flex:1;display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border2);cursor:pointer;font-size:12px;">
-                <input type="radio" name="ps-startlist-gender" value="K" id="ps-sl-k" onchange="saveProjSettings()" /> ♀ K
-              </label>
-            </div>
-          </div>
-          <button class="btn btn-sm" onclick="openStartlistProjektor()" style="width:100%;color:var(--green);border-color:rgba(80,200,144,.3);margin-bottom:10px;">📋 Otwórz projektor list startowych</button>
+        </button>
+
+        <!-- Sekcje wyników — kafelki toggle -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
+          <button id="ps-tile-ind-m" onclick="toggleProjTile('ind-m')" style="padding:10px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--male);">♂ Mężczyźni</button>
+          <button id="ps-tile-ind-k" onclick="toggleProjTile('ind-k')" style="padding:10px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--female);">♀ Kobiety</button>
+          <button id="ps-tile-team" onclick="toggleProjTile('team')" style="padding:10px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--orange);">🏃 Drużynowy</button>
+          <button id="ps-tile-klas" onclick="toggleProjTile('klas')" style="padding:10px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--accent);">🏆 Klasyfikacja</button>
         </div>
 
-        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;display:flex;gap:8px;">
-          <button class="btn btn-sm btn-primary" onclick="openProjektor()" style="flex:1;">🚀 Otwórz projektor wyników</button>
-          <button class="btn btn-sm" onclick="toggleProjSettings()">Zamknij</button>
+        <!-- Scroll + progress — rząd -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+          <div style="flex:1;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Scroll</div>
+            <select id="ps-scroll-speed" onchange="saveProjSettings()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-size:12px;cursor:pointer;">
+              <option value="0">Wyłączony</option>
+              <option value="15">Wolny</option>
+              <option value="30">Normalny</option>
+              <option value="60">Szybki</option>
+              <option value="100">Bardzo szybki</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
+            <button id="ps-tile-progress" onclick="toggleProjTile('progress')" style="width:100%;padding:6px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">Włącz</button>
+          </div>
+        </div>
+
+        <!-- LISTA STARTOWA -->
+        <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:10px;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Lista startowa</div>
+
+          <!-- Seria -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+            <button id="ps-tile-s1" onclick="setProjSLSeries('s1')" style="padding:8px;background:var(--bg3);border:2px solid var(--accent);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);">Seria 1</button>
+            <button id="ps-tile-s2" onclick="setProjSLSeries('s2')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">Seria 2</button>
+          </div>
+
+          <!-- Płeć -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+            <button id="ps-tile-g-both" onclick="setProjSLGender('both')" style="padding:8px;background:var(--bg3);border:2px solid var(--accent);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);">M + K</button>
+            <button id="ps-tile-g-m" onclick="setProjSLGender('M')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♂ M</button>
+            <button id="ps-tile-g-k" onclick="setProjSLGender('K')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♀ K</button>
+          </div>
+
+          <button onclick="openStartlistProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <span style="font-size:22px;">📋</span>
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--green);">Otwórz listę startową</div>
+              <div id="ps-sl-preview" style="font-size:10px;color:var(--text3);margin-top:2px;">Seria 1 · M + K</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Ukryte inputy dla kompatybilności -->
+        <div style="display:none;">
+          <input type="text" id="ps-custom-title" />
+          <input type="checkbox" id="ps-show-ind-m" checked />
+          <input type="checkbox" id="ps-show-ind-k" checked />
+          <input type="checkbox" id="ps-show-team" checked />
+          <input type="checkbox" id="ps-show-klas" checked />
+          <input type="checkbox" id="ps-show-s1" checked />
+          <input type="checkbox" id="ps-show-s2" checked />
+          <input type="number" id="ps-top-n" value="0" />
+          <input type="checkbox" id="ps-show-progress" checked />
+          <input type="radio" name="ps-startlist-series" value="s1" id="ps-sl-s1" checked />
+          <input type="radio" name="ps-startlist-series" value="s2" id="ps-sl-s2" />
+          <input type="radio" name="ps-startlist-gender" value="both" id="ps-sl-both" checked />
+          <input type="radio" name="ps-startlist-gender" value="M" id="ps-sl-m" />
+          <input type="radio" name="ps-startlist-gender" value="K" id="ps-sl-k" />
         </div>
       </div>
     </div>
@@ -5125,34 +5113,6 @@ function toggleProjPopup() {
   }
 }
 
-function toggleProjSettings() {
-  const pop = document.getElementById('proj-settings-pop');
-  if (pop.style.display === 'none') {
-    const s = getProjSettings();
-    document.getElementById('ps-custom-title').value  = s.customTitle;
-    document.getElementById('ps-show-ind-m').checked  = s.showIndM;
-    document.getElementById('ps-show-ind-k').checked  = s.showIndK;
-    document.getElementById('ps-show-team').checked   = s.showTeam;
-    document.getElementById('ps-show-klas').checked   = s.showKlas;
-    document.getElementById('ps-show-s1').checked     = s.showS1;
-    document.getElementById('ps-show-s2').checked     = s.showS2;
-    document.getElementById('ps-top-n').value         = s.topN;
-    document.getElementById('ps-scroll-speed').value  = s.scrollSpeed;
-    document.getElementById('ps-show-progress').checked = s.showProgress;
-    pop.style.display = 'block';
-  } else {
-    pop.style.display = 'none';
-  }
-}
-
-function getProjSettings() {
-  try {
-    const raw = localStorage.getItem('osf_proj_settings');
-    if (raw) return { ...defaultProjSettings(), ...JSON.parse(raw) };
-  } catch(e) {}
-  return defaultProjSettings();
-}
-
 function defaultProjSettings() {
   return {
     customTitle:  '',
@@ -5164,26 +5124,131 @@ function defaultProjSettings() {
     showS2:       true,
     topN:         0,
     scrollSpeed:  0,
-    showProgress: true
+    showProgress: false,
+    slSeries:     's1',
+    slGender:     'both'
   };
 }
 
+function getProjSettings() {
+  try {
+    const raw = localStorage.getItem('osf_proj_settings');
+    if (raw) return { ...defaultProjSettings(), ...JSON.parse(raw) };
+  } catch(e) {}
+  return defaultProjSettings();
+}
+
 function saveProjSettings() {
-  const s = {
-    customTitle:  document.getElementById('ps-custom-title').value.trim(),
-    showIndM:     document.getElementById('ps-show-ind-m').checked,
-    showIndK:     document.getElementById('ps-show-ind-k').checked,
-    showTeam:     document.getElementById('ps-show-team').checked,
-    showKlas:     document.getElementById('ps-show-klas').checked,
-    showS1:       document.getElementById('ps-show-s1').checked,
-    showS2:       document.getElementById('ps-show-s2').checked,
-    topN:         parseInt(document.getElementById('ps-top-n').value) || 0,
-    scrollSpeed:  parseInt(document.getElementById('ps-scroll-speed').value) || 0,
-    showProgress: document.getElementById('ps-show-progress').checked,
-    slSeries:     (document.querySelector('input[name="ps-startlist-series"]:checked') || {}).value || 's1',
-    slGender:     (document.querySelector('input[name="ps-startlist-gender"]:checked') || {}).value || 'both'
-  };
+  const s = getProjSettings();
+  s.scrollSpeed = parseInt(document.getElementById('ps-scroll-speed').value) || 0;
   localStorage.setItem('osf_proj_settings', JSON.stringify(s));
+  _updateProjTiles();
+}
+
+function _updateProjTiles() {
+  const s = getProjSettings();
+  const TILE_ACTIVE = 'border:2px solid var(--accent);';
+  const TILE_OFF    = 'border:2px solid var(--border2);';
+
+  function setTile(id, active, colorVar) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor  = active ? colorVar  : 'var(--border2)';
+    el.style.color        = active ? colorVar  : 'var(--text3)';
+    el.style.background   = active ? colorVar + '18' : 'var(--bg3)';
+  }
+  setTile('ps-tile-ind-m',   s.showIndM,    'var(--male)');
+  setTile('ps-tile-ind-k',   s.showIndK,    'var(--female)');
+  setTile('ps-tile-team',    s.showTeam,    'var(--orange)');
+  setTile('ps-tile-klas',    s.showKlas,    'var(--accent)');
+  setTile('ps-tile-progress',s.showProgress,'var(--green)');
+
+  // Seria
+  const s1 = document.getElementById('ps-tile-s1');
+  const s2 = document.getElementById('ps-tile-s2');
+  if (s1) { s1.style.borderColor = s.slSeries==='s1' ? 'var(--accent)' : 'var(--border2)'; s1.style.color = s.slSeries==='s1' ? 'var(--accent)' : 'var(--text3)'; }
+  if (s2) { s2.style.borderColor = s.slSeries==='s2' ? 'var(--accent)' : 'var(--border2)'; s2.style.color = s.slSeries==='s2' ? 'var(--accent)' : 'var(--text3)'; }
+
+  // Płeć
+  ['both','M','K'].forEach(g => {
+    const el = document.getElementById('ps-tile-g-' + (g === 'both' ? 'both' : g.toLowerCase()));
+    if (!el) return;
+    const active = s.slGender === g;
+    el.style.borderColor = active ? 'var(--accent)' : 'var(--border2)';
+    el.style.color       = active ? 'var(--accent)' : 'var(--text3)';
+  });
+
+  // Preview
+  const prev = document.getElementById('ps-sl-preview');
+  if (prev) {
+    const ser = s.slSeries === 's1' ? 'Seria 1' : 'Seria 2';
+    const gen = s.slGender === 'M' ? '♂ M' : s.slGender === 'K' ? '♀ K' : 'M + K';
+    prev.textContent = ser + ' · ' + gen;
+  }
+
+  // Scroll dropdown
+  const spd = document.getElementById('ps-scroll-speed');
+  if (spd) spd.value = s.scrollSpeed;
+
+  // Ukryte inputy dla kompatybilności z openStartlistProjektor
+  const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = v; };
+  setChk('ps-show-ind-m',  s.showIndM);
+  setChk('ps-show-ind-k',  s.showIndK);
+  setChk('ps-show-team',   s.showTeam);
+  setChk('ps-show-klas',   s.showKlas);
+  setChk('ps-show-progress', s.showProgress);
+  const slS1  = document.getElementById('ps-sl-s1');
+  const slS2  = document.getElementById('ps-sl-s2');
+  if (slS1) slS1.checked = s.slSeries === 's1';
+  if (slS2) slS2.checked = s.slSeries === 's2';
+  const slBoth = document.getElementById('ps-sl-both');
+  const slM    = document.getElementById('ps-sl-m');
+  const slK    = document.getElementById('ps-sl-k');
+  if (slBoth) slBoth.checked = s.slGender === 'both';
+  if (slM)    slM.checked    = s.slGender === 'M';
+  if (slK)    slK.checked    = s.slGender === 'K';
+}
+
+function toggleProjTile(key) {
+  const s = getProjSettings();
+  const map = { 'ind-m': 'showIndM', 'ind-k': 'showIndK', 'team': 'showTeam', 'klas': 'showKlas', 'progress': 'showProgress' };
+  const field = map[key];
+  if (field) s[field] = !s[field];
+  localStorage.setItem('osf_proj_settings', JSON.stringify(s));
+  _updateProjTiles();
+}
+
+function setProjSLSeries(series) {
+  const s = getProjSettings();
+  s.slSeries = series;
+  localStorage.setItem('osf_proj_settings', JSON.stringify(s));
+  _updateProjTiles();
+}
+
+function setProjSLGender(gender) {
+  const s = getProjSettings();
+  s.slGender = gender;
+  localStorage.setItem('osf_proj_settings', JSON.stringify(s));
+  _updateProjTiles();
+}
+
+function toggleProjSettings() {
+  const pop = document.getElementById('proj-settings-pop');
+  if (pop.style.display === 'none' || pop.style.display === '') {
+    pop.style.display = 'block';
+    _updateProjTiles();
+    setTimeout(() => {
+      const handler = e => {
+        if (!pop.contains(e.target) && !e.target.closest('[onclick*="toggleProjSettings"]')) {
+          pop.style.display = 'none';
+        }
+        document.removeEventListener('click', handler);
+      };
+      document.addEventListener('click', handler);
+    }, 10);
+  } else {
+    pop.style.display = 'none';
+  }
 }
 
 function openStartlistProjektor() {

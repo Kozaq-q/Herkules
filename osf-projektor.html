@@ -923,52 +923,88 @@ function renderStartlist() {
 function buildStartlistRows(pairs, athletes, series) {
   if (!pairs.length) return '<div class="no-data">Brak par — wygeneruj listę startową</div>';
 
-  // Dynamiczny rozmiar czcionki wg liczby par
   const N        = pairs.length;
   const nameSize = N > 20 ? 14 : N > 14 ? 16 : N > 9 ? 18 : 20;
   const subSize  = 11;
   const numSize  = N > 20 ? 18 : N > 14 ? 20 : 22;
 
+  // Oblicz ranking wg czasu S1 dla badge'y — tylko gdy seria S2 lub mamy S1 times
+  const rankMap = new Map(); // athleteId → rank (1-based)
+  const gender  = pairs[0] && pairs[0].gender;
+  if (gender) {
+    const allAthletes = athletes.filter(a => a.gender === gender);
+    const withTime = allAthletes
+      .map(a => ({ id: a.id, sec: parseTime(getTime(a.id, 's1')) }))
+      .filter(r => r.sec < Infinity)
+      .sort((a, b) => a.sec - b.sec);
+    withTime.forEach((r, i) => rankMap.set(r.id, i + 1));
+  }
+
+  const BADGES = [
+    null,
+    { icon: '🥇', label: 'LIDER',      color: '#ffd700' },
+    { icon: '🥈', label: 'WICELIDER',  color: '#c8d0d8' },
+    { icon: '🥉', label: 'PODIUM',     color: '#d4a060' },
+    { icon: '⚔️', label: 'WALKA O MEDAL', color: '#e8944d' },
+  ];
+
+  function rankBadge(athId) {
+    const r = rankMap.get(athId);
+    if (!r || r > 4) return '';
+    const b = BADGES[r];
+    return `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;
+      color:${b.color};border:1px solid ${b.color}33;background:${b.color}18;
+      padding:1px 6px;border-radius:3px;margin-left:6px;vertical-align:middle;
+      font-family:var(--font-b);white-space:nowrap;">${b.icon} ${b.label}</span>`;
+  }
+
+  function athleteHTML(ath, lane, isSoloSlot) {
+    if (!ath || isSoloSlot) {
+      // Pusty slot — nie pokazuj nic (para solo nie ma drugiej strony)
+      return `<div class="sl-athlete" style="flex:1;"></div>`;
+    }
+    const nameLen = (ath.name || '').length;
+    const fs = nameLen > 22 ? Math.max(11, nameSize - 3)
+             : nameLen > 16 ? Math.max(12, nameSize - 1)
+             : nameSize;
+    const s1time = state.times && state.times[ath.id] && state.times[ath.id].s1 || '';
+    const s1dsq  = !!(state.disq && state.disq[ath.id] && state.disq[ath.id].s1);
+    const timeStr = s1time ? (s1dsq ? ' · <span style="color:var(--red);">DSQ</span>' : ' · ' + s1time) : '';
+    const badge   = rankBadge(ath.id);
+    return `<div class="sl-athlete lane-${lane}">
+      <div class="sl-lane-badge ${lane}">${lane}</div>
+      <div class="sl-athlete-name" style="font-size:${fs}px;">${esc(ath.name)}${badge}</div>
+      <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${timeStr}</div>
+    </div>`;
+  }
+
   return pairs.map((p, idx) => {
-    const a = p.aId ? athletes.find(x => x.id === p.aId) : null;
-    const b = p.bId ? athletes.find(x => x.id === p.bId) : null;
-    const isSolo = !b;
+    const aAth  = p.aId ? athletes.find(x => x.id === p.aId) : null;
+    const bAth  = p.bId ? athletes.find(x => x.id === p.bId) : null;
+    const isSolo = !aAth || !bAth;
     const altCls = idx % 2 === 0 ? 'even' : 'odd';
 
     const laneA = p.aLane || 'L';
     const laneB = p.bLane || 'P';
 
-    // Zawodnik L i P
-    const [athL, laneL, athP, laneP] = laneA === 'L'
-      ? [a, laneA, b, laneB]
-      : [b, laneB, a, laneA];
+    // Zawodnik L po lewej, P po prawej — solo po swojej stronie, druga strona pusta
+    const [athL, athP] = laneA === 'L' ? [aAth, bAth] : [bAth, aAth];
 
-    function athleteHTML(ath, lane, side) {
-      if (!ath) {
-        return `<div class="sl-athlete lane-${lane}" style="opacity:.3;">
-          <div class="sl-lane-badge ${lane}">${lane}</div>
-          <div class="sl-athlete-name" style="font-size:${nameSize}px;color:var(--text3);">—</div>
-        </div>`;
-      }
-      const nameLen = (ath.name || '').length;
-      const fs = nameLen > 22 ? Math.max(11, nameSize - 3)
-               : nameLen > 16 ? Math.max(12, nameSize - 1)
-               : nameSize;
-      const s1time = series === 's2' ? (state.times && state.times[ath.id] && state.times[ath.id].s1) || '' : '';
-      return `<div class="sl-athlete lane-${lane}">
-        <div class="sl-lane-badge ${lane}">${lane}</div>
-        <div class="sl-athlete-name" style="font-size:${fs}px;">${esc(ath.name)}</div>
-        <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${s1time ? ' · S1: ' + s1time : ''}</div>
-      </div>`;
-    }
-
-    const soloLabel = isSolo ? `<span class="sl-solo-badge">SOLO</span>` : '';
+    // Solo badge w nagłówku pary
+    const soloBadge = isSolo
+      ? `<span style="font-size:10px;font-weight:800;letter-spacing:1.5px;
+          color:var(--orange);border:1px solid rgba(240,144,80,.4);
+          background:rgba(240,144,80,.1);padding:2px 8px;border-radius:3px;
+          margin-left:8px;">SOLO</span>`
+      : '';
 
     return `<div class="sl-pair-row ${altCls}">
-      <div class="sl-pair-num" style="font-size:${numSize}px;">${p.pairNum}${soloLabel}</div>
-      ${athleteHTML(athL, 'L', 'left')}
-      ${isSolo ? '' : '<div class="sl-vs">VS</div>'}
-      ${isSolo ? '<div style="flex:1;"></div>' : athleteHTML(athP, 'P', 'right')}
+      <div class="sl-pair-num" style="font-size:${numSize}px;">
+        ${p.pairNum}${soloBadge}
+      </div>
+      ${athleteHTML(athL, 'L', isSolo && laneA === 'P')}
+      ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
+      ${athleteHTML(athP, 'P', isSolo && laneA === 'L')}
     </div>`;
   }).join('');
 }
