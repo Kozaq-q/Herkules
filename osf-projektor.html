@@ -162,6 +162,13 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   border-radius: 3px; padding: 1px 5px; margin-left: 5px; vertical-align: middle;
   line-height: 1.4; white-space: nowrap;
 }
+.m36-badge {
+  display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800;
+  letter-spacing: 1px; color: var(--blue); background: rgba(96,168,232,.12);
+  border: 1px solid rgba(96,168,232,.4);
+  border-radius: 3px; padding: 1px 5px; margin-left: 5px; vertical-align: middle;
+  line-height: 1.4; white-space: nowrap;
+}
 
 /* ── SL PROGRESS BAR ── */
 #sl-progress {
@@ -640,7 +647,7 @@ function buildIndRows(gender) {
     return `<tr class="rank-row ${rowCls}">
         <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</td>
         <td class="rank-name-cell">
-          <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}${r.a.pk ? '<span class="pk-badge">PK</span>' : ''}</span>
+          <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}${r.a.pk ? '<span class="pk-badge">PK</span>' : ''}${r.a.m36 ? '<span class="m36-badge">M36+</span>' : ''}</span>
           <span class="rank-team-sub" style="font-size:${subSize}px;">${esc(r.a.team)}</span>
         </td>
         <td class="rank-time-cell" style="font-size:${timeSize};">
@@ -1033,7 +1040,7 @@ function buildStartlistRows(pairs, athletes, series) {
       : (s1time ? `S1: <span style="color:${s1dsq ? 'var(--red)' : 'var(--text2)'};">${s1dsq ? 'DSQ' : s1time}</span>` : '');
     return `<div class="sl-athlete lane-${lane}" style="${ran ? 'opacity:.5;' : ''}">
       <div class="sl-lane-badge ${lane}">${lane}</div>
-      <div class="sl-athlete-name" style="font-size:${fs}px;${ran ? 'color:var(--text3);' : ''}">${esc(ath.name)}${pk}${badge}</div>
+      <div class="sl-athlete-name" style="font-size:${fs}px;${ran ? 'color:var(--text3);' : ''}">${esc(ath.name)}${pk}${ath.m36 ? '<span class="m36-badge">M36+</span>' : ''}${badge}</div>
       <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${timeDisp ? ' · ' + timeDisp : ''}</div>
     </div>`;
   }

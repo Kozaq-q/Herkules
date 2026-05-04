@@ -230,6 +230,7 @@ tr:last-child > td { border-bottom: none; }
 .welcome-form-title { font-family: var(--font-h); font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 20px; }
 /* ─── PK — POZA KONKURENCJĄ ─── */
 .pk-badge { background: rgba(224,85,85,.15); color: var(--red); border: 1px solid rgba(224,85,85,.4); padding: 1px 6px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display:inline-block; }
+.m36-badge { background: rgba(96,168,232,.12); color: var(--blue); border: 1px solid rgba(96,168,232,.4); padding: 1px 6px; border-radius: 2px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 1px; display:inline-block; margin-left:4px; }
 .pk-row td { opacity: 0.55; }
 .pk-row td:first-child, .pk-row td:nth-child(2) { opacity: 1; }
 
@@ -360,6 +361,12 @@ tr:last-child > td { border-bottom: none; }
             <button id="ps-tile-g-both" onclick="setProjSLGender('both')" style="padding:8px;background:var(--bg3);border:2px solid var(--accent);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);">M + K</button>
             <button id="ps-tile-g-m" onclick="setProjSLGender('M')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♂ M</button>
             <button id="ps-tile-g-k" onclick="setProjSLGender('K')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♀ K</button>
+          </div>
+
+          <!-- Progress bar listy startowej -->
+          <div style="margin-bottom:10px;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
+            <button id="ps-tile-sl-progress" onclick="toggleProjTile('sl-progress')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);">Włączony</button>
           </div>
 
           <button onclick="openStartlistProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border2)'">
@@ -675,6 +682,24 @@ tr:last-child > td { border-bottom: none; }
           <tbody id="results-K"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <!-- Wyniki M36+ -->
+  <div id="results-m36-section" style="margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--blue);">
+      <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blue);">
+        ♂ M36+ — Kategoria wiekowa
+      </div>
+      <button class="btn btn-sm" onclick="printResultsM36()">🖨 Drukuj M36+</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Msc M36+</th><th>Zawodnik</th><th>Drużyna</th><th>S1</th><th>S2</th><th>Wynik</th>
+        </tr></thead>
+        <tbody id="results-M36"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -1185,6 +1210,12 @@ tr:last-child > td { border-bottom: none; }
         <option value="M">M — Mężczyzna</option>
         <option value="K">K — Kobieta</option>
       </select>
+    </div>
+    <div id="edit-m36-group" class="form-group" style="display:none;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="edit-m36" style="width:16px;height:16px;accent-color:var(--blue);" />
+        <span>Kategoria <span class="m36-badge">M36+</span></span>
+      </label>
     </div>
     <div class="form-group">
       <label>Drużyna</label>
@@ -2309,20 +2340,20 @@ function buildTeamSeries1() {
   // ALBO: solo na idx=0, a order ma parzystą liczbę elementów dzięki null-placeholder
   const order = [];
   if (isOdd) {
-    // Solo: pierwsza drużyna (najsłabsza) — wstawiana jako osobna para z null-partnerem
+    // Solo: pierwsza drużyna (najsłabsza) — tor P
     const soloItem = eligible[0];
-    order.push({ team: soloItem.team, lane: 'L', startNum: 1, sum: soloItem.sum, count: soloItem.athletes.length, _solo: true });
-    order.push(null); // null = brak partnera → renderer rozpozna jako solo
-    // Pary: od idx=1 w eligible (kolejne drużyny parują się po 2)
+    order.push({ team: soloItem.team, lane: 'P', startNum: 1, sum: soloItem.sum, count: soloItem.athletes.length, _solo: true });
+    order.push(null);
+    // Pary: od idx=1; parzyste (słabszy w parze) → P, nieparzyste (silniejszy) → L
     for (let idx = 1; idx < eligible.length; idx++) {
       const item = eligible[idx];
-      const pairIdx = idx - 1; // pozycja w parach (0=pierwsza para, 1=druga para...)
-      const lane = pairIdx % 2 === 0 ? 'L' : 'P';
+      const pairIdx = idx - 1;
+      const lane = pairIdx % 2 === 0 ? 'P' : 'L';
       order.push({ team: item.team, lane, startNum: idx + 1, sum: item.sum, count: item.athletes.length });
     }
   } else {
     eligible.forEach((item, idx) => {
-      const lane = idx % 2 === 0 ? 'L' : 'P';
+      const lane = idx % 2 === 0 ? 'P' : 'L';
       order.push({ team: item.team, lane, startNum: idx + 1, sum: item.sum, count: item.athletes.length });
     });
   }
@@ -3200,7 +3231,7 @@ function renderAthletes() {
     html += warningBadge(warnings);
     html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
     html += '<td style="font-size:11px;color:var(--text3);">' + esc(a.rank || '') + '</td>';
-    html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</td>';
+    html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a.m36 ? ' <span class="m36-badge">M36+</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(a.team) + '</td>';
     html += '<td class="mono" style="color:var(--orange);">' + a.bib + '</td>';
     html += '<td style="display:flex;gap:4px;padding:4px 6px;">';
@@ -3271,6 +3302,21 @@ function openEditModal(id) {
     list.innerHTML = html;
   }
 
+  // M36+ — pokaż tylko dla M
+  const m36Group = document.getElementById('edit-m36-group');
+  const m36Chk   = document.getElementById('edit-m36');
+  if (m36Group && m36Chk) {
+    m36Group.style.display = a.gender === 'M' ? '' : 'none';
+    m36Chk.checked = !!a.m36;
+  }
+  // Aktualizuj widoczność M36+ przy zmianie płci
+  const genderSel = document.getElementById('edit-gender');
+  if (genderSel) {
+    genderSel.onchange = () => {
+      if (m36Group) m36Group.style.display = genderSel.value === 'M' ? '' : 'none';
+    };
+  }
+
   document.getElementById('modal-edit').classList.add('open');
   setTimeout(() => document.getElementById('edit-rank').focus(), 50);
 }
@@ -3306,6 +3352,7 @@ function saveEditAthlete() {
     if (!a) { showToast('Błąd: nie znaleziono zawodnika', 'error'); return; }
 
     a.rank   = rank;
+    a.m36    = gender === 'M' && !!(document.getElementById('edit-m36') && document.getElementById('edit-m36').checked);
     a.name   = name;
     a.gender = gender;
     a.team   = team;
@@ -4059,7 +4106,7 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
     '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">' +
-    '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
+    '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a.m36 ? ' <span class="m36-badge">M36+</span>' : '') + '</span>' +
     '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;flex-shrink:0;" title="Zmień numer startowy" onclick="event.stopPropagation();openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
     swapBtn +
     '</div>' +
@@ -4537,6 +4584,7 @@ function renderResults() {
 
   renderResultsForGender('M', 'results-M');
   renderResultsForGender('K', 'results-K');
+  renderResultsM36();
   // Przywróć filtr jeśli aktywny
   filterResults();
   // Zaktualizuj wygląd przycisków sortowania
@@ -4601,7 +4649,7 @@ function renderResultsForGender(gender, tbodyId) {
     html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
     html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' +
       (myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'') + rankDisp + '</td>';
-    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + '</td>';
+    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + (r.athlete.m36 ? ' <span class="m36-badge">M36+</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s1disp + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s2disp + '</td>';
@@ -4618,6 +4666,83 @@ function renderResultsForGender(gender, tbodyId) {
       document.getElementById('page-klasyfikacja').classList.contains('active')) {
     renderKlasyfikacja();
   }
+}
+
+function renderResultsM36() {
+  const tbody  = document.getElementById('results-M36');
+  const section = document.getElementById('results-m36-section');
+  if (!tbody) return;
+
+  const m36athletes = state.athletes.filter(a => a.gender === 'M' && a.m36 && !a.pk);
+  if (section) section.style.display = m36athletes.length ? '' : 'none';
+  if (!m36athletes.length) { tbody.innerHTML = ''; return; }
+
+  const rows = m36athletes.map(a => ({
+    athlete: a,
+    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+  })).sort((a,b) => a.bestSec - b.bestSec);
+
+  let rank = 1;
+  let html = '';
+  rows.forEach(r => {
+    const noBest  = r.bestSec === Infinity;
+    const myRank  = noBest ? null : rank++;
+    const rankCls = myRank===1?'rank-1':myRank===2?'rank-2':myRank===3?'rank-3':'';
+    const medal   = myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'';
+    const s1disp  = r.s1dsq ? '<span style="color:var(--red);">' + r.s1 + ' DSQ</span>' : (r.s1||'—');
+    const s2disp  = r.s2dsq ? '<span style="color:var(--red);">' + r.s2 + ' DSQ</span>' : (r.s2||'—');
+    html += '<tr>'
+      + '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + medal + (myRank||'—') + '</td>'
+      + '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + ' <span class="m36-badge">M36+</span></td>'
+      + '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>'
+      + '<td class="mono" style="font-size:12px;">' + s1disp + '</td>'
+      + '<td class="mono" style="font-size:12px;">' + s2disp + '</td>'
+      + '<td class="mono" style="font-size:13px;font-weight:700;color:' + (noBest?'var(--text3)':'var(--green)') + ';">' + (r.best||'—') + '</td>'
+      + '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function printResultsM36() {
+  const c = state.contest || {};
+  const m36athletes = state.athletes.filter(a => a.gender === 'M' && a.m36 && !a.pk);
+  const rows = m36athletes.map(a => ({
+    athlete: a,
+    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+  })).sort((a,b) => a.bestSec - b.bestSec);
+
+  let rank = 1;
+  const rowsHtml = rows.map(r => {
+    const noBest = r.bestSec === Infinity;
+    const myRank = noBest ? null : rank++;
+    const medal  = myRank===1?'🥇':myRank===2?'🥈':myRank===3?'🥉':'';
+    return '<tr>'
+      + '<td style="font-weight:800;font-size:14px;">' + medal + ' ' + (myRank||'—') + '</td>'
+      + '<td style="font-weight:700;">' + esc(displayName(r.athlete)) + '</td>'
+      + '<td>' + esc(r.athlete.team) + '</td>'
+      + '<td style="font-family:monospace;">' + (r.s1dsq ? r.s1+' DSQ' : r.s1||'—') + '</td>'
+      + '<td style="font-family:monospace;">' + (r.s2dsq ? r.s2+' DSQ' : r.s2||'—') + '</td>'
+      + '<td style="font-family:monospace;font-weight:700;">' + (r.best||'—') + '</td>'
+      + '</tr>';
+  }).join('');
+
+  const html = '<html><head><meta charset="UTF-8"><style>' + PDF_CSS + '</style></head><body>'
+    + '<h1>OSF — ' + esc(c.city||'') + '</h1>'
+    + '<div class="sub">' + (c.name ? esc(c.name) + ' · ' : '') + (c.date||'') + '</div>'
+    + '<h2>♂ Wyniki M36+ — Kategoria wiekowa</h2>'
+    + '<table><thead><tr><th>Msc M36+</th><th>Zawodnik</th><th>Drużyna</th><th>S1</th><th>S2</th><th>Wynik</th></tr></thead>'
+    + '<tbody>' + rowsHtml + '</tbody></table>'
+    + '</body></html>';
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 400);
 }
 
 // ═══════════════════════════════════════════════════
@@ -4669,7 +4794,7 @@ function pairTableRowsStartList(pairs) {
     html += '<td class="lane-cell lane-L-cell">';
     if (athL) {
       html += '<span class="lane-L">L</span> ';
-      html += '<strong>' + esc(athL.name) + '</strong>' + (athL.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '');
+      html += '<strong>' + esc(athL.name) + '</strong>' + (athL.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '') + (athL.m36 ? ' <span style="color:#1a6fa8;font-size:9px;font-weight:bold;">M36+</span>' : '');
       if (athL.bib) html += ' <span class="bib">' + athL.bib + '</span>';
       html += '<br><span class="team">' + esc(athL.team) + '</span>';
     } else {
@@ -4682,7 +4807,7 @@ function pairTableRowsStartList(pairs) {
     html += '<td class="lane-cell lane-P-cell">';
     if (athP) {
       html += '<span class="lane-P">P</span> ';
-      html += '<strong>' + esc(athP.name) + '</strong>';
+      html += '<strong>' + esc(athP.name) + '</strong>' + (athP.pk ? ' <span style="color:red;font-size:9px;font-weight:bold;">PK</span>' : '') + (athP.m36 ? ' <span style="color:#1a6fa8;font-size:9px;font-weight:bold;">M36+</span>' : '');
       if (athP.bib) html += ' <span class="bib">' + athP.bib + '</span>';
       html += '<br><span class="team">' + esc(athP.team) + '</span>';
     } else {
@@ -5111,6 +5236,7 @@ function defaultProjSettings() {
     topN:         0,
     scrollSpeed:  0,
     showProgress: false,
+    showSLProgress: true,
     slSeries:     's1',
     slGender:     'both'
   };
@@ -5148,6 +5274,16 @@ function _updateProjTiles() {
   setTile('ps-tile-team',    s.showTeam,    'var(--orange)');
   setTile('ps-tile-klas',    s.showKlas,    'var(--accent)');
   setTile('ps-tile-progress',s.showProgress,'var(--green)');
+
+  // SL progress tile
+  const slProgTile = document.getElementById('ps-tile-sl-progress');
+  if (slProgTile) {
+    const slProg = s.showSLProgress !== false;
+    slProgTile.style.borderColor  = slProg ? 'var(--green)' : 'var(--border2)';
+    slProgTile.style.color        = slProg ? 'var(--green)' : 'var(--text3)';
+    slProgTile.style.background   = slProg ? 'rgba(80,200,144,.1)' : 'var(--bg3)';
+    slProgTile.textContent        = slProg ? 'Włączony' : 'Wyłączony';
+  }
 
   // Seria
   const s1 = document.getElementById('ps-tile-s1');
@@ -5197,7 +5333,7 @@ function _updateProjTiles() {
 
 function toggleProjTile(key) {
   const s = getProjSettings();
-  const map = { 'ind-m': 'showIndM', 'ind-k': 'showIndK', 'team': 'showTeam', 'klas': 'showKlas', 'progress': 'showProgress' };
+  const map = { 'ind-m': 'showIndM', 'ind-k': 'showIndK', 'team': 'showTeam', 'klas': 'showKlas', 'progress': 'showProgress', 'sl-progress': 'showSLProgress' };
   const field = map[key];
   if (field) s[field] = !s[field];
   localStorage.setItem('osf_proj_settings', JSON.stringify(s));
@@ -7115,6 +7251,15 @@ function togglePK(id) {
   updateStats();
 }
 
+function toggleM36(id) {
+  const a = state.athletes.find(x => x.id === id);
+  if (!a || a.gender !== 'M') return;
+  a.m36 = !a.m36;
+  save();
+  renderAthletes();
+  renderResults();
+}
+
 // ═══════════════════════════════════════════════════
 // PARA INFO — DLACZEGO TAKA KOLEJNOŚĆ?
 // ═══════════════════════════════════════════════════
@@ -7251,11 +7396,11 @@ document.addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════
 // TEMPLATE DOWNLOAD
 // ═══════════════════════════════════════════════════
-const TEMPLATE_HEADERS = ['Lp', 'Stopień', 'Imię i Nazwisko', 'Płeć (M/K)', 'Drużyna', 'Nr startowy'];
+const TEMPLATE_HEADERS = ['Lp', 'Stopień', 'Imię i Nazwisko', 'Płeć (M/K)', 'Drużyna', 'Nr startowy', 'M36+'];
 const TEMPLATE_EXAMPLE = [
-  [1, 'sierż. KOWALSKI Jan',       'M', 'JW 1234', 1],
-  [2, 'kpr. NOWAK Anna',           'K', 'JW 1234', 2],
-  [3, 'st.szer. WIŚNIEWSKI Piotr', 'M', 'JW 5678', 3],
+  [1, 'sierż. KOWALSKI Jan',       'M', 'JW 1234', 1, ''],
+  [2, 'kpr. NOWAK Anna',           'K', 'JW 1234', 2, ''],
+  [3, 'st.szer. WIŚNIEWSKI Piotr', 'M', 'JW 5678', 3, 'M36+'],
 ];
 
 function downloadTemplateCSV() {
@@ -7268,7 +7413,7 @@ function downloadTemplateXLSX() {
   if (typeof XLSX === 'undefined') { alert('Biblioteka Excel nie jest załadowana — spróbuj za chwilę.'); return; }
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
-  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }];
+  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 8 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
   XLSX.writeFile(wb, 'osf_lista_startowa_template.xlsx');
 }
@@ -7277,7 +7422,7 @@ function downloadTemplateODS() {
   if (typeof XLSX === 'undefined') { alert('Biblioteka nie jest załadowana — spróbuj za chwilę.'); return; }
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
-  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }];
+  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 8 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
   XLSX.writeFile(wb, 'osf_lista_startowa_template.ods', { bookType: 'ods' });
 }
@@ -7345,6 +7490,7 @@ function parseImportRows(raw) {
     gender: headers.findIndex(h => h.includes('płeć') || h.includes('plec') || h.includes('m/k') || h.includes('k/m')),
     team:   headers.findIndex(h => h.includes('drużyna') || h.includes('druzyna') || h.includes('jednostka')),
     bib:    headers.findIndex(h => h.includes('nr') || h.includes('numer') || h.includes('startowy')),
+    m36:    headers.findIndex(h => h.includes('m36') || h === 'm36+' || h.includes('weteran') || h.includes('masters')),
   };
   if (col.rank   < 0) col.rank   = -1; // opcjonalna
   if (col.name   < 0) col.name   = 1;
@@ -7360,9 +7506,11 @@ function parseImportRows(raw) {
     const gender = String(row[col.gender] || '').trim().toUpperCase();
     const team   = String(row[col.team]   || '').trim();
     const bibRaw = row[col.bib];
+    const m36Raw = col.m36 >= 0 ? String(row[col.m36] || '').trim().toUpperCase() : '';
+    const m36    = m36Raw === 'M36+' || m36Raw === 'X' || m36Raw === 'TAK' || m36Raw === '1' || m36Raw === 'TRUE';
     if (!name) continue;
     if (gender !== 'M' && gender !== 'K') continue;
-    result.push({ rank, name, gender, team, bib: bibRaw ? parseInt(bibRaw) : null });
+    result.push({ rank, name, gender, team, bib: bibRaw ? parseInt(bibRaw) : null, m36 });
   }
   return result;
 }
@@ -7385,7 +7533,7 @@ function applyImportRows(rows) {
   }
 
   newRows.forEach(r => {
-    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: false });
+    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: false, m36: r.m36 || false });
   });
   assignBibs();
   save();
