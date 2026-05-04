@@ -306,6 +306,10 @@ async function manualConnect() {
   await boot(val);
 }
 
+// Tryb projektora: 'results' lub 'startlist'
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const PROJ_MODE  = URL_PARAMS.get('mode') || 'results';
+
 async function boot(s) {
   slotId = s;
   cfg = loadSettings();
@@ -321,8 +325,25 @@ async function boot(s) {
   const app = document.getElementById('proj-app');
   app.style.display = 'flex';
   applyTitle();
-  buildLayout();
-  renderAll();
+  if (PROJ_MODE === 'startlist') {
+    // Tryb listy startowej
+    document.getElementById('proj-main').style.display = 'none';
+    document.getElementById('proj-progress').style.display = 'none';
+    document.getElementById('startlist-main').style.display = 'flex';
+    document.getElementById('proj-header').style.borderBottomColor = 'var(--green)';
+    // Pobierz series i gender z URL (priorytet) lub cfg
+    const urlSeries = URL_PARAMS.get('series') || cfg.slSeries || 's1';
+    const urlGender = URL_PARAMS.get('gender') || cfg.slGender || 'both';
+    cfg.slSeries = urlSeries; cfg.slGender = urlGender;
+    const titleEl = document.getElementById('proj-title');
+    const seriesLabel = urlSeries === 's1' ? 'SERIA 1' : 'SERIA 2';
+    const genderLabel = urlGender === 'M' ? ' — MĘŻCZYŹNI' : urlGender === 'K' ? ' — KOBIETY' : '';
+    if (titleEl) titleEl.textContent = 'LISTA STARTOWA · ' + seriesLabel + genderLabel;
+    renderStartlist();
+  } else {
+    buildLayout();
+    renderAll();
+  }
   startClock();
   startRealtime();
 
@@ -525,6 +546,7 @@ function renderAll() {
 }
 
 function softRender() {
+  if (PROJ_MODE === 'startlist') { renderStartlist(); return; }
   // Odśwież dane bez przebudowy layoutu (nie resetuje scrollowania)
   applyTitle();
   if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M'));

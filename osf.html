@@ -297,9 +297,24 @@ tr:last-child > td { border-bottom: none; }
     <span class="header-autosave" id="header-autosave">● łączenie...</span>
     <span id="rt-status" style="font-family:var(--font-m);font-size:10px;margin-left:8px;padding:2px 6px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);">RT: ...</span>
     <div style="position:relative;display:flex;gap:0;">
-      <button class="btn btn-sm" onclick="openProjektor()" title="Otwórz projektor wyników" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-right:none;border-radius:var(--radius) 0 0 var(--radius);">📺 Projektor</button>
-      <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-radius:0 var(--radius) var(--radius) 0;padding:0 8px;">⚙</button>
-      <button class="btn btn-sm" onclick="openStartlistProjektor()" title="Otwórz projektor list startowych (osobne okno)" style="flex-shrink:0;color:var(--green);border-color:rgba(80,200,144,.3);border-radius:var(--radius);">📋 Lista startowa</button>
+      <div style="position:relative;display:inline-block;">
+        <button class="btn btn-sm" onclick="toggleProjPopup()" title="Projektor" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-right:none;border-radius:var(--radius) 0 0 var(--radius);">📺 Projektor</button>
+        <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-radius:0 var(--radius) var(--radius) 0;padding:0 8px;">⚙</button>
+        <!-- Popup z kafelkami -->
+        <div id="proj-popup" style="display:none;position:fixed;top:58px;right:90px;z-index:9100;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:260px;box-shadow:0 4px 24px rgba(0,0,0,.8);">
+          <div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">Otwórz projektor</div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="openProjektor();toggleProjPopup();" style="flex:1;padding:16px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;color:var(--text1);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div style="font-size:24px;margin-bottom:6px;">📊</div>
+              <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--accent);">WYNIKI</div>
+            </button>
+            <button onclick="openStartlistProjektor();toggleProjPopup();" style="flex:1;padding:16px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;color:var(--text1);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div style="font-size:24px;margin-bottom:6px;">📋</div>
+              <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--green);">LISTA</div>
+            </button>
+          </div>
+        </div>
+      </div>
       <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:18px 20px;width:340px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.8);">
         <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:8px;">⚙ Ustawienia projektora</div>
 
@@ -492,7 +507,7 @@ tr:last-child > td { border-bottom: none; }
       <button class="btn btn-sm btn-primary" onclick="openDrawPanel()" title="Panel losowania Serii 1">🎲 Losowanie S1</button>
       <button class="btn btn-sm" onclick="openAddSoloModal('s1')" title="Dodaj pusty slot SOLO" style="color:var(--accent);border-color:rgba(232,212,77,.3);">+ SOLO</button>
       <button class="btn btn-sm" onclick="openAddLateAthleteModal()" title="Dopisz zawodnika do S1 jako solo na końcu" style="color:var(--green);border-color:rgba(76,175,130,.3);">+ Dopisz</button>
-      <button id="s1-lock-all-btn" class="btn btn-sm" onclick="toggleLockAllPairs('s1')" title="Zablokuj / odblokuj wszystkie pary S1" style="color:var(--text3);border-color:var(--border2);font-size:11px;">🔒 Zablokuj wszystkie</button>
+
     </div>
   </div>
 
@@ -1265,12 +1280,22 @@ tr:last-child > td { border-bottom: none; }
 <!-- ═══ MODAL: KTO STARTUJE W S2 ═══ -->
 <div class="modal-overlay" id="modal-s2-startlist">
   <div class="modal" style="max-width:560px;max-height:80vh;display:flex;flex-direction:column;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0;">
       <div class="modal-title" style="margin-bottom:0;">👥 Kto startuje w Serii 2?</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:6px;align-items:center;">
         <button class="btn btn-sm" onclick="setAllS2Start(true)" style="font-size:11px;">✓ Wszyscy</button>
         <button class="btn btn-sm" onclick="setAllS2Start(false)" style="font-size:11px;color:var(--text3);">✗ Nikt</button>
       </div>
+    </div>
+    <!-- Sortowanie -->
+    <div style="display:flex;gap:4px;margin-bottom:10px;flex-shrink:0;">
+      <span style="font-size:10px;color:var(--text3);align-self:center;margin-right:4px;">Sortuj:</span>
+      <button id="sl-sort-az"     onclick="setS2Sort('az')"     class="btn btn-sm" style="font-size:10px;padding:2px 8px;">A–Z</button>
+      <button id="sl-sort-team"   onclick="setS2Sort('team')"   class="btn btn-sm" style="font-size:10px;padding:2px 8px;color:var(--text3);">Drużyna</button>
+      <div style="width:1px;background:var(--border2);margin:0 2px;"></div>
+      <button id="sl-filter-all"  onclick="setS2Filter('all')"  class="btn btn-sm" style="font-size:10px;padding:2px 8px;">M+K</button>
+      <button id="sl-filter-m"    onclick="setS2Filter('M')"    class="btn btn-sm" style="font-size:10px;padding:2px 8px;color:var(--text3);">♂ M</button>
+      <button id="sl-filter-k"    onclick="setS2Filter('K')"    class="btn btn-sm" style="font-size:10px;padding:2px 8px;color:var(--text3);">♀ K</button>
     </div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:10px;flex-shrink:0;">
       Odznaczeni nie wchodzą do parowania S2 — ich wynik S1 zostaje w punktacji.
@@ -2936,9 +2961,13 @@ function saveEditAthlete() {
     }
 
     save();
+    // Zapamiętaj i przywróć filtr wyszukiwarki po renderze
+    const searchEl = document.getElementById('athletes-search');
+    const prevQ    = searchEl ? searchEl.value : '';
     renderAthletes();
     updateStats();
     updateBibButtons();
+    if (prevQ && searchEl) { searchEl.value = prevQ; filterAthletes(); }
   } catch(e) {
     console.error('saveEditAthlete error:', e);
   }
@@ -3508,6 +3537,7 @@ function renderPairsHTML(containerId, pairs, isS2) {
   const container = document.getElementById(containerId);
   if (!pairs.length) { container.innerHTML = ''; return; }
   const series = isS2 ? 's2' : 's1';
+  if (!isS2) _updateLockAllBtn('s1');
   let html = '';
   const total = pairs.length;
   pairs.forEach((p, idx) => {
@@ -3532,18 +3562,39 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '<div class="' + cls + '" data-pair="' + p.pairNum + '" data-series="' + series + '" data-gender="' + gender + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
-    // Strzałki kolejności — S1 zawsze, S2 tylko w trybie edycji awaryjnej
+    // Przycisk "Zablokuj wszystkie" — tylko przy pierwszej parze, tylko S1
+    if (p.pairNum === 1 && series === 's1') {
+      const allLocked = pairs.every(pp => isPairLocked('s1', pp.gender, pp.pairNum));
+      html += '<button id="s1-lock-all-btn" onclick="event.stopPropagation();toggleLockAllPairs(\'' + series + '\')" ' +
+        'title="' + (allLocked ? 'Odblokuj wszystkie pary' : 'Zablokuj wszystkie pary') + '" ' +
+        'style="margin-left:auto;margin-right:6px;background:none;border:1px solid var(--border2);border-radius:var(--radius);' +
+        'padding:2px 7px;font-size:13px;cursor:pointer;color:' + (allLocked ? 'var(--accent)' : 'var(--text3)') + ';' +
+        'line-height:1.4;">' + (allLocked ? '🔓' : '🔒') + '</button>';
+    }
+    // Strzałki kolejności + pole pozycji — S1 zawsze, S2 tylko w trybie edycji awaryjnej
     if (series === 's1' || (series === 's2' && _s2EditMode)) {
       const isFirstP = p.pairNum === 1;
       const isLastP  = p.pairNum === pairs.length;
-      const moveFunc = series === 's1' ? 'movePair' : 'moveS2Pair';
+      const moveFunc  = series === 's1' ? 'movePair'     : 'moveS2Pair';
+      const jumpFunc  = series === 's1' ? 'jumpPairTo'   : 'jumpS2PairTo';
       const arrowColor = series === 's2' ? 'var(--red)' : 'var(--text2)';
-      html += '<div style="display:flex;gap:1px;margin-right:4px;">';
-      html += '<button onclick="' + moveFunc + '(\'' + gender + '\',' + p.pairNum + ',-1)" title="Przesuń parę wyżej"' +
-        ' style="font-size:13px;padding:0 5px;line-height:1.6;background:transparent;border:1px solid var(--border2);border-radius:var(--radius) 0 0 var(--radius);color:' + arrowColor + ';cursor:pointer;opacity:' + (isFirstP ? '.2' : '1') + ';"' +
+      html += '<div style="display:flex;align-items:center;gap:2px;margin-right:4px;">';
+      // Strzałka w górę
+      html += '<button onclick="' + moveFunc + '(\'' + gender + '\',' + p.pairNum + ',-1)" title="Przesuń wyżej"' +
+        ' style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--border2);border-radius:var(--radius) 0 0 var(--radius);color:' + arrowColor + ';cursor:pointer;opacity:' + (isFirstP ? '.2' : '1') + ';"' +
         (isFirstP ? ' disabled' : '') + '>↑</button>';
-      html += '<button onclick="' + moveFunc + '(\'' + gender + '\',' + p.pairNum + ',+1)" title="Przesuń parę niżej"' +
-        ' style="font-size:13px;padding:0 5px;line-height:1.6;background:transparent;border:1px solid var(--border2);border-left:none;border-radius:0 var(--radius) var(--radius) 0;color:' + arrowColor + ';cursor:pointer;opacity:' + (isLastP ? '.2' : '1') + ';"' +
+      // Pole liczbowe — wpisz numer pozycji i naciśnij Enter
+      html += '<input type="number" min="1" max="' + pairs.length + '" value="' + p.pairNum + '"' +
+        ' title="Wpisz numer pozycji i naciśnij Enter"' +
+        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();' + jumpFunc + '(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value));this.blur();}"' +
+        ' onblur="' + jumpFunc + '(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value))"' +
+        ' onclick="event.stopPropagation();this.select();"' +
+        ' style="width:36px;text-align:center;font-size:11px;font-family:var(--font-m);padding:0 2px;line-height:1.7;' +
+        'background:var(--bg3);border:1px solid var(--border2);border-left:none;border-right:none;' +
+        'color:' + arrowColor + ';cursor:text;-moz-appearance:textfield;" />';
+      // Strzałka w dół
+      html += '<button onclick="' + moveFunc + '(\'' + gender + '\',' + p.pairNum + ',+1)" title="Przesuń niżej"' +
+        ' style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;color:' + arrowColor + ';cursor:pointer;opacity:' + (isLastP ? '.2' : '1') + ';"' +
         (isLastP ? ' disabled' : '') + '>↓</button>';
       html += '</div>';
     }
@@ -4636,6 +4687,25 @@ function syncSetupToPanel() {
   if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2000); }
 }
 
+function toggleProjPopup() {
+  const pop = document.getElementById('proj-popup');
+  if (!pop) return;
+  const isOpen = pop.style.display !== 'none';
+  pop.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // Zamknij po kliknięciu poza popupem
+    setTimeout(() => {
+      const handler = (e) => {
+        if (!pop.contains(e.target) && !e.target.closest('[onclick="toggleProjPopup()"]')) {
+          pop.style.display = 'none';
+        }
+        document.removeEventListener('click', handler);
+      };
+      document.addEventListener('click', handler);
+    }, 10);
+  }
+}
+
 function toggleProjSettings() {
   const pop = document.getElementById('proj-settings-pop');
   if (pop.style.display === 'none') {
@@ -4699,8 +4769,14 @@ function saveProjSettings() {
 
 function openStartlistProjektor() {
   saveProjSettings();
-  const url = 'osf-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY) + '&mode=startlist';
-  window.open(url, 'osf_startlist_proj', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+  const cfg = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
+  const series = cfg.slSeries || 's1';
+  const gender = cfg.slGender || 'both';
+  const url = 'osf-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY)
+    + '&mode=startlist'
+    + '&series=' + series
+    + '&gender=' + gender;
+  window.open(url, 'osf_startlist_proj_' + series, 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
   document.getElementById('proj-settings-pop').style.display = 'none';
 }
 
@@ -5805,41 +5881,38 @@ function addSoloPair() {
 // DOPISZ ZAWODNIKA DO S1 (spóźniony)
 // ═══════════════════════════════════════
 function openAddLateAthleteModal() {
-  // Zbierz zawodników którzy nie mają jeszcze pary w S1
-  const allInS1 = new Set();
+  // Tylko zawodnicy bez pary w S1
+  const inS1 = new Set();
   state.s1pairs.forEach(p => {
-    if (p.aId) allInS1.add(p.aId);
-    if (p.bId) allInS1.add(p.bId);
+    if (p.aId) inS1.add(p.aId);
+    if (p.bId) inS1.add(p.bId);
   });
 
   const sel = document.getElementById('late-athlete-select');
   sel.innerHTML = '<option value="">— wybierz —</option>';
 
-  // Pokaż wszystkich zawodników (nawet już w S1 - może ktoś chce dopisać drugą płeć)
-  const available = state.athletes.filter(a => !allInS1.has(a.id));
-  const inS1      = state.athletes.filter(a => allInS1.has(a.id));
+  // Dostępni = w zakładce Zawodnicy, ale bez pary w S1
+  const available = state.athletes
+    .filter(a => !inS1.has(a.id))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pl'));
 
-  if (available.length) {
-    const grp = document.createElement('optgroup');
-    grp.label = 'Bez pary w S1';
-    available.forEach(a => {
-      const o = document.createElement('option');
-      o.value = a.id;
-      o.textContent = a.name + ' (' + a.gender + ', ' + (a.team||'—') + ')';
-      grp.appendChild(o);
+  if (!available.length) {
+    sel.innerHTML = '<option value="" disabled>Wszyscy zawodnicy mają już parę w S1</option>';
+  } else {
+    // Grupuj po płci
+    ['M', 'K'].forEach(g => {
+      const gAthletes = available.filter(a => a.gender === g);
+      if (!gAthletes.length) return;
+      const grp = document.createElement('optgroup');
+      grp.label = g === 'M' ? '♂ Mężczyźni' : '♀ Kobiety';
+      gAthletes.forEach(a => {
+        const o = document.createElement('option');
+        o.value = a.id;
+        o.textContent = a.name + (a.team ? ' · ' + a.team : '');
+        grp.appendChild(o);
+      });
+      sel.appendChild(grp);
     });
-    sel.appendChild(grp);
-  }
-  if (inS1.length) {
-    const grp2 = document.createElement('optgroup');
-    grp2.label = 'Już w S1 (dodatkowy slot)';
-    inS1.forEach(a => {
-      const o = document.createElement('option');
-      o.value = a.id;
-      o.textContent = a.name + ' (' + a.gender + ', ' + (a.team||'—') + ')';
-      grp2.appendChild(o);
-    });
-    sel.appendChild(grp2);
   }
 
   document.getElementById('modal-add-late-athlete').classList.add('open');
@@ -5914,6 +5987,32 @@ function openS2StartlistModal() {
   document.getElementById('modal-s2-startlist').classList.add('open');
 }
 
+let _s2SortMode   = 'az';   // 'az' | 'team'
+let _s2FilterMode = 'all';  // 'all' | 'M' | 'K'
+
+function setS2Sort(mode) {
+  _s2SortMode = mode;
+  ['az','team'].forEach(m => {
+    const btn = document.getElementById('sl-sort-' + m);
+    if (btn) { btn.style.color = m === mode ? 'var(--accent)' : 'var(--text3)'; btn.style.borderColor = m === mode ? 'rgba(232,212,77,.4)' : 'var(--border2)'; }
+  });
+  const q = (document.getElementById('s2-startlist-search') || {}).value || '';
+  _buildS2StartlistModal(q);
+}
+
+function setS2Filter(mode) {
+  _s2FilterMode = mode;
+  ['all','M','K'].forEach(m => {
+    const id = m === 'all' ? 'sl-filter-all' : 'sl-filter-' + m.toLowerCase();
+    const btn = document.getElementById(id);
+    if (btn) { btn.style.color = m === mode ? 'var(--accent)' : 'var(--text3)'; btn.style.borderColor = m === mode ? 'rgba(232,212,77,.4)' : 'var(--border2)'; }
+  });
+  document.getElementById('s2-startlist-M').style.display = (mode === 'K') ? 'none' : '';
+  document.getElementById('s2-startlist-K').style.display = (mode === 'M') ? 'none' : '';
+  const q = (document.getElementById('s2-startlist-search') || {}).value || '';
+  _buildS2StartlistModal(q);
+}
+
 function _buildS2StartlistModal(filter) {
   const q = (filter || '').toLowerCase();
   ['M', 'K'].forEach(gender => {
@@ -5926,12 +6025,16 @@ function _buildS2StartlistModal(filter) {
       if (p.aId) { const a = state.athletes.find(x => x.id === p.aId); if (a) athletes.push(a); }
       if (p.bId) { const b = state.athletes.find(x => x.id === p.bId); if (b) athletes.push(b); }
     });
-    // Sortuj alfabetycznie
-    athletes.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pl'));
+    // Sortuj wg trybu
+    if (_s2SortMode === 'team') {
+      athletes.sort((a, b) => (a.team || '').localeCompare(b.team || '', 'pl') || (a.name || '').localeCompare(b.name || '', 'pl'));
+    } else {
+      athletes.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pl'));
+    }
     // Filtruj wyszukiwarką
     if (q) athletes = athletes.filter(a =>
-      (a.name  || '').toLowerCase().includes(q) ||
-      (a.team  || '').toLowerCase().includes(q)
+      (a.name || '').toLowerCase().includes(q) ||
+      (a.team || '').toLowerCase().includes(q)
     );
 
     if (!athletes.length) { el.innerHTML = ''; return; }
@@ -5942,7 +6045,7 @@ function _buildS2StartlistModal(filter) {
     el.innerHTML =
       '<div style="font-size:10px;font-weight:700;color:' + color + ';letter-spacing:1.5px;' +
         'text-transform:uppercase;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px;">' +
-        label + ' — ' + athletes.length + ' zawodników</div>' +
+        label + ' — ' + athletes.length + '</div>' +
       athletes.map(a => {
         const skips = !!(state.s2skip && state.s2skip.includes(a.id));
         return '<div onclick="toggleS2SkipRow(' + a.id + ', this)" ' +
@@ -5963,7 +6066,7 @@ function _buildS2StartlistModal(filter) {
             '<div style="font-size:11px;color:var(--text3);">' + esc(a.team || '') + '</div>' +
           '</div>' +
           '<div style="font-size:11px;font-weight:700;color:' + (skips ? 'var(--red)' : 'var(--green)') + ';flex-shrink:0;">' +
-            (skips ? 'NIE STARTUJE' : 'STARTUJE') +
+            (skips ? 'NIE' : 'TAK') +
           '</div>' +
         '</div>';
       }).join('');
@@ -6016,6 +6119,39 @@ function setAllS2Start(starts) {
 // ═══════════════════════════════════════
 // ZMIANA KOLEJNOŚCI PAR S2 (strzałki)
 // ═══════════════════════════════════════
+function jumpPairTo(gender, fromPairNum, toPos) {
+  // Przesuń parę z fromPairNum na pozycję toPos (1-based)
+  if (!toPos || isNaN(toPos)) return;
+  const pairs  = state.s1pairs.filter(p => p.gender === gender);
+  const others = state.s1pairs.filter(p => p.gender !== gender);
+  const fromIdx = pairs.findIndex(p => p.pairNum === fromPairNum);
+  if (fromIdx === -1) return;
+  const toIdx = Math.max(0, Math.min(pairs.length - 1, toPos - 1));
+  if (fromIdx === toIdx) { renderSeries1View(); return; }
+  const [moved] = pairs.splice(fromIdx, 1);
+  pairs.splice(toIdx, 0, moved);
+  pairs.forEach((p, i) => { p.pairNum = i + 1; });
+  state.s1pairs = [...others, ...pairs];
+  save();
+  renderSeries1View();
+}
+
+function jumpS2PairTo(gender, fromPairNum, toPos) {
+  if (!toPos || isNaN(toPos)) return;
+  const pairs  = state.s2pairs.filter(p => p.gender === gender);
+  const others = state.s2pairs.filter(p => p.gender !== gender);
+  const fromIdx = pairs.findIndex(p => p.pairNum === fromPairNum);
+  if (fromIdx === -1) return;
+  const toIdx = Math.max(0, Math.min(pairs.length - 1, toPos - 1));
+  if (fromIdx === toIdx) { renderSeries2View(); return; }
+  const [moved] = pairs.splice(fromIdx, 1);
+  pairs.splice(toIdx, 0, moved);
+  pairs.forEach((p, i) => { p.pairNum = i + 1; });
+  state.s2pairs = [...others, ...pairs];
+  save();
+  renderSeries2View();
+}
+
 function moveS2Pair(gender, pairNum, dir) {
   // dir: -1=w górę, +1=w dół
   const pairs  = state.s2pairs.filter(p => p.gender === gender);
