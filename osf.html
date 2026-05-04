@@ -487,28 +487,39 @@ tr:last-child > td { border-bottom: none; }
 
 <!-- ═══ TAB: SERIA 1 ═══ -->
 <div class="page" id="page-seria1">
-  <div class="flex-between mb-12">
-    <div>
-      <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Seria 1 — Losowanie par</div>
-      <div class="text-muted mt-4" style="font-size:12px;">Pary losowane losowo · każda para ma tory L i P</div>
-    </div>
-    <div class="flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-      <!-- Lista startowa osobno -->
-      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS1StartList('M')" title="Lista startowa — Mężczyźni">🖨 Lista M</button>
-        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS1StartList('K')" title="Lista startowa — Kobiety">🖨 Lista K</button>
-      </div>
-      <!-- Lista sędziowska osobno -->
-      <div style="display:flex;gap:4px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
-        <button class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);" onclick="printS1JudgeList('M')" title="Lista sędziowska — Mężczyźni">📋 Sędz. M</button>
-        <button class="btn btn-sm" style="border:none;border-radius:0;" onclick="printS1JudgeList('K')" title="Lista sędziowska — Kobiety">📋 Sędz. K</button>
-      </div>
-      <!-- Losowanie osobno -->
-      <button class="btn btn-sm btn-primary" onclick="openDrawPanel()" title="Panel losowania Serii 1">🎲 Losowanie S1</button>
-      <button class="btn btn-sm" onclick="openAddSoloModal('s1')" title="Dodaj pusty slot SOLO" style="color:var(--accent);border-color:rgba(232,212,77,.3);">+ SOLO</button>
-      <button class="btn btn-sm" onclick="openAddLateAthleteModal()" title="Dopisz zawodnika do S1 jako solo na końcu" style="color:var(--green);border-color:rgba(76,175,130,.3);">+ Dopisz</button>
 
+  <!-- Nagłówek: jeden rząd -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <!-- Tytuł -->
+    <div style="font-family:var(--font-h);font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-right:4px;">Seria 1</div>
+    <!-- Główna akcja -->
+    <button class="btn btn-sm btn-primary" onclick="openDrawPanel()" title="Panel losowania Serii 1" style="font-weight:700;">🎲 Losowanie</button>
+    <!-- Wydruki -->
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="togglePrintPanel('s1')" title="Wydruki" style="font-size:15px;padding:4px 10px;">🖨</button>
+      <div id="print-panel-s1" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px;width:220px;box-shadow:0 4px 20px rgba(0,0,0,.7);">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Wydruki S1</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button onclick="printS1StartList('M');togglePrintPanel('s1')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--male)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📄</div><div style="font-size:11px;font-weight:700;color:var(--male);margin-top:3px;">Lista M</div>
+          </button>
+          <button onclick="printS1StartList('K');togglePrintPanel('s1')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--female)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📄</div><div style="font-size:11px;font-weight:700;color:var(--female);margin-top:3px;">Lista K</div>
+          </button>
+          <button onclick="printS1JudgeList('M');togglePrintPanel('s1')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--male)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--male);margin-top:3px;">Sędz. M</div>
+          </button>
+          <button onclick="printS1JudgeList('K');togglePrintPanel('s1')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;" onmouseover="this.style.borderColor='var(--female)'" onmouseout="this.style.borderColor='var(--border2)'">
+            <div style="font-size:16px;">📋</div><div style="font-size:11px;font-weight:700;color:var(--female);margin-top:3px;">Sędz. K</div>
+          </button>
+        </div>
+      </div>
     </div>
+    <!-- Separator -->
+    <div style="width:1px;height:20px;background:var(--border2);margin:0 2px;"></div>
+    <!-- Akcje drugorzędne — mniejsze, szare -->
+    <button class="btn btn-sm" onclick="openAddSoloModal('s1')" title="Dodaj pusty slot SOLO" style="color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO</button>
+    <button class="btn btn-sm" onclick="openAddLateAthleteModal()" title="Dopisz spóźnionego zawodnika jako solo na końcu" style="color:var(--text3);border-color:var(--border2);font-size:11px;">+ Dopisz</button>
   </div>
 
   <div id="swap-cancel-bar">
@@ -520,13 +531,13 @@ tr:last-child > td { border-bottom: none; }
   <div id="s1-alert-drawn" class="alert alert-success" style="display:none;"></div>
 
   <!-- Wyszukiwarka S1 -->
-  <div id="s1-search-wrap" style="display:none;margin-bottom:12px;">
+  <div id="s1-search-wrap" style="display:none;margin-bottom:8px;">
     <input type="text" id="s1-search" placeholder="🔍  Szukaj zawodnika..." oninput="filterPairs('s1')"
-      style="width:100%;max-width:340px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 12px;font-family:var(--font-b);font-size:13px;" />
+      style="width:100%;max-width:320px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 12px;font-family:var(--font-b);font-size:13px;" />
   </div>
 
-  <!-- Zakładki wewnętrzne M / K -->
-  <div id="s1-inner-tabs" style="display:none;margin-bottom:14px;display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;">
+  <!-- Zakładki M/K + przycisk kłódki po prawej -->
+  <div id="s1-inner-tabs" style="display:none;margin-bottom:14px;display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;align-items:flex-end;">
     <button id="s1-tab-M" onclick="switchS1Tab('M')"
       style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
       ♂ Mężczyźni
@@ -535,6 +546,11 @@ tr:last-child > td { border-bottom: none; }
       style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
       ♀ Kobiety
     </button>
+    <!-- Kłódka wszystkich par — po prawej, w linii z kłódkami par -->
+    <div style="flex:1;"></div>
+    <button id="s1-lock-all-btn" onclick="toggleLockAllPairs('s1')"
+      title="Zablokuj / odblokuj wszystkie pary"
+      style="background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 9px;font-size:15px;cursor:pointer;color:var(--text3);margin-bottom:4px;line-height:1.4;">🔒</button>
   </div>
 
   <div id="s1-section-M" style="display:none;">
@@ -3626,15 +3642,7 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '<div class="' + cls + '" data-pair="' + p.pairNum + '" data-series="' + series + '" data-gender="' + gender + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
-    // Przycisk "Zablokuj wszystkie" — tylko przy pierwszej parze, tylko S1
-    if (p.pairNum === 1 && series === 's1') {
-      const allLocked = pairs.every(pp => isPairLocked('s1', pp.gender, pp.pairNum));
-      html += '<button id="s1-lock-all-btn" onclick="event.stopPropagation();toggleLockAllPairs(\'' + series + '\')" ' +
-        'title="' + (allLocked ? 'Odblokuj wszystkie pary' : 'Zablokuj wszystkie pary') + '" ' +
-        'style="margin-left:auto;margin-right:6px;background:none;border:1px solid var(--border2);border-radius:var(--radius);' +
-        'padding:2px 7px;font-size:13px;cursor:pointer;color:' + (allLocked ? 'var(--accent)' : 'var(--text3)') + ';' +
-        'line-height:1.4;">' + (allLocked ? '🔓' : '🔒') + '</button>';
-    }
+
     // Strzałki kolejności + pole pozycji — S1 zawsze, S2 tylko w trybie edycji awaryjnej
     if (series === 's1' || (series === 's2' && _s2EditMode)) {
       const isFirstP = p.pairNum === 1;
@@ -4750,6 +4758,25 @@ function syncSetupToPanel() {
   } catch(e) {}
   const el = document.getElementById('sync-status');
   if (el) { el.style.display = 'inline'; setTimeout(() => el.style.display = 'none', 2000); }
+}
+
+function togglePrintPanel(series) {
+  const id  = 'print-panel-' + series;
+  const pop = document.getElementById(id);
+  if (!pop) return;
+  const isOpen = pop.style.display !== 'none';
+  pop.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    setTimeout(() => {
+      const handler = e => {
+        if (!pop.contains(e.target) && !e.target.closest('[onclick*="togglePrintPanel"]')) {
+          pop.style.display = 'none';
+        }
+        document.removeEventListener('click', handler);
+      };
+      document.addEventListener('click', handler);
+    }, 10);
+  }
 }
 
 function toggleProjPopup() {
@@ -6030,15 +6057,17 @@ function toggleLockAllPairs(series) {
 }
 
 function _updateLockAllBtn(series) {
+  if (series !== 's1') return;
   const btn = document.getElementById('s1-lock-all-btn');
-  if (!btn || series !== 's1') return;
+  if (!btn) return;
   const gPairs  = state.s1pairs;
   if (!gPairs.length) return;
-  const allKeys = gPairs.map(p => lockKey('s1', p.gender, p.pairNum));
-  const current = (state.lockedPairs && state.lockedPairs.s1) || [];
+  const allKeys   = gPairs.map(p => lockKey('s1', p.gender, p.pairNum));
+  const current   = (state.lockedPairs && state.lockedPairs.s1) || [];
   const allLocked = allKeys.length > 0 && allKeys.every(k => current.includes(k));
-  btn.textContent = allLocked ? '🔓 Odblokuj wszystkie' : '🔒 Zablokuj wszystkie';
-  btn.style.color = allLocked ? 'var(--accent)' : 'var(--text3)';
+  btn.textContent  = allLocked ? '🔓' : '🔒';
+  btn.title        = allLocked ? 'Odblokuj wszystkie pary' : 'Zablokuj wszystkie pary';
+  btn.style.color  = allLocked ? 'var(--accent)' : 'var(--text3)';
   btn.style.borderColor = allLocked ? 'rgba(232,212,77,.3)' : 'var(--border2)';
 }
 
