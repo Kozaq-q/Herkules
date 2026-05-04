@@ -473,6 +473,7 @@ tr:last-child > td { border-bottom: none; }
           <button id="bib-btn-sequential" class="btn btn-sm" style="border:none;border-radius:0;padding:4px 9px;" onclick="setBibScheme('sequential')">1,2,3…</button>
         </div>
         <button class="btn btn-sm" onclick="openImportModal()">↑ Import CSV/XLSX</button>
+        <button class="btn btn-sm" onclick="removeDuplicateAthletes()" style="color:var(--text3);border-color:var(--border2);" title="Usuń zduplikowanych zawodników z listy">⊘ Duplikaty</button>
         <button class="btn btn-sm btn-primary" onclick="openAddModal()">+ Dodaj</button>
       </div>
     </div>
@@ -3507,6 +3508,30 @@ function checkImportDuplicate(rows) {
   }
   localStorage.setItem(STORAGE_KEY + '_import_hash', hash);
   return true;
+}
+
+function removeDuplicateAthletes() {
+  // Znajdź duplikaty (ten sam klucz: nazwisko+drużyna+płeć)
+  const seen    = new Map(); // key → pierwszy athlete.id
+  const dupIds  = new Set();
+  state.athletes.forEach(a => {
+    const key = (a.name + '|' + a.team + '|' + a.gender).toLowerCase();
+    if (seen.has(key)) dupIds.add(a.id);
+    else               seen.set(key, a.id);
+  });
+
+  if (!dupIds.size) {
+    showToast('Brak duplikatów — lista zawodników jest czysta ✓', 'success');
+    return;
+  }
+
+  if (!confirm('Usunieto duplikaty: ' + dupIds.size + ' kopii zostanie usunietych. Pierwsza kopia zostaje. Kontynuowac?')) return;
+
+  state.athletes = state.athletes.filter(a => !dupIds.has(a.id));
+  save();
+  renderAthletes();
+  updateStats();
+  showToast('✓ Usunięto ' + dupIds.size + ' duplikatów', 'success');
 }
 
 function updateStats() {
@@ -7294,7 +7319,21 @@ function parseImportRows(raw) {
 function applyImportRows(rows) {
   if (!rows.length) { showToast('Brak danych do importu — sprawdź format pliku.', 'error'); return; }
   if (!checkImportDuplicate(rows)) return; // użytkownik anulował
-  rows.forEach(r => {
+
+  // WARSTWA 1: pomiń zawodników którzy już istnieją (po nazwisku + drużyna + płeć)
+  const existingKeys = new Set(
+    state.athletes.map(a => (a.name + '|' + a.team + '|' + a.gender).toLowerCase())
+  );
+  const newRows    = rows.filter(r => !existingKeys.has((r.name + '|' + r.team + '|' + r.gender).toLowerCase()));
+  const skipped    = rows.length - newRows.length;
+
+  if (!newRows.length) {
+    showToast('Wszyscy zawodnicy z listy już istnieją — nie dodano nikogo.', 'warning');
+    closeModal('modal-import');
+    return;
+  }
+
+  newRows.forEach(r => {
     state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: false });
   });
   assignBibs();
@@ -7302,7 +7341,10 @@ function applyImportRows(rows) {
   renderAthletes();
   updateStats();
   closeModal('modal-import');
-  showToast('✓ Zaimportowano ' + rows.length + ' zawodników', 'success');
+  const msg = skipped > 0
+    ? '✓ Dodano ' + newRows.length + ' zawodników (' + skipped + ' już istniało — pominięto)'
+    : '✓ Zaimportowano ' + newRows.length + ' zawodników';
+  showToast(msg, 'success');
 }
 
 // ═══════════════════════════════════════════════════
