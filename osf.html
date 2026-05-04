@@ -1877,81 +1877,67 @@ function openDupModal() {
   const list = document.getElementById('dup-modal-list');
   if (!list) return;
 
-  list.innerHTML = dups.map((d, i) => {
-    const athlete = state.athletes.find(x => x.id === d.athleteId);
-    const aName   = athlete ? esc(athlete.name) : '#' + d.athleteId;
-    const pairs   = d.series === 's1' ? state.s1pairs : state.s2pairs;
+  // Prosty nagłówek
+  let html = '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;">' +
+    'Z której pary usunąć zawodnika? Kliknij numer pary.</div>';
+
+  html += dups.map((d, i) => {
+    const athlete  = state.athletes.find(x => x.id === d.athleteId);
+    const aName    = athlete ? esc(athlete.name) : '#' + d.athleteId;
     const serLabel = d.series === 's1' ? 'S1' : 'S2';
 
-    function partnerName(pairNum, gender) {
-      const p = pairs.find(x => x.pairNum === pairNum && x.gender === gender);
-      if (!p) return '—';
-      const partId = p.aId === d.athleteId ? p.bId : p.aId;
-      const part   = partId ? state.athletes.find(x => x.id === partId) : null;
-      return part ? esc(part.name) : 'solo';
+    function mkBtn(pairNum, gender) {
+      const dd = JSON.stringify({ ...d, secondPairNum: pairNum, secondGender: gender });
+      return '<button onclick="fixOneDuplicate(' + i + ',\'only\',' + dd + ')" ' +
+        'style="padding:7px 18px;background:var(--bg3);border:1px solid var(--border2);' +
+        'border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:700;color:var(--text2);">' +
+        serLabel + ' · ' + pairNum +
+        '</button>';
     }
 
-    function pairTile(pairNum, gender, isFirst) {
-      const partner = partnerName(pairNum, gender);
-      const borderColor = isFirst ? 'var(--border2)' : 'var(--red)';
-      const badge = isFirst
-        ? '<span style="font-size:10px;color:var(--green);">✓ zostaje</span>'
-        : '<button onclick="fixOneDuplicate(' + i + ',\'only\',' + JSON.stringify(d) + ')" ' +
-            'style="font-size:11px;font-weight:700;padding:5px 12px;background:var(--red);color:#fff;' +
-            'border:none;border-radius:var(--radius);cursor:pointer;white-space:nowrap;">Usuń z tej</button>';
-      return '<div style="flex:1;border:2px solid ' + borderColor + ';border-radius:var(--radius);' +
-             'padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0;">' +
-        '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;">' + serLabel + ' · Para ' + pairNum + '</div>' +
-        '<div style="font-size:15px;font-weight:800;color:var(--text1);line-height:1.2;word-break:break-word;">' + aName + '</div>' +
-        '<div style="font-size:13px;color:var(--text3);">+ ' + partner + '</div>' +
-        '<div style="margin-top:2px;">' + badge + '</div>' +
-      '</div>';
-    }
-
-    return '<div style="padding:4px 0;">' +
-      '<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Wybierz <strong>którą parę</strong> usunąć ' + aName.split(' ').pop() + ':</div>' +
-      '<div style="display:flex;gap:10px;">' +
-        pairTile(d.firstPairNum,  d.firstGender,  true) +
-        pairTile(d.secondPairNum, d.secondGender, false) +
-      '</div>' +
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="flex:1;font-size:14px;font-weight:700;color:var(--text1);">' + aName + '</div>' +
+      mkBtn(d.firstPairNum,  d.firstGender) +
+      mkBtn(d.secondPairNum, d.secondGender) +
     '</div>';
-  }).join('<div style="border-top:1px solid var(--border);margin:12px 0;"></div>');
+  }).join('');
 
+  list.innerHTML = html;
   document.getElementById('modal-duplicates').classList.add('open');
 }
 
 function fixOneDuplicate(idx, decision, d) {
-  const pairs = d.series === 's1' ? state.s1pairs : state.s2pairs;
-  const p2    = pairs.find(p => p.pairNum === d.secondPairNum && p.gender === d.secondGender);
-  if (!p2) { closeModal('modal-duplicates'); return; }
+  // d.secondPairNum/secondGender = para z której usuwamy zawodnika
+  const pairs  = d.series === 's1' ? state.s1pairs : state.s2pairs;
+  const target = pairs.find(p => p.pairNum === d.secondPairNum && p.gender === d.secondGender);
+  if (!target) { closeModal('modal-duplicates'); return; }
 
-  if (decision === 'only') {
-    // Usuń tylko zduplikowanego ze slotu, partner zostaje jako solo
-    if (p2.aId === d.athleteId) p2.aId = null;
-    else if (p2.bId === d.athleteId) p2.bId = null;
-    // Normalizuj: zostający → slot a
-    const remId   = p2.aId || p2.bId;
-    const remLane = p2.aId ? p2.aLane : p2.bLane;
-    if (remId) { p2.aId = remId; p2.aLane = remLane; p2.bId = null; p2.bLane = remLane === 'L' ? 'P' : 'L'; }
-    else { const ix = pairs.indexOf(p2); if (ix >= 0) pairs.splice(ix, 1); }
+  // Usuń zawodnika ze slotu — partner zostaje solo
+  if (target.aId === d.athleteId) target.aId = null;
+  else if (target.bId === d.athleteId) target.bId = null;
+  // Normalizuj: zostający → slot a
+  const remId   = target.aId || target.bId;
+  const remLane = target.aId ? target.aLane : target.bLane;
+  if (remId) {
+    target.aId = remId; target.aLane = remLane;
+    target.bId = null;  target.bLane = remLane === 'L' ? 'P' : 'L';
   } else {
-    // Usuń całą parę
-    const ix = pairs.indexOf(p2); if (ix >= 0) pairs.splice(ix, 1);
+    const ix = pairs.indexOf(target);
+    if (ix >= 0) pairs.splice(ix, 1);
   }
   pairs.filter(p => p.gender === d.secondGender).forEach((p, i) => { p.pairNum = i + 1; });
 
   saveImmediate();
   closeModal('modal-duplicates');
-  // Sprawdź czy zostały jeszcze duplikaty
+
   const remaining = [...detectPairDuplicates('s1'), ...detectPairDuplicates('s2')];
   if (remaining.length) {
-    // Pokaż modal z resztą
     const bar = document.getElementById('dup-warning-bar');
     if (bar) bar.dataset.dups = JSON.stringify(remaining);
-    setTimeout(openDupModal, 200);
+    setTimeout(openDupModal, 150);
   } else {
     hideDupWarning();
-    showToast('✓ Wszystkie duplikaty naprawione', 'success');
+    showToast('✓ Naprawiono', 'success');
   }
   if (state.s1pairs.length) renderSeries1View();
   if (state.s2pairs.length) renderSeries2View();
