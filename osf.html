@@ -2354,63 +2354,70 @@ function buildTeamSeries1() {
 function buildTeamSeries2() {
   if (!state.teamOrder.s1.length) { alert('Najpierw wygeneruj kolejność Serii 1.'); return; }
 
-  // Weź drużyny z S1 i uzupełnij o czas S1
-  const withTimes = state.teamOrder.s1.map(item => {
-    const rawTime = getTeamTime(item.team, 's1');
-    const dsq     = isTeamDisq(item.team, 's1');
-    return {
-      ...item,
-      s1time: (dsq || !rawTime) ? Infinity : parseTime(rawTime)
-    };
-  });
+  // Weź drużyny z S1, uzupełnij o czas S1 i wymagany tor S2
+  const pool = state.teamOrder.s1
+    .filter(item => item && item.team)
+    .map(item => {
+      const rawTime = getTeamTime(item.team, 's1');
+      const dsq     = isTeamDisq(item.team, 's1');
+      const s2lane  = (state.setup && state.setup.ignoreLaneRule)
+        ? (Math.random() < 0.5 ? 'L' : 'P')
+        : (item.lane === 'L' ? 'P' : 'L');
+      return {
+        team:   item.team,
+        s1lane: item.lane,
+        s2lane,
+        sum:    item.sum,
+        count:  item.count,
+        s1time: (dsq || !rawTime) ? Infinity : parseTime(rawTime)
+      };
+    });
 
-  // Sortuj: brak czasu/DSQ → na początku, potem najwolniejsze → najszybsze
-  withTimes.sort((a, b) => {
+  // Sortuj globalnie: brak czasu pierwsi, najwolniejsi → najszybsi
+  pool.sort((a, b) => {
     if (a.s1time === Infinity && b.s1time === Infinity) return 0;
     if (a.s1time === Infinity) return -1;
     if (b.s1time === Infinity) return 1;
-    return b.s1time - a.s1time; // najwolniejsze pierwsze
+    return b.s1time - a.s1time;
   });
 
-  // Obowiązkowa zmiana toru: każda drużyna dostaje tor przeciwny niż w S1
-  const isOdd = withTimes.length % 2 !== 0;
-  const s1LaneMap = {};
-  withTimes.forEach(item => { if (item.team) s1LaneMap[item.team] = item.lane; });
+  // Wyciągaj solo z dłuższej kolejki torowej aż L = P
+  // Zasada toru bezwzględna — nigdy dwie drużyny z tym samym torem w parze
+  const solos = [];
+  let remaining = [...pool];
+  while (true) {
+    const nL = remaining.filter(p => p.s2lane === 'L').length;
+    const nP = remaining.filter(p => p.s2lane === 'P').length;
+    if (nL === nP) break;
+    const longerLane  = nL > nP ? 'L' : 'P';
+    const fromLonger  = remaining.filter(p => p.s2lane === longerLane);
+    const soloItem    = fromLonger[0]; // najwolniejszy z dłuższej kolejki
+    solos.push(soloItem);
+    remaining = remaining.filter(p => p !== soloItem);
+  }
 
+  // Paruj i-ty z needL z i-tym z needP (kolejność zachowana = wolniejsi pierwsi)
+  const needL = remaining.filter(p => p.s2lane === 'L');
+  const needP = remaining.filter(p => p.s2lane === 'P');
+
+  // Buduj order: solo pierwsze (z null-partnerem), potem pary
   const order = [];
-  if (isOdd) {
-    // Solo: pierwsza drużyna (najsłabsza/bez czasu) — z null-partnerem
-    const soloItem = withTimes[0];
-    const soloOppLane = (s1LaneMap[soloItem.team] || 'L') === 'L' ? 'P' : 'L';
-    order.push({ team: soloItem.team, lane: soloOppLane, startNum: 1, sum: soloItem.sum, count: soloItem.count, _solo: true });
-    order.push(null);
-    // Pary od idx=1
-    for (let idx = 1; idx < withTimes.length; idx++) {
-      const item = withTimes[idx];
-      const oppLane = (s1LaneMap[item.team] || 'L') === 'L' ? 'P' : 'L';
-      order.push({ team: item.team, lane: oppLane, startNum: idx + 1, sum: item.sum, count: item.count });
-    }
-    // Upewnij każdą parę (poza solo) że ma L i P
-    for (let i = 2; i < order.length - 1; i += 2) {
-      if (order[i] && order[i+1] && order[i].lane === order[i+1].lane) {
-        order[i+1].lane = order[i+1].lane === 'L' ? 'P' : 'L';
-      }
-    }
-  } else {
-    withTimes.forEach((item, idx) => {
-      const oppLane = (s1LaneMap[item.team] || 'L') === 'L' ? 'P' : 'L';
-      order.push({ team: item.team, lane: oppLane, startNum: idx + 1, sum: item.sum, count: item.count });
-    });
-    // Upewnij każdą parę że ma L i P
-    for (let i = 0; i < order.length - 1; i += 2) {
-      if (order[i].lane === order[i+1].lane) {
-        order[i+1].lane = order[i+1].lane === 'L' ? 'P' : 'L';
-      }
-    }
+  let startNum = 1;
+
+  for (const s of solos) {
+    order.push({ team: s.team, lane: s.s2lane, startNum, sum: s.sum, count: s.count, _solo: true });
+    order.push(null); // pusty slot dla solo
+    startNum += 2;
+  }
+
+  for (let i = 0; i < needL.length; i++) {
+    const a = needL[i], b = needP[i];
+    order.push({ team: a.team, lane: 'L', startNum, sum: a.sum, count: a.count });
+    order.push({ team: b.team, lane: 'P', startNum: startNum + 1, sum: b.sum, count: b.count });
+    startNum += 2;
   }
 
   state.teamOrder.s2 = order;
-  // Generowanie S2 resetuje tryb edycji awaryjnej S2
   disableTeamEditMode('s2');
   save();
   renderTeamView();
