@@ -431,6 +431,26 @@ tr:last-child > td { border-bottom: none; }
   <button class="nav-tab" onclick="showTab('klasyfikacja')" id="tab-klasyfikacja" style="color:var(--accent);border-bottom-color:transparent;">🏆 Klasyfikacja</button>
 </nav>
 
+<!-- Pasek ostrzeżenia o duplikatach par -->
+<div id="dup-warning-bar" style="display:none;align-items:center;gap:10px;padding:8px 20px;
+  background:rgba(224,85,85,.12);border-bottom:2px solid rgba(224,85,85,.5);
+  font-size:12px;color:var(--text2);flex-wrap:wrap;" data-dups="[]">
+  <span style="color:var(--red);font-weight:700;flex-shrink:0;">⚠ Duplikat w parach</span>
+  <span id="dup-warning-names" style="flex:1;color:var(--text3);font-size:11px;"></span>
+  <button onclick="fixDuplicates('remove')"
+    style="background:var(--red);color:#fff;border:none;border-radius:var(--radius);
+           padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">
+    ✕ Usuń duplikat
+  </button>
+  <button onclick="fixDuplicates('empty')"
+    style="background:var(--bg3);color:var(--text2);border:1px solid var(--border2);
+           border-radius:var(--radius);padding:3px 10px;font-size:11px;cursor:pointer;white-space:nowrap;">
+    ○ Zostaw puste miejsce
+  </button>
+  <button onclick="hideDupWarning()"
+    style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;">×</button>
+</div>
+
 <div class="main-content">
 
 <!-- ═══ TAB: ZAWODNICY ═══ -->
@@ -1696,6 +1716,8 @@ function _applyRemoteState(stateJson) {
     state = incoming;
     ensureStateDefaults();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Sprawdź duplikaty po synchronizacji ze zdalnym stanem
+    setTimeout(checkAndWarnDuplicates, 500);
 
     // Odśwież header i kolor — bezpieczne, nie dotykają inputów
     const c = state.contest || {};
@@ -1799,12 +1821,89 @@ function save() {
   scheduleSave();
 }
 
+function detectPairDuplicates(series) {
+  const pairs  = series === 's1' ? state.s1pairs : state.s2pairs;
+  const seen   = new Map(); // athleteId → pierwsza para
+  const dups   = [];        // { athleteId, firstPairNum, secondPairNum, slot }
+  pairs.forEach(p => {
+    [['aId', p.aId], ['bId', p.bId]].forEach(([slot, id]) => {
+      if (!id) return;
+      if (seen.has(id)) {
+        dups.push({ athleteId: id, firstPairNum: seen.get(id).pairNum,
+                    firstGender: seen.get(id).gender, secondPairNum: p.pairNum,
+                    secondGender: p.gender, slot, series });
+      } else {
+        seen.set(id, { pairNum: p.pairNum, gender: p.gender });
+      }
+    });
+  });
+  return dups;
+}
+
+function checkAndWarnDuplicates() {
+  const s1dups = detectPairDuplicates('s1');
+  const s2dups = detectPairDuplicates('s2');
+  const allDups = [...s1dups, ...s2dups];
+  if (!allDups.length) return;
+
+  const el = document.getElementById('dup-warning-bar');
+  if (el) {
+    el.style.display = 'flex';
+    el.dataset.dups  = JSON.stringify(allDups);
+    const names = allDups.map(d => {
+      const a = state.athletes.find(x => x.id === d.athleteId);
+      return (a ? a.name : '#' + d.athleteId) + ' (' + d.series.toUpperCase() + ')';
+    });
+    document.getElementById('dup-warning-names').textContent =
+      'Duplikat: ' + [...new Set(names)].join(', ');
+  }
+}
+
+function hideDupWarning() {
+  const el = document.getElementById('dup-warning-bar');
+  if (el) el.style.display = 'none';
+}
+
+function fixDuplicates(mode) {
+  // mode: 'remove' = usuń drugą parę, 'empty' = wyczyść zawodnika z drugiej pary
+  const el   = document.getElementById('dup-warning-bar');
+  if (!el) return;
+  const dups = JSON.parse(el.dataset.dups || '[]');
+
+  dups.forEach(d => {
+    const pairs = d.series === 's1' ? state.s1pairs : state.s2pairs;
+    // Druga para = ta z secondPairNum
+    const secondPair = pairs.find(p => p.pairNum === d.secondPairNum && p.gender === d.secondGender);
+    if (!secondPair) return;
+
+    if (mode === 'remove') {
+      // Usuń całą drugą parę
+      const idx = pairs.indexOf(secondPair);
+      if (idx >= 0) pairs.splice(idx, 1);
+      // Przenumeruj
+      pairs.filter(p => p.gender === d.secondGender).forEach((p, i) => { p.pairNum = i + 1; });
+    } else {
+      // Zostaw pusty slot — wyczyść tylko tego zawodnika z drugiej pary
+      if (secondPair.aId === d.athleteId) secondPair.aId = null;
+      else if (secondPair.bId === d.athleteId) secondPair.bId = null;
+    }
+  });
+
+  hideDupWarning();
+  saveImmediate();
+  if (state.s1pairs.length) renderSeries1View();
+  if (state.s2pairs.length) renderSeries2View();
+  showToast('✓ Duplikaty naprawione', 'success');
+}
+
 function ensureStateDefaults() {
   if (!state) state = {};
   if (!state.contest)    state.contest    = { name: '', city: '', date: '' };
   if (!state.athletes)   state.athletes   = [];
   if (!state.s1pairs)    state.s1pairs    = [];
   if (!state.s2pairs)    state.s2pairs    = [];
+
+
   if (!state.times)      state.times      = {};
   if (!state.disq)       state.disq       = {};
   if (!state.bibScheme)  state.bibScheme  = 'team';
@@ -3610,6 +3709,9 @@ function renderSeries1View() {
   // Aktualizuj przycisk "Zablokuj wszystkie"
   _updateLockAllBtn('s1');
 
+  // Sprawdź duplikaty po każdym renderze
+  checkAndWarnDuplicates();
+
   // Zakładki wewnętrzne — pokaż tylko gdy są pary
   const tabs = document.getElementById('s1-inner-tabs');
   const hasM = mPairs.length > 0;
@@ -4046,6 +4148,14 @@ function buildSeries2(gender) {
       }
     });
 
+    // Deduplikacja — jeśli ta sama osoba trafiła do dwóch par S1 (błąd danych)
+    const seenIds = new Set();
+    pool = pool.filter(p => {
+      if (seenIds.has(p.athlete.id)) return false;
+      seenIds.add(p.athlete.id);
+      return true;
+    });
+
     if (!pool.length) return [];
 
     // Wymagane tory S2 (zmiana obowiązkowa)
@@ -4171,6 +4281,9 @@ function renderSeries2View() {
 
   renderPairsHTML('s2-pairs-M', mPairs, true);
   renderPairsHTML('s2-pairs-K', kPairs, true);
+
+  // Sprawdź duplikaty
+  checkAndWarnDuplicates();
 
   // Zakładki wewnętrzne
   const tabs = document.getElementById('s2-inner-tabs');
@@ -6422,12 +6535,18 @@ function removeFromS1(athleteId, pairNum, gender) {
   const remainingId   = removingA ? pair.bId   : pair.aId;
   const remainingLane = removingA ? pair.bLane  : pair.aLane;
 
-  // Zawsze normalizuj: zostający → slot 'a', slot 'b' → pusty
-  // Pusty slot 'b' dostaje przeciwny tor
-  pair.aId   = remainingId;
-  pair.aLane = remainingLane || 'L';
-  pair.bId   = null;
-  pair.bLane = pair.aLane === 'L' ? 'P' : 'L';
+  // Jeśli nie ma zostającego (usuwamy solo) — usuń całą parę z tablicy
+  if (!remainingId) {
+    state.s1pairs = state.s1pairs.filter(p => !(p.pairNum === pairNum && p.gender === gender));
+    // Przenumeruj
+    state.s1pairs.filter(p => p.gender === gender).forEach((p, i) => { p.pairNum = i + 1; });
+  } else {
+    // Normalizuj: zostający → slot 'a', slot 'b' → pusty
+    pair.aId   = remainingId;
+    pair.aLane = remainingLane || 'L';
+    pair.bId   = null;
+    pair.bLane = pair.aLane === 'L' ? 'P' : 'L';
+  }
 
   saveImmediate();
   renderSeries1View();
