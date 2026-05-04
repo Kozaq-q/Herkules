@@ -824,31 +824,21 @@ function _renderSection(id, { html, count }) {
   const speed = cfg.scrollSpeed || 0;
 
   if (speed > 0) {
-    // Ustaw jedną kopię i zmierz wysokość
     track.innerHTML = html;
     track.style.transform = 'translateY(0)';
-
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const vpH   = vp ? vp.offsetHeight : window.innerHeight;
-      const oneH  = track.offsetHeight;
+      const vpH  = vp ? vp.offsetHeight : window.innerHeight;
+      const oneH = track.offsetHeight;
       if (oneH <= 0) return;
-
-      // Ile kopii potrzeba żeby wypełnić przynajmniej 2× viewport (płynna pętla)
-      // Minimalna liczba kopii: tyle żeby oneH * copies >= vpH * 2
-      const copies = Math.max(3, Math.ceil((vpH * 2.5) / oneH) + 1);
+      const copies = Math.max(2, Math.ceil((vpH * 2) / oneH) + 1);
       track.innerHTML = Array(copies).fill(html).join('');
-      track.style.transform = 'translateY(0)';
-
-      // segH = wysokość jednej kopii po wypełnieniu (może się nieznacznie różnić)
-      const segH = track.offsetHeight / copies;
-
+      const segH = oneH; // identyczne kopie → segment = oryginalna wysokość
       let pos = 0, lastT = null;
       function step(now) {
-        if (!lastT) { lastT = now; }
+        if (!lastT) lastT = now;
         const dt = Math.min(now - lastT, 50);
         lastT = now;
         pos += speed * dt / 1000;
-        // Kiedy przewinęliśmy dokładnie jedną kopię — cofnij bezszwowo
         if (pos >= segH) pos -= segH;
         track.style.transform = `translateY(-${pos}px)`;
         _scrollRAFs[id] = requestAnimationFrame(step);
@@ -869,9 +859,9 @@ const _slScrollRAFs = {};
 function renderStartlist() {
   if (!state) return;
   const cfg2     = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
-  const series   = cfg2.slSeries  || 's1';
-  const gender   = cfg2.slGender  || 'both';
-  const speed    = cfg2.scrollSpeed || 0;
+  const series   = cfg2.slSeries   || URL_PARAMS.get('series') || 's1';
+  const gender   = cfg2.slGender   || URL_PARAMS.get('gender') || 'both';
+  const speed    = typeof cfg2.scrollSpeed === 'number' ? cfg2.scrollSpeed : (parseInt(cfg2.scrollSpeed) || 0);
   const pairs    = series === 's1' ? (state.s1pairs || []) : (state.s2pairs || []);
   const athletes = state.athletes || [];
   const main     = document.getElementById('startlist-main');
@@ -928,23 +918,25 @@ function buildStartlistRows(pairs, athletes, series) {
   const subSize  = 11;
   const numSize  = N > 20 ? 18 : N > 14 ? 20 : 22;
 
-  // Oblicz ranking wg czasu S1 dla badge'y — tylko gdy seria S2 lub mamy S1 times
-  const rankMap = new Map(); // athleteId → rank (1-based)
-  const gender  = pairs[0] && pairs[0].gender;
-  if (gender) {
-    const allAthletes = athletes.filter(a => a.gender === gender);
-    const withTime = allAthletes
-      .map(a => ({ id: a.id, sec: parseTime(getTime(a.id, 's1')) }))
-      .filter(r => r.sec < Infinity)
-      .sort((a, b) => a.sec - b.sec);
-    withTime.forEach((r, i) => rankMap.set(r.id, i + 1));
+  // Badge rangi — TYLKO dla S2, wg czasu S1
+  const rankMap = new Map();
+  if (series === 's2') {
+    const gender = pairs[0] && pairs[0].gender;
+    if (gender) {
+      const allAthletes = athletes.filter(a => a.gender === gender);
+      const withTime = allAthletes
+        .map(a => ({ id: a.id, sec: parseTime(getTime(a.id, 's1')) }))
+        .filter(r => r.sec < Infinity)
+        .sort((a, b) => a.sec - b.sec);
+      withTime.forEach((r, i) => rankMap.set(r.id, i + 1));
+    }
   }
 
   const BADGES = [
     null,
-    { icon: '🥇', label: 'LIDER',      color: '#ffd700' },
-    { icon: '🥈', label: 'WICELIDER',  color: '#c8d0d8' },
-    { icon: '🥉', label: 'PODIUM',     color: '#d4a060' },
+    { icon: '🥇', label: 'LIDER',         color: '#ffd700' },
+    { icon: '🥈', label: 'WICELIDER',     color: '#c8d0d8' },
+    { icon: '🥉', label: 'PODIUM',        color: '#d4a060' },
     { icon: '⚔️', label: 'WALKA O MEDAL', color: '#e8944d' },
   ];
 
@@ -953,44 +945,68 @@ function buildStartlistRows(pairs, athletes, series) {
     if (!r || r > 4) return '';
     const b = BADGES[r];
     return `<span style="font-size:10px;font-weight:700;letter-spacing:.5px;
-      color:${b.color};border:1px solid ${b.color}33;background:${b.color}18;
+      color:${b.color};border:1px solid ${b.color}44;background:${b.color}1a;
       padding:1px 6px;border-radius:3px;margin-left:6px;vertical-align:middle;
       font-family:var(--font-b);white-space:nowrap;">${b.icon} ${b.label}</span>`;
   }
 
-  function athleteHTML(ath, lane, isSoloSlot) {
-    if (!ath || isSoloSlot) {
-      // Pusty slot — nie pokazuj nic (para solo nie ma drugiej strony)
-      return `<div class="sl-athlete" style="flex:1;"></div>`;
-    }
+  // Sprawdź czy para już pobiegła (ma wynik w bieżącej serii)
+  function pairRan(p) {
+    const aTime = p.aId && state.times && state.times[p.aId] && state.times[p.aId][series];
+    const bTime = p.bId && state.times && state.times[p.bId] && state.times[p.bId][series];
+    return !!(aTime || bTime);
+  }
+
+  function athleteHTML(ath, lane, isSoloSlot, ran) {
+    if (!ath || isSoloSlot) return `<div class="sl-athlete" style="flex:1;"></div>`;
     const nameLen = (ath.name || '').length;
     const fs = nameLen > 22 ? Math.max(11, nameSize - 3)
              : nameLen > 16 ? Math.max(12, nameSize - 1)
              : nameSize;
-    const s1time = state.times && state.times[ath.id] && state.times[ath.id].s1 || '';
-    const s1dsq  = !!(state.disq && state.disq[ath.id] && state.disq[ath.id].s1);
-    const timeStr = s1time ? (s1dsq ? ' · <span style="color:var(--red);">DSQ</span>' : ' · ' + s1time) : '';
-    const badge   = rankBadge(ath.id);
-    return `<div class="sl-athlete lane-${lane}">
+    const sTime = state.times && state.times[ath.id] && state.times[ath.id][series] || '';
+    const sDsq  = !!(state.disq && state.disq[ath.id] && state.disq[ath.id][series]);
+    const s1time = series === 's2' ? (state.times && state.times[ath.id] && state.times[ath.id].s1 || '') : '';
+    const s1dsq  = series === 's2' && !!(state.disq && state.disq[ath.id] && state.disq[ath.id].s1);
+    const badge  = rankBadge(ath.id);
+    const nameColor = ran ? 'color:var(--text3);' : '';
+    const timeDisp = sTime
+      ? `<span style="color:${sDsq ? 'var(--red)' : 'var(--green)'};">${sDsq ? 'DSQ' : sTime}</span>`
+      : (s1time ? `S1: <span style="color:${s1dsq ? 'var(--red)' : 'var(--text2)'};">${s1dsq ? 'DSQ' : s1time}</span>` : '');
+    return `<div class="sl-athlete lane-${lane}" style="${ran ? 'opacity:.5;' : ''}">
       <div class="sl-lane-badge ${lane}">${lane}</div>
-      <div class="sl-athlete-name" style="font-size:${fs}px;">${esc(ath.name)}${badge}</div>
-      <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${timeStr}</div>
+      <div class="sl-athlete-name" style="font-size:${fs}px;${nameColor}">${esc(ath.name)}${badge}</div>
+      <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${timeDisp ? ' · ' + timeDisp : ''}</div>
     </div>`;
   }
 
-  return pairs.map((p, idx) => {
+  let rows = '';
+  pairs.forEach((p, idx) => {
     const aAth  = p.aId ? athletes.find(x => x.id === p.aId) : null;
     const bAth  = p.bId ? athletes.find(x => x.id === p.bId) : null;
     const isSolo = !aAth || !bAth;
+    const ran    = pairRan(p);
     const altCls = idx % 2 === 0 ? 'even' : 'odd';
-
-    const laneA = p.aLane || 'L';
-    const laneB = p.bLane || 'P';
-
-    // Zawodnik L po lewej, P po prawej — solo po swojej stronie, druga strona pusta
+    const laneA  = p.aLane || 'L';
     const [athL, athP] = laneA === 'L' ? [aAth, bAth] : [bAth, aAth];
 
-    // Solo badge w nagłówku pary
+    // Wyróżnienie pierwszej pary — linia oddzielająca pod nią
+    const isFirst = p.pairNum === 1;
+    const firstStyle = isFirst ? 'border-bottom:3px solid var(--orange);' : '';
+
+    // Separator "POBIEGŁO" gdy poprzednia para pobiegła a ta jeszcze nie
+    const prevPair = idx > 0 ? pairs[idx - 1] : null;
+    const prevRan  = prevPair ? pairRan(prevPair) : false;
+    const separator = (!ran && prevRan && idx > 0)
+      ? `<div style="display:flex;align-items:center;gap:10px;padding:4px 16px;
+           background:rgba(80,200,144,.08);border-top:1px solid rgba(80,200,144,.25);
+           border-bottom:1px solid rgba(80,200,144,.25);">
+           <div style="flex:1;height:1px;background:rgba(80,200,144,.25);"></div>
+           <span style="font-family:var(--font-h);font-size:10px;font-weight:700;
+             letter-spacing:2px;color:var(--green);">▶ NA TORZE</span>
+           <div style="flex:1;height:1px;background:rgba(80,200,144,.25);"></div>
+         </div>`
+      : '';
+
     const soloBadge = isSolo
       ? `<span style="font-size:10px;font-weight:800;letter-spacing:1.5px;
           color:var(--orange);border:1px solid rgba(240,144,80,.4);
@@ -998,15 +1014,16 @@ function buildStartlistRows(pairs, athletes, series) {
           margin-left:8px;">SOLO</span>`
       : '';
 
-    return `<div class="sl-pair-row ${altCls}">
-      <div class="sl-pair-num" style="font-size:${numSize}px;">
+    rows += separator + `<div class="sl-pair-row ${altCls}" style="${firstStyle}${ran ? 'opacity:.6;' : ''}">
+      <div class="sl-pair-num" style="font-size:${numSize}px;${ran ? 'color:var(--text3);' : ''}">
         ${p.pairNum}${soloBadge}
       </div>
-      ${athleteHTML(athL, 'L', isSolo && laneA === 'P')}
+      ${athleteHTML(athL, 'L', isSolo && laneA === 'P', ran)}
       ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
-      ${athleteHTML(athP, 'P', isSolo && laneA === 'L')}
+      ${athleteHTML(athP, 'P', isSolo && laneA === 'L', ran)}
     </div>`;
-  }).join('');
+  });
+  return rows;
 }
 
 function _renderSlSection(id, html, speed, vp) {
@@ -1016,21 +1033,26 @@ function _renderSlSection(id, html, speed, vp) {
   if (_slScrollRAFs[id]) { cancelAnimationFrame(_slScrollRAFs[id]); delete _slScrollRAFs[id]; }
 
   if (speed > 0) {
+    // Zmierz wysokość jednej kopii
     track.innerHTML = html;
     track.style.transform = 'translateY(0)';
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const vpH   = vp.offsetHeight;
-      const oneH  = track.offsetHeight;
-      if (oneH <= 0) return;
-      const copies = Math.max(3, Math.ceil((vpH * 2.5) / oneH) + 1);
+      const vpH  = vp ? vp.offsetHeight : window.innerHeight;
+      const oneH = track.offsetHeight;
+      if (oneH <= 0) { track.innerHTML = html; return; }
+      // Ile kopii potrzeba żeby lista była co najmniej 2x wyższy od viewportu
+      const copies = Math.max(2, Math.ceil((vpH * 2) / oneH) + 1);
+      // Wypełnij, zmierz segment DOKŁADNIE jako oneH (nie dzielimy po fillowaniu)
       track.innerHTML = Array(copies).fill(html).join('');
-      const segH = track.offsetHeight / copies;
+      // segH = wysokość jednej sekcji = oryginalna oneH (każda kopia identyczna)
+      const segH = oneH;
       let pos = 0, lastT = null;
       function step(now) {
         if (!lastT) lastT = now;
         const dt = Math.min(now - lastT, 50);
         lastT = now;
         pos += speed * dt / 1000;
+        // Bezszwowe zapętlenie: gdy przewinęliśmy jedną kopię, cofnij
         if (pos >= segH) pos -= segH;
         track.style.transform = `translateY(-${pos}px)`;
         _slScrollRAFs[id] = requestAnimationFrame(step);

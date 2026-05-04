@@ -296,25 +296,11 @@ tr:last-child > td { border-bottom: none; }
     <span class="header-contest-name" id="header-contest-name"></span>
     <span class="header-autosave" id="header-autosave">● łączenie...</span>
     <span id="rt-status" style="font-family:var(--font-m);font-size:10px;margin-left:8px;padding:2px 6px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);">RT: ...</span>
-    <div style="position:relative;display:flex;gap:0;">
-      <div style="position:relative;display:inline-block;">
-        <button class="btn btn-sm" onclick="toggleProjPopup()" title="Projektor" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-right:none;border-radius:var(--radius) 0 0 var(--radius);">📺 Projektor</button>
-        <button class="btn btn-sm" onclick="toggleProjSettings()" title="Ustawienia projektora" style="flex-shrink:0;color:var(--accent);border-color:rgba(232,212,77,.3);border-radius:0 var(--radius) var(--radius) 0;padding:0 8px;">⚙</button>
-        <!-- Popup z kafelkami -->
-        <div id="proj-popup" style="display:none;position:fixed;top:58px;right:90px;z-index:9100;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:260px;box-shadow:0 4px 24px rgba(0,0,0,.8);">
-          <div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">Otwórz projektor</div>
-          <div style="display:flex;gap:10px;">
-            <button onclick="openProjektor();toggleProjPopup();" style="flex:1;padding:16px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;color:var(--text1);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-              <div style="font-size:24px;margin-bottom:6px;">📊</div>
-              <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--accent);">WYNIKI</div>
-            </button>
-            <button onclick="openStartlistProjektor();toggleProjPopup();" style="flex:1;padding:16px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;color:var(--text1);transition:border-color .15s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border2)'">
-              <div style="font-size:24px;margin-bottom:6px;">📋</div>
-              <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--green);">LISTA</div>
-            </button>
-          </div>
-        </div>
-      </div>
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="toggleProjSettings()" title="Projektor i ustawienia"
+        style="color:var(--accent);border-color:rgba(232,212,77,.3);display:flex;align-items:center;gap:6px;">
+        📺 <span style="opacity:.6;font-size:13px;">⚙</span>
+      </button>
       <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:16px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.9);">
 
         <!-- Nagłówek -->
