@@ -7502,37 +7502,32 @@ function downloadTemplateXLSX() {
   const contestDate = (state.contest?.date || '').trim();
   const meta = [contestCity, contestDate].filter(Boolean).join(' · ');
 
-  // Przykładowe wiersze
   const examples = TEMPLATE_EXAMPLE.map((r, i) => ({
     lp: i + 1, name: r[1], gender: r[2], team: r[3], m36: r[4] || '', pk: r[5] || ''
   }));
 
-  // Puste wiersze do uzupełnienia
   const emptyRows = [];
-  for (let i = examples.length + 1; i <= 60; i++) emptyRows.push(i);
+  for (let i = examples.length + 1; i <= 80; i++) emptyRows.push(i);
 
   function exRow(r) {
-    const gColor = r.gender === 'M' ? '#1a5fa8' : '#993388';
-    const gBg    = r.gender === 'M' ? '#cce0ff'  : '#f5d6ee';
     return `<tr>
-      <td style="text-align:center;color:#5a6a7a;background:#dce4f0;font-size:10px;">${r.lp}</td>
-      <td style="font-weight:600;color:#1a2535;">${r.name}</td>
-      <td style="text-align:center;font-weight:700;color:${gColor};background:${gBg};">${r.gender}</td>
-      <td style="color:#1a2535;">${r.team}</td>
-      <td style="text-align:center;font-weight:700;color:#1a5fa8;background:${r.m36 ? '#cce0ff' : '#fff'};">${r.m36}</td>
-      <td style="text-align:center;font-weight:700;color:#a81a1a;background:${r.pk ? '#ffd6d6' : '#fff'};">${r.pk}</td>
+      <td class="lp">${r.lp}</td>
+      <td class="data">${r.name}</td>
+      <td class="data center">${r.gender}</td>
+      <td class="data">${r.team}</td>
+      <td class="data center">${r.m36}</td>
+      <td class="data center">${r.pk}</td>
     </tr>`;
   }
 
-  function emptyRow(i, shade) {
-    const bg = shade ? '#e8edf4' : '#ffffff';
+  function emptyRow(i) {
     return `<tr>
-      <td style="text-align:center;color:#b0bcc8;background:#dce4f0;font-size:10px;">${i}</td>
-      <td style="background:${bg};"></td>
-      <td style="background:${bg};"></td>
-      <td style="background:${bg};"></td>
-      <td style="background:${bg};"></td>
-      <td style="background:${bg};"></td>
+      <td class="lp">${i}</td>
+      <td class="data"></td>
+      <td class="data center"></td>
+      <td class="data"></td>
+      <td class="data center"></td>
+      <td class="data center"></td>
     </tr>`;
   }
 
@@ -7548,42 +7543,59 @@ function downloadTemplateXLSX() {
     </x:WorksheetOptions></x:ExcelWorksheet>
   </x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
   <style>
-    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+    body  { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
     table { border-collapse: collapse; width: 100%; }
-    td, th { border: 1px solid #b0bcc8; padding: 5px 8px; }
-    .hdr-osf   { background: #0d1b2a; color: #c8a000; font-size: 18pt; font-weight: bold; text-align: center; height: 36px; }
-    .hdr-name  { background: #1c3a5a; color: #ffffff; font-size: 13pt; font-weight: bold; text-align: center; height: 24px; }
-    .hdr-meta  { background: #2a5080; color: #fdf3c0; font-size: 10pt; font-style: italic; text-align: center; height: 20px; }
-    .hdr-sep   { background: #0d1b2a; height: 6px; }
-    .col-hdr th { background: #1c3a5a; color: #ffffff; font-weight: bold; font-size: 11pt; text-align: center; height: 28px; border-color: #2a5080; }
-    .col-hdr th.m36h { background: #1a5fa8; }
-    .col-hdr th.pkh  { background: #a81a1a; }
+    td, th { padding: 6px 10px; vertical-align: middle; word-wrap: break-word; }
+
+    .hdr-osf  { background:#0d1b2a; color:#c8a000; font-size:16pt; font-weight:bold; text-align:center; height:38px; border:none; }
+    .hdr-name { background:#0d1b2a; color:#ffffff; font-size:11pt; font-weight:bold; text-align:center; height:22px; border:none; }
+    .hdr-meta { background:#0d1b2a; color:#8a9bb0; font-size:9pt; font-style:italic; text-align:center; height:18px; border:none; }
+    .hdr-sep  { background:#0d1b2a; height:8px; border:none; }
+
+    .col-hdr th {
+      background:#1c3a5a; color:#ffffff;
+      font-weight:bold; font-size:10pt;
+      text-align:center; height:26px;
+      border:1px solid #2a5080;
+      white-space:nowrap;
+    }
+
+    .lp   { text-align:center; color:#9aa8b8; font-size:9pt; width:36px; border:1px solid #d0d8e4; background:#f4f6f9; }
+    .data { border:1px solid #d0d8e4; color:#1a2535; background:#ffffff; }
+    .center { text-align:center; }
   </style>
 </head>
 <body>
 <table>
+  <col style="width:40px">
+  <col style="width:300px">
+  <col style="width:55px">
+  <col style="width:200px">
+  <col style="width:60px">
+  <col style="width:55px">
+
   <tr><td colspan="6" class="hdr-osf">OSF &mdash; LISTA STARTOWA</td></tr>
-  <tr><td colspan="6" class="hdr-name">${contestName || 'Nazwa zawodów'}</td></tr>
+  <tr><td colspan="6" class="hdr-name">${contestName || '&nbsp;'}</td></tr>
   <tr><td colspan="6" class="hdr-meta">${meta || '&nbsp;'}</td></tr>
   <tr><td colspan="6" class="hdr-sep"></td></tr>
   <tr class="col-hdr">
-    <th style="width:40px;">Lp</th>
-    <th style="width:320px;">Stopień / Imię i Nazwisko</th>
-    <th style="width:55px;">Płeć</th>
-    <th style="width:220px;">Drużyna / Jednostka</th>
-    <th class="m36h" style="width:65px;">M36+</th>
-    <th class="pkh"  style="width:55px;">PK</th>
+    <th>Lp</th>
+    <th style="text-align:left;">Stopień / Imię i Nazwisko</th>
+    <th>Płeć</th>
+    <th style="text-align:left;">Drużyna / Jednostka</th>
+    <th>M36+</th>
+    <th>PK</th>
   </tr>
   ${examples.map(exRow).join('\n  ')}
-  ${emptyRows.map((i, idx) => emptyRow(i, idx % 2 === 0)).join('\n  ')}
+  ${emptyRows.map(emptyRow).join('\n  ')}
 </table>
 </body></html>`;
 
   const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = 'osf_lista_startowa.xls'; a.click();
-  URL.revokeObjectURL(url);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'osf_lista_startowa.xls';
+  a.click();
 }
 
 function downloadTemplateODS() {
