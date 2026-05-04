@@ -831,20 +831,9 @@ tr:last-child > td { border-bottom: none; }
     <button onclick="cancelTeamSwap()" style="background:rgba(232,148,77,.15);border:1px solid rgba(232,148,77,.4);border-radius:var(--radius);color:var(--orange);font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;">✕ Anuluj zamianę</button>
   </div>
 
-  <!-- Zakładki S1 / S2 -->
-  <div id="dr-inner-tabs" style="display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;margin-bottom:14px;align-items:flex-end;">
-    <button id="dr-tab-s1" onclick="switchDrTab('s1')"
-      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--accent);background:rgba(232,212,77,.08);color:var(--accent);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
-      Seria 1
-    </button>
-    <button id="dr-tab-s2" onclick="switchDrTab('s2')"
-      style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
-      Seria 2
-    </button>
-  </div>
-
-  <!-- Sekcja S1 -->
-  <div id="dr-section-s1">
+  <!-- Seria 1 -->
+  <div class="card mb-12">
+    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;">Seria 1</div>
     <div id="dr-s1-edit-warning" style="display:none;background:rgba(224,85,85,.1);border:2px solid rgba(224,85,85,.5);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
       <strong style="color:var(--red);">⚠ Tryb edycji awaryjnej S1</strong> — kolejność wyznaczona ręcznie. Kliknięcie <em>Generuj S1</em> przywróci regulaminową kolejność.
       <button onclick="disableTeamEditMode('s1')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj edycję</button>
@@ -853,8 +842,9 @@ tr:last-child > td { border-bottom: none; }
     <div id="dr-s1-teams"></div>
   </div>
 
-  <!-- Sekcja S2 -->
-  <div id="dr-section-s2" style="display:none;">
+  <!-- Seria 2 -->
+  <div class="card mb-12">
+    <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;">Seria 2</div>
     <div id="dr-s2-edit-warning" style="display:none;background:rgba(224,85,85,.15);border:3px solid var(--red);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.7;">
       <strong style="color:var(--red);font-size:13px;">⚠ EDYCJA AWARYJNA S2</strong><br>
       Każda drużyna <strong>musi biec na innym torze niż w S1</strong> — to wymóg regulaminowy.<br>
@@ -2467,25 +2457,6 @@ function recalcLanesWithOpposite(order, s1order) {
 // ═══════════════════════════════════════════════════
 // BIEG DRUŻYNOWY — render
 // ═══════════════════════════════════════════════════
-let _drActiveTab = 's1';
-
-function switchDrTab(tab) {
-  _drActiveTab = tab;
-  const s1 = document.getElementById('dr-section-s1');
-  const s2 = document.getElementById('dr-section-s2');
-  const t1 = document.getElementById('dr-tab-s1');
-  const t2 = document.getElementById('dr-tab-s2');
-  if (!s1 || !s2) return;
-
-  const activeStyle   = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--accent);background:rgba(232,212,77,.08);color:var(--accent);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
-  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
-
-  s1.style.display = tab === 's1' ? '' : 'none';
-  s2.style.display = tab === 's2' ? '' : 'none';
-  if (t1) t1.style.cssText = tab === 's1' ? activeStyle : inactiveStyle;
-  if (t2) t2.style.cssText = tab === 's2' ? activeStyle : inactiveStyle;
-}
-
 function renderTeamView() {
   const hasAnyTime = state.athletes.some(a => bestTime(a.id));
   document.getElementById('dr-alert-no-times').style.display = hasAnyTime ? 'none' : 'block';
@@ -2493,7 +2464,6 @@ function renderTeamView() {
   renderTeamOrderSection('s1');
   renderTeamOrderSection('s2');
   renderTeamResults();
-  switchDrTab(_drActiveTab);
 }
 
 function renderTeamOrderSection(series) {
@@ -5959,17 +5929,34 @@ function handleEmptySlotClick(el) {
     const srcPair  = srcPairs.find(p => p.pairNum === _swapSource.pairNum && p.gender === gender);
     if (!srcPair) { cancelSwapMode(); return; }
 
+    const samePair = (srcPair === pair);
+
     // Wyczyść zawodnika ze źródłowego slotu
     if (srcPair.aId === _swapSource.athleteId) srcPair.aId = null;
     else                                        srcPair.bId = null;
 
-    // Wstaw zawodnika do pustego slotu 'b' (po normalizacji 'a'=solo, 'b'=pusty)
-    // Zaktualizuj tor 'b' na kliknięty
-    pair.bId   = _swapSource.athleteId;
-    pair.bLane = lane;
+    // Wstaw zawodnika do slotu docelowego pasującego do klikniętego toru
+    if (pair.aLane === lane) pair.aId = _swapSource.athleteId;
+    else                     pair.bId = _swapSource.athleteId;
+    // Upewnij się że tor jest ustawiony poprawnie
+    if (pair.aId === _swapSource.athleteId) pair.aLane = lane;
+    else                                    pair.bLane = lane;
 
-    // Jeśli źródłowa para jest teraz całkowicie pusta — usuń ją
-    if (!srcPair.aId && !srcPair.bId) {
+    // Normalizuj parę docelową: zajęty zawodnik zawsze w slocie 'a'
+    // (tylko gdy jest dokładnie jeden zawodnik — solo)
+    if (!pair.aId && pair.bId) {
+      pair.aId   = pair.bId;   pair.aLane = pair.bLane;
+      pair.bId   = null;        pair.bLane = pair.aLane === 'L' ? 'P' : 'L';
+    }
+
+    // Normalizuj parę źródłową: jeśli zawodnik został w bId → przenieś do aId
+    if (!samePair && !srcPair.aId && srcPair.bId) {
+      srcPair.aId   = srcPair.bId;   srcPair.aLane = srcPair.bLane;
+      srcPair.bId   = null;           srcPair.bLane = srcPair.aLane === 'L' ? 'P' : 'L';
+    }
+
+    // Jeśli źródłowa para (inna niż docelowa) jest teraz pusta — usuń ją
+    if (!samePair && !srcPair.aId && !srcPair.bId) {
       const idx = pairs.indexOf(srcPair);
       if (idx >= 0) pairs.splice(idx, 1);
       pairs.filter(p => p.gender === gender).forEach((p, i) => { p.pairNum = i + 1; });
@@ -6115,7 +6102,7 @@ function openTeamDrawPanel(series) {
   document.getElementById('team-draw-rules-text').innerHTML = rulesText;
   const warn = document.getElementById('team-draw-warning');
   const order = state.teamOrder[series];
-  const hasAnyTime = state.teamOrder.s1.some(item => getTeamTime(item.team, series));
+  const hasAnyTime = state.teamOrder.s1.some(item => item && getTeamTime(item.team, series));
   const warnLines = [];
   if (order.length) warnLines.push('Istnieje już kolejność ' + series.toUpperCase() + ' (' + order.length + ' drużyn).');
   if (hasAnyTime) warnLines.push('⚠ Niektóre drużyny mają wpisane czasy (nie zostaną skasowane).');
