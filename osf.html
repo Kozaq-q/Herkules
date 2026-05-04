@@ -3751,22 +3751,26 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
       'background:var(--bg3);color:' + (series==='s2'?'var(--red)':'var(--text3)') + ';cursor:pointer;line-height:1.5;flex-shrink:0;" title="Zamień zawodnika">↔</button>'
     : '';
 
-  // Przycisk ✕ — usuń z S1 (zostaje pusty slot), tylko S1, tylko niezablokowane
+  // Przycisk ✕ — w prawym górnym rogu karty, osobna zmienna
   const locked = isPairLocked(series, g, pairNum);
-  const removeBtn = (series === 's1' && pairNum && !locked)
-    ? '<button onclick="event.stopPropagation();removeFromS1(' + a.id + ',' + pairNum + ',\'' + g + '\')" ' +
-      'style="font-size:10px;padding:1px 5px;border:1px solid var(--border2);border-radius:var(--radius);' +
-      'background:transparent;color:var(--text3);cursor:pointer;line-height:1.6;flex-shrink:0;opacity:.6;" ' +
-      'title="Usuń z Serii 1 — zawodnik wróci do puli dostępnych">✕</button>'
+  const removeBtn = ''; // renderowany osobno w rogu karty
+
+  // Przycisk usuwania z S1 — prawy górny róg, z potwierdzeniem inline
+  const canRemove = (series === 's1' && pairNum && !locked);
+  const removeCornerBtn = canRemove
+    ? '<button onclick="event.stopPropagation();confirmRemoveFromS1(' + a.id + ',' + pairNum + ',\'' + g + '\', this)" ' +
+      'style="position:absolute;top:4px;right:4px;background:none;border:none;' +
+      'color:var(--text3);font-size:11px;cursor:pointer;padding:2px 4px;line-height:1;opacity:.4;" ' +
+      'title="Usuń z S1">✕</button>'
     : '';
 
-  return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
+  return '<div class="pair-athlete"' + pickAttr + ' style="position:relative;' + (dsq ? 'opacity:.6;' : '') + '">' +
+    removeCornerBtn +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
     '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">' +
     '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + '</span>' +
     '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;flex-shrink:0;" title="Zmień numer startowy" onclick="event.stopPropagation();openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
     swapBtn +
-    removeBtn +
     '</div>' +
     '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;margin-left:6px;">' + lane + '</span>' +
     '</div>' +
@@ -5685,10 +5689,10 @@ function handleEmptySlotClick(el) {
     if (srcPair.aId === _swapSource.athleteId) srcPair.aId = null;
     else                                        srcPair.bId = null;
 
-    // Wstaw zawodnika do docelowego slotu (pasującego do klikniętego toru)
-    // Slot docelowy = ten którego lane pasuje do klikniętego lane
-    if (pair.aLane === lane) pair.aId = _swapSource.athleteId;
-    else                     pair.bId = _swapSource.athleteId;
+    // Wstaw zawodnika do pustego slotu 'b' (po normalizacji 'a'=solo, 'b'=pusty)
+    // Zaktualizuj tor 'b' na kliknięty
+    pair.bId   = _swapSource.athleteId;
+    pair.bLane = lane;
 
     // Jeśli źródłowa para jest teraz całkowicie pusta — usuń ją
     if (!srcPair.aId && !srcPair.bId) {
@@ -5706,14 +5710,16 @@ function handleEmptySlotClick(el) {
     showToast('→ ' + displayName(a1) + ' → Tor ' + lane, 'success');
 
   } else {
-    // ── Bez trybu zamiany: zmień tor SOLO na przeciwny ──
-    // lane = tor pustego miejsca = nowy tor solo
-    const isSoloInA = !!pair.aId;
-    // Zamień tory: solo dostaje "lane" (kliknięty pusty tor), pusty tor dostaje stary tor solo
-    const oldSoloLane = isSoloInA ? pair.aLane : pair.bLane;
-    if (isSoloInA) { pair.aLane = lane; pair.bLane = oldSoloLane; }
-    else           { pair.bLane = lane; pair.aLane = oldSoloLane; }
-    const a = state.athletes.find(x => x.id === (pair.aId || pair.bId));
+    // ── Bez trybu zamiany: zmień tor SOLO ──
+    // Po normalizacji solo jest zawsze w slocie 'a'
+    // 'lane' = tor pustego miejsca = nowy tor solo
+    const soloId = pair.aId || pair.bId;
+    // Normalizuj: solo do slotu 'a', pusty slot 'b'
+    pair.aId   = soloId;
+    pair.aLane = lane;                           // nowy tor solo
+    pair.bId   = null;
+    pair.bLane = lane === 'L' ? 'P' : 'L';      // pusty slot dostaje stary tor
+    const a = state.athletes.find(x => x.id === soloId);
     save();
     series === 's2' ? renderSeries2View() : renderSeries1View();
     showToast('↔ Tor: ' + displayName(a) + ' → ' + lane, 'success');
@@ -6241,18 +6247,43 @@ function setAllS2Start(starts) {
 // ═══════════════════════════════════════
 // ZMIANA KOLEJNOŚCI PAR S2 (strzałki)
 // ═══════════════════════════════════════
+function confirmRemoveFromS1(athleteId, pairNum, gender, btn) {
+  // Zamień przycisk ✕ na inline "Usuń? [Tak] [Nie]"
+  const orig = btn.outerHTML;
+  btn.outerHTML =
+    '<span style="position:absolute;top:3px;right:3px;display:flex;align-items:center;gap:3px;font-size:10px;">' +
+    '<span style="color:var(--text3);">Usuń?</span>' +
+    '<button onclick="event.stopPropagation();removeFromS1(' + athleteId + ',' + pairNum + ',\'' + gender + '\')" ' +
+      'style="background:var(--red);color:#fff;border:none;border-radius:3px;padding:1px 5px;cursor:pointer;font-size:10px;font-weight:700;">Tak</button>' +
+    '<button onclick="event.stopPropagation();renderSeries1View()" ' +
+      'style="background:var(--bg3);color:var(--text3);border:1px solid var(--border2);border-radius:3px;padding:1px 5px;cursor:pointer;font-size:10px;">Nie</button>' +
+    '</span>';
+}
+
 function removeFromS1(athleteId, pairNum, gender) {
   const pair = state.s1pairs.find(p => p.pairNum === pairNum && p.gender === gender);
   if (!pair) return;
   const a = state.athletes.find(x => x.id === athleteId);
 
-  // Wyczyść zawodnika ze slotu — zostaw drugi slot i tory bez zmian
-  if (pair.aId === athleteId) pair.aId = null;
-  else if (pair.bId === athleteId) pair.bId = null;
+  // Znajdź który slot ma usuwany zawodnik i który zostaje
+  const removingA = pair.aId === athleteId;
+  const removingB = pair.bId === athleteId;
+  if (!removingA && !removingB) return;
+
+  // Zostający zawodnik i jego tor
+  const remainingId   = removingA ? pair.bId   : pair.aId;
+  const remainingLane = removingA ? pair.bLane  : pair.aLane;
+
+  // Zawsze normalizuj: zostający → slot 'a', slot 'b' → pusty
+  // Pusty slot 'b' dostaje przeciwny tor
+  pair.aId   = remainingId;
+  pair.aLane = remainingLane || 'L';
+  pair.bId   = null;
+  pair.bLane = pair.aLane === 'L' ? 'P' : 'L';
 
   saveImmediate();
   renderSeries1View();
-  showToast('✕ ' + displayName(a) + ' usunięty z S1 — dostępny w "Dopisz"', 'success');
+  showToast('✕ ' + displayName(a) + ' usunięty — dostępny w "Dopisz"', 'success');
 }
 
 function jumpPairTo(gender, fromPairNum, toPos) {
