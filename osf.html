@@ -537,7 +537,7 @@ tr:last-child > td { border-bottom: none; }
   </div>
 
   <!-- Zakładki M/K + przycisk kłódki po prawej -->
-  <div id="s1-inner-tabs" style="display:none;margin-bottom:14px;display:flex;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;align-items:flex-end;">
+  <div id="s1-inner-tabs" style="display:none;margin-bottom:14px;gap:4px;border-bottom:2px solid var(--border);padding-bottom:0;align-items:flex-end;">
     <button id="s1-tab-M" onclick="switchS1Tab('M')"
       style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
       ♂ Mężczyźni
@@ -3414,6 +3414,10 @@ function drawSeries1(gender) {
   } else {
     // Renumeruj zachowane pary żeby nie kolidowały
     const allNew = [...newPairs, ...keptPairs];
+    // Renumeruj per gender żeby numery były unikalne w obrębie płci
+    ['M', 'K'].forEach(g => {
+      allNew.filter(p => p.gender === g).forEach((p, i) => { p.pairNum = i + 1; });
+    });
     state.s1pairs = allNew;
   }
 
@@ -6057,16 +6061,17 @@ function toggleLockAllPairs(series) {
   if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
   if (!state.lockedPairs[series]) state.lockedPairs[series] = [];
 
-  const gPairs  = series === 's1' ? state.s1pairs : state.s2pairs;
-  const allKeys = gPairs.map(p => lockKey(series, p.gender, p.pairNum));
-  const current = state.lockedPairs[series];
-  const allLocked = allKeys.every(k => current.includes(k));
+  // Działa tylko na aktywną płeć w danej serii
+  const activeGender = series === 's1' ? (_s1ActiveTab || 'M') : (_s2ActiveTab || 'M');
+  const allPairs = series === 's1' ? state.s1pairs : state.s2pairs;
+  const gPairs   = allPairs.filter(p => p.gender === activeGender);
+  const allKeys  = gPairs.map(p => lockKey(series, p.gender, p.pairNum));
+  const current  = state.lockedPairs[series];
+  const allLocked = allKeys.length > 0 && allKeys.every(k => current.includes(k));
 
   if (allLocked) {
-    // Odblokuj wszystkie
     state.lockedPairs[series] = current.filter(k => !allKeys.includes(k));
   } else {
-    // Zablokuj wszystkie których jeszcze nie ma
     allKeys.forEach(k => { if (!current.includes(k)) current.push(k); });
   }
 
@@ -6080,13 +6085,15 @@ function _updateLockAllBtn(series) {
   if (series !== 's1') return;
   const btn = document.getElementById('s1-lock-all-btn');
   if (!btn) return;
-  const gPairs  = state.s1pairs;
+  // Sprawdź stan tylko dla aktywnej płci
+  const activeGender = _s1ActiveTab || 'M';
+  const gPairs  = state.s1pairs.filter(p => p.gender === activeGender);
   if (!gPairs.length) return;
   const allKeys   = gPairs.map(p => lockKey('s1', p.gender, p.pairNum));
   const current   = (state.lockedPairs && state.lockedPairs.s1) || [];
   const allLocked = allKeys.length > 0 && allKeys.every(k => current.includes(k));
   btn.textContent  = allLocked ? '🔓' : '🔒';
-  btn.title        = allLocked ? 'Odblokuj wszystkie pary' : 'Zablokuj wszystkie pary';
+  btn.title        = allLocked ? 'Odblokuj wszystkie pary (' + activeGender + ')' : 'Zablokuj wszystkie pary (' + activeGender + ')';
   btn.style.color  = allLocked ? 'var(--accent)' : 'var(--text3)';
   btn.style.borderColor = allLocked ? 'rgba(232,212,77,.3)' : 'var(--border2)';
 }
