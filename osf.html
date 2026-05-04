@@ -2584,9 +2584,11 @@ function renderTeamOrderSection(series) {
       const soloLane  = p.a ? p.a.lane : 'L';
       const otherLane = soloLane === 'L' ? 'P' : 'L';
       // data-idx = indeks SOLO w order[] (p.aIdx), data-lane = tor pustego miejsca
+      // data-solo-idx = indeks drużyny solo, data-null-idx = indeks null slotu
+      // data-lane = tor pustego miejsca (przeciwny do solo)
       const emptySoloSlot =
         '<div class="pair-athlete team-empty-slot" ' +
-        'data-series="' + series + '" data-idx="' + p.aIdx + '" data-lane="' + otherLane + '" ' +
+        'data-series="' + series + '" data-solo-idx="' + p.aIdx + '" data-null-idx="' + p.bIdx + '" data-lane="' + otherLane + '" ' +
         'onclick="handleTeamEmptySlotClick(this)" ' +
         'style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:90px;' +
         'border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;cursor:pointer;opacity:.5;">' +
@@ -6215,42 +6217,56 @@ function handleTeamClick(el) {
 
 function handleTeamEmptySlotClick(el) {
   const series   = el.dataset.series;
-  const soloIdx  = parseInt(el.dataset.idx); // indeks SOLO w order[]
-  const newLane  = el.dataset.lane;           // tor pustego miejsca (L lub P)
+  const soloIdx  = parseInt(el.dataset.soloIdx);  // indeks drużyny solo w order[]
+  const nullIdx  = parseInt(el.dataset.nullIdx);   // indeks null slotu w order[]
+  const newLane  = el.dataset.lane;                // tor pustego miejsca
   const order    = state.teamOrder[series];
   const soloItem = order[soloIdx];
   if (!soloItem) return;
 
   if (_teamSwapSource && _teamSwapSource.series === series) {
-    // Tryb zamiany — wrzuć zaznaczoną drużynę na tor pustego miejsca
-    // Realizujemy to jako: SOLO dostaje tor newLane, zaznaczona drużyna dostaje stary tor solo
-    const srcIdx    = _teamSwapSource.idx;
-    const srcItem   = order[srcIdx];
-    const oldSoloLane = soloItem.lane;
+    const srcIdx  = _teamSwapSource.idx;
+    const srcItem = order[srcIdx];
+    if (!srcItem) { cancelTeamSwap(); return; }
 
-    if (srcIdx === soloIdx) {
-      // Kliknięcie na własny pusty tor = zmień tor solo
-      order[soloIdx] = { ...soloItem, lane: newLane };
-    } else {
-      // Zamień: zaznaczona drużyna → tor pustego miejsca, solo → tor zaznaczonej
-      order[soloIdx] = { ...soloItem, lane: newLane };
-      order[srcIdx]  = { ...srcItem,  lane: oldSoloLane };
-      // Zamień też drużyny między slotami
-      const tmpTeam = soloItem.team;
-      order[soloIdx] = { ...order[soloIdx], team: srcItem.team, sum: srcItem.sum, count: srcItem.count };
-      order[srcIdx]  = { ...order[srcIdx],  team: tmpTeam,     sum: soloItem.sum, count: soloItem.count };
+    // Wstaw zaznaczoną drużynę w null slot z torem pustego miejsca
+    order[nullIdx] = { ...srcItem, lane: newLane, startNum: nullIdx + 1 };
+
+    // Opróżnij źródłowy slot
+    order[srcIdx] = null;
+
+    // Usuń parę null+null jeśli powstała
+    for (let i = order.length - 2; i >= 0; i -= 2) {
+      if (order[i] === null && order[i + 1] === null) {
+        order.splice(i, 2);
+      }
     }
+
+    // Normalizuj: jeśli null jest pierwszym w parze, zamień miejscami
+    // żeby drużyna (solo) zawsze była na parzystym indeksie (slot a)
+    for (let i = 0; i < order.length - 1; i += 2) {
+      if (order[i] === null && order[i + 1] !== null) {
+        order[i]     = order[i + 1];
+        order[i + 1] = null;
+      }
+    }
+
+    order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+
     const n = _teamSwapSource.teamName;
     cancelTeamSwap();
     save();
     renderTeamView();
-    showToast('→ ' + n + ' na Tor ' + newLane, 'success');
+    showToast('→ ' + n + ' → Tor ' + newLane, 'success');
+
   } else {
-    // Bez trybu zamiany — kliknięcie pustego toru = zmień tor SOLO na przeciwny
+    // Bez trybu zamiany — zmień tor SOLO (zamień lane solo i lane pustego slotu)
+    const oldSoloLane = soloItem.lane;
     order[soloIdx] = { ...soloItem, lane: newLane };
+    // Null slot zachowuje swój "tor" w data-lane — renderer go odczyta ponownie
     save();
     renderTeamView();
-    showToast('↔ Zmieniono tor: ' + (soloItem.team||'') + ' → Tor ' + newLane, 'success');
+    showToast('↔ Tor: ' + (soloItem.team || '') + ' → ' + newLane, 'success');
   }
 }
 
