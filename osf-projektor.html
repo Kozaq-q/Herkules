@@ -155,6 +155,25 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 /* ── NO DATA ── */
 .no-data { text-align: center; padding: 48px 16px; color: var(--text3); font-family: var(--font-b); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
 
+/* ── PK BADGE ── */
+.pk-badge {
+  display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800;
+  letter-spacing: 1px; color: #fff; background: var(--red);
+  border-radius: 3px; padding: 1px 5px; margin-left: 5px; vertical-align: middle;
+  line-height: 1.4; white-space: nowrap;
+}
+
+/* ── SL PROGRESS BAR ── */
+#sl-progress {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 6px 24px; display: flex; gap: 20px; align-items: center; flex-shrink: 0;
+}
+.sl-prog-item { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.sl-prog-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); display: flex; justify-content: space-between; }
+.sl-prog-count { font-family: var(--font-m); font-size: 10px; color: var(--accent); }
+.sl-prog-bar { background: var(--bg4); border-radius: 3px; height: 4px; overflow: hidden; }
+.sl-prog-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
 /* ── LISTA STARTOWA ── */
 #startlist-main {
   display: flex; flex-direction: column; overflow: hidden;
@@ -257,7 +276,10 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   <div id="proj-progress" style="display:none;"></div>
 
   <div id="proj-main"></div>
-  <div id="startlist-main" style="display:none;"></div>
+  <div id="startlist-main" style="display:none;flex-direction:column;">
+    <div id="sl-progress" style="display:none;"></div>
+    <div id="sl-blocks" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
+  </div>
 
 </div>
 
@@ -618,7 +640,7 @@ function buildIndRows(gender) {
     return `<tr class="rank-row ${rowCls}">
         <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</td>
         <td class="rank-name-cell">
-          <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}</span>
+          <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}${r.a.pk ? '<span class="pk-badge">PK</span>' : ''}</span>
           <span class="rank-team-sub" style="font-size:${subSize}px;">${esc(r.a.team)}</span>
         </td>
         <td class="rank-time-cell" style="font-size:${timeSize};">
@@ -862,10 +884,13 @@ function renderStartlist() {
   const series   = cfg2.slSeries   || URL_PARAMS.get('series') || 's1';
   const gender   = cfg2.slGender   || URL_PARAMS.get('gender') || 'both';
   const speed    = typeof cfg2.scrollSpeed === 'number' ? cfg2.scrollSpeed : (parseInt(cfg2.scrollSpeed) || 0);
+  const showProg = cfg2.showSLProgress !== false; // domyślnie true
   const pairs    = series === 's1' ? (state.s1pairs || []) : (state.s2pairs || []);
   const athletes = state.athletes || [];
   const main     = document.getElementById('startlist-main');
-  if (!main) return;
+  const blocksEl = document.getElementById('sl-blocks');
+  const progEl   = document.getElementById('sl-progress');
+  if (!main || !blocksEl) return;
 
   const genders = gender === 'both' ? ['M', 'K'] : [gender];
 
@@ -875,25 +900,55 @@ function renderStartlist() {
     delete _slScrollRAFs[k];
   });
 
-  main.innerHTML = '';
+  // Progress bar
+  if (progEl) {
+    if (showProg) {
+      const allPairs = genders.flatMap(g => pairs.filter(p => p.gender === g));
+      const total    = allPairs.filter(p => p.aId).length;
+      const ran      = allPairs.filter(p => {
+        const aT = p.aId && state.times?.[p.aId]?.[series];
+        const bT = p.bId && state.times?.[p.bId]?.[series];
+        return !!(aT || bT);
+      }).length;
+      const pct   = total > 0 ? Math.round(100 * ran / total) : 0;
+      const color = series === 's1' ? 'var(--male)' : 'var(--female)';
+      progEl.style.display = 'flex';
+      progEl.innerHTML = `<div class="sl-prog-item">
+        <div class="sl-prog-label">
+          <span>POSTĘP — ${series.toUpperCase()} ${genders.join('+')}</span>
+          <span class="sl-prog-count">${ran} / ${total} par</span>
+        </div>
+        <div class="sl-prog-bar"><div class="sl-prog-fill" style="width:${pct}%;background:${color};"></div></div>
+      </div>`;
+    } else {
+      progEl.style.display = 'none';
+    }
+  }
+
+  blocksEl.innerHTML = '';
 
   genders.forEach(g => {
     const gPairs = pairs.filter(p => p.gender === g).sort((a,b) => a.pairNum - b.pairNum);
-    if (!gPairs.length && gender === 'both') return; // pomiń pustą płeć
+    if (!gPairs.length && gender === 'both') return;
 
     const block = document.createElement('div');
     block.className = 'sl-gender-block';
-    block.style.flex = gender === 'both' ? '1' : '1';
 
-    const color     = g === 'M' ? 'var(--male)' : 'var(--female)';
-    const gLabel    = g === 'M' ? '♂ Mężczyźni' : '♀ Kobiety';
-    const sLabel    = series === 's1' ? 'Seria 1' : 'Seria 2';
+    const gLabel = g === 'M' ? '♂ Mężczyźni' : '♀ Kobiety';
+    const sLabel = series === 's1' ? 'Seria 1' : 'Seria 2';
+    const ranCount = gPairs.filter(p => {
+      const aT = p.aId && state.times?.[p.aId]?.[series];
+      const bT = p.bId && state.times?.[p.bId]?.[series];
+      return !!(aT || bT);
+    }).length;
     block.innerHTML = `<div class="sl-section-header ind-${g.toLowerCase()}">
       <span>${gLabel} — ${sLabel}</span>
-      <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;">${gPairs.filter(p=>p.aId).length} par</span>
+      <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;">
+        ${ranCount}/${gPairs.length} par
+      </span>
     </div>`;
 
-    const vp = document.createElement('div');
+    const vp    = document.createElement('div');
     vp.className = 'sl-scroll-viewport';
     vp.id = 'sl-vp-' + g;
 
@@ -904,7 +959,7 @@ function renderStartlist() {
     const html = buildStartlistRows(gPairs, athletes, series);
     vp.appendChild(track);
     block.appendChild(vp);
-    main.appendChild(block);
+    blocksEl.appendChild(block);
 
     _renderSlSection(g, html, speed, vp);
   });
@@ -950,11 +1005,15 @@ function buildStartlistRows(pairs, athletes, series) {
       font-family:var(--font-b);white-space:nowrap;">${b.icon} ${b.label}</span>`;
   }
 
-  // Sprawdź czy para już pobiegła (ma wynik w bieżącej serii)
+  function pkBadge(ath) {
+    if (!ath || !ath.pk) return '';
+    return '<span class="pk-badge">PK</span>';
+  }
+
   function pairRan(p) {
-    const aTime = p.aId && state.times && state.times[p.aId] && state.times[p.aId][series];
-    const bTime = p.bId && state.times && state.times[p.bId] && state.times[p.bId][series];
-    return !!(aTime || bTime);
+    const aT = p.aId && state.times?.[p.aId]?.[series];
+    const bT = p.bId && state.times?.[p.bId]?.[series];
+    return !!(aT || bT);
   }
 
   function athleteHTML(ath, lane, isSoloSlot, ran) {
@@ -963,21 +1022,36 @@ function buildStartlistRows(pairs, athletes, series) {
     const fs = nameLen > 22 ? Math.max(11, nameSize - 3)
              : nameLen > 16 ? Math.max(12, nameSize - 1)
              : nameSize;
-    const sTime = state.times && state.times[ath.id] && state.times[ath.id][series] || '';
-    const sDsq  = !!(state.disq && state.disq[ath.id] && state.disq[ath.id][series]);
-    const s1time = series === 's2' ? (state.times && state.times[ath.id] && state.times[ath.id].s1 || '') : '';
-    const s1dsq  = series === 's2' && !!(state.disq && state.disq[ath.id] && state.disq[ath.id].s1);
+    const sTime = state.times?.[ath.id]?.[series] || '';
+    const sDsq  = !!(state.disq?.[ath.id]?.[series]);
+    const s1time = series === 's2' ? (state.times?.[ath.id]?.s1 || '') : '';
+    const s1dsq  = series === 's2' && !!(state.disq?.[ath.id]?.s1);
     const badge  = rankBadge(ath.id);
-    const nameColor = ran ? 'color:var(--text3);' : '';
+    const pk     = pkBadge(ath);
     const timeDisp = sTime
       ? `<span style="color:${sDsq ? 'var(--red)' : 'var(--green)'};">${sDsq ? 'DSQ' : sTime}</span>`
       : (s1time ? `S1: <span style="color:${s1dsq ? 'var(--red)' : 'var(--text2)'};">${s1dsq ? 'DSQ' : s1time}</span>` : '');
     return `<div class="sl-athlete lane-${lane}" style="${ran ? 'opacity:.5;' : ''}">
       <div class="sl-lane-badge ${lane}">${lane}</div>
-      <div class="sl-athlete-name" style="font-size:${fs}px;${nameColor}">${esc(ath.name)}${badge}</div>
+      <div class="sl-athlete-name" style="font-size:${fs}px;${ran ? 'color:var(--text3);' : ''}">${esc(ath.name)}${pk}${badge}</div>
       <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${timeDisp ? ' · ' + timeDisp : ''}</div>
     </div>`;
   }
+
+  // Pusty slot z badge SOLO
+  const soloEmptySlot = `<div class="sl-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.35;">
+    <span style="font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:2px;
+      color:var(--orange);border:1px solid rgba(240,144,80,.4);
+      background:rgba(240,144,80,.08);padding:4px 14px;border-radius:4px;">SOLO</span>
+  </div>`;
+
+  // Overlay "BIEG ZAKOŃCZONY" — nakładany na całą parę gdy pobiegła
+  const ranOverlay = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
+    <span style="font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:3px;
+      text-transform:uppercase;color:var(--green);opacity:.9;
+      background:rgba(10,12,14,.7);border:1px solid rgba(80,200,144,.4);
+      padding:5px 18px;border-radius:4px;">✓ BIEG ZAKOŃCZONY</span>
+  </div>`;
 
   let rows = '';
   pairs.forEach((p, idx) => {
@@ -989,11 +1063,11 @@ function buildStartlistRows(pairs, athletes, series) {
     const laneA  = p.aLane || 'L';
     const [athL, athP] = laneA === 'L' ? [aAth, bAth] : [bAth, aAth];
 
-    // Wyróżnienie pierwszej pary — linia oddzielająca pod nią
-    const isFirst = p.pairNum === 1;
+    // Pierwsza para — pomarańczowa linia pod nią
+    const isFirst   = p.pairNum === 1;
     const firstStyle = isFirst ? 'border-bottom:3px solid var(--orange);' : '';
 
-    // Separator "POBIEGŁO" gdy poprzednia para pobiegła a ta jeszcze nie
+    // Separator "NA TORZE" gdy poprzednia pobiegła a ta nie
     const prevPair = idx > 0 ? pairs[idx - 1] : null;
     const prevRan  = prevPair ? pairRan(prevPair) : false;
     const separator = (!ran && prevRan && idx > 0)
@@ -1007,24 +1081,19 @@ function buildStartlistRows(pairs, athletes, series) {
          </div>`
       : '';
 
-    // Pusty slot z badge SOLO — w miejscu nieobecnego zawodnika
-    const soloEmptySlot = `<div class="sl-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.4;">
-      <span style="font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:2px;
-        color:var(--orange);border:1px solid rgba(240,144,80,.4);
-        background:rgba(240,144,80,.08);padding:4px 14px;border-radius:4px;">SOLO</span>
-    </div>`;
-
-    rows += separator + `<div class="sl-pair-row ${altCls}" style="${firstStyle}${ran ? 'opacity:.6;' : ''}">
+    rows += separator + `<div class="sl-pair-row ${altCls}" style="position:relative;${firstStyle}${ran ? 'opacity:.6;' : ''}">
       <div class="sl-pair-num" style="font-size:${numSize}px;${ran ? 'color:var(--text3);' : ''}">
         ${p.pairNum}
       </div>
       ${isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, ran)}
       ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
       ${isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, ran)}
+      ${ran ? ranOverlay : ''}
     </div>`;
   });
   return rows;
 }
+
 
 function _renderSlSection(id, html, speed, vp) {
   const track = document.getElementById('sl-track-' + id);
