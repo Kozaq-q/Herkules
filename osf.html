@@ -2298,12 +2298,12 @@ function buildTeamSeries1() {
   }
 
   // Sortuj kwalifikujące: najsłabsze (największa suma) → najlepsze (najmniejsza suma)
-  // Drużyny bez pełnego zestawu N wyników (sum=Infinity) idą NA KONIEC —
-  // nie wiadomo jak silne są, więc nie traktujemy ich jako "najsłabszych"
+  // Drużyny bez pełnego zestawu N wyników (sum=Infinity) idą NA POCZĄTEK —
+  // siła nieznana = traktujemy jako najsłabsze, nie fair żeby startowały z silniejszymi
   eligible.sort((a, b) => {
     if (a.sum === Infinity && b.sum === Infinity) return 0;
-    if (a.sum === Infinity) return 1;  // brak N wyników → na koniec (nieznana siła)
-    if (b.sum === Infinity) return -1;
+    if (a.sum === Infinity) return -1; // brak N wyników → na początku (najsłabsi)
+    if (b.sum === Infinity) return 1;
     return b.sum - a.sum; // największa suma = najwolniejsza = na początku
   });
 
