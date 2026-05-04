@@ -7497,238 +7497,93 @@ function downloadTemplateCSV() {
 }
 
 function downloadTemplateXLSX() {
-  if (typeof XLSX === 'undefined') { alert('Biblioteka Excel nie jest załadowana — spróbuj za chwilę.'); return; }
+  const contestName = (state.contest?.name || '').trim();
+  const contestCity = (state.contest?.city || '').trim();
+  const contestDate = (state.contest?.date || '').trim();
+  const meta = [contestCity, contestDate].filter(Boolean).join(' · ');
 
-  const contestName = state.contest?.name || 'Zawody OSF';
-  const contestCity = state.contest?.city || '';
-  const contestDate = state.contest?.date || '';
-  const contestMeta = [contestCity, contestDate].filter(Boolean).join('  ·  ');
+  // Przykładowe wiersze
+  const examples = TEMPLATE_EXAMPLE.map((r, i) => ({
+    lp: i + 1, name: r[1], gender: r[2], team: r[3], m36: r[4] || '', pk: r[5] || ''
+  }));
 
-  const wb = XLSX.utils.book_new();
+  // Puste wiersze do uzupełnienia
+  const emptyRows = [];
+  for (let i = examples.length + 1; i <= 60; i++) emptyRows.push(i);
 
-  // ── KOLORY I STYLE ──────────────────────────────
-  const C = {
-    navy:    '0d1b2a',   // ciemny granat — nagłówek bloku info
-    steel:   '1c3a5a',   // stalowy — nagłówek tabeli
-    steelL:  '2a5080',   // jaśniejszy stalowy — akcent
-    gold:    'c8a000',   // złoty — akcenty OSF
-    goldL:   'fdf3c0',   // jasny złoty — tło nagłówka
-    blue:    '1a5fa8',   // niebieski — M36+
-    blueL:   'cce0ff',   // jasny niebieski — tło M36+
-    red:     'a81a1a',   // czerwony — PK
-    redL:    'ffd6d6',   // jasny czerwony — tło PK
-    maleC:   '1a5fa8',   // kolor M
-    femaleC: '993388',   // kolor K
-    maleL:   'cce0ff',   // tło M
-    femaleL: 'f5d6ee',   // tło K
-    white:   'FFFFFF',
-    offWhite:'e8edf4',   // wyraźniejszy kontrast naprzemiennych wierszy
-    light:   'dce4f0',
-    mid:     'b0bcc8',
-    dark:    '1a2535',
-    gray:    '5a6a7a',
-    grayL:   'dce4f0',   // ciemniejszy pasek Lp
-  };
-
-  function style(overrides) {
-    return Object.assign({
-      font:      { name: 'Calibri', sz: 11, color: { rgb: C.dark } },
-      alignment: { vertical: 'center' },
-      border: {
-        top:    { style: 'thin', color: { rgb: C.mid } },
-        bottom: { style: 'thin', color: { rgb: C.mid } },
-        left:   { style: 'thin', color: { rgb: C.mid } },
-        right:  { style: 'thin', color: { rgb: C.mid } },
-      }
-    }, overrides);
+  function exRow(r) {
+    const gColor = r.gender === 'M' ? '#1a5fa8' : '#993388';
+    const gBg    = r.gender === 'M' ? '#cce0ff'  : '#f5d6ee';
+    return `<tr>
+      <td style="text-align:center;color:#5a6a7a;background:#dce4f0;font-size:10px;">${r.lp}</td>
+      <td style="font-weight:600;color:#1a2535;">${r.name}</td>
+      <td style="text-align:center;font-weight:700;color:${gColor};background:${gBg};">${r.gender}</td>
+      <td style="color:#1a2535;">${r.team}</td>
+      <td style="text-align:center;font-weight:700;color:#1a5fa8;background:${r.m36 ? '#cce0ff' : '#fff'};">${r.m36}</td>
+      <td style="text-align:center;font-weight:700;color:#a81a1a;background:${r.pk ? '#ffd6d6' : '#fff'};">${r.pk}</td>
+    </tr>`;
   }
 
-  // Wiersz 1: Blok tytułowy OSF — scalony A1:F1
-  // Wiersz 2: Nazwa zawodów — scalony A2:F2
-  // Wiersz 3: Meta (miasto, data) — scalony A3:F3
-  // Wiersz 4: pusty separator
-  // Wiersz 5: Instrukcja skrócona — scalony A5:F5
-  // Wiersz 6: Nagłówki kolumn
-  // Wiersz 7+: dane
-
-  const HDR_ROW = 5; // wiersz nagłówka tabeli (1-based)
-  const DATA_START = 6;
-
-  // Buduj arkusz z pustą macierzą (wypełnimy ręcznie)
-  const aoa = [
-    ['OSF — LISTA STARTOWA', '', '', '', '', ''],     // row 1
-    [contestName, '', '', '', '', ''],                           // row 2
-    [contestMeta, '', '', '', '', ''],                           // row 3
-    ['', '', '', '', '', ''],                                    // row 4 separator
-    ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna / Jednostka', 'M36+', 'PK'],  // row 6
-    ...TEMPLATE_EXAMPLE.map((r, i) => [i+1, r[1], r[2], r[3], r[4], r[5] || '']),
-  ];
-
-  // Dodaj 80 pustych wierszy dla wpisywania
-  for (let i = TEMPLATE_EXAMPLE.length + 1; i <= 80; i++) {
-    aoa.push([i, '', '', '', '', '']);
+  function emptyRow(i, shade) {
+    const bg = shade ? '#e8edf4' : '#ffffff';
+    return `<tr>
+      <td style="text-align:center;color:#b0bcc8;background:#dce4f0;font-size:10px;">${i}</td>
+      <td style="background:${bg};"></td>
+      <td style="background:${bg};"></td>
+      <td style="background:${bg};"></td>
+      <td style="background:${bg};"></td>
+      <td style="background:${bg};"></td>
+    </tr>`;
   }
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:x="urn:schemas-microsoft-com:office:excel"
+    xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>
+    <x:ExcelWorksheet><x:Name>Lista startowa</x:Name>
+    <x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/>
+    <x:SplitHorizontal>5</x:SplitHorizontal><x:TopRowBottomPane>5</x:TopRowBottomPane>
+    </x:WorksheetOptions></x:ExcelWorksheet>
+  </x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+  <style>
+    body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border: 1px solid #b0bcc8; padding: 5px 8px; }
+    .hdr-osf   { background: #0d1b2a; color: #c8a000; font-size: 18pt; font-weight: bold; text-align: center; height: 36px; }
+    .hdr-name  { background: #1c3a5a; color: #ffffff; font-size: 13pt; font-weight: bold; text-align: center; height: 24px; }
+    .hdr-meta  { background: #2a5080; color: #fdf3c0; font-size: 10pt; font-style: italic; text-align: center; height: 20px; }
+    .hdr-sep   { background: #0d1b2a; height: 6px; }
+    .col-hdr th { background: #1c3a5a; color: #ffffff; font-weight: bold; font-size: 11pt; text-align: center; height: 28px; border-color: #2a5080; }
+    .col-hdr th.m36h { background: #1a5fa8; }
+    .col-hdr th.pkh  { background: #a81a1a; }
+  </style>
+</head>
+<body>
+<table>
+  <tr><td colspan="6" class="hdr-osf">OSF &mdash; LISTA STARTOWA</td></tr>
+  <tr><td colspan="6" class="hdr-name">${contestName || 'Nazwa zawodów'}</td></tr>
+  <tr><td colspan="6" class="hdr-meta">${meta || '&nbsp;'}</td></tr>
+  <tr><td colspan="6" class="hdr-sep"></td></tr>
+  <tr class="col-hdr">
+    <th style="width:40px;">Lp</th>
+    <th style="width:320px;">Stopień / Imię i Nazwisko</th>
+    <th style="width:55px;">Płeć</th>
+    <th style="width:220px;">Drużyna / Jednostka</th>
+    <th class="m36h" style="width:65px;">M36+</th>
+    <th class="pkh"  style="width:55px;">PK</th>
+  </tr>
+  ${examples.map(exRow).join('\n  ')}
+  ${emptyRows.map((i, idx) => emptyRow(i, idx % 2 === 0)).join('\n  ')}
+</table>
+</body></html>`;
 
-  // ── SZEROKOŚCI I WYSOKOŚCI ──────────────────────
-  ws['!cols'] = [
-    { wch: 5  },   // Lp
-    { wch: 42 },   // Nazwisko
-    { wch: 7  },   // Płeć
-    { wch: 30 },   // Drużyna
-    { wch: 9  },   // M36+
-    { wch: 9  },   // PK
-  ];
-
-  const totalRows = aoa.length;
-  ws['!rows'] = Array(totalRows).fill(null).map((_, i) => {
-    if (i === 0) return { hpt: 36 };  // tytuł OSF
-    if (i === 1) return { hpt: 22 };  // nazwa zawodów
-    if (i === 2) return { hpt: 18 };  // meta
-    if (i === 3) return { hpt: 8  };  // separator
-    if (i === 4) return { hpt: 28 };  // nagłówek tabeli
-    return { hpt: 22 };               // dane
-  });
-
-  // ── SCALANIE ────────────────────────────────────
-  ws['!merges'] = [
-    { s: { r:0, c:0 }, e: { r:0, c:5 } },  // tytuł
-    { s: { r:1, c:0 }, e: { r:1, c:5 } },  // nazwa zawodów
-    { s: { r:2, c:0 }, e: { r:2, c:5 } },  // meta
-    { s: { r:3, c:0 }, e: { r:3, c:5 } },  // separator
-  ];
-
-  // ── FREEZE ──────────────────────────────────────
-  ws['!freeze'] = { xSplit: 0, ySplit: HDR_ROW };
-
-  // ── STYLE WIERSZY TYTUŁOWYCH ────────────────────
-
-  // Wiersz 1 — OSF HERKULES
-  ws['A1'].s = {
-    font:      { name: 'Calibri', bold: true, sz: 18, color: { rgb: C.gold } },
-    fill:      { fgColor: { rgb: C.navy } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-  };
-
-  // Wiersz 2 — nazwa zawodów
-  ws['A2'].s = {
-    font:      { name: 'Calibri', bold: true, sz: 13, color: { rgb: C.white } },
-    fill:      { fgColor: { rgb: C.steel } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-  };
-
-  // Wiersz 3 — meta
-  ws['A3'].s = {
-    font:      { name: 'Calibri', sz: 11, color: { rgb: C.goldL }, italic: true },
-    fill:      { fgColor: { rgb: C.steelL } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-  };
-
-  // Wiersz 4 — separator (ciemne tło bez treści)
-  ws['A4'].s = { fill: { fgColor: { rgb: C.navy } } };
-
-  // Wiersz 5 — nagłówki kolumn
-  const colKeys = ['A','B','C','D','E','F'];
-  const hdrLabels = ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna / Jednostka', 'M36+', 'PK'];
-  colKeys.forEach((c, ci) => {
-    const ref = c + HDR_ROW;
-    if (!ws[ref]) ws[ref] = { t: 's', v: hdrLabels[ci] };
-    ws[ref].s = {
-      font:      { name: 'Calibri', bold: true, sz: 11, color: { rgb: C.white } },
-      fill:      { fgColor: { rgb: C.steel } },
-      alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
-      border: {
-        top:    { style: 'medium', color: { rgb: C.steelL } },
-        bottom: { style: 'medium', color: { rgb: C.gold } },
-        left:   { style: 'thin',   color: { rgb: C.steelL } },
-        right:  { style: 'thin',   color: { rgb: C.steelL } },
-      }
-    };
-  });
-
-  // Wiersz 6 — specjalne kolory dla E i F (M36+ i PK)
-  ws['E' + HDR_ROW].s = Object.assign({}, ws['E' + HDR_ROW].s, {
-    fill: { fgColor: { rgb: C.blue } },
-    font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: C.white } },
-  });
-  ws['F' + HDR_ROW].s = Object.assign({}, ws['F' + HDR_ROW].s, {
-    fill: { fgColor: { rgb: C.red } },
-    font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: C.white } },
-  });
-
-  // ── STYLE WIERSZY DANYCH ────────────────────────
-  for (let r = DATA_START; r <= aoa.length; r++) {
-    const isEven = (r - DATA_START) % 2 === 0;
-    const rowBg  = isEven ? C.white : C.offWhite;
-    const isExample = r < DATA_START + TEMPLATE_EXAMPLE.length;
-
-    colKeys.forEach((c, ci) => {
-      const ref  = c + r;
-      if (!ws[ref]) ws[ref] = { t: 's', v: '' };
-      const cell = ws[ref];
-      const val  = String(cell.v || '');
-
-      const baseBorder = {
-        top:    { style: 'thin', color: { rgb: C.mid } },
-        bottom: { style: 'thin', color: { rgb: C.mid } },
-        left:   { style: 'thin', color: { rgb: C.mid } },
-        right:  { style: 'thin', color: { rgb: C.mid } },
-      };
-
-      if (ci === 0) {
-        // Lp
-        cell.s = { font: { name:'Calibri', sz:10, color:{rgb:C.gray} }, fill: { fgColor:{rgb:C.grayL} }, alignment:{horizontal:'center',vertical:'center'}, border: baseBorder };
-      } else if (ci === 2) {
-        // Płeć
-        const isM = val === 'M';
-        const isK = val === 'K';
-        cell.s = {
-          font:      { name:'Calibri', bold: true, sz:11, color:{rgb: isM ? C.maleC : isK ? C.femaleC : C.dark} },
-          fill:      { fgColor:{rgb: isM ? C.maleL : isK ? C.femaleL : rowBg} },
-          alignment: { horizontal:'center', vertical:'center' },
-          border:    baseBorder
-        };
-      } else if (ci === 4) {
-        // M36+
-        cell.s = val
-          ? { font:{name:'Calibri',bold:true,sz:10,color:{rgb:C.blue}}, fill:{fgColor:{rgb:C.blueL}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder }
-          : { font:{name:'Calibri',sz:10,color:{rgb:C.mid}}, fill:{fgColor:{rgb:rowBg}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder };
-      } else if (ci === 5) {
-        // PK
-        cell.s = val
-          ? { font:{name:'Calibri',bold:true,sz:10,color:{rgb:C.red}}, fill:{fgColor:{rgb:C.redL}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder }
-          : { font:{name:'Calibri',sz:10,color:{rgb:C.mid}}, fill:{fgColor:{rgb:rowBg}}, alignment:{horizontal:'center',vertical:'center'}, border:baseBorder };
-      } else {
-        // Imię/nazwisko, drużyna
-        cell.s = {
-          font:      { name:'Calibri', sz:11, color:{rgb: isExample ? C.dark : C.gray} },
-          fill:      { fgColor:{rgb:rowBg} },
-          alignment: { vertical:'center', wrapText: false },
-          border:    baseBorder
-        };
-      }
-    });
-  }
-
-  // Lewa linia akcentująca kolumny kategorii
-  for (let r = DATA_START; r <= aoa.length; r++) {
-    const eRef = 'E' + r;
-    if (ws[eRef] && ws[eRef].s) {
-      ws[eRef].s.border = Object.assign({}, ws[eRef].s.border, {
-        left: { style: 'medium', color: { rgb: C.blue } }
-      });
-    }
-    const fRef = 'F' + r;
-    if (ws[fRef] && ws[fRef].s) {
-      ws[fRef].s.border = Object.assign({}, ws[fRef].s.border, {
-        left: { style: 'thin', color: { rgb: C.mid } }
-      });
-    }
-  }
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Lista startowa');
-  XLSX.writeFile(wb, 'osf_lista_startowa.xlsx');
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'osf_lista_startowa.xls'; a.click();
+  URL.revokeObjectURL(url);
 }
 
 function downloadTemplateODS() {
