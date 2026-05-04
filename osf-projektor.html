@@ -1007,20 +1007,20 @@ function buildStartlistRows(pairs, athletes, series) {
          </div>`
       : '';
 
-    const soloBadge = isSolo
-      ? `<span style="font-size:10px;font-weight:800;letter-spacing:1.5px;
-          color:var(--orange);border:1px solid rgba(240,144,80,.4);
-          background:rgba(240,144,80,.1);padding:2px 8px;border-radius:3px;
-          margin-left:8px;">SOLO</span>`
-      : '';
+    // Pusty slot z badge SOLO — w miejscu nieobecnego zawodnika
+    const soloEmptySlot = `<div class="sl-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.4;">
+      <span style="font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:2px;
+        color:var(--orange);border:1px solid rgba(240,144,80,.4);
+        background:rgba(240,144,80,.08);padding:4px 14px;border-radius:4px;">SOLO</span>
+    </div>`;
 
     rows += separator + `<div class="sl-pair-row ${altCls}" style="${firstStyle}${ran ? 'opacity:.6;' : ''}">
       <div class="sl-pair-num" style="font-size:${numSize}px;${ran ? 'color:var(--text3);' : ''}">
-        ${p.pairNum}${soloBadge}
+        ${p.pairNum}
       </div>
-      ${athleteHTML(athL, 'L', isSolo && laneA === 'P', ran)}
+      ${isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, ran)}
       ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
-      ${athleteHTML(athP, 'P', isSolo && laneA === 'L', ran)}
+      ${isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, ran)}
     </div>`;
   });
   return rows;
