@@ -5608,9 +5608,12 @@ function calcIndividualPoints(rank, N) {
 // Punkty drużynowe: N = liczba drużyn, M = mnożnik
 // 1. miejsce: N*M+1, 2.: N*M-1, 3.: N*M-2, ...k: N*M-k (k>=2)
 function calcTeamPoints(rank, N, multiplier) {
-  const base = N * multiplier;
-  if (rank === 1) return base + 1;
-  return Math.max(0, base - rank + 1);
+  // 1. miejsce: (N+1) × mult
+  // 2. miejsce: (N-1) × mult
+  // k. miejsce: (N+1-(rank===1?0:rank)) × mult
+  // Uproszczone: rank=1 → (N+1)×mult, rank>1 → (N+1-rank)×mult
+  if (rank === 1) return (N + 1) * multiplier;
+  return Math.max(0, (N + 1 - rank) * multiplier);
 }
 
 function getMultiplier() {
@@ -5768,7 +5771,7 @@ function renderKlasyfikacja() {
   const fInd  = document.getElementById('klas-formula-ind');
   const fTeam = document.getElementById('klas-formula-team');
   if (fInd)  fInd.textContent  = 'N=' + N_men  + ' · 1msc=' + (N_men+1) + ' · 2msc=' + Math.max(0,N_men-1) + ' · 3msc=' + Math.max(0,N_men-2) + ' · ...';
-  if (fTeam) fTeam.textContent = 'N=' + N_team + ' · ×' + mult + ' · pula=' + (N_team*mult) + ' · 1msc=' + (N_team*mult+1) + ' · 2msc=' + Math.max(0,N_team*mult-1) + ' · ...';
+  if (fTeam) fTeam.textContent = 'N=' + N_team + ' · ×' + mult + ' · 1msc=' + ((N_team+1)*mult) + ' · 2msc=' + Math.max(0,(N_team)*mult) + ' · 3msc=' + Math.max(0,(N_team-1)*mult) + ' · ...';
 
   // Tabela główna
   const tbody = document.getElementById('klas-tbody');
