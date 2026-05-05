@@ -981,7 +981,7 @@ tr:last-child > td { border-bottom: none; }
             <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Maks. punktujących M</div>
             <button onclick="toggleSetupTip('tip-max-scoring')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
           </div>
-          <input type="number" id="osf-max-scoring-m" min="0" max="20" value="0" oninput="saveSetup()"
+          <input type="number" id="osf-max-scoring-m" min="0" max="20" value="0" onchange="saveSetup()" onblur="saveSetup()"
             style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--male);text-align:center;width:80px;background:none;border:none;outline:none;" />
           <div id="tip-max-scoring" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
             Ile najlepszych zawodników M z każdej drużyny liczy się do sumy ind. dla klasyfikacji drużynowej.<br>
@@ -5627,12 +5627,27 @@ function getRankedMen() {
     bestSec: parseTime(bestTime(a.id))
   })).sort((a, b) => a.bestSec - b.bestSec);
 
+  // Precompute scoring sets per team jeśli limit aktywny
+  const limit = MAX_SCORING_M();
+  const scoringIds = new Map(); // team → Set<id>
+  if (limit > 0) {
+    const teams = [...new Set(men.map(a => a.team))];
+    teams.forEach(team => {
+      const ids = getScoringAthleteIds(team);
+      scoringIds.set(team, ids);
+    });
+  }
+
   let rank = 1;
   return ranked.map((r, i) => {
-    const noBest = r.bestSec === Infinity;
-    const pts    = noBest ? 0 : calcIndividualPoints(rank, N);
+    const noBest  = r.bestSec === Infinity;
+    // Sprawdź czy zawodnik punktuje do klasyfikacji drużynowej
+    const scores  = limit === 0 || !r.athlete.team
+      ? true
+      : (scoringIds.get(r.athlete.team)?.has(r.athlete.id) ?? true);
+    const pts     = (noBest || !scores) ? 0 : calcIndividualPoints(rank, N);
     if (!noBest) rank++;
-    return { ...r, rank: noBest ? null : rank - 1, pts, N };
+    return { ...r, rank: noBest ? null : rank - 1, pts, scores, N };
   });
 }
 
