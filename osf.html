@@ -1434,6 +1434,13 @@ tr:last-child > td { border-bottom: none; }
           <div style="font-size:11px;color:var(--text3);margin-top:2px;">Gdy po sparowaniu zostają osoby bez pary — dobierz je ze sobą, nawet jeśli mają ten sam wymagany tor.</div>
         </div>
       </label>
+      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
+        <input type="checkbox" id="osf-pk-at-end" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text2);">PK startują na końcu</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Domyślnie zawodnicy PK biegną na początku serii. Zaznacz, aby startowali na końcu.</div>
+        </div>
+      </label>
       <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(232,148,77,.04);border-radius:var(--radius);border:1px solid rgba(232,148,77,.25);">
         <input type="checkbox" id="osf-ignore-lane-rule" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
         <div>
@@ -1638,6 +1645,7 @@ let state = {
     teamMultiplier: 3, // mnożnik punktowy dla biegu drużynowego
     allowSameTeamPair: false,
     allowSoloPair: false,
+    pkAtEnd: false,
     ignoreLaneRule: false  // gdy true — tor z numeru bib ignorowany, dowolne parowanie
   }
 };
@@ -3774,7 +3782,8 @@ function drawSeries1(gender) {
     const normPairs = pairPool(normPool, allowSameTeam, allowSoloPair);
 
     // PK NA POCZĄTKU, normalni po nich — renumeruj
-    const allPairs = [...pkPairs, ...normPairs];
+    const pkAtEnd  = state.setup && state.setup.pkAtEnd;
+    const allPairs = pkAtEnd ? [...normPairs, ...pkPairs] : [...pkPairs, ...normPairs];
     allPairs.forEach((p, i) => { p.pairNum = i + 1; });
     return allPairs;
   }
@@ -4507,7 +4516,8 @@ function buildSeries2(gender) {
     // PK pierwsi, normalni po nich
     const pkEntries   = buildEntries(pkResult.solos,   pkResult.pairs);
     const normEntries = buildEntries(normResult.solos, normResult.pairs);
-    const result = [...pkEntries, ...normEntries];
+    const pkAtEnd2 = state.setup && state.setup.pkAtEnd;
+    const result = pkAtEnd2 ? [...normEntries, ...pkEntries] : [...pkEntries, ...normEntries];
     result.forEach((p, i) => { p.pairNum = i + 1; });
     return result;
   }
@@ -5143,6 +5153,7 @@ function renderSetupPage() {
   setVal('osf-team-multiplier',  s.teamMultiplier || 3);
   setChk('osf-allow-same-team-pair', s.allowSameTeamPair);
   setChk('osf-allow-solo-pair',      s.allowSoloPair);
+  setChk('osf-pk-at-end',            s.pkAtEnd);
   setChk('osf-ignore-lane-rule',     s.ignoreLaneRule);
   updateMultiplierButtons();
 
@@ -5170,6 +5181,7 @@ function saveSetup() {
   state.setup.teamMultiplier = getNum('osf-team-multiplier', 3);
   state.setup.allowSameTeamPair = getChk('osf-allow-same-team-pair');
   state.setup.allowSoloPair     = getChk('osf-allow-solo-pair');
+  state.setup.pkAtEnd           = getChk('osf-pk-at-end');
   state.setup.ignoreLaneRule    = getChk('osf-ignore-lane-rule');
 
   // Synchronizuj contest z setup
