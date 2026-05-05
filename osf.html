@@ -3631,6 +3631,27 @@ function _importRawCSV(raw) {
 // ═══════════════════════════════════════════════════
 // SERIES 1 — RANDOM DRAW
 // ═══════════════════════════════════════════════════
+// Wyciąga numer zawodnika wewnątrz drużyny z bib (X/Y → Y)
+function getAthInternalNum(a) {
+  const s = String(a.bib || '');
+  if (s.includes('/')) return parseInt(s.split('/')[1]) || 999;
+  return parseInt(s) || 999;
+}
+
+// Sortuje pary wg najniższego numeru porządkowego zawodnika w parze (miękka zasada)
+// Kolejność drużyn między sobą nie jest narzucona — tylko numer wewnętrzny
+function sortPairsByInternalOrder(pairs, athletes) {
+  function minInternalNum(p) {
+    const a = p.aId ? athletes.find(x => x.id === p.aId) : null;
+    const b = p.bId ? athletes.find(x => x.id === p.bId) : null;
+    const nA = a ? getAthInternalNum(a) : 999;
+    const nB = b ? getAthInternalNum(b) : 999;
+    return Math.min(nA, nB);
+  }
+  // Stabilne sortowanie — zachowuje istniejącą kolejność gdy remis
+  return [...pairs].sort((a, b) => minInternalNum(a) - minInternalNum(b));
+}
+
 function drawSeries1(gender) {
   // gender: 'M', 'K', lub undefined = oba
   const athletes = state.athletes;
@@ -3779,9 +3800,12 @@ function drawSeries1(gender) {
     const pkPairs = pairPool(pkPool, true, true);
 
     // Normalni zawodnicy
-    const normPairs = pairPool(normPool, allowSameTeam, allowSoloPair);
+    const normPairsRaw = pairPool(normPool, allowSameTeam, allowSoloPair);
 
-    // PK NA POCZĄTKU, normalni po nich — renumeruj
+    // Sortuj normalnych wg numeru porządkowego zawodnika (miękka zasada)
+    const normPairs = sortPairsByInternalOrder(normPairsRaw, athletes);
+
+    // PK NA POCZĄTKU lub na końcu — renumeruj
     const pkAtEnd  = state.setup && state.setup.pkAtEnd;
     const allPairs = pkAtEnd ? [...normPairs, ...pkPairs] : [...pkPairs, ...normPairs];
     allPairs.forEach((p, i) => { p.pairNum = i + 1; });
@@ -4514,8 +4538,10 @@ function buildSeries2(gender) {
     }
 
     // PK pierwsi, normalni po nich
-    const pkEntries   = buildEntries(pkResult.solos,   pkResult.pairs);
-    const normEntries = buildEntries(normResult.solos, normResult.pairs);
+    const pkEntries      = buildEntries(pkResult.solos,   pkResult.pairs);
+    const normEntriesRaw = buildEntries(normResult.solos, normResult.pairs);
+    // Sortuj normalnych wg numeru porządkowego zawodnika (miękka zasada)
+    const normEntries = sortPairsByInternalOrder(normEntriesRaw, state.athletes || []);
     const pkAtEnd2 = state.setup && state.setup.pkAtEnd;
     const result = pkAtEnd2 ? [...normEntries, ...pkEntries] : [...pkEntries, ...normEntries];
     result.forEach((p, i) => { p.pairNum = i + 1; });
