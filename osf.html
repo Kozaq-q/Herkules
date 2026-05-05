@@ -4538,10 +4538,9 @@ function buildSeries2(gender) {
     }
 
     // PK pierwsi, normalni po nich
-    const pkEntries      = buildEntries(pkResult.solos,   pkResult.pairs);
-    const normEntriesRaw = buildEntries(normResult.solos, normResult.pairs);
-    // Sortuj normalnych wg numeru porządkowego zawodnika (miękka zasada)
-    const normEntries = sortPairsByInternalOrder(normEntriesRaw, state.athletes || []);
+    const pkEntries   = buildEntries(pkResult.solos,   pkResult.pairs);
+    const normEntries = buildEntries(normResult.solos, normResult.pairs);
+    // S2: kolejność wg wyników S1 — nie sortujemy wg numerów porządkowych
     const pkAtEnd2 = state.setup && state.setup.pkAtEnd;
     const result = pkAtEnd2 ? [...normEntries, ...pkEntries] : [...pkEntries, ...normEntries];
     result.forEach((p, i) => { p.pairNum = i + 1; });
