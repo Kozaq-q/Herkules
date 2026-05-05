@@ -3635,12 +3635,23 @@ function drawSeries1(gender) {
     return parseInt(s) || 1;
   }
 
+  function getTeamNum(a) {
+    // Wyciąga numer drużyny z bib (X/Y → X)
+    const s = String(a.bib || '');
+    if (s.includes('/')) return parseInt(s.split('/')[0]) || 1;
+    return 1; // brak formatu X/Y — zakładamy drużynę 1
+  }
+
   function getLaneFromBib(a) {
-    // Gdy ignoreLaneRule — losuj tor
     if (state.setup && state.setup.ignoreLaneRule) {
       return Math.random() < 0.5 ? 'L' : 'P';
     }
-    return getBibNum(a) % 2 === 1 ? 'L' : 'P';
+    const teamNum  = getTeamNum(a);
+    const athNum   = getBibNum(a);
+    // Drużyna nieparzysta: nieparzysty zawodnik → L, parzysty → P
+    // Drużyna parzysta:   nieparzysty zawodnik → P, parzysty → L
+    // Reguła: jeśli (teamNum + athNum) nieparzyste → L, parzyste → P
+    return (teamNum + athNum) % 2 === 0 ? 'L' : 'P';
   }
 
   // Zachowaj zablokowane pary (klucz: "s1_M_3" itp.)
@@ -3751,7 +3762,8 @@ function drawSeries1(gender) {
       return ordered;
     }
 
-    const allowSameTeam = state.setup && state.setup.allowSameTeamPair;
+    // W S1 zakaz pary z tej samej drużyny jest BEZWZGLĘDNY — nawet przy ustawieniu allowSameTeamPair
+    const allowSameTeam = false; // S1 — zawsze false, zasada drużynowa
     const allowSoloPair = state.setup && state.setup.allowSoloPair;
 
     // PK zawodnicy — paruj między sobą (bez reguły drużyn, losowo)
@@ -4128,7 +4140,7 @@ function athleteCardHTML(a, lane, time, series, pairNum, gender) {
   return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
     '<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">' +
-    '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a.m36 ? ' <span class="m36-badge">M36+</span>' : '') + '</span>' +
+    '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a.m36 ? ' <span class="m36-badge">M36+</span>' : '') + (a.bib ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:3px;">#' + a.bib + '</span>' : '') + '</span>' +
     '<span style="font-family:var(--font-m);font-size:10px;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.25);padding:1px 5px;border-radius:2px;cursor:pointer;flex-shrink:0;" title="Zmień numer startowy" onclick="event.stopPropagation();openBibSwap(' + a.id + ')">' + a.bib + '</span>' +
     swapBtn +
     '</div>' +
@@ -4671,7 +4683,7 @@ function renderResultsForGender(gender, tbodyId) {
     html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
     html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' +
       (myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'') + rankDisp + '</td>';
-    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + (r.athlete.m36 ? ' <span class="m36-badge">M36+</span>' : '') + '</td>';
+    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + (r.athlete.m36 ? ' <span class="m36-badge">M36+</span>' : '') + (r.athlete.bib ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:4px;">#' + r.athlete.bib + '</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s1disp + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s2disp + '</td>';
@@ -4717,7 +4729,7 @@ function renderResultsM36() {
     const s2disp  = r.s2dsq ? '<span style="color:var(--red);">' + r.s2 + ' DSQ</span>' : (r.s2||'—');
     html += '<tr>'
       + '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + medal + (myRank||'—') + '</td>'
-      + '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + ' <span class="m36-badge">M36+</span></td>'
+      + '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + ' <span class="m36-badge">M36+</span>' + (r.athlete.bib ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:4px;">#' + r.athlete.bib + '</span>' : '') + '</td>'
       + '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>'
       + '<td class="mono" style="font-size:12px;">' + s1disp + '</td>'
       + '<td class="mono" style="font-size:12px;">' + s2disp + '</td>'
