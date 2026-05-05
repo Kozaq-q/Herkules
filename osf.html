@@ -975,6 +975,20 @@ tr:last-child > td { border-bottom: none; }
             </div>
           </div>
         </div>
+        <!-- Maks. punktujących M -->
+        <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;text-align:center;position:relative;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Maks. punktujących M</div>
+            <button onclick="toggleSetupTip('tip-max-scoring')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
+          </div>
+          <input type="number" id="osf-max-scoring-m" min="0" max="20" value="0" oninput="saveSetup()"
+            style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--male);text-align:center;width:80px;background:none;border:none;outline:none;" />
+          <div id="tip-max-scoring" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
+            Ile najlepszych zawodników M z każdej drużyny liczy się do sumy ind. dla klasyfikacji drużynowej.<br>
+            0 = wszyscy punktują (brak limitu).<br>
+            Zawodnicy powyżej limitu nadal liczą się do klasyfikacji indywidualnej i zabierają miejsca, ale nie dodają punktów swojej drużynie.
+          </div>
+        </div>
         <!-- Mnożnik -->
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Mnożnik</div>
@@ -1641,6 +1655,7 @@ let state = {
     accentColor: '#e8944d',
     name: '', city: '', date: '', org: '', notes: '',
     teamCount: 8,      // N — najlepszych z biegu ind. do sumy + N-ty na mecie
+    maxScoringM: 0,    // maks. punktujących M do sumy ind. (0 = wszyscy)
     teamMin: 8,        // min. skład do startu (poniżej → DSQ, brak pary, brak pkt)
     teamMultiplier: 3, // mnożnik punktowy dla biegu drużynowego
     allowSameTeamPair: false,
@@ -1652,6 +1667,7 @@ let state = {
 
 // Dynamiczne stałe drużynowe — czytają z setup
 function TEAM_COUNT() { return state.setup && state.setup.teamCount ? state.setup.teamCount : 8; }
+function MAX_SCORING_M() { return (state.setup && state.setup.maxScoringM) ? state.setup.maxScoringM : 0; }
 function TEAM_MIN_VAL() { return state.setup && state.setup.teamMin ? state.setup.teamMin : 8; }
 
 // ═══════════════════════════════════════════════════
@@ -2226,7 +2242,23 @@ function getTeamIndividualSum(team) {
     .filter(t => t < Infinity)
     .sort((a, b) => a - b);
   if (times.length < TEAM_COUNT()) return Infinity;
-  return times.slice(0, TEAM_COUNT()).reduce((s, t) => s + t, 0);
+  // Ograniczenie MAX_SCORING_M — tylko X najlepszych punktuje do sumy ind.
+  const limit = MAX_SCORING_M();
+  const take  = limit > 0 ? Math.min(limit, TEAM_COUNT(), times.length) : TEAM_COUNT();
+  return times.slice(0, take).reduce((s, t) => s + t, 0);
+}
+
+// Zwraca zbiór id zawodników M którzy PUNKTUJĄ do klasyfikacji drużynowej
+// (X najlepszych z drużyny wg czasu, nie-PK)
+function getScoringAthleteIds(team) {
+  const limit = MAX_SCORING_M();
+  if (!limit) return null; // null = wszyscy punktują
+  const athletes = getTeamAthletes(team); // bez PK
+  const ranked = athletes
+    .filter(a => parseTime(bestTime(a.id)) < Infinity)
+    .sort((a, b) => parseTime(bestTime(a.id)) - parseTime(bestTime(b.id)));
+  const scoringIds = new Set(ranked.slice(0, limit).map(a => a.id));
+  return scoringIds;
 }
 
 function getTeamSumDisplay(team) {
@@ -4700,14 +4732,32 @@ function renderResultsForGender(gender, tbodyId) {
 
   let html = '';
 
+  // Precompute scoring sets per team (dla M z limitem)
+  const scoringCache = new Map(); // team → Set<id> | null
+  function isScoring(athlete) {
+    if (gender !== 'M' || athlete.pk) return false;
+    const limit = MAX_SCORING_M();
+    if (!limit) return true; // brak limitu — wszyscy punktują
+    if (!scoringCache.has(athlete.team)) {
+      scoringCache.set(athlete.team, getScoringAthleteIds(athlete.team));
+    }
+    const ids = scoringCache.get(athlete.team);
+    return ids ? ids.has(athlete.id) : true;
+  }
+
   function renderRow(r, isPK) {
     const noBest   = r.bestSec === Infinity;
     const myRank   = isPK ? null : (rankMap.get(r.athlete.id) || null);
     const rankCls  = (!isPK && myRank===1)?'rank-1':(!isPK && myRank===2)?'rank-2':(!isPK && myRank===3)?'rank-3':'';
-    const pts      = (gender==='M' && !isPK && myRank) ? calcIndividualPoints(myRank, N) : null;
+    const scores   = !isPK && isScoring(r.athlete);
+    const pts      = (gender==='M' && !isPK && myRank && scores) ? calcIndividualPoints(myRank, N) : null;
     const s1disp   = r.s1dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s1 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s1||'—');
     const s2disp   = r.s2dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s2 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s2||'—');
     const rankDisp = isPK ? '<span class="pk-badge" style="font-size:10px;">PK</span>' : (noBest ? '—' : myRank);
+    // Badge "nie punktuje" — tylko dla M bez PK gdy limit aktywny i nie punktuje
+    const noScoreBadge = (gender === 'M' && !isPK && !noBest && MAX_SCORING_M() > 0 && !scores)
+      ? ' <span style="font-family:var(--font-m);font-size:9px;color:var(--text3);border:1px solid var(--border2);border-radius:2px;padding:1px 4px;white-space:nowrap;vertical-align:middle;margin-left:4px;">∅</span>'
+      : '';
     // Separator między drużynami w trybie team
     if (_resultsSort === 'team' && !isPK) {
       const idx = displayRanked.indexOf(r);
@@ -4718,7 +4768,7 @@ function renderResultsForGender(gender, tbodyId) {
     html += '<tr class="' + (isPK ? 'pk-row' : '') + '">';
     html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' +
       (myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'') + rankDisp + '</td>';
-    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + (r.athlete.m36 ? ' <span class="m36-badge">M36+</span>' : '') + (r.athlete.bib ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:4px;">#' + r.athlete.bib + '</span>' : '') + '</td>';
+    html += '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + (r.athlete.m36 ? ' <span class="m36-badge">M36+</span>' : '') + noScoreBadge + (r.athlete.bib ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:4px;">#' + r.athlete.bib + '</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(r.athlete.team) + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s1disp + '</td>';
     html += '<td class="mono" style="font-size:12px;">' + s2disp + '</td>';
@@ -5185,6 +5235,7 @@ function renderSetupPage() {
   setVal('osf-setup-org',   s.org   || '');
   setVal('osf-setup-notes', s.notes || '');
   setVal('osf-team-count',       s.teamCount      || 8);
+  setVal('osf-max-scoring-m',    s.maxScoringM    !== undefined ? s.maxScoringM : 0);
   setVal('osf-team-min-start',   s.teamMin        !== undefined ? s.teamMin : (s.teamCount || 8));
   setVal('osf-team-multiplier',  s.teamMultiplier || 3);
   setChk('osf-allow-same-team-pair', s.allowSameTeamPair);
@@ -5213,6 +5264,7 @@ function saveSetup() {
   state.setup.org   = getVal('osf-setup-org');
   state.setup.notes = getVal('osf-setup-notes');
   state.setup.teamCount      = getNum('osf-team-count', 8);
+  state.setup.maxScoringM    = getNum('osf-max-scoring-m', 0);
   state.setup.teamMin        = getNum('osf-team-min-start', state.setup.teamCount || 8);
   state.setup.teamMultiplier = getNum('osf-team-multiplier', 3);
   state.setup.allowSameTeamPair = getChk('osf-allow-same-team-pair');
