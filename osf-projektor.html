@@ -575,7 +575,7 @@ function renderAll() {
 }
 
 function softRender() {
-  if (PROJ_MODE === 'startlist') { renderStartlist(); return; }
+  if (PROJ_MODE === 'startlist') { softRenderStartlist(); return; }
   // Odśwież dane bez przebudowy layoutu (nie resetuje scrollowania)
   applyTitle();
   if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M'));
@@ -858,18 +858,21 @@ function _renderSection(id, { html, count }) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const vpH  = vp ? vp.offsetHeight : window.innerHeight;
       const oneH = track.offsetHeight;
-      if (oneH <= 0) return;
-      const copies = Math.max(2, Math.ceil((vpH * 2) / oneH) + 1);
+      if (oneH <= 0) {
+        setTimeout(() => _renderSection(id, { html, count: 0 }), 100);
+        return;
+      }
+      const copies = Math.max(3, Math.ceil((vpH * 3) / oneH) + 1);
       track.innerHTML = Array(copies).fill(html).join('');
-      const segH = oneH; // identyczne kopie → segment = oryginalna wysokość
+      const segH = oneH;
       let pos = 0, lastT = null;
       function step(now) {
-        if (!lastT) lastT = now;
-        const dt = Math.min(now - lastT, 50);
+        if (!lastT) { lastT = now; }
+        const dt = Math.min(now - lastT, 100);
         lastT = now;
         pos += speed * dt / 1000;
         if (pos >= segH) pos -= segH;
-        track.style.transform = `translateY(-${pos}px)`;
+        track.style.transform = 'translateY(-' + pos.toFixed(2) + 'px)';
         _scrollRAFs[id] = requestAnimationFrame(step);
       }
       _scrollRAFs[id] = requestAnimationFrame(step);
@@ -884,6 +887,89 @@ function _renderSection(id, { html, count }) {
 // ═══════════════════════════════════════════════════
 
 const _slScrollRAFs = {};
+
+// Aktualizuje dane listy startowej BEZ resetowania scrollu
+// Używane przez polling i Realtime — scroll kontynuuje płynnie
+function softRenderStartlist() {
+  if (!state) return;
+  const cfg2    = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
+  const series  = cfg2.slSeries  || URL_PARAMS.get('series') || 's1';
+  const gender  = cfg2.slGender  || URL_PARAMS.get('gender') || 'both';
+  const speed   = typeof cfg2.scrollSpeed === 'number' ? cfg2.scrollSpeed : (parseInt(cfg2.scrollSpeed) || 0);
+  const showProg = cfg2.showSLProgress !== false;
+  const pairs   = series === 's1' ? (state.s1pairs || []) : (state.s2pairs || []);
+  const athletes = state.athletes || [];
+  const genders = gender === 'both' ? ['M', 'K'] : [gender];
+
+  // Zaktualizuj progress bar bez resetu
+  const progEl = document.getElementById('sl-progress');
+  if (progEl) {
+    if (showProg) {
+      const allPairs = genders.flatMap(g => pairs.filter(p => p.gender === g));
+      const total = allPairs.filter(p => p.aId).length;
+      const ran   = allPairs.filter(p => {
+        return !!(p.aId && state.times?.[p.aId]?.[series] ||
+                  p.bId && state.times?.[p.bId]?.[series] ||
+                  p.aId && state.disq?.[p.aId]?.[series] ||
+                  p.bId && state.disq?.[p.bId]?.[series]);
+      }).length;
+      const pct   = total > 0 ? Math.round(100 * ran / total) : 0;
+      const fill  = progEl.querySelector('.sl-prog-fill');
+      const count = progEl.querySelector('.sl-prog-count');
+      if (fill)  fill.style.width = pct + '%';
+      if (count) count.textContent = ran + ' / ' + total + ' par';
+      progEl.style.display = 'flex';
+    } else {
+      progEl.style.display = 'none';
+    }
+  }
+
+  // Dla każdej sekcji — zaktualizuj HTML kopii w tracku BEZ resetu pozycji
+  genders.forEach(g => {
+    const track = document.getElementById('sl-track-' + g);
+    if (!track) {
+      // Sekcja nie istnieje jeszcze — zrób pełny render
+      renderStartlist();
+      return;
+    }
+
+    const gPairs = pairs.filter(p => p.gender === g).sort((a,b) => a.pairNum - b.pairNum);
+    const newHtml = buildStartlistRows(gPairs, athletes, series);
+
+    if (speed > 0) {
+      // Zamień zawartość wszystkich kopii w miejscu — pos nie zmienia się
+      // Policz ile kopii jest aktualnie w tracku przez porównanie z oryginalną długością
+      const firstMarker = track.querySelector('.sl-pair-row, .no-data');
+      if (!firstMarker) { renderStartlist(); return; }
+
+      // Podmień innerHTML całego tracku zachowując liczbę kopii
+      // Liczymy kopie przez podzielenie childCount (każda kopia ma tę samą strukturę)
+      // Prościej: po prostu podmień HTML — copies razy — bez zmiany pos
+      const copies = Math.max(2, track.children.length > 0
+        ? Math.ceil(track.innerHTML.length / (newHtml.length || 1))
+        : 2);
+      const actualCopies = Math.max(2, Math.round(track.innerHTML.length / Math.max(newHtml.length, 1)));
+      const safeCopies = Math.max(2, Math.min(actualCopies, 10));
+      track.innerHTML = Array(safeCopies).fill(newHtml).join('');
+    } else {
+      // Scroll wyłączony — podmień bezpośrednio
+      track.innerHTML = newHtml;
+    }
+
+    // Zaktualizuj licznik w nagłówku sekcji
+    const ranCount = pairs.filter(p => p.gender === g).filter(p => {
+      return !!(p.aId && state.times?.[p.aId]?.[series] || p.bId && state.times?.[p.bId]?.[series]);
+    }).length;
+    const total = pairs.filter(p => p.gender === g).length;
+    const hdr = document.querySelector('#sl-vp-' + g + ' ~ .sl-section-header, .sl-section-header');
+    // Zaktualizuj span z licznikiem — szukaj w bloku nadrzędnym
+    const vpEl = document.getElementById('sl-vp-' + g);
+    if (vpEl && vpEl.parentElement) {
+      const countSpan = vpEl.parentElement.querySelector('.sl-section-header span:last-child');
+      if (countSpan) countSpan.textContent = ranCount + '/' + total + ' par';
+    }
+  });
+}
 
 function renderStartlist() {
   if (!state) return;
@@ -1012,15 +1098,21 @@ function buildStartlistRows(pairs, athletes, series) {
       font-family:var(--font-b);white-space:nowrap;">${b.icon} ${b.label}</span>`;
   }
 
-  function pkBadge(ath) {
-    if (!ath || !ath.pk) return '';
-    return '<span class="pk-badge">PK</span>';
+  function pairRan(p) {
+    const aTime = p.aId && state.times && state.times[p.aId] && state.times[p.aId][series];
+    const bTime = p.bId && state.times && state.times[p.bId] && state.times[p.bId][series];
+    const aDsq  = p.aId && state.disq && state.disq[p.aId] && state.disq[p.aId][series];
+    const bDsq  = p.bId && state.disq && state.disq[p.bId] && state.disq[p.bId][series];
+    return !!(aTime || bTime || aDsq || bDsq);
   }
 
-  function pairRan(p) {
-    const aT = p.aId && state.times?.[p.aId]?.[series];
-    const bT = p.bId && state.times?.[p.bId]?.[series];
-    return !!(aT || bT);
+  function pkBadge(ath) {
+    if (!ath || !ath.pk) return '';
+    return `<span class="pk-badge">PK</span>`;
+  }
+
+  function getTime(athId, ser) {
+    return state.times && state.times[athId] && state.times[athId][ser] || '';
   }
 
   function athleteHTML(ath, lane, isSoloSlot, ran) {
@@ -1029,119 +1121,124 @@ function buildStartlistRows(pairs, athletes, series) {
     const fs = nameLen > 22 ? Math.max(11, nameSize - 3)
              : nameLen > 16 ? Math.max(12, nameSize - 1)
              : nameSize;
-    const sTime = state.times?.[ath.id]?.[series] || '';
-    const sDsq  = !!(state.disq?.[ath.id]?.[series]);
-    const s1time = series === 's2' ? (state.times?.[ath.id]?.s1 || '') : '';
-    const s1dsq  = series === 's2' && !!(state.disq?.[ath.id]?.s1);
+    const sTime = getTime(ath.id, series);
+    const sDsq  = !!(state.disq && state.disq[ath.id] && state.disq[ath.id][series]);
+    const s1time = series === 's2' ? getTime(ath.id, 's1') : '';
+    const s1dsq  = series === 's2' && !!(state.disq && state.disq[ath.id] && state.disq[ath.id].s1);
     const badge  = rankBadge(ath.id);
     const pk     = pkBadge(ath);
     const timeDisp = sTime
       ? `<span style="color:${sDsq ? 'var(--red)' : 'var(--green)'};">${sDsq ? 'DSQ' : sTime}</span>`
       : (s1time ? `S1: <span style="color:${s1dsq ? 'var(--red)' : 'var(--text2)'};">${s1dsq ? 'DSQ' : s1time}</span>` : '');
-    return `<div class="sl-athlete lane-${lane}" style="${ran ? 'opacity:.5;' : ''}">
+    return `<div class="sl-athlete lane-${lane}">
       <div class="sl-lane-badge ${lane}">${lane}</div>
-      <div class="sl-athlete-name" style="font-size:${fs}px;${ran ? 'color:var(--text3);' : ''}">${esc(ath.name)}${pk}${ath.m36 ? '<span class="m36-badge">M36+</span>' : ''}${badge}</div>
+      <div class="sl-athlete-name" style="font-size:${fs}px;">${esc(ath.name)}${pk}${ath.m36 ? '<span class="m36-badge">M36+</span>' : ''}${badge}</div>
       <div class="sl-athlete-sub" style="font-size:${subSize}px;">${esc(ath.team || '')}${timeDisp ? ' · ' + timeDisp : ''}</div>
     </div>`;
   }
 
-  // Pusty slot z badge SOLO
-  const soloEmptySlot = `<div class="sl-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.35;">
+  const soloEmptySlot = `<div class="sl-athlete" style="flex:1;display:flex;align-items:center;justify-content:center;opacity:.4;">
     <span style="font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:2px;
       color:var(--orange);border:1px solid rgba(240,144,80,.4);
       background:rgba(240,144,80,.08);padding:4px 14px;border-radius:4px;">SOLO</span>
   </div>`;
 
-  // Overlay "BIEG ZAKOŃCZONY" — nakładany na całą parę gdy pobiegła
-  const ranOverlay = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
-    <span style="font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:3px;
-      text-transform:uppercase;color:var(--green);opacity:.9;
-      background:rgba(10,12,14,.7);border:1px solid rgba(80,200,144,.4);
-      padding:5px 18px;border-radius:4px;">✓ BIEG ZAKOŃCZONY</span>
-  </div>`;
+  function ranOverlay() {
+    return `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
+      <span style="font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:3px;
+        color:var(--green);background:rgba(10,12,14,.75);border:1px solid rgba(80,200,144,.3);
+        padding:5px 18px;border-radius:4px;text-transform:uppercase;backdrop-filter:blur(2px);">
+        ✓ BIEG ZAKOŃCZONY
+      </span>
+    </div>`;
+  }
+
+  // Kompaktowy wiersz dla ostatnich 3 zakończonych par
+  function compactRanRow(p) {
+    const aAth = p.aId ? athletes.find(x => x.id === p.aId) : null;
+    const bAth = p.bId ? athletes.find(x => x.id === p.bId) : null;
+    const laneA = p.aLane || 'L';
+    const [athL, athP] = laneA === 'L' ? [aAth, bAth] : [bAth, aAth];
+
+    const nameL = athL ? athL.name.split(' ').pop() : '—';  // samo nazwisko
+    const nameP = athP ? athP.name.split(' ').pop() : (p.bId ? '—' : 'SOLO');
+    const tL = athL ? (getTime(athL.id, series) || '') : '';
+    const tP = athP ? (getTime(athP.id, series) || '') : '';
+    const timeStr = [tL, tP].filter(Boolean).join(' · ');
+
+    return `<div style="display:flex;align-items:center;gap:10px;padding:5px 14px;
+        opacity:.45;border-bottom:1px solid rgba(255,255,255,.04);">
+      <span style="font-family:var(--font-h);font-size:13px;font-weight:700;color:var(--green);
+        min-width:28px;text-align:right;">✓${p.pairNum}</span>
+      <span style="font-family:var(--font-b);font-size:13px;color:var(--text2);flex:1;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        ${esc(nameL)} <span style="color:var(--text3);">vs</span> ${esc(nameP)}
+      </span>
+      ${timeStr ? `<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);white-space:nowrap;">${timeStr}</span>` : ''}
+    </div>`;
+  }
+
+  // Podziel pary na: pobiegłe i czekające
+  const ranPairs  = pairs.filter(p => pairRan(p));
+  const waitPairs = pairs.filter(p => !pairRan(p));
+  const isFirst   = waitPairs.length > 0 ? waitPairs[0].pairNum === 1 : false;
 
   let rows = '';
-  pairs.forEach((p, idx) => {
+
+  // Poprzednie pobiegłe — jeśli więcej niż 3
+  const hiddenRan = ranPairs.length > 3 ? ranPairs.length - 3 : 0;
+  if (hiddenRan > 0) {
+    rows += `<div style="padding:6px 14px;text-align:center;">
+      <span style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;
+        color:var(--text3);text-transform:uppercase;">↑ ${hiddenRan} par wcześniej</span>
+    </div>`;
+  }
+
+  // Ostatnie 3 pobiegłe — kompaktowe
+  const last3Ran = ranPairs.slice(-3);
+  last3Ran.forEach(p => { rows += compactRanRow(p); });
+
+  // Separator NA TORZE — tylko jeśli są pobiegłe i czekające
+  if (ranPairs.length > 0 && waitPairs.length > 0) {
+    rows += `<div style="display:flex;align-items:center;gap:10px;padding:6px 16px;
+       background:rgba(80,200,144,.08);border-top:2px solid rgba(80,200,144,.35);
+       border-bottom:2px solid rgba(80,200,144,.35);">
+       <div style="flex:1;height:1px;background:rgba(80,200,144,.25);"></div>
+       <span style="font-family:var(--font-h);font-size:11px;font-weight:700;
+         letter-spacing:2px;color:var(--green);">▶ NA TORZE</span>
+       <div style="flex:1;height:1px;background:rgba(80,200,144,.25);"></div>
+     </div>`;
+  }
+
+  // Czekające pary — pełne wiersze
+  waitPairs.forEach((p, idx) => {
     const aAth  = p.aId ? athletes.find(x => x.id === p.aId) : null;
     const bAth  = p.bId ? athletes.find(x => x.id === p.bId) : null;
     const isSolo = !aAth || !bAth;
-    const ran    = pairRan(p);
     const altCls = idx % 2 === 0 ? 'even' : 'odd';
     const laneA  = p.aLane || 'L';
     const [athL, athP] = laneA === 'L' ? [aAth, bAth] : [bAth, aAth];
-
-    // Pierwsza para — pomarańczowa linia pod nią
-    const isFirst   = p.pairNum === 1;
+    const isFirst = idx === 0;
     const firstStyle = isFirst ? 'border-bottom:3px solid var(--orange);' : '';
 
-    // Separator "NA TORZE" gdy poprzednia pobiegła a ta nie
-    const prevPair = idx > 0 ? pairs[idx - 1] : null;
-    const prevRan  = prevPair ? pairRan(prevPair) : false;
-    const separator = (!ran && prevRan && idx > 0)
-      ? `<div style="display:flex;align-items:center;gap:10px;padding:4px 16px;
-           background:rgba(80,200,144,.08);border-top:1px solid rgba(80,200,144,.25);
-           border-bottom:1px solid rgba(80,200,144,.25);">
-           <div style="flex:1;height:1px;background:rgba(80,200,144,.25);"></div>
-           <span style="font-family:var(--font-h);font-size:10px;font-weight:700;
-             letter-spacing:2px;color:var(--green);">▶ NA TORZE</span>
-           <div style="flex:1;height:1px;background:rgba(80,200,144,.25);"></div>
-         </div>`
-      : '';
-
-    rows += separator + `<div class="sl-pair-row ${altCls}" style="position:relative;${firstStyle}${ran ? 'opacity:.6;' : ''}">
-      <div class="sl-pair-num" style="font-size:${numSize}px;${ran ? 'color:var(--text3);' : ''}">
-        ${p.pairNum}
-      </div>
-      ${isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, ran)}
+    rows += `<div class="sl-pair-row ${altCls}" style="position:relative;${firstStyle}">
+      <div class="sl-pair-num" style="font-size:${numSize}px;">${p.pairNum}</div>
+      ${isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, false)}
       ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
-      ${isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, ran)}
-      ${ran ? ranOverlay : ''}
+      ${isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, false)}
     </div>`;
   });
+
+  // Jeśli wszystkie pobiegły
+  if (waitPairs.length === 0 && ranPairs.length > 0) {
+    rows += `<div style="padding:20px;text-align:center;">
+      <span style="font-family:var(--font-h);font-size:14px;letter-spacing:2px;color:var(--green);">
+        ✓ WSZYSTKIE BIEGI ZAKOŃCZONE
+      </span>
+    </div>`;
+  }
+
   return rows;
 }
 
 
-function _renderSlSection(id, html, speed, vp) {
-  const track = document.getElementById('sl-track-' + id);
-  if (!track) return;
-
-  if (_slScrollRAFs[id]) { cancelAnimationFrame(_slScrollRAFs[id]); delete _slScrollRAFs[id]; }
-
-  if (speed > 0) {
-    // Zmierz wysokość jednej kopii
-    track.innerHTML = html;
-    track.style.transform = 'translateY(0)';
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const vpH  = vp ? vp.offsetHeight : window.innerHeight;
-      const oneH = track.offsetHeight;
-      if (oneH <= 0) { track.innerHTML = html; return; }
-      // Ile kopii potrzeba żeby lista była co najmniej 2x wyższy od viewportu
-      const copies = Math.max(2, Math.ceil((vpH * 2) / oneH) + 1);
-      // Wypełnij, zmierz segment DOKŁADNIE jako oneH (nie dzielimy po fillowaniu)
-      track.innerHTML = Array(copies).fill(html).join('');
-      // segH = wysokość jednej sekcji = oryginalna oneH (każda kopia identyczna)
-      const segH = oneH;
-      let pos = 0, lastT = null;
-      function step(now) {
-        if (!lastT) lastT = now;
-        const dt = Math.min(now - lastT, 50);
-        lastT = now;
-        pos += speed * dt / 1000;
-        // Bezszwowe zapętlenie: gdy przewinęliśmy jedną kopię, cofnij
-        if (pos >= segH) pos -= segH;
-        track.style.transform = `translateY(-${pos}px)`;
-        _slScrollRAFs[id] = requestAnimationFrame(step);
-      }
-      _slScrollRAFs[id] = requestAnimationFrame(step);
-    }));
-  } else {
-    track.innerHTML = html;
-    track.style.transform = 'translateY(0)';
-  }
-}
-
-
-</script>
-</body>
-</html>
