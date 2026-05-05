@@ -6181,7 +6181,24 @@ function printKlasyfikacjaPDF() {
   });
   html += '</tbody></table>';
 
-  // Szczegóły ind. M
+  // Szczegóły drużynowy — nad indywidualnym
+  html += '<div class="section-title">Bieg drużynowy (N=' + N_team + ' × ' + mult + ')</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
+    '</tr></thead><tbody>';
+  rankedTeams.forEach((r, i) => {
+    const rk = r.rank;
+    const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
+      '<td class="bold">' + esc(r.team) + '</td>' +
+      '<td class="c mono">' + (r.best||'—') + '</td>' +
+      '<td class="r bold">' + r.pts + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Szczegóły ind. M — pod drużynowym
   html += '<div class="section-title">Bieg indywidualny M (N=' + N_men + ')</div>';
   html += '<table><thead><tr>' +
     '<th class="rank-col">Msc</th><th>Zawodnik</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
@@ -6193,23 +6210,6 @@ function printKlasyfikacjaPDF() {
       '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
       '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
-      '<td class="c mono">' + (r.best||'—') + '</td>' +
-      '<td class="r bold">' + r.pts + '</td>' +
-      '</tr>';
-  });
-  html += '</tbody></table>';
-
-  // Szczegóły drużynowy
-  html += '<div class="section-title">Bieg drużynowy (N=' + N_team + ' × ' + mult + ')</div>';
-  html += '<table><thead><tr>' +
-    '<th class="rank-col">Msc</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
-    '</tr></thead><tbody>';
-  rankedTeams.forEach((r, i) => {
-    const rk = r.rank;
-    const topCls = rk===1?' top1':rk===2?' top2':rk===3?' top3':'';
-    html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + (r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'') + (r.rank||'—') + '</td>' +
-      '<td class="bold">' + esc(r.team) + '</td>' +
       '<td class="c mono">' + (r.best||'—') + '</td>' +
       '<td class="r bold">' + r.pts + '</td>' +
       '</tr>';
