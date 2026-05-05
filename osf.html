@@ -5107,12 +5107,19 @@ function printResultsGender(gender) {
   const athletes = state.athletes.filter(a => a.gender === gender);
   if (!athletes.length) { alert('Brak zawodników ' + (gender === 'M' ? 'M' : 'K')); return; }
   const N = athletes.length;
-  const ranked = athletes.map(a => ({
-    athlete: a,
-    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
-    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
-    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
-  })).sort((a,b) => a.bestSec - b.bestSec);
+  const ranked = athletes
+    .map(a => ({
+      athlete: a,
+      s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+      s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+      best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+    }))
+    .filter(r => r.s1 || r.s2 || r.s1dsq || r.s2dsq)
+    .sort((a, b) => {
+      if (a.athlete.pk && !b.athlete.pk) return 1;
+      if (!a.athlete.pk && b.athlete.pk) return -1;
+      return a.bestSec - b.bestSec;
+    });
 
   const gLabel = gender === 'M' ? 'Mężczyźni' : 'Kobiety';
   const c = state.contest;
@@ -5127,16 +5134,20 @@ function printResultsGender(gender) {
     const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
     const s1d = r.s1dsq ? '<span class="dsq">' + (r.s1||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">' + (r.s2||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
-    html += '<tr class="' + topCls + '">';
-    const rankEmoji = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
-    html += '<td class="rank-cell">' + rankEmoji + (noBest ? '—' : rank) + '</td>';
-    html += '<td class="name-cell">' + esc(displayName(r.athlete)) + ' <span style="font-size:9px;opacity:.6;">' + r.athlete.bib + '</span></td>';
+    const isPKr  = !!r.athlete.pk;
+    const isM36r = !!r.athlete.m36;
+    const badgesR = (isPKr  ? ' <span style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '')
+                  + (isM36r ? ' <span style="background:rgba(26,95,168,.12);color:#1a5fa8;border:1px solid rgba(26,95,168,.35);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">M36+</span>' : '');
+    html += '<tr class="' + topCls + '"' + (isPKr ? '' : '') + '>';
+    const rankEmojiR = (!noBest && !isPKr) ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
+    html += '<td class="rank-cell">' + rankEmojiR + (isPKr ? 'PK' : noBest ? '—' : rank) + '</td>';
+    html += '<td class="name-cell">' + esc(displayName(r.athlete)) + badgesR + ' <span style="font-size:9px;opacity:.6;">' + r.athlete.bib + '</span></td>';
     html += '<td class="team-cell">' + esc(r.athlete.team) + '</td>';
     html += '<td class="time-cell">' + s1d + '</td>';
     html += '<td class="time-cell">' + s2d + '</td>';
     html += '<td class="best-cell">' + (r.best||'—') + '</td>';
     html += '</tr>';
-    if (!noBest) rank++;
+    if (!noBest && !isPKr) rank++;
   });
   html += '</tbody></table>';
   openPrint(html, RESULTS_PDF_CSS);
@@ -5822,12 +5833,20 @@ function _printInd(gender) {
   const athletes = state.athletes.filter(a => a.gender === gender);
   if (!athletes.length) { alert('Brak zawodników ' + gender); return; }
 
-  const ranked = athletes.map(a => ({
-    athlete: a,
-    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
-    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
-    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
-  })).sort((a,b) => a.bestSec - b.bestSec);
+  const ranked = athletes
+    .map(a => ({
+      athlete: a,
+      s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+      s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+      best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+    }))
+    .filter(r => r.s1 || r.s2 || r.s1dsq || r.s2dsq)  // usuń bez żadnego wpisu
+    .sort((a, b) => {
+      // PK zawsze na końcu
+      if (a.athlete.pk && !b.athlete.pk) return 1;
+      if (!a.athlete.pk && b.athlete.pk) return -1;
+      return a.bestSec - b.bestSec;
+    });
 
   const gLabel = gender === 'M' ? 'Bieg Indywidualny — Mężczyźni' : 'Bieg Indywidualny — Kobiety';
   const medals = ['🥇','🥈','🥉'];
@@ -5872,16 +5891,23 @@ function _printInd(gender) {
     const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
     const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
-    const rankEmojiInd = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
-    html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + rankEmojiInd + (noBest ? '—' : rank) + '</td>' +
-      '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
+    const isPK   = !!r.athlete.pk;
+    const isM36  = !!r.athlete.m36;
+    // PK nie dostaje medalu ani miejsca
+    const rankEmojiInd = (!noBest && !isPK) ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
+    const rankDisp = isPK ? 'PK' : (noBest ? '—' : rank);
+    const badges = (isPK ? ' <span style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;letter-spacing:.5px;">PK</span>' : '')
+                 + (isM36 ? ' <span style="background:rgba(26,95,168,.12);color:#1a5fa8;border:1px solid rgba(26,95,168,.35);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;letter-spacing:.5px;">M36+</span>' : '');
+    const rowStyle = isPK ? '' : '';
+    html += '<tr class="' + topCls + '"' + rowStyle + '>' +
+      '<td class="rank-col">' + rankEmojiInd + rankDisp + '</td>' +
+      '<td class="bold">' + esc(displayName(r.athlete)) + badges + '<span class="bib">' + r.athlete.bib + '</span></td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
       '<td class="c mono">' + s2d + '</td>' +
       '<td class="c mono bold">' + (r.best||'—') + '</td>' +
       '</tr>';
-    if (!noBest) rank++;
+    if (!noBest && !isPK) rank++;
   });
   html += '</tbody></table>';
   openPrint(html, PREMIUM_PDF_CSS);
@@ -5891,12 +5917,19 @@ function printIndM36() {
   const m36athletes = state.athletes.filter(a => a.gender === 'M' && a.m36 && !a.pk);
   if (!m36athletes.length) { alert('Brak zawodników w kategorii M36+.'); return; }
 
-  const ranked = m36athletes.map(a => ({
-    athlete: a,
-    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
-    s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
-    best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
-  })).sort((a,b) => a.bestSec - b.bestSec);
+  const ranked = m36athletes
+    .map(a => ({
+      athlete: a,
+      s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+      s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
+      best: bestTime(a.id), bestSec: parseTime(bestTime(a.id))
+    }))
+    .filter(r => r.s1 || r.s2 || r.s1dsq || r.s2dsq)
+    .sort((a, b) => {
+      if (a.athlete.pk && !b.athlete.pk) return 1;
+      if (!a.athlete.pk && b.athlete.pk) return -1;
+      return a.bestSec - b.bestSec;
+    });
 
   // Podium top3 — format identyczny jak _printInd
   const top3 = ranked.filter(r => r.bestSec !== Infinity).slice(0,3);
@@ -5936,16 +5969,19 @@ function printIndM36() {
     const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
     const s1d = r.s1dsq ? '<span class="dsq">'+(r.s1||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
     const s2d = r.s2dsq ? '<span class="dsq">'+(r.s2||'')+'</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
-    const medal = !noBest ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
-    html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + medal + (noBest ? '—' : rank) + '</td>' +
-      '<td class="bold">' + esc(displayName(r.athlete)) + '<span class="bib">' + r.athlete.bib + '</span></td>' +
+    const isPKm  = !!r.athlete.pk;
+    const medal  = (!noBest && !isPKm) ? (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'') : '';
+    const badgeM36 = ' <span style="background:rgba(26,95,168,.12);color:#1a5fa8;border:1px solid rgba(26,95,168,.35);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">M36+</span>';
+    const badgePKm = isPKm ? ' <span style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '';
+    html += '<tr class="' + topCls + '"' + (isPKm ? '' : '') + '>' +
+      '<td class="rank-col">' + medal + (isPKm ? 'PK' : noBest ? '—' : rank) + '</td>' +
+      '<td class="bold">' + esc(displayName(r.athlete)) + badgeM36 + badgePKm + '<span class="bib">' + r.athlete.bib + '</span></td>' +
       '<td class="small">' + esc(r.athlete.team) + '</td>' +
       '<td class="c mono">' + s1d + '</td>' +
       '<td class="c mono">' + s2d + '</td>' +
       '<td class="c mono bold">' + (r.best||'—') + '</td>' +
       '</tr>';
-    if (!noBest) rank++;
+    if (!noBest && !isPKm) rank++;
   });
   html += '</tbody></table>';
   openPrint(html, PREMIUM_PDF_CSS);
