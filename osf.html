@@ -2459,7 +2459,13 @@ function buildTeamSeries2() {
   if (!state.teamOrder.s1.length) { alert('Najpierw wygeneruj kolejność Serii 1.'); return; }
 
   // Wykluczone drużyny z modalu "Kto startuje"
-  const teamS2skip = state.teamS2skip || [];
+  // Czytaj teamS2skip z localStorage jako backup (bardziej aktualne niż state po Realtime sync)
+  let teamS2skip = state.teamS2skip || [];
+  try {
+    const lsKey = 'osf_teamS2skip_' + STORAGE_KEY;
+    const lsVal = localStorage.getItem(lsKey);
+    if (lsVal) teamS2skip = JSON.parse(lsVal);
+  } catch(e) {}
 
   // Weź drużyny z S1, uzupełnij o czas S1 i wymagany tor S2
   const pool = state.teamOrder.s1
@@ -6679,6 +6685,18 @@ function jumpTeamPairTo(series, fromPairNum, toPos) {
 
 function openTeamS2WhoStarts() {
   if (!state.teamS2skip) state.teamS2skip = [];
+  // Merge z localStorage — zabezpieczenie przed nadpisaniem przez Realtime echo
+  try {
+    const lsKey = 'osf_teamS2skip_' + STORAGE_KEY;
+    const lsVal = localStorage.getItem(lsKey);
+    if (lsVal) {
+      const lsSkip = JSON.parse(lsVal);
+      // Użyj wersji localStorage jeśli jest nowsza (ma więcej/mniej elementów)
+      if (JSON.stringify(lsSkip) !== JSON.stringify(state.teamS2skip)) {
+        state.teamS2skip = lsSkip;
+      }
+    }
+  } catch(e) {}
   const teams = [...new Set(state.athletes.filter(a => a.gender === 'M').map(a => a.team))].filter(Boolean).sort();
   const container = document.getElementById('team-s2-who-tiles');
   if (!container) return;
@@ -6710,7 +6728,9 @@ function toggleTeamS2Skip(team, btn) {
   const nowSkips = idx === -1;
   if (nowSkips) state.teamS2skip.push(team);
   else          state.teamS2skip.splice(idx, 1);
-  save();
+  // Zapisz natychmiast do Supabase i do localStorage jako backup
+  try { localStorage.setItem('osf_teamS2skip_' + STORAGE_KEY, JSON.stringify(state.teamS2skip)); } catch(e) {}
+  saveImmediate();
   if (btn) {
     btn.style.background  = nowSkips ? 'rgba(224,85,85,.08)' : 'var(--bg3)';
     btn.style.borderColor = nowSkips ? 'var(--red)' : 'var(--border2)';
@@ -6723,7 +6743,8 @@ function toggleTeamS2Skip(team, btn) {
 
 function clearTeamS2Skip() {
   state.teamS2skip = [];
-  save();
+  try { localStorage.setItem('osf_teamS2skip_' + STORAGE_KEY, JSON.stringify([])); } catch(e) {}
+  saveImmediate();
   openTeamS2WhoStarts();
 }
 
