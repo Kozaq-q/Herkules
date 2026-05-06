@@ -1805,8 +1805,16 @@ function _applyRemoteState(stateJson) {
     if (_isSaving) return;
 
     // Zapisz state — zawsze, niezależnie od focusa
+    // Jeśli operator właśnie klikał kafelki S2 — zachowaj jego teamS2skip
+    if (Date.now() < _ts2BlockRT && state.teamS2skip !== undefined) {
+      incoming.teamS2skip = state.teamS2skip;
+    }
     state = incoming;
     ensureStateDefaults();
+    // Zaktualizuj cache LS
+    if (state.teamS2skip) {
+      try { localStorage.setItem('osf_ts2skip_' + STORAGE_KEY, JSON.stringify(state.teamS2skip)); } catch(e) {}
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     // Sprawdź duplikaty po synchronizacji ze zdalnym stanem
     setTimeout(checkAndWarnDuplicates, 500);
@@ -2459,13 +2467,7 @@ function buildTeamSeries2() {
   if (!state.teamOrder.s1.length) { alert('Najpierw wygeneruj kolejność Serii 1.'); return; }
 
   // Wykluczone drużyny z modalu "Kto startuje"
-  // Czytaj teamS2skip z localStorage jako backup (bardziej aktualne niż state po Realtime sync)
-  let teamS2skip = state.teamS2skip || [];
-  try {
-    const lsKey = 'osf_teamS2skip_' + STORAGE_KEY;
-    const lsVal = localStorage.getItem(lsKey);
-    if (lsVal) teamS2skip = JSON.parse(lsVal);
-  } catch(e) {}
+  const teamS2skip = getTeamS2Skip();
 
   // Weź drużyny z S1, uzupełnij o czas S1 i wymagany tor S2
   const pool = state.teamOrder.s1
@@ -6683,28 +6685,36 @@ function jumpTeamPairTo(series, fromPairNum, toPos) {
   renderTeamView();
 }
 
-function openTeamS2WhoStarts() {
-  if (!state.teamS2skip) state.teamS2skip = [];
-  // Merge z localStorage — zabezpieczenie przed nadpisaniem przez Realtime echo
+
+// teamS2skip — localStorage jako szybki cache + state+Supabase jako trwały zapis
+// Blokada RT: po zapisie ignoruj Realtime echo przez 3s
+let _ts2BlockRT = 0;
+
+function getTeamS2Skip() {
+  // Najpierw cache lokalny (najszybszy, aktualny)
   try {
-    const lsKey = 'osf_teamS2skip_' + STORAGE_KEY;
-    const lsVal = localStorage.getItem(lsKey);
-    if (lsVal) {
-      const lsSkip = JSON.parse(lsVal);
-      // Użyj wersji localStorage jeśli jest nowsza (ma więcej/mniej elementów)
-      if (JSON.stringify(lsSkip) !== JSON.stringify(state.teamS2skip)) {
-        state.teamS2skip = lsSkip;
-      }
-    }
+    const cached = localStorage.getItem('osf_ts2skip_' + STORAGE_KEY);
+    if (cached !== null) return JSON.parse(cached);
   } catch(e) {}
+  return state.teamS2skip || [];
+}
+function setTeamS2Skip(arr) {
+  // 1. Zapisz do cache natychmiast
+  try { localStorage.setItem('osf_ts2skip_' + STORAGE_KEY, JSON.stringify(arr)); } catch(e) {}
+  // 2. Zapisz do state i Supabase
+  state.teamS2skip = arr;
+  // 3. Zablokuj RT echo na 3s żeby nie nadpisało naszego zapisu
+  _ts2BlockRT = Date.now() + 3000;
+  saveImmediate();
+}
+function openTeamS2WhoStarts() {
   const teams = [...new Set(state.athletes.filter(a => a.gender === 'M').map(a => a.team))].filter(Boolean).sort();
   const container = document.getElementById('team-s2-who-tiles');
   if (!container) return;
 
-  // Buduj kafelki przez DOM — nie innerHTML z onclick — żeby uniknąć problemu z cudzysłowami w nazwie
   container.innerHTML = '';
   teams.forEach(team => {
-    const skips = state.teamS2skip.includes(team);
+    const skips = getTeamS2Skip().includes(team);
     const btn = document.createElement('button');
     btn.dataset.team = team;
     btn.style.cssText = 'background:' + (skips ? 'rgba(224,85,85,.08)' : 'var(--bg3)') + ';' +
@@ -6723,14 +6733,12 @@ function openTeamS2WhoStarts() {
 }
 
 function toggleTeamS2Skip(team, btn) {
-  if (!state.teamS2skip) state.teamS2skip = [];
-  const idx = state.teamS2skip.indexOf(team);
+  const skip = getTeamS2Skip();
+  const idx = skip.indexOf(team);
   const nowSkips = idx === -1;
-  if (nowSkips) state.teamS2skip.push(team);
-  else          state.teamS2skip.splice(idx, 1);
-  // Zapisz natychmiast do Supabase i do localStorage jako backup
-  try { localStorage.setItem('osf_teamS2skip_' + STORAGE_KEY, JSON.stringify(state.teamS2skip)); } catch(e) {}
-  saveImmediate();
+  if (nowSkips) skip.push(team);
+  else          skip.splice(idx, 1);
+  setTeamS2Skip(skip);  // tylko localStorage — natychmiastowe, nie async
   if (btn) {
     btn.style.background  = nowSkips ? 'rgba(224,85,85,.08)' : 'var(--bg3)';
     btn.style.borderColor = nowSkips ? 'var(--red)' : 'var(--border2)';
@@ -6742,9 +6750,7 @@ function toggleTeamS2Skip(team, btn) {
 }
 
 function clearTeamS2Skip() {
-  state.teamS2skip = [];
-  try { localStorage.setItem('osf_teamS2skip_' + STORAGE_KEY, JSON.stringify([])); } catch(e) {}
-  saveImmediate();
+  setTeamS2Skip([]);
   openTeamS2WhoStarts();
 }
 
