@@ -8029,8 +8029,8 @@ function setStartTimeAdjustment(key, pairNum, newTime) {
   if (newTime) state.startSchedule[key].adjustments[pairNum] = newTime;
   else         delete state.startSchedule[key].adjustments[pairNum];
   saveImmediate();
-  if (key === 's1') renderSeries1View();
-  else if (key === 's2') renderSeries2View();
+  if (key.startsWith('s1')) renderSeries1View();
+  else if (key.startsWith('s2')) renderSeries2View();
   else renderTeamView();
 }
 
