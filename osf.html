@@ -7935,19 +7935,22 @@ function openPairTimeAdjust(key, pairNum, currentTime, btnEl) {
   // Buduj popup przez DOM — unikamy problemów z cudzysłowami
   const _pLabel = document.createElement('div');
   _pLabel.style.cssText = 'font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;';
-  _pLabel.textContent = 'Nowy czas startu pary ' + pairNum;
+  _pLabel.textContent = 'Czas startu pary ' + pairNum;
 
   const _pInput = document.createElement('input');
   _pInput.type = 'time';
   _pInput.id   = 'pair-time-input';
   _pInput.value = currentTime || '';
   _pInput.style.cssText = 'width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-size:14px;font-family:var(--font-m);margin-bottom:8px;box-sizing:border-box;';
+  _pInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); _applyPairTimeAdj(key, pairNum); }
+  });
 
   const _pRow = document.createElement('div');
   _pRow.style.cssText = 'display:flex;gap:6px;';
 
   const _pOk = document.createElement('button');
-  _pOk.textContent = 'Zatwierdź';
+  _pOk.textContent = '✓ Zatwierdź';
   _pOk.style.cssText = 'flex:1;background:var(--accent);color:#000;border:none;border-radius:var(--radius);padding:5px;font-weight:700;cursor:pointer;font-size:12px;';
   _pOk.addEventListener('click', function() { _applyPairTimeAdj(key, pairNum); });
 
@@ -7961,6 +7964,21 @@ function openPairTimeAdjust(key, pairNum, currentTime, btnEl) {
   popup.appendChild(_pLabel);
   popup.appendChild(_pInput);
   popup.appendChild(_pRow);
+
+  // Przycisk usuwania korekty — tylko gdy para ma ręczną korektę
+  const hasAdj = !!(state.startSchedule && state.startSchedule[key] &&
+                    state.startSchedule[key].adjustments &&
+                    state.startSchedule[key].adjustments[pairNum]);
+  if (hasAdj) {
+    const _pReset = document.createElement('button');
+    _pReset.textContent = '↺ Usuń korektę — wróć do harmonogramu';
+    _pReset.style.cssText = 'width:100%;margin-top:6px;background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:5px;color:var(--text3);cursor:pointer;font-size:11px;';
+    _pReset.addEventListener('click', function() {
+      setStartTimeAdjustment(key, pairNum, null);
+      popup.remove();
+    });
+    popup.appendChild(_pReset);
+  }
 
   document.body.appendChild(popup);
   popup.querySelector('input').focus();

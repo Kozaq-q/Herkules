@@ -1226,72 +1226,17 @@ function buildStartlistRows(pairs, athletes, series) {
     const _showST  = !!_cfg2st.showStartTimes;
     const _pTime   = _showST ? getPairStartTimeProj(series, p.pairNum) : null;
     const _pAdj    = _pTime && isTimeAdjusted(series, p.pairNum);
+    const _tColor  = _pAdj ? 'var(--red)' : 'rgba(255,255,255,.4)';
     const _timeBadge = _pTime
-      ? '<span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:' + (_pAdj ? 'var(--red)' : 'var(--text3)') + ';margin-left:8px;">⏱ ' + _pTime + '</span>'
+      ? '<span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:' + _tColor + ';margin-left:8px;">\u23f1 ' + _pTime + '</span>'
       : '';
 
-    rows += `<div class="sl-pair-row ${altCls}" style="position:relative;${firstStyle}">
-      <div class="sl-pair-num" style="font-size:${numSize}px;">${p.pairNum}</div>
-      ${isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, false)}
-      ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
-      ${isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, false)}
-    </div>`;
-    // Dodaj badge czasu po wygenerowaniu HTML — bezpiecznie poza template literal
-    if (_pTime) {
-      const _lastRow = rows.lastIndexOf('<div class="sl-pair-num"');
-      const _insertAt = rows.indexOf('</div>', _lastRow);
-      rows = rows.slice(0, _insertAt) + _timeBadge + rows.slice(_insertAt);
-    }  });
+    const _soloL = isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, false);
+    const _soloR = isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, false);
+    const _mid   = isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>';
 
-  // Jeśli wszystkie pobiegły
-  if (waitPairs.length === 0 && ranPairs.length > 0) {
-    rows += `<div style="padding:20px;text-align:center;">
-      <span style="font-family:var(--font-h);font-size:14px;letter-spacing:2px;color:var(--green);">
-        ✓ WSZYSTKIE BIEGI ZAKOŃCZONE
-      </span>
-    </div>`;
-  }
-
-  return rows;
-}
-
-function _renderSlSection(id, html, speed, vp) {
-  const track = document.getElementById('sl-track-' + id);
-  if (!track) return;
-
-  if (_slScrollRAFs[id]) { cancelAnimationFrame(_slScrollRAFs[id]); delete _slScrollRAFs[id]; }
-
-  if (speed > 0) {
-    track.innerHTML = html;
-    track.style.transform = 'translateY(0)';
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const vpH  = vp ? vp.offsetHeight : window.innerHeight;
-      const oneH = track.offsetHeight;
-      if (oneH <= 0) {
-        setTimeout(() => _renderSlSection(id, html, speed, vp), 100);
-        return;
-      }
-      const copies = Math.max(3, Math.ceil((vpH * 3) / oneH) + 1);
-      track.innerHTML = Array(copies).fill(html).join('');
-      const segH = oneH;
-      let pos = 0, lastT = null;
-      function step(now) {
-        if (!lastT) { lastT = now; }
-        const dt = Math.min(now - lastT, 100);
-        lastT = now;
-        pos += speed * dt / 1000;
-        if (pos >= segH) pos -= segH;
-        track.style.transform = 'translateY(-' + pos.toFixed(2) + 'px)';
-        _slScrollRAFs[id] = requestAnimationFrame(step);
-      }
-      _slScrollRAFs[id] = requestAnimationFrame(step);
-    }));
-  } else {
-    track.innerHTML = html;
-    track.style.transform = 'translateY(0)';
-  }
-}
-
-</script>
-</body>
-</html>
+    rows += separator
+      + '<div class="sl-pair-row ' + altCls + '" style="position:relative;' + firstStyle + '">'
+      + '<div class="sl-pair-num" style="font-size:' + numSize + 'px;">' + p.pairNum + _timeBadge + '</div>'
+      + _soloL + _mid + _soloR
+      + '</div>'
