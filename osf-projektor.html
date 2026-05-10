@@ -716,10 +716,10 @@ function buildTeamRows() {
       <td class="rank-pos ${posCls}" style="font-size:${posFs}px;">${rankTxt}</td>
       <td class="rank-name-cell">
         <span class="rank-name" style="font-size:${fontSize};">${esc(r.team)}</span>
+        ${timeSub ? `<span class="rank-sub-time" style="display:block;margin-top:2px;">${timeSub}</span>` : ''}
       </td>
       <td class="rank-time-cell" style="font-size:${timeFs}px;">
         ${r.best || '<span style="color:var(--text3);">—</span>'}
-        ${timeSub ? `<span class="rank-sub-time">${timeSub}</span>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -1222,7 +1222,14 @@ function buildStartlistRows(pairs, athletes, series) {
     const firstStyle = isFirst ? 'border-bottom:3px solid var(--orange);' : '';
 
     rows += `<div class="sl-pair-row ${altCls}" style="position:relative;${firstStyle}">
-      <div class="sl-pair-num" style="font-size:${numSize}px;">${p.pairNum}</div>
+      <div class="sl-pair-num" style="font-size:${numSize}px;">${p.pairNum}${(() => {
+        const cfg2st = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
+        if (!cfg2st.showStartTimes) return '';
+        const t = getPairStartTimeProj(series, p.pairNum);
+        if (!t) return '';
+        const adj = isTimeAdjusted(series, p.pairNum);
+        return '<span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:' + (adj ? 'var(--red)' : 'var(--text3)') + ';margin-left:8px;">⏱ ' + t + '</span>';
+      })()}</div>
       ${isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, false)}
       ${isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>'}
       ${isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, false)}
