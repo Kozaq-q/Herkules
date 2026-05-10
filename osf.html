@@ -515,26 +515,47 @@ tr:last-child > td { border-bottom: none; }
         </div>
       </div>
     </div>
-    <!-- Czas startu Seria 1 -->
+    <!-- Czas startu Seria 1 — osobno M i K -->
     <div style="position:relative;">
-      <button class="btn btn-sm" onclick="toggleStartTimePanel('s1')"
-        id="starttime-btn-s1"
-        style="color:var(--text3);border-color:var(--border2);font-size:11px;">⏱</button>
-      <div id="start-time-panel-s1" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:250px;box-shadow:0 4px 20px rgba(0,0,0,.8);">
-        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Harmonogram — Seria 1</div>
+      <button class="btn btn-sm" onclick="toggleStartTimePanel('s1M')"
+        id="starttime-btn-s1M"
+        style="color:var(--text3);border-color:var(--border2);font-size:11px;">⏱ M</button>
+      <div id="start-time-panel-s1M" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:250px;box-shadow:0 4px 20px rgba(0,0,0,.8);">
+        <div style="font-size:10px;color:var(--male);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Harmonogram S1 — Mężczyźni</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Pierwsza para</div>
-            <input type="time" id="sched-first-s1" oninput="saveStartSchedule('s1')"
+            <input type="time" id="sched-first-s1M" onchange="saveStartSchedule('s1M')"
               style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);" />
           </div>
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Interwał (min)</div>
-            <input type="number" id="sched-interval-s1" min="1" max="60" value="2" oninput="saveStartSchedule('s1')"
+            <input type="number" id="sched-interval-s1M" min="1" max="60" value="2" oninput="saveStartSchedule('s1M')"
               style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);text-align:center;" />
           </div>
         </div>
-        <button onclick="clearStartSchedule('s1')" style="width:100%;background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:5px;font-size:11px;cursor:pointer;">✕ Usuń harmonogram</button>
+        <button onclick="clearStartSchedule('s1M')" style="width:100%;background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:5px;font-size:11px;cursor:pointer;">✕ Usuń harmonogram</button>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="toggleStartTimePanel('s1K')"
+        id="starttime-btn-s1K"
+        style="color:var(--text3);border-color:var(--border2);font-size:11px;">⏱ K</button>
+      <div id="start-time-panel-s1K" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:250px;box-shadow:0 4px 20px rgba(0,0,0,.8);">
+        <div style="font-size:10px;color:var(--female);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Harmonogram S1 — Kobiety</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Pierwsza para</div>
+            <input type="time" id="sched-first-s1K" onchange="saveStartSchedule('s1K')"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);" />
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Interwał (min)</div>
+            <input type="number" id="sched-interval-s1K" min="1" max="60" value="2" oninput="saveStartSchedule('s1K')"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);text-align:center;" />
+          </div>
+        </div>
+        <button onclick="clearStartSchedule('s1K')" style="width:100%;background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:5px;font-size:11px;cursor:pointer;">✕ Usuń harmonogram</button>
       </div>
     </div>
     <!-- Separator -->
@@ -619,26 +640,47 @@ tr:last-child > td { border-bottom: none; }
         </div>
       </div>
     </div>
-    <!-- Czas startu Seria 2 -->
+    <!-- Czas startu Seria 2 — osobno M i K -->
     <div style="position:relative;">
-      <button class="btn btn-sm" onclick="toggleStartTimePanel('s2')"
-        id="starttime-btn-s2"
-        style="color:var(--text3);border-color:var(--border2);font-size:11px;">⏱</button>
-      <div id="start-time-panel-s2" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:250px;box-shadow:0 4px 20px rgba(0,0,0,.8);">
-        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Harmonogram — Seria 2</div>
+      <button class="btn btn-sm" onclick="toggleStartTimePanel('s2M')"
+        id="starttime-btn-s2M"
+        style="color:var(--text3);border-color:var(--border2);font-size:11px;">⏱ M</button>
+      <div id="start-time-panel-s2M" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:250px;box-shadow:0 4px 20px rgba(0,0,0,.8);">
+        <div style="font-size:10px;color:var(--male);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Harmonogram S2 — Mężczyźni</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Pierwsza para</div>
-            <input type="time" id="sched-first-s2" oninput="saveStartSchedule('s2')"
+            <input type="time" id="sched-first-s2M" onchange="saveStartSchedule('s2M')"
               style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);" />
           </div>
           <div>
             <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Interwał (min)</div>
-            <input type="number" id="sched-interval-s2" min="1" max="60" value="2" oninput="saveStartSchedule('s2')"
+            <input type="number" id="sched-interval-s2M" min="1" max="60" value="2" oninput="saveStartSchedule('s2M')"
               style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);text-align:center;" />
           </div>
         </div>
-        <button onclick="clearStartSchedule('s2')" style="width:100%;background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:5px;font-size:11px;cursor:pointer;">✕ Usuń harmonogram</button>
+        <button onclick="clearStartSchedule('s2M')" style="width:100%;background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:5px;font-size:11px;cursor:pointer;">✕ Usuń harmonogram</button>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <button class="btn btn-sm" onclick="toggleStartTimePanel('s2K')"
+        id="starttime-btn-s2K"
+        style="color:var(--text3);border-color:var(--border2);font-size:11px;">⏱ K</button>
+      <div id="start-time-panel-s2K" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:500;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;width:250px;box-shadow:0 4px 20px rgba(0,0,0,.8);">
+        <div style="font-size:10px;color:var(--female);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Harmonogram S2 — Kobiety</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Pierwsza para</div>
+            <input type="time" id="sched-first-s2K" onchange="saveStartSchedule('s2K')"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);" />
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">Interwał (min)</div>
+            <input type="number" id="sched-interval-s2K" min="1" max="60" value="2" oninput="saveStartSchedule('s2K')"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-size:13px;font-family:var(--font-m);text-align:center;" />
+          </div>
+        </div>
+        <button onclick="clearStartSchedule('s2K')" style="width:100%;background:none;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);padding:5px;font-size:11px;cursor:pointer;">✕ Usuń harmonogram</button>
       </div>
     </div>
     <!-- Separator -->
@@ -2826,7 +2868,7 @@ function renderTeamOrderSection(series) {
     const isLastP   = p.pairNum === total;
     html += '<div class="pair-card' + (isLast&&!p.isSolo ? ' last-pair' : '') + '">';
     // Czas startu pary — data-* zamiast inline onclick
-    const schedKey = series === 's1' ? 's1' : 's2';
+    const schedKey = series === 's1' ? 'drS1' : 'drS2';
     const pairStartTime = getPairStartTime(schedKey, p.pairNum);
     const hasAdj = !!(state.startSchedule && state.startSchedule[schedKey] &&
                    state.startSchedule[schedKey].adjustments &&
@@ -4269,7 +4311,7 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '<span class="pair-num">' + p.pairNum + '</span>';
 
     // Czas startu pary
-    const _schedKey = series;
+    const _schedKey = series + (p.gender || '');
     const _pairTime = getPairStartTime(_schedKey, p.pairNum);
     const _hasAdj   = !!(state.startSchedule && state.startSchedule[_schedKey] &&
                       state.startSchedule[_schedKey].adjustments &&
@@ -5270,8 +5312,9 @@ function printS1StartList(gender) {
     const pairs = state.s1pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
     html += '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>';
-    const s1FirstTime = getPairStartTime('s1', 1);
-    const s1Interval  = (state.startSchedule && state.startSchedule.s1 && state.startSchedule.s1.intervalMin) || 2;
+    const _s1key = 's1' + g;
+    const s1FirstTime = getPairStartTime(_s1key, 1);
+    const s1Interval  = (state.startSchedule && state.startSchedule[_s1key] && state.startSchedule[_s1key].intervalMin) || 2;
     if (s1FirstTime) html += '<p style="font-size:11px;color:#555;font-style:italic;margin:0 0 6px;">Planowany start pierwszej pary: <strong>' + s1FirstTime + '</strong> · interwał: ' + s1Interval + ' min</p>';
     html += '<table><thead><tr><th class="pair-num">#</th><th>Tor L — Zawodnik / Drużyna</th><th class="vs-cell"></th><th>Tor P — Zawodnik / Drużyna</th></tr></thead><tbody>';
     html += pairTableRowsStartList(pairs);
@@ -5305,8 +5348,9 @@ function printS2StartList(gender) {
     const pairs = state.s2pairs.filter(p => p.gender === g);
     if (!pairs.length) return;
     html += '<h2>' + (g==='M'?'Mężczyźni':'Kobiety') + '</h2>';
-    const s2FirstTime = getPairStartTime('s2', 1);
-    const s2Interval  = (state.startSchedule && state.startSchedule.s2 && state.startSchedule.s2.intervalMin) || 2;
+    const _s2key = 's2' + g;
+    const s2FirstTime = getPairStartTime(_s2key, 1);
+    const s2Interval  = (state.startSchedule && state.startSchedule[_s2key] && state.startSchedule[_s2key].intervalMin) || 2;
     if (s2FirstTime) html += '<p style="font-size:11px;color:#555;font-style:italic;margin:0 0 6px;">Planowany start pierwszej pary: <strong>' + s2FirstTime + '</strong> · interwał: ' + s2Interval + ' min</p>';
     html += '<table><thead><tr><th class="pair-num">#</th><th>Tor L — Zawodnik / Drużyna</th><th class="vs-cell"></th><th>Tor P — Zawodnik / Drużyna</th></tr></thead><tbody>';
     html += pairTableRowsStartList(pairs);
@@ -7812,7 +7856,6 @@ function toggleStartTimePanel(key) {
   const panel = document.getElementById('start-time-panel-' + key);
   if (!panel) return;
   const isOpen = panel.style.display !== 'none';
-  // Zamknij wszystkie inne
   document.querySelectorAll('[id^="start-time-panel-"]').forEach(p => p.style.display = 'none');
   if (!isOpen) {
     panel.style.display = 'block';
@@ -7847,9 +7890,9 @@ function saveStartSchedule(key) {
   const btn = document.getElementById('starttime-btn-' + key);
   if (btn) btn.style.color = first.value ? 'var(--accent)' : 'var(--text3)';
   saveImmediate();
-  // Odśwież widok par żeby pokazać czasy
-  if (key === 's1') renderSeries1View();
-  else if (key === 's2') renderSeries2View();
+  // Odśwież widok
+  if (key.startsWith('s1')) renderSeries1View();
+  else if (key.startsWith('s2')) renderSeries2View();
   else if (key === 'drS1' || key === 'drS2') renderTeamView();
 }
 
@@ -7859,17 +7902,17 @@ function loadStartScheduleUI(key) {
   const interval = document.getElementById('sched-interval-' + key);
   if (first)    first.value    = sched.firstStart || '';
   if (interval) interval.value = sched.intervalMin || 2;
+  const btn = document.getElementById('starttime-btn-' + key);
+  if (btn) btn.style.color = (sched.firstStart) ? 'var(--accent)' : 'var(--text3)';
 }
 
 function clearStartSchedule(key) {
   if (!state.startSchedule) return;
   delete state.startSchedule[key];
   loadStartScheduleUI(key);
-  const btn = document.getElementById('starttime-btn-' + key);
-  if (btn) btn.style.color = 'var(--text3)';
   saveImmediate();
-  if (key === 's1') renderSeries1View();
-  else if (key === 's2') renderSeries2View();
+  if (key.startsWith('s1')) renderSeries1View();
+  else if (key.startsWith('s2')) renderSeries2View();
   else if (key === 'drS1' || key === 'drS2') renderTeamView();
 }
 
@@ -7898,8 +7941,11 @@ function getPairStartTime(key, pairNum) {
 
 function addMinutesToTime(timeStr, minutes) {
   if (!timeStr) return null;
-  const [h, m] = timeStr.split(':').map(Number);
-  const total  = h * 60 + m + minutes;
+  // Obsługa formatów: 'HH:MM', 'H:MM', 'HH'
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0]) || 0;
+  const m = parseInt(parts[1]) || 0;
+  const total = h * 60 + m + minutes;
   const hh = Math.floor(total / 60) % 24;
   const mm = total % 60;
   return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');

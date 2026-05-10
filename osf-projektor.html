@@ -1224,8 +1224,9 @@ function buildStartlistRows(pairs, athletes, series) {
     // Czas startu pary
     const _cfg2st  = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
     const _showST  = !!_cfg2st.showStartTimes;
-    const _pTime   = _showST ? getPairStartTimeProj(series, p.pairNum) : null;
-    const _pAdj    = _pTime && isTimeAdjusted(series, p.pairNum);
+    const _schedK  = series + (p.gender || '');
+    const _pTime   = _showST ? getPairStartTimeProj(_schedK, p.pairNum) : null;
+    const _pAdj    = _pTime && isTimeAdjusted(_schedK, p.pairNum);
     const _tColor  = _pAdj ? 'var(--red)' : 'rgba(255,255,255,.4)';
     const _timeBadge = _pTime
       ? '<span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:' + _tColor + ';margin-left:8px;">\u23f1 ' + _pTime + '</span>'
