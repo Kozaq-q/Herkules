@@ -4268,6 +4268,21 @@ function renderPairsHTML(containerId, pairs, isS2) {
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
 
+    // Czas startu pary
+    const _schedKey = series;
+    const _pairTime = getPairStartTime(_schedKey, p.pairNum);
+    const _hasAdj   = !!(state.startSchedule && state.startSchedule[_schedKey] &&
+                      state.startSchedule[_schedKey].adjustments &&
+                      state.startSchedule[_schedKey].adjustments[p.pairNum]);
+    if (_pairTime) {
+      html += '<span class="pair-start-time" data-sk="' + _schedKey + '" data-pn="' + p.pairNum + '" data-pt="' + _pairTime + '" style="font-family:var(--font-m);font-size:10px;color:' + (_hasAdj ? 'var(--orange)' : 'var(--text3)') + ';margin-left:6px;cursor:pointer;" title="Kliknij aby zmienić czas startu">⏱ ' + _pairTime + '</span>';
+    } else {
+      const _sched = getStartSchedule(_schedKey);
+      if (_sched.firstStart) {
+        html += '<span class="pair-start-time" data-sk="' + _schedKey + '" data-pn="' + p.pairNum + '" data-pt="" style="font-family:var(--font-m);font-size:10px;color:var(--text3);margin-left:6px;cursor:pointer;" title="Ustaw czas startu">⏱</span>';
+      }
+    }
+
     // Strzałki kolejności + pole pozycji — S1 zawsze, S2 tylko w trybie edycji awaryjnej
     if (series === 's1' || (series === 's2' && _s2EditMode)) {
       const isFirstP = p.pairNum === 1;
