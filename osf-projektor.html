@@ -1058,6 +1058,32 @@ function renderStartlist() {
   });
 }
 
+function getPairStartTimeProj(key, pairNum) {
+  if (!state || !state.startSchedule) return null;
+  const sched = state.startSchedule[key];
+  if (!sched || !sched.firstStart) return null;
+  const adj = sched.adjustments || {};
+  let baseTime = sched.firstStart, basePair = 1;
+  Object.keys(adj).forEach(p => {
+    const pn = parseInt(p);
+    if (pn <= pairNum && pn >= basePair) { basePair = pn; baseTime = adj[p]; }
+  });
+  const offset = (pairNum - basePair) * (sched.intervalMin || 2);
+  const parts  = baseTime.split(':');
+  const h = parseInt(parts[0]) || 0;
+  const m = parseInt(parts[1]) || 0;
+  const total = h * 60 + m + offset;
+  const hh = Math.floor(total / 60) % 24;
+  const mm  = total % 60;
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+
+function isTimeAdjusted(key, pairNum) {
+  return !!(state && state.startSchedule && state.startSchedule[key] &&
+            state.startSchedule[key].adjustments &&
+            state.startSchedule[key].adjustments[pairNum]);
+}
+
 function buildStartlistRows(pairs, athletes, series) {
   if (!pairs.length) return '<div class="no-data">Brak par — wygeneruj listę startową</div>';
 
@@ -1221,23 +1247,75 @@ function buildStartlistRows(pairs, athletes, series) {
     const isFirst = idx === 0;
     const firstStyle = isFirst ? 'border-bottom:3px solid var(--orange);' : '';
 
-    // Czas startu pary
+    // Czas startu — klucz zawiera serię i płeć
     const _cfg2st  = JSON.parse(localStorage.getItem('osf_proj_settings') || '{}');
     const _showST  = !!_cfg2st.showStartTimes;
     const _schedK  = series + (p.gender || '');
     const _pTime   = _showST ? getPairStartTimeProj(_schedK, p.pairNum) : null;
-    const _pAdj    = _pTime && isTimeAdjusted(_schedK, p.pairNum);
-    const _tColor  = _pAdj ? 'var(--red)' : 'rgba(255,255,255,.4)';
-    const _timeBadge = _pTime
-      ? '<span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:' + _tColor + ';margin-left:8px;">\u23f1 ' + _pTime + '</span>'
+    const _pAdj    = _pTime ? isTimeAdjusted(_schedK, p.pairNum) : false;
+    const _tBadge  = _pTime
+      ? '<span style="font-family:var(--font-m);font-size:11px;font-weight:700;color:' + (_pAdj ? 'var(--red)' : 'rgba(255,255,255,.45)') + ';margin-left:8px;">⏱ ' + _pTime + '</span>'
       : '';
 
     const _soloL = isSolo && laneA !== 'L' ? soloEmptySlot : athleteHTML(athL, 'L', false, false);
     const _soloR = isSolo && laneA === 'L' ? soloEmptySlot : athleteHTML(athP, 'P', false, false);
     const _mid   = isSolo ? '<div style="width:48px;min-width:48px;flex-shrink:0;"></div>' : '<div class="sl-vs">VS</div>';
 
-    rows += separator
-      + '<div class="sl-pair-row ' + altCls + '" style="position:relative;' + firstStyle + '">'
-      + '<div class="sl-pair-num" style="font-size:' + numSize + 'px;">' + p.pairNum + _timeBadge + '</div>'
+    rows += '<div class="sl-pair-row ' + altCls + '" style="position:relative;' + firstStyle + '">'
+      + '<div class="sl-pair-num" style="font-size:' + numSize + 'px;">' + p.pairNum + _tBadge + '</div>'
       + _soloL + _mid + _soloR
-      + '</div>'
+      + '</div>';
+  });
+
+  // Jeśli wszystkie pobiegły
+  if (waitPairs.length === 0 && ranPairs.length > 0) {
+    rows += `<div style="padding:20px;text-align:center;">
+      <span style="font-family:var(--font-h);font-size:14px;letter-spacing:2px;color:var(--green);">
+        ✓ WSZYSTKIE BIEGI ZAKOŃCZONE
+      </span>
+    </div>`;
+  }
+
+  return rows;
+}
+
+function _renderSlSection(id, html, speed, vp) {
+  const track = document.getElementById('sl-track-' + id);
+  if (!track) return;
+
+  if (_slScrollRAFs[id]) { cancelAnimationFrame(_slScrollRAFs[id]); delete _slScrollRAFs[id]; }
+
+  if (speed > 0) {
+    track.innerHTML = html;
+    track.style.transform = 'translateY(0)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const vpH  = vp ? vp.offsetHeight : window.innerHeight;
+      const oneH = track.offsetHeight;
+      if (oneH <= 0) {
+        setTimeout(() => _renderSlSection(id, html, speed, vp), 100);
+        return;
+      }
+      const copies = Math.max(3, Math.ceil((vpH * 3) / oneH) + 1);
+      track.innerHTML = Array(copies).fill(html).join('');
+      const segH = oneH;
+      let pos = 0, lastT = null;
+      function step(now) {
+        if (!lastT) { lastT = now; }
+        const dt = Math.min(now - lastT, 100);
+        lastT = now;
+        pos += speed * dt / 1000;
+        if (pos >= segH) pos -= segH;
+        track.style.transform = 'translateY(-' + pos.toFixed(2) + 'px)';
+        _slScrollRAFs[id] = requestAnimationFrame(step);
+      }
+      _slScrollRAFs[id] = requestAnimationFrame(step);
+    }));
+  } else {
+    track.innerHTML = html;
+    track.style.transform = 'translateY(0)';
+  }
+}
+
+</script>
+</body>
+</html>
