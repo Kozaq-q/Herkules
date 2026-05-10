@@ -2983,6 +2983,12 @@ function renderTeamOrderSection(series) {
     html += '</div></div>';
   });
   teamsEl.innerHTML = html;
+  // Event delegation dla pair-start-time w drużynowym
+  teamsEl.querySelectorAll('.pair-start-time').forEach(el => {
+    el.addEventListener('click', function() {
+      openPairTimeAdjust(this.dataset.sk, parseInt(this.dataset.pn), this.dataset.pt || '', this);
+    });
+  });
 }
 
 function renderTeamResults() {
