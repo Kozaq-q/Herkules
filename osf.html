@@ -1706,7 +1706,7 @@ tr:last-child > td { border-bottom: none; }
 <!-- ═══ MODAL: DOPISZ ZAWODNIKA DO S1 ═══ -->
 <!-- Modal: Kolejność drużyn -->
 <div class="modal-overlay" id="modal-team-numbering">
-  <div class="modal" id="team-order-modal-box" style="max-width:760px;width:95%;background:var(--bg2);transition:background .3s,border-color .3s;">
+  <div class="modal" id="team-order-modal-box" style="max-width:520px;width:95%;background:var(--bg2);transition:background .3s,border-color .3s;">
     <div class="modal-header">
       <div class="modal-title" id="team-order-title">↔ Kolejność drużyn</div>
       <button class="modal-close" onclick="closeModal('modal-team-numbering')">✕</button>
@@ -1729,7 +1729,9 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:1fr 1fr;column-gap:20px;row-gap:4px;max-height:62vh;overflow-y:auto;margin-bottom:12px;padding:4px 4px 40px;"></div>
+    <!-- KLUCZ: row-gap = STAGGER (30px) — kafel z prawej kolumny przesunięty w dół o 30 ląduje
+         dokładnie tam, gdzie zaczynałby następny wiersz, więc nie nakłada się. -->
+    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:30px;max-height:62vh;overflow-y:auto;margin-bottom:12px;padding:4px 4px 36px;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty do wypełnienia poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
@@ -8666,8 +8668,11 @@ function _renderEditMode() {
   if (!container) return;
   container.innerHTML = '';
 
-  // F1 grid: parzyste kafle (idx 1,3,5...) w prawej kolumnie przesunięte w dół
-  const STAGGER_PX = 32;
+  // F1 grid: parzyste idx (1,3,5...) w prawej kolumnie przesunięte w dół.
+  // KLUCZ: row-gap w gridzie = STAGGER_PX → kafel z prawej kolumny lądował
+  // dokładnie w tym miejscu w pionie, w którym powinien być następny rząd —
+  // żadnego nakładania.
+  const STAGGER_PX = 30;
 
   _teamOrderDraft.forEach((team, idx) => {
     const newNum = idx + 1;
@@ -8686,41 +8691,36 @@ function _renderEditMode() {
     tile.draggable = true;
     tile.dataset.idx = idx;
     tile.dataset.basey = String(baseY);
-    tile.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;background:var(--bg3);border:2px solid var(--border2);border-radius:8px;padding:12px 10px 10px;cursor:grab;user-select:none;transform:translateY(' + baseY + 'px);transition:border-color .15s,opacity .15s;min-height:130px;';
+    // Kompaktowy kafel: ~190×80 — bardziej kwadratowy niż dotąd, nie marnuje miejsca
+    tile.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;padding:6px 8px;cursor:grab;user-select:none;transform:translateY(' + baseY + 'px);transition:border-color .15s,opacity .15s;min-height:74px;';
 
-    // Numer (duży, na górze)
+    // Numer (kompaktowy, na górze)
     const numEl = document.createElement('div');
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:36px;font-weight:800;color:var(--accent);line-height:1;';
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--accent);line-height:1;';
     numEl.textContent = newNum;
 
-    // Nazwa drużyny (wrap, 14px)
+    // Nazwa drużyny
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:14px;font-weight:700;color:var(--text1);word-break:break-word;line-height:1.25;flex:1;display:flex;align-items:center;';
+    nameEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--text1);word-break:break-word;line-height:1.2;';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
-    // Status zmiany
+    // Status zmiany (mały)
     const changeEl = document.createElement('div');
     if (willChange) {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--orange);font-weight:600;';
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--orange);font-weight:600;';
       changeEl.textContent = '↻ był: ' + oldX;
     } else if (oldX !== null) {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);';
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--text3);';
       changeEl.textContent = '✓ bez zmian';
     } else {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);';
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--text3);';
       changeEl.textContent = 'nowa';
     }
-
-    // Uchwyt drag w rogu prawym górnym
-    const handleEl = document.createElement('div');
-    handleEl.style.cssText = 'position:absolute;top:6px;right:8px;font-size:13px;color:var(--text3);line-height:1;';
-    handleEl.textContent = '⋮⋮';
 
     tile.appendChild(numEl);
     tile.appendChild(nameEl);
     tile.appendChild(changeEl);
-    tile.appendChild(handleEl);
 
     // Drag & drop handlery — łączą staggering (translateY) z efektami drag
     tile.addEventListener('dragstart', (e) => {
