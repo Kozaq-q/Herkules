@@ -1706,7 +1706,7 @@ tr:last-child > td { border-bottom: none; }
 <!-- ═══ MODAL: DOPISZ ZAWODNIKA DO S1 ═══ -->
 <!-- Modal: Kolejność drużyn -->
 <div class="modal-overlay" id="modal-team-numbering">
-  <div class="modal" id="team-order-modal-box" style="max-width:720px;width:95%;background:var(--bg2);transition:background .3s,border-color .3s;">
+  <div class="modal" id="team-order-modal-box" style="width:90vw;max-width:800px;padding:18px;max-height:92vh;background:var(--bg2);transition:background .3s,border-color .3s;">
     <div class="modal-header">
       <div class="modal-title" id="team-order-title">↔ Kolejność drużyn</div>
       <button class="modal-close" onclick="closeModal('modal-team-numbering')">✕</button>
@@ -1729,8 +1729,8 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <!-- Małe kwadratowe kafelki — flexbox z flex-wrap. Najprostsze i najbardziej przewidywalne. -->
-    <div id="team-numbering-tiles" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px;padding:4px;"></div>
+    <!-- Małe kwadratowe kafelki — flexbox z flex-wrap, explicit width 100%. -->
+    <div id="team-numbering-tiles" style="display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;justify-content:center;width:100%;box-sizing:border-box;margin-bottom:12px;padding:4px 0;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
@@ -8674,8 +8674,8 @@ function _renderEditMode() {
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    // Explicit width+height — żadnej niejednoznaczności co do rozmiaru
-    tile.style.cssText = 'width:86px;height:86px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
+    // Explicit flex:0 0 86px — nie kurczy się, nie rośnie, basis 86px (super defensywnie)
+    tile.style.cssText = 'flex:0 0 86px;width:86px;height:86px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
 
     // Numer — input widoczny od razu, można wpisywać bez wcześniejszego klikania
     const numEl = document.createElement('input');
