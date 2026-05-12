@@ -1055,18 +1055,34 @@ function athleteRowHTML(it, series) {
          + '</div>';
   }
   const team = a.team || '';
-  let sub = team;
-  // W S2 — pokaż czas z S1 obok
+
+  // Zbierz czasy do pokazania:
+  // - W widoku S2: zawsze pokaż S1 (jeśli jest)
+  // - Zawsze pokaż czas bieżącej serii (jeśli jest — czyli para zakończyła ten bieg)
+  const timeParts = [];
   if (series === 's2') {
     const s1 = getTime(a.id, 's1');
     const s1d = isDisq(a.id, 's1');
     if (s1 || s1d) {
-      const timeHtml = s1d
+      timeParts.push('S1: ' + (s1d
         ? '<span class="s1-time dsq">DSQ</span>'
-        : '<span class="s1-time">' + esc(s1) + '</span>';
-      sub = (team ? team + ' · ' : '') + 'S1: ' + timeHtml;
+        : '<span class="s1-time">' + esc(s1) + '</span>'));
     }
   }
+  const curT = getTime(a.id, series);
+  const curD = isDisq(a.id, series);
+  if (curT || curD) {
+    const lbl = series === 's1' ? 'S1' : 'S2';
+    timeParts.push(lbl + ': ' + (curD
+      ? '<span class="s1-time dsq">DSQ</span>'
+      : '<span class="s1-time">' + esc(curT) + '</span>'));
+  }
+
+  let sub = team;
+  if (timeParts.length) {
+    sub = (team ? team + ' · ' : '') + timeParts.join(' · ');
+  }
+
   return '<div class="pair-ath">'
        +   '<span class="lane-badge ' + lane + '">' + lane + '</span>'
        +   '<div class="pair-ath-info">'
