@@ -1729,8 +1729,8 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <!-- Małe kwadratowe kafelki — fixed 86px kolumny, brak rozciągania. -->
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fit, 86px);gap:6px;margin-bottom:12px;padding:4px;justify-content:center;"></div>
+    <!-- Małe kwadratowe kafelki — flexbox z flex-wrap. Najprostsze i najbardziej przewidywalne. -->
+    <div id="team-numbering-tiles" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px;padding:4px;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
