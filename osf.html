@@ -1729,9 +1729,8 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <!-- Małe kwadratowe kafelki (zawsze 80-95px). aspect-ratio:1 + cap na max szerokość kolumny
-         (zamiast 1fr) — kafle nie rozciągają się gdy jest mało drużyn. -->
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(80px, 95px));gap:5px;margin-bottom:12px;padding:4px;justify-content:center;"></div>
+    <!-- Małe kwadratowe kafelki — fixed 86px kolumny, brak rozciągania. -->
+    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fit, 86px);gap:6px;margin-bottom:12px;padding:4px;justify-content:center;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
@@ -8675,8 +8674,8 @@ function _renderEditMode() {
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    // Kwadratowy kafel (aspect-ratio:1) — wymusza kwadrat niezależnie od liczby kolumn
-    tile.style.cssText = 'aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
+    // Explicit width+height — żadnej niejednoznaczności co do rozmiaru
+    tile.style.cssText = 'width:86px;height:86px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
 
     // Numer — klikalny, otwiera input do zmiany
     const numEl = document.createElement('div');
