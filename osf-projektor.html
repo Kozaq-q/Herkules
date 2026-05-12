@@ -93,7 +93,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .scroll-track { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
 
 /* ── RANKING TABLE ── */
-.rank-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+/* Cap szerokości — przy pojedynczej sekcji na ekranie tabela nie rozciąga
+   nazwiska na 1500+ px i czas trzyma się blisko nazwiska */
+.rank-table { width: 100%; max-width: 1100px; margin: 0 auto; border-collapse: collapse; table-layout: fixed; }
 .rank-table td { border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; }
 /* Naprzemienne tła wierszy */
 .rank-row.even td { background: var(--bg2); }
@@ -137,7 +139,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 
 /* ── KLASYFIKACJA WIERSZE ── */
-.klas-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+.klas-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); max-width: 1100px; margin-left: auto; margin-right: auto; }
 .klas-row.even { background: var(--bg2); }
 .klas-row.odd  { background: var(--bg3); }
 .klas-row.top1 { background: rgba(255,210,0,.09) !important; }
