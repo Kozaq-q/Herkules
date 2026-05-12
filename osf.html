@@ -383,31 +383,6 @@ tr:last-child > td { border-bottom: none; }
           </button>
         </div>
 
-        <!-- ═══ SPEAKER — link mobilny ═══ -->
-        <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:4px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">🎙 Speaker — link mobilny</div>
-            <span id="sp-status-pill" style="font-family:var(--font-m);font-size:10px;padding:2px 7px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
-          </div>
-          <div style="font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:10px;">Wyślij speakerowi link — otworzy go na telefonie i zobaczy listy startowe oraz wyniki na żywo.</div>
-
-          <button id="sp-toggle-btn" onclick="toggleSpeakerEnabled()" style="width:100%;padding:10px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">
-            Aktywuj link
-          </button>
-
-          <div id="sp-link-row" style="display:none;margin-bottom:8px;">
-            <div style="font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Link</div>
-            <div style="display:flex;gap:6px;">
-              <input id="sp-link-input" readonly style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 9px;font-family:var(--font-m);font-size:10px;" onclick="this.select()" />
-              <button onclick="copySpeakerLink()" style="background:var(--green);color:#0a0c0e;border:none;border-radius:var(--radius);padding:7px 12px;font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1px;cursor:pointer;flex-shrink:0;">📋 Kopiuj</button>
-            </div>
-          </div>
-
-          <button id="sp-rotate-btn" onclick="regenerateSpeakerKey()" style="display:none;width:100%;padding:7px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
-            🔄 Wygeneruj nowy klucz (stary link przestanie działać)
-          </button>
-        </div>
-
         <!-- Ukryte inputy dla kompatybilności -->
         <div style="display:none;">
           <input type="text" id="ps-custom-title" />
@@ -1240,6 +1215,33 @@ tr:last-child > td { border-bottom: none; }
         <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
         <span id="import-file-name" style="font-size:11px;color:var(--text3);font-family:var(--font-m);"></span>
         <span id="sync-status" style="display:none;"></span>
+      </div>
+
+      <!-- Speaker — link mobilny -->
+      <div class="card mb-12">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;">🎙 Speaker — link mobilny</div>
+          <span id="sp-status-pill" style="font-family:var(--font-m);font-size:10px;padding:3px 9px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
+        </div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:14px;">
+          Wygeneruj link dla komentatora zawodów — otworzy go na telefonie lub tablecie i zobaczy listy startowe oraz wyniki na żywo. Tylko do odczytu, nie da rady niczego zmienić.
+        </div>
+
+        <button id="sp-toggle-btn" onclick="toggleSpeakerEnabled()" style="width:100%;padding:12px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:12px;">
+          Aktywuj link
+        </button>
+
+        <div id="sp-link-row" style="display:none;margin-bottom:10px;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Link dla speakera</div>
+          <div style="display:flex;gap:8px;">
+            <input id="sp-link-input" readonly style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:9px 11px;font-family:var(--font-m);font-size:11px;" onclick="this.select()" />
+            <button onclick="copySpeakerLink()" style="background:var(--green);color:#0a0c0e;border:none;border-radius:var(--radius);padding:9px 16px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:1px;cursor:pointer;flex-shrink:0;">📋 Kopiuj</button>
+          </div>
+        </div>
+
+        <button id="sp-rotate-btn" onclick="regenerateSpeakerKey()" style="display:none;width:100%;padding:8px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
+          🔄 Wygeneruj nowy klucz (stary link przestanie działać)
+        </button>
       </div>
 
       <!-- Zarządzanie zawodami — kafelki -->
@@ -5621,6 +5623,7 @@ function renderSetupPage() {
   const s = state.setup || {};
   const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
   const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+  _renderSpeakerSection();
 
   setVal('osf-setup-name',  s.name  || state.contest.name  || '');
   setVal('osf-setup-city',  s.city  || state.contest.city  || '');
@@ -5900,7 +5903,6 @@ function toggleProjSettings() {
   if (pop.style.display === 'none' || pop.style.display === '') {
     pop.style.display = 'block';
     _updateProjTiles();
-    _renderSpeakerSection();
     setTimeout(() => {
       const handler = e => {
         if (!pop.contains(e.target) && !e.target.closest('[onclick*="toggleProjSettings"]')) {
