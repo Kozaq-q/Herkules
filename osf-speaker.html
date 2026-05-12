@@ -124,6 +124,18 @@ button { font: inherit; cursor: pointer; }
 .view { display: none; padding: 16px; }
 .view.active { display: block; }
 
+/* Welcome banner — duża nazwa miasta */
+.welcome-city {
+  font-family: var(--font-h);
+  font-size: 44px; font-weight: 700;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--orange);
+  text-align: center;
+  line-height: 1.05;
+  padding: 24px 8px 26px;
+  word-break: break-word;
+}
+
 /* Page title for tile menus */
 .view-title {
   font-family: var(--font-h); font-size: 14px; font-weight: 700;
@@ -284,12 +296,11 @@ button { font: inherit; cursor: pointer; }
 .pair-ath-info { flex: 1; min-width: 0; overflow: hidden; }
 .pair-ath-name {
   font-family: var(--font-b); font-size: 14px; font-weight: 600;
-  color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text1); word-break: break-word; line-height: 1.25;
 }
 .pair-ath-sub {
   font-family: var(--font-b); font-size: 11px; color: var(--text3);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-top: 1px;
+  margin-top: 2px; word-break: break-word; line-height: 1.3;
 }
 .pair-ath-sub .s1-time {
   font-family: var(--font-m); font-weight: 600; color: var(--accent);
@@ -345,11 +356,11 @@ button { font: inherit; cursor: pointer; }
 .rank-info { flex: 1; min-width: 0; }
 .rank-name {
   font-family: var(--font-b); font-size: 15px; font-weight: 600;
-  color: var(--text1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text1); word-break: break-word; line-height: 1.25;
 }
 .rank-team {
   font-family: var(--font-b); font-size: 11px; color: var(--text3);
-  margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px; word-break: break-word; line-height: 1.3;
 }
 .rank-times {
   font-family: var(--font-m); font-size: 10px; color: var(--text3);
@@ -383,7 +394,7 @@ button { font: inherit; cursor: pointer; }
 .klas-name {
   font-family: var(--font-h); font-size: 17px; font-weight: 700;
   letter-spacing: 1px; color: var(--text1); text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-break: break-word; line-height: 1.2;
 }
 .klas-detail {
   font-family: var(--font-m); font-size: 11px; color: var(--text3);
@@ -432,7 +443,7 @@ button { font: inherit; cursor: pointer; }
 .team-row-name {
   font-family: var(--font-h); font-size: 16px; font-weight: 700;
   color: var(--text1); text-transform: uppercase; letter-spacing: 1px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-break: break-word; line-height: 1.2;
 }
 .team-row-sub {
   font-family: var(--font-b); font-size: 11px; color: var(--text3);
@@ -480,6 +491,7 @@ button { font: inherit; cursor: pointer; }
 
   <!-- ── Level 1: Welcome ── -->
   <div class="view active" id="view-welcome">
+    <div class="welcome-city" id="welcome-city">—</div>
     <button class="tile-big start" onclick="goListMenu()">
       <span class="accent-bar"></span>
       <span class="icon">⚐</span>
@@ -593,6 +605,8 @@ let _teamSubseries = 's1';           // segmented w drużynówce
     return;
   }
 
+  // Zawsze startuj na ekranie powitalnym — auto-jump wyłączony (zbyt mylące dla speakera)
+  _autoJumpDone = true;
   enterApp();
 })();
 
@@ -751,6 +765,8 @@ function renderHeader() {
   const sub  = [c.city, c.date].filter(Boolean).join(' · ');
   document.getElementById('contest-name').textContent = name;
   document.getElementById('contest-sub').textContent = sub;
+  const wc = document.getElementById('welcome-city');
+  if (wc) wc.textContent = c.city || c.name || 'OSF';
   if (state && state.setup && state.setup.accentColor) {
     document.documentElement.style.setProperty('--orange', state.setup.accentColor);
   }
