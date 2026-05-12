@@ -92,37 +92,27 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .scroll-viewport { flex: 1; overflow: hidden; position: relative; min-height: 0; }
 .scroll-track { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
 
-/* ── RANKING ROWS (CSS Grid, div-based — taki sam wzorzec jak .klas-row) ── */
-/* DEFAULT (multi-sekcja): [pos][nazwa max-content][czas auto][spacer 1fr] —
-   nazwa szeroka jak treść, treść wypełnia naturalnie wąską sekcję.
-   SINGLE SECTION (body.single-section): centrowane z 1fr-spacerami po obu
-   stronach i stałą szerokością nazwy, żeby czasy ustawiały się w jednej linii. */
-.rank-table { width: 100%; }
-.rank-row {
-  display: grid;
-  grid-template-columns: 60px minmax(0, max-content) auto 1fr;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-}
-body.single-section .rank-row {
-  grid-template-columns: 1fr 60px var(--rank-name-width, 440px) auto 1fr;
-}
-.rank-row.even { background: var(--bg2); }
-.rank-row.odd  { background: var(--bg3); }
-.rank-row.top1 { background: rgba(255,210,0,.09); }
-.rank-row.top2 { background: rgba(200,210,220,.06); }
-.rank-row.top3 { background: rgba(200,140,60,.06); }
-.rank-row.dsq  { background: transparent; opacity: .4; }
+/* ── RANKING TABLE ── */
+.rank-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.rank-table td { border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; }
+/* Naprzemienne tła wierszy */
+.rank-row.even td { background: var(--bg2); }
+.rank-row.odd  td { background: var(--bg3); }
+/* Podświetlenia top3 nadpisują naprzemienne */
+.rank-row.top1 td { background: rgba(255,210,0,.09) !important; }
+.rank-row.top2 td { background: rgba(200,210,220,.06) !important; }
+.rank-row.top3 td { background: rgba(200,140,60,.06) !important; }
+.rank-row.dsq  td { background: transparent !important; opacity: .4; }
 
-/* Pozycja */
-.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; padding: 10px 4px; white-space: nowrap; }
+/* Pozycja — stała szerokość, nie obcina */
+.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; width: 50px; padding: 10px 4px; white-space: nowrap; flex-shrink: 0; }
 .rank-pos.p1 { color: #ffd700; }
 .rank-pos.p2 { color: #c8d0d8; }
 .rank-pos.p3 { color: #d4a060; }
 .rank-pos.other { color: var(--text3); font-size: .85em; }
 
-/* Kolumna nazwy — szerokość ustalana przez grid (var --rank-name-width) */
-.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; min-width: 0; }
+/* Kolumna nazwy — z paddingiem, wrap */
+.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; }
 .rank-name {
   font-family: var(--font-b); font-weight: 700;
   display: block;
@@ -136,41 +126,31 @@ body.single-section .rank-row {
   margin-top: 2px; padding-right: 4px;
 }
 
-/* Czas — sticks tuż za nazwą (mały lewy padding = blisko do nazwiska) */
+/* Czas — stała szerokość, nie obcina */
 .rank-time-cell {
   font-family: var(--font-m); font-weight: 500; color: var(--green);
-  text-align: left; white-space: nowrap;
-  padding: 10px 12px 10px 4px;
-  min-width: 80px;
+  text-align: right; white-space: nowrap;
+  padding: 10px 12px 10px 6px;
+  width: 90px; min-width: 90px;
 }
-.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: left; margin-top: 2px; }
+.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; }
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 
 /* ── KLASYFIKACJA WIERSZE ── */
-/* DEFAULT (multi): naturalne wypełnienie. SINGLE: centrowane z fixed name width */
-.klas-row {
-  display: grid;
-  grid-template-columns: 60px minmax(0, max-content) auto 1fr;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-}
-body.single-section .klas-row {
-  grid-template-columns: 1fr 60px var(--rank-name-width, 440px) auto 1fr;
-}
+.klas-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
 .klas-row.even { background: var(--bg2); }
 .klas-row.odd  { background: var(--bg3); }
 .klas-row.top1 { background: rgba(255,210,0,.09) !important; }
 .klas-row.top2 { background: rgba(200,210,220,.06) !important; }
 .klas-row.top3 { background: rgba(200,140,60,.06) !important; }
-.klas-pos  { font-family: var(--font-h); font-weight: 700; text-align: center; padding: 10px 4px; }
+.klas-pos  { font-family: var(--font-h); font-weight: 700; width: 50px; min-width: 50px; text-align: center; padding: 10px 4px; flex-shrink: 0; }
 .klas-name {
   font-family: var(--font-b); font-weight: 700;
-  padding: 10px 10px;
-  white-space: normal; word-break: break-word; line-height: 1.3;
-  max-width: 600px; min-width: 0;
+  flex: 1; padding: 10px 10px;
+  white-space: normal; word-break: break-word; line-height: 1.3; overflow: hidden;
 }
 .klas-pts-detail { font-family: var(--font-m); font-size: 10px; color: var(--text3); display: block; margin-top: 2px; font-weight: 400; }
-.klas-score { font-family: var(--font-h); font-weight: 700; color: var(--accent); padding: 10px 14px; text-align: left; white-space: nowrap; min-width: 70px; }
+.klas-score { font-family: var(--font-h); font-weight: 700; color: var(--accent); padding: 10px 14px; flex-shrink: 0; text-align: right; white-space: nowrap; min-width: 70px; }
 
 /* ── NO DATA ── */
 .no-data { text-align: center; padding: 48px 16px; color: var(--text3); font-family: var(--font-b); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
@@ -566,10 +546,6 @@ function buildLayout() {
   const main = document.getElementById('proj-main');
   main.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
 
-  // Centrowanie + stała szerokość nazwy tylko gdy 1 sekcja na ekranie
-  document.body.classList.toggle('single-section', n === 1);
-  if (n === 1) document.documentElement.style.setProperty('--rank-name-width', '440px');
-
   main.innerHTML = sections.map(s =>
     `<div class="proj-section" id="section-${s.id}">
       <div class="section-header ${s.cls}">
@@ -672,21 +648,21 @@ function buildIndRows(gender) {
 
     const posDisp = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
     if (!noBest) rank++;
-    return `<div class="rank-row ${rowCls}">
-        <div class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</div>
-        <div class="rank-name-cell">
+    return `<tr class="rank-row ${rowCls}">
+        <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</td>
+        <td class="rank-name-cell">
           <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}${r.a.pk ? '<span class="pk-badge">PK</span>' : ''}${r.a.m36 ? '<span class="m36-badge">M36+</span>' : ''}</span>
           <span class="rank-team-sub" style="font-size:${subSize}px;">${esc(r.a.team)}</span>
-        </div>
-        <div class="rank-time-cell" style="font-size:${timeSize};">
+        </td>
+        <td class="rank-time-cell" style="font-size:${timeSize};">
           ${r.best || '<span style="color:var(--text3);">—</span>'}
           ${timeSub ? `<span class="rank-sub-time">${timeSub}</span>` : ''}
-        </div>
-      </div>`;
+        </td>
+      </tr>`;
   }).join('');
 
   return {
-    html: `<div class="rank-table">${rows||'<div class="no-data">Brak wyników</div>'}</div>`,
+    html: `<table class="rank-table"><tbody>${rows||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
     count: shown.filter(r=>r.bestSec<Infinity).length + ' zaw.'
   };
 }
@@ -740,20 +716,20 @@ function buildTeamRows() {
 
     const rankTxt = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
     if (!isDsq && !noBest) rank++;
-    return `<div class="rank-row ${rowCls}">
-      <div class="rank-pos ${posCls}" style="font-size:${posFs}px;">${rankTxt}</div>
-      <div class="rank-name-cell">
+    return `<tr class="rank-row ${rowCls}">
+      <td class="rank-pos ${posCls}" style="font-size:${posFs}px;">${rankTxt}</td>
+      <td class="rank-name-cell">
         <span class="rank-name" style="font-size:${fontSize};">${esc(r.team)}</span>
         ${timeSub ? `<span class="rank-sub-time" style="display:block;margin-top:2px;">${timeSub}</span>` : ''}
-      </div>
-      <div class="rank-time-cell" style="font-size:${timeFs}px;">
+      </td>
+      <td class="rank-time-cell" style="font-size:${timeFs}px;">
         ${r.best || '<span style="color:var(--text3);">—</span>'}
-      </div>
-    </div>`;
+      </td>
+    </tr>`;
   }).join('');
 
   return {
-    html: `<div class="rank-table">${html||'<div class="no-data">Brak wyników</div>'}</div>`,
+    html: `<table class="rank-table"><tbody>${html||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
     count: shown2.filter(r=>r.ok&&r.best).length + ' drużyn'
   };
 }
