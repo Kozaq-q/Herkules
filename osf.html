@@ -1730,7 +1730,7 @@ tr:last-child > td { border-bottom: none; }
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
     <!-- Prosta siatka kwadratowych kafelków, auto-fill — czytelne i spójne z OSF -->
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:8px;max-height:55vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
+    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(95px, 1fr));gap:6px;max-height:62vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
@@ -8669,25 +8669,18 @@ function _renderEditMode() {
 
   _teamOrderDraft.forEach((team, idx) => {
     const newNum = idx + 1;
-    const ath = state.athletes.find(a => a.team === team);
-    const oldX = (() => {
-      if (!ath) return null;
-      const parts = String(ath.bib || '').split('/');
-      return parts.length === 2 ? parseInt(parts[0]) : null;
-    })();
-    const willChange = oldX !== null && oldX !== newNum;
 
     const tile = document.createElement('div');
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    // Kwadratowy kafel — styl spójny z innymi kartami w OSF
-    tile.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;min-height:108px;';
+    // Kompaktowy kwadratowy kafel
+    tile.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;min-height:64px;';
 
     // Numer — klikalny, otwiera input do zmiany
     const numEl = document.createElement('div');
     numEl.className = 'team-tile-num';
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:32px;font-weight:800;color:var(--accent);line-height:1;padding:2px 10px;border-radius:var(--radius);cursor:pointer;transition:background .15s;';
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:24px;font-weight:800;color:var(--accent);line-height:1;padding:1px 8px;border-radius:var(--radius);cursor:pointer;transition:background .15s;';
     numEl.textContent = newNum;
     numEl.title = 'Kliknij aby zmienić numer';
     numEl.onmouseenter = () => numEl.style.background = 'rgba(232,212,77,0.12)';
@@ -8696,26 +8689,12 @@ function _renderEditMode() {
 
     // Nazwa drużyny
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:12px;font-weight:600;color:var(--text1);word-break:break-word;line-height:1.25;';
+    nameEl.style.cssText = 'font-size:11px;font-weight:600;color:var(--text1);word-break:break-word;line-height:1.2;';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
-    // Status zmiany — mały, pod nazwą
-    const changeEl = document.createElement('div');
-    if (willChange) {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--orange);font-weight:600;';
-      changeEl.textContent = '↻ był: ' + oldX;
-    } else if (oldX !== null) {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--text3);';
-      changeEl.textContent = '✓ bez zmian';
-    } else {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--text3);';
-      changeEl.textContent = 'nowa';
-    }
-
     tile.appendChild(numEl);
     tile.appendChild(nameEl);
-    tile.appendChild(changeEl);
 
     // Drag & drop — wciąż dostępny jako alternatywa dla klikania w numer
     tile.addEventListener('dragstart', (e) => {
@@ -8774,7 +8753,7 @@ function _editTileNumber(idx) {
   input.min   = '1';
   input.max   = String(total);
   input.value = String(current);
-  input.style.cssText = 'font-family:var(--font-h);font-size:28px;font-weight:800;color:var(--accent);background:var(--bg2);border:2px solid var(--accent);border-radius:var(--radius);width:64px;text-align:center;padding:2px;outline:none;';
+  input.style.cssText = 'font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--accent);background:var(--bg2);border:2px solid var(--accent);border-radius:var(--radius);width:50px;text-align:center;padding:1px;outline:none;';
   numEl.replaceWith(input);
   setTimeout(() => { input.focus(); input.select(); }, 10);
 
