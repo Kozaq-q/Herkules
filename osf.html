@@ -3540,11 +3540,26 @@ function renderAthletes() {
 
   let html = '';
   let lastGender = null;
+  let lastTeam   = null;
   all.forEach((a, i) => {
     if (filterGender === 'all' && a.gender !== lastGender) {
       lastGender = a.gender;
+      lastTeam   = null;
       const label = a.gender === 'M' ? 'Mężczyźni' : 'Kobiety';
       html += '<tr><td colspan="7" style="background:var(--bg3);font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:' + (a.gender==='M'?'var(--male)':'var(--female)') + ';padding:6px 10px;font-weight:700;">' + label + '</td></tr>';
+    }
+    // Separator drużyny z przyciskiem zmiany numeru
+    const teamNum = a.bib ? String(a.bib).split('/')[0] : '';
+    if (a.team !== lastTeam) {
+      lastTeam = a.team;
+      const escTeam = esc(a.team || '—');
+      html += '<tr><td colspan="7" style="background:var(--bg2);border-top:1px solid var(--border);padding:4px 10px;">'
+        + '<span style="font-family:var(--font-b);font-size:11px;color:var(--text2);">' + escTeam + '</span>'
+        + (teamNum ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">(' + teamNum + ')</span>' : '')
+        + '<button onclick="openRenumberTeam(' + JSON.stringify(a.team) + ',' + JSON.stringify(teamNum) + ')" '
+        + 'style="margin-left:8px;background:none;border:1px solid var(--border2);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--text3);cursor:pointer;" '
+        + 'title="Zmień numer drużyny">✎ nr</button>'
+        + '</td></tr>';
     }
     const warnings = getAthleteWarnings(a);
     const hasWarn  = warnings.length > 0;
@@ -8115,6 +8130,103 @@ function _applyPairTimeAdj(key, pairNum) {
   const popup = document.getElementById('pair-time-popup');
   if (popup) popup.remove();
 }
+// Zmiana numeru drużyny dla wszystkich zawodników w drużynie
+function openRenumberTeam(teamName, currentNum) {
+  const existing = document.getElementById('renumber-team-popup');
+  if (existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'renumber-team-popup';
+  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:20px;width:280px;box-shadow:0 8px 40px rgba(0,0,0,.8);';
+
+  const label = document.createElement('div');
+  label.style.cssText = 'font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;';
+  label.textContent = 'Zmień numer drużyny: ' + teamName;
+
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:14px;';
+
+  const oldLabel = document.createElement('span');
+  oldLabel.style.cssText = 'font-family:var(--font-m);font-size:22px;font-weight:700;color:var(--text3);min-width:30px;text-align:center;';
+  oldLabel.textContent = currentNum || '?';
+
+  const arrow = document.createElement('span');
+  arrow.style.cssText = 'color:var(--text3);font-size:16px;';
+  arrow.textContent = '→';
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.id   = 'renumber-input';
+  input.min  = '1';
+  input.max  = '99';
+  input.placeholder = 'Nowy numer';
+  input.style.cssText = 'flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-size:18px;font-family:var(--font-m);text-align:center;font-weight:700;';
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') applyRenumber(teamName); });
+
+  row.appendChild(oldLabel);
+  row.appendChild(arrow);
+  row.appendChild(input);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;';
+
+  const okBtn = document.createElement('button');
+  okBtn.textContent = '✓ Zmień';
+  okBtn.style.cssText = 'flex:1;background:var(--accent);color:#000;border:none;border-radius:var(--radius);padding:8px;font-weight:700;cursor:pointer;font-size:13px;';
+  okBtn.addEventListener('click', () => applyRenumber(teamName));
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '✕';
+  cancelBtn.style.cssText = 'background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:8px 14px;color:var(--text3);cursor:pointer;font-size:13px;';
+  cancelBtn.addEventListener('click', () => popup.remove());
+
+  btnRow.appendChild(okBtn);
+  btnRow.appendChild(cancelBtn);
+
+  popup.appendChild(label);
+  popup.appendChild(row);
+  popup.appendChild(btnRow);
+  document.body.appendChild(popup);
+  input.focus();
+
+  // Overlay do zamknięcia
+  const overlay = document.createElement('div');
+  overlay.id = 'renumber-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;';
+  overlay.addEventListener('click', () => { popup.remove(); overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function applyRenumber(teamName) {
+  const input = document.getElementById('renumber-input');
+  if (!input) return;
+  const newNum = parseInt(input.value);
+  if (!newNum || newNum < 1 || newNum > 99) {
+    input.style.borderColor = 'var(--red)';
+    input.focus();
+    return;
+  }
+  // Zmień bib wszystkim zawodnikom tej drużyny
+  let changed = 0;
+  state.athletes.forEach(a => {
+    if (a.team !== teamName) return;
+    const parts = String(a.bib || '').split('/');
+    if (parts.length === 2) {
+      a.bib = newNum + '/' + parts[1];
+    } else {
+      // Bib bez formatu X/Y — nie zmieniaj
+    }
+    changed++;
+  });
+  document.getElementById('renumber-team-popup')?.remove();
+  document.getElementById('renumber-overlay')?.remove();
+  if (changed > 0) {
+    saveImmediate();
+    renderAthletes();
+    updateStats();
+  }
+}
+
 // ═══════════════════════════════════════════════════
 // PARA INFO — DLACZEGO TAKA KOLEJNOŚĆ?
 // ═══════════════════════════════════════════════════
