@@ -92,29 +92,33 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .scroll-viewport { flex: 1; overflow: hidden; position: relative; min-height: 0; }
 .scroll-track { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
 
-/* ── RANKING TABLE ── */
-/* Cap szerokości — przy pojedynczej sekcji na ekranie tabela nie rozciąga
-   nazwiska na 1500+ px i czas trzyma się blisko nazwiska */
-.rank-table { width: 100%; max-width: 1100px; margin: 0 auto; border-collapse: collapse; table-layout: fixed; }
-.rank-table td { border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; }
-/* Naprzemienne tła wierszy */
-.rank-row.even td { background: var(--bg2); }
-.rank-row.odd  td { background: var(--bg3); }
-/* Podświetlenia top3 nadpisują naprzemienne */
-.rank-row.top1 td { background: rgba(255,210,0,.09) !important; }
-.rank-row.top2 td { background: rgba(200,210,220,.06) !important; }
-.rank-row.top3 td { background: rgba(200,140,60,.06) !important; }
-.rank-row.dsq  td { background: transparent !important; opacity: .4; }
+/* ── RANKING ROWS (CSS Grid, div-based — taki sam wzorzec jak .klas-row) ── */
+/* Każdy wiersz to grid 4 kolumn: [pos][nazwa][czas][spacer 1fr].
+   Pos+name+time siedzą zwarte po lewej, spacer (pusty) zjada nadmiar szerokości.
+   Tło wiersza pokrywa całą szerokość sekcji — bez czarnych pasów po bokach. */
+.rank-table { width: 100%; }
+.rank-row {
+  display: grid;
+  grid-template-columns: 60px minmax(0, max-content) auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.rank-row.even { background: var(--bg2); }
+.rank-row.odd  { background: var(--bg3); }
+.rank-row.top1 { background: rgba(255,210,0,.09); }
+.rank-row.top2 { background: rgba(200,210,220,.06); }
+.rank-row.top3 { background: rgba(200,140,60,.06); }
+.rank-row.dsq  { background: transparent; opacity: .4; }
 
-/* Pozycja — stała szerokość, nie obcina */
-.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; width: 50px; padding: 10px 4px; white-space: nowrap; flex-shrink: 0; }
+/* Pozycja */
+.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; padding: 10px 4px; white-space: nowrap; }
 .rank-pos.p1 { color: #ffd700; }
 .rank-pos.p2 { color: #c8d0d8; }
 .rank-pos.p3 { color: #d4a060; }
 .rank-pos.other { color: var(--text3); font-size: .85em; }
 
-/* Kolumna nazwy — z paddingiem, wrap */
-.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; }
+/* Kolumna nazwy — cap max-width żeby czas trzymał się blisko */
+.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; max-width: 600px; min-width: 0; }
 .rank-name {
   font-family: var(--font-b); font-weight: 700;
   display: block;
@@ -128,31 +132,38 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   margin-top: 2px; padding-right: 4px;
 }
 
-/* Czas — stała szerokość, nie obcina */
+/* Czas — sticks tuż za nazwą, nie pcha się na sam prawy kraniec */
 .rank-time-cell {
   font-family: var(--font-m); font-weight: 500; color: var(--green);
-  text-align: right; white-space: nowrap;
-  padding: 10px 12px 10px 6px;
-  width: 90px; min-width: 90px;
+  text-align: left; white-space: nowrap;
+  padding: 10px 16px 10px 10px;
+  min-width: 90px;
 }
-.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; }
+.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: left; margin-top: 2px; }
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 
 /* ── KLASYFIKACJA WIERSZE ── */
-.klas-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); max-width: 1100px; margin-left: auto; margin-right: auto; }
+/* Grid: [pos][nazwa drużyny][punkty][spacer] — punkty tuż za nazwą, reszta pusta po prawej */
+.klas-row {
+  display: grid;
+  grid-template-columns: 60px minmax(0, max-content) auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
 .klas-row.even { background: var(--bg2); }
 .klas-row.odd  { background: var(--bg3); }
 .klas-row.top1 { background: rgba(255,210,0,.09) !important; }
 .klas-row.top2 { background: rgba(200,210,220,.06) !important; }
 .klas-row.top3 { background: rgba(200,140,60,.06) !important; }
-.klas-pos  { font-family: var(--font-h); font-weight: 700; width: 50px; min-width: 50px; text-align: center; padding: 10px 4px; flex-shrink: 0; }
+.klas-pos  { font-family: var(--font-h); font-weight: 700; text-align: center; padding: 10px 4px; }
 .klas-name {
   font-family: var(--font-b); font-weight: 700;
-  flex: 1; padding: 10px 10px;
-  white-space: normal; word-break: break-word; line-height: 1.3; overflow: hidden;
+  padding: 10px 10px;
+  white-space: normal; word-break: break-word; line-height: 1.3;
+  max-width: 600px; min-width: 0;
 }
 .klas-pts-detail { font-family: var(--font-m); font-size: 10px; color: var(--text3); display: block; margin-top: 2px; font-weight: 400; }
-.klas-score { font-family: var(--font-h); font-weight: 700; color: var(--accent); padding: 10px 14px; flex-shrink: 0; text-align: right; white-space: nowrap; min-width: 70px; }
+.klas-score { font-family: var(--font-h); font-weight: 700; color: var(--accent); padding: 10px 14px; text-align: left; white-space: nowrap; min-width: 70px; }
 
 /* ── NO DATA ── */
 .no-data { text-align: center; padding: 48px 16px; color: var(--text3); font-family: var(--font-b); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
@@ -650,21 +661,21 @@ function buildIndRows(gender) {
 
     const posDisp = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
     if (!noBest) rank++;
-    return `<tr class="rank-row ${rowCls}">
-        <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</td>
-        <td class="rank-name-cell">
+    return `<div class="rank-row ${rowCls}">
+        <div class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</div>
+        <div class="rank-name-cell">
           <span class="rank-name" style="font-size:${fontSize};">${esc(r.a.name)}${r.a.pk ? '<span class="pk-badge">PK</span>' : ''}${r.a.m36 ? '<span class="m36-badge">M36+</span>' : ''}</span>
           <span class="rank-team-sub" style="font-size:${subSize}px;">${esc(r.a.team)}</span>
-        </td>
-        <td class="rank-time-cell" style="font-size:${timeSize};">
+        </div>
+        <div class="rank-time-cell" style="font-size:${timeSize};">
           ${r.best || '<span style="color:var(--text3);">—</span>'}
           ${timeSub ? `<span class="rank-sub-time">${timeSub}</span>` : ''}
-        </td>
-      </tr>`;
+        </div>
+      </div>`;
   }).join('');
 
   return {
-    html: `<table class="rank-table"><tbody>${rows||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
+    html: `<div class="rank-table">${rows||'<div class="no-data">Brak wyników</div>'}</div>`,
     count: shown.filter(r=>r.bestSec<Infinity).length + ' zaw.'
   };
 }
@@ -718,20 +729,20 @@ function buildTeamRows() {
 
     const rankTxt = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
     if (!isDsq && !noBest) rank++;
-    return `<tr class="rank-row ${rowCls}">
-      <td class="rank-pos ${posCls}" style="font-size:${posFs}px;">${rankTxt}</td>
-      <td class="rank-name-cell">
+    return `<div class="rank-row ${rowCls}">
+      <div class="rank-pos ${posCls}" style="font-size:${posFs}px;">${rankTxt}</div>
+      <div class="rank-name-cell">
         <span class="rank-name" style="font-size:${fontSize};">${esc(r.team)}</span>
         ${timeSub ? `<span class="rank-sub-time" style="display:block;margin-top:2px;">${timeSub}</span>` : ''}
-      </td>
-      <td class="rank-time-cell" style="font-size:${timeFs}px;">
+      </div>
+      <div class="rank-time-cell" style="font-size:${timeFs}px;">
         ${r.best || '<span style="color:var(--text3);">—</span>'}
-      </td>
-    </tr>`;
+      </div>
+    </div>`;
   }).join('');
 
   return {
-    html: `<table class="rank-table"><tbody>${html||'<tr><td colspan="3" class="no-data">Brak wyników</td></tr>'}</tbody></table>`,
+    html: `<div class="rank-table">${html||'<div class="no-data">Brak wyników</div>'}</div>`,
     count: shown2.filter(r=>r.ok&&r.best).length + ' drużyn'
   };
 }
