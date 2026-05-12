@@ -252,6 +252,74 @@ tr:last-child > td { border-bottom: none; }
 .osf-swatch:hover { transform: scale(1.15); }
 .osf-swatch.active { border-color: var(--text1); transform: scale(1.1); }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════
+   TEAM ORDER MODAL — kompaktowa siatka kwadratowych kafli
+   Wszystkie style w bloku <style> żeby uniknąć konfliktów ze stylami modal/inline.
+   !important używamy żeby przeskoczyć .modal { width:480px } z klasy globalnej.
+   ═══════════════════════════════════════════════════ */
+#team-order-modal-box {
+  width: 90vw !important;
+  max-width: 800px !important;
+  padding: 18px !important;
+  max-height: 92vh !important;
+}
+.team-order-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  justify-content: center !important;
+  align-content: flex-start !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  padding: 4px 0;
+}
+.team-order-grid .team-order-tile {
+  flex: 0 0 86px !important;
+  width: 86px !important;
+  height: 86px !important;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+  transition: border-color .15s, opacity .15s, background .15s;
+}
+.team-order-grid .team-order-num-input {
+  font-family: var(--font-h);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 42px;
+  text-align: center;
+  padding: 1px;
+  outline: none;
+  cursor: text;
+}
+.team-order-grid .team-order-num-input:focus {
+  border-color: var(--accent);
+}
+.team-order-grid .team-order-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text1);
+  word-break: break-word;
+  line-height: 1.15;
+  overflow: hidden;
+}
 </style>
 </head>
 <body>
@@ -1706,7 +1774,7 @@ tr:last-child > td { border-bottom: none; }
 <!-- ═══ MODAL: DOPISZ ZAWODNIKA DO S1 ═══ -->
 <!-- Modal: Kolejność drużyn -->
 <div class="modal-overlay" id="modal-team-numbering">
-  <div class="modal" id="team-order-modal-box" style="width:90vw;max-width:800px;padding:18px;max-height:92vh;background:var(--bg2);transition:background .3s,border-color .3s;">
+  <div class="modal" id="team-order-modal-box" style="background:var(--bg2);transition:background .3s,border-color .3s;">
     <div class="modal-header">
       <div class="modal-title" id="team-order-title">↔ Kolejność drużyn</div>
       <button class="modal-close" onclick="closeModal('modal-team-numbering')">✕</button>
@@ -1728,9 +1796,8 @@ tr:last-child > td { border-bottom: none; }
       Pozycja kafla = numer bib drużyny. <strong>Złap kafel i upuść w nowym miejscu</strong> żeby zmienić kolejność. Po zatwierdzeniu wszyscy zawodnicy dostaną nowe numery (np. <span style="color:var(--orange);">3</span>/1, <span style="color:var(--orange);">3</span>/2…).
     </div>
 
-    <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <!-- Małe kwadratowe kafelki — flexbox z flex-wrap, explicit width 100%. -->
-    <div id="team-numbering-tiles" style="display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;justify-content:center;width:100%;box-sizing:border-box;margin-bottom:12px;padding:4px 0;"></div>
+    <!-- Tryb EDIT: kontener z klasą .team-order-grid (style w <style>, klasa nadpisuje wszystko !important) -->
+    <div id="team-numbering-tiles" class="team-order-grid" style="margin-bottom:12px;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
@@ -8674,28 +8741,25 @@ function _renderEditMode() {
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    // Explicit flex:0 0 86px — nie kurczy się, nie rośnie, basis 86px (super defensywnie)
-    tile.style.cssText = 'flex:0 0 86px;width:86px;height:86px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
+    // BRAK inline cssText — wszystko ze stylu w <style> via .team-order-grid .team-order-tile
 
-    // Numer — input widoczny od razu, można wpisywać bez wcześniejszego klikania
+    // Numer — input widoczny od razu (klasa .team-order-num-input)
     const numEl = document.createElement('input');
     numEl.type = 'number';
     numEl.min = '1';
     numEl.max = String(_teamOrderDraft.length);
     numEl.value = String(newNum);
     numEl.dataset.original = String(newNum);
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--accent);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);width:42px;text-align:center;padding:1px;outline:none;cursor:text;';
+    numEl.className = 'team-order-num-input';
     numEl.title = 'Wpisz nowy numer (Enter zapisuje, Escape anuluje)';
-    // Zapobiegnij dragstart z inputu — żeby kliknięcie/typing nie konfliktowało z drag&drop
     numEl.addEventListener('mousedown', (e) => e.stopPropagation());
     numEl.addEventListener('dragstart', (e) => e.preventDefault());
-    numEl.addEventListener('focus', () => { numEl.select(); numEl.style.borderColor = 'var(--accent)'; });
+    numEl.addEventListener('focus', () => numEl.select());
     numEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter')      { e.preventDefault(); numEl.blur(); }
       else if (e.key === 'Escape'){ e.preventDefault(); numEl.value = numEl.dataset.original; numEl.blur(); }
     });
     numEl.addEventListener('blur', () => {
-      numEl.style.borderColor = 'var(--border)';
       const newVal = parseInt(numEl.value, 10);
       const total  = _teamOrderDraft.length;
       const current = idx + 1;
@@ -8709,9 +8773,9 @@ function _renderEditMode() {
       _renderTeamOrderModal();
     });
 
-    // Nazwa drużyny — mała, zawijana
+    // Nazwa drużyny (klasa .team-order-name)
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:10px;font-weight:600;color:var(--text1);word-break:break-word;line-height:1.15;overflow:hidden;';
+    nameEl.className = 'team-order-name';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
