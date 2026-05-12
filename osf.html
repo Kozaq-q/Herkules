@@ -4676,13 +4676,27 @@ function timeToSeconds(t) {
   return parseFloat(t);
 }
 
-// Normalizuje czas do formatu SS.ss — zawsze same sekundy, 2 miejsca po przecinku.
-// Np: "1:02.12"→"62.12"  "45,3"→"45.30"  "62."→"62.00"  "62-12"→"62.12"  ".5"→"0.50"
+// Normalizuje czas do formatu M:SS.ss gdy >= 60s, lub SS.ss gdy < 60s.
+// Np: "134.10"→"2:14.10"  "2:14.10"→"2:14.10"  "45,3"→"45.30"  "59.99"→"59.99"
 function normalizeTime(t) {
   if (!t) return '';
   const sec = timeToSeconds(t);
   if (sec === null || sec < 0) return '';
-  return sec.toFixed(2);
+  return formatSeconds(sec);
+}
+
+// Formatuje sekundy do czytelnego formatu czasu
+function formatSeconds(sec) {
+  if (sec < 60) {
+    return sec.toFixed(2);
+  }
+  const mins = Math.floor(sec / 60);
+  const secs = sec - mins * 60;
+  // Sekundy zawsze 2 cyfry przed kropką
+  const secsStr = secs < 10
+    ? '0' + secs.toFixed(2)
+    : secs.toFixed(2);
+  return mins + ':' + secsStr;
 }
 
 function saveTime(input) {
