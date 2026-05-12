@@ -3057,10 +3057,6 @@ function renderTeamResults() {
     if (!noBest && !dsq) rank++;
   });
   tbody.innerHTML = html;
-  // Event delegation dla przycisków zmiany numeru drużyny
-  tbody.querySelectorAll('.ren-team-btn').forEach(btn => {
-    btn.addEventListener('click', () => openRenumberTeam(btn.dataset.team, btn.dataset.num));
-  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -3576,13 +3572,26 @@ function renderAthletes() {
     if (a.team !== lastTeam) {
       lastTeam = a.team;
       const escTeam = esc(a.team || '—');
-      html += '<tr><td colspan="7" style="background:var(--bg2);border-top:1px solid var(--border);padding:4px 10px;">'
-        + '<span style="font-family:var(--font-b);font-size:11px;color:var(--text2);">' + escTeam + '</span>'
-        + (teamNum ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">(' + teamNum + ')</span>' : '')
-        + '<button class="ren-team-btn" data-team="' + escTeam + '" data-num="' + teamNum + '" '
-        + 'style="margin-left:8px;background:none;border:1px solid var(--border2);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--text3);cursor:pointer;" '
-        + 'title="Zmień numer drużyny">✎ nr</button>'
-        + '</td></tr>';
+      // Flush HTML buffer przed wstawieniem DOM węzła
+      tbody.insertAdjacentHTML('beforeend', html);
+      html = '';
+      const _sepRow = document.createElement('tr');
+      const _sepTd  = document.createElement('td');
+      _sepTd.colSpan = 7;
+      _sepTd.style.cssText = 'background:var(--bg2);border-top:1px solid var(--border);padding:4px 10px;';
+      _sepTd.innerHTML = '<span style="font-family:var(--font-b);font-size:11px;color:var(--text2);">' + escTeam + '</span>'
+        + (teamNum ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">(' + teamNum + ')</span>' : '');
+      const _renBtn = document.createElement('button');
+      _renBtn.className = 'ren-team-btn';
+      _renBtn.dataset.team = a.team;
+      _renBtn.dataset.num  = teamNum;
+      _renBtn.style.cssText = 'margin-left:8px;background:none;border:1px solid var(--border2);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--text3);cursor:pointer;';
+      _renBtn.title = 'Zmień numer drużyny';
+      _renBtn.textContent = '✎ nr';
+      _renBtn.addEventListener('click', () => openRenumberTeam(_renBtn.dataset.team, _renBtn.dataset.num));
+      _sepTd.appendChild(_renBtn);
+      _sepRow.appendChild(_sepTd);
+      tbody.appendChild(_sepRow);
     }
     const warnings = getAthleteWarnings(a);
     const hasWarn  = warnings.length > 0;
@@ -3971,15 +3980,30 @@ function getAthInternalNum(a) {
 // Sortuje pary wg najniższego numeru porządkowego zawodnika w parze (miękka zasada)
 // Kolejność drużyn między sobą nie jest narzucona — tylko numer wewnętrzny
 function sortPairsByInternalOrder(pairs, athletes) {
+  // Solo (bId === null) zawsze na końcu
+  const normal = pairs.filter(p => p.bId !== null);
+  const solo   = pairs.filter(p => p.bId === null);
+
   function minInternalNum(p) {
     const a = p.aId ? athletes.find(x => x.id === p.aId) : null;
     const b = p.bId ? athletes.find(x => x.id === p.bId) : null;
     const nA = a ? getAthInternalNum(a) : 999;
     const nB = b ? getAthInternalNum(b) : 999;
+    // Używamy minimum — zawodnik z niższym numerem w drużynie powinien być wyżej
     return Math.min(nA, nB);
   }
-  // Stabilne sortowanie — zachowuje istniejącą kolejność gdy remis
-  return [...pairs].sort((a, b) => minInternalNum(a) - minInternalNum(b));
+
+  // Stabilne sortowanie par normalnych — niższy numer wewnętrzny = wcześniej
+  const sortedNormal = [...normal].sort((a, b) => minInternalNum(a) - minInternalNum(b));
+
+  // Solo sortowane wg numeru wewnętrznego (jeśli jest ich kilka)
+  const sortedSolo = [...solo].sort((a, b) => {
+    const athA = a.aId ? athletes.find(x => x.id === a.aId) : null;
+    const athB = b.aId ? athletes.find(x => x.id === b.aId) : null;
+    return (athA ? getAthInternalNum(athA) : 999) - (athB ? getAthInternalNum(athB) : 999);
+  });
+
+  return [...sortedNormal, ...sortedSolo];
 }
 
 function drawSeries1(gender) {
