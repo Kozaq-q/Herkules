@@ -852,7 +852,7 @@ tr:last-child > td { border-bottom: none; }
   <div class="card mb-12" id="klas-info-card">
     <div style="display:flex;gap:24px;flex-wrap:wrap;">
       <div>
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Sys. punktowy — ind. M</div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;" id="klas-formula-ind-label">Sys. punktowy — ind. M</div>
         <div style="font-family:var(--font-m);font-size:12px;" id="klas-formula-ind">—</div>
       </div>
       <div>
@@ -900,6 +900,15 @@ tr:last-child > td { border-bottom: none; }
         <table>
           <thead><tr><th>Msc</th><th>Zawodnik</th><th>Drużyna</th><th>Czas</th><th style="text-align:right;">Pkt</th></tr></thead>
           <tbody id="klas-ind-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" id="klas-k-card" style="display:none;grid-column:span 2;">
+      <div class="card-title" style="color:var(--female);">Punkty — Bieg indywidualny K</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Msc</th><th>Zawodniczka</th><th>Drużyna</th><th>Czas</th><th style="text-align:right;">Pkt</th></tr></thead>
+          <tbody id="klas-ind-k-tbody"></tbody>
         </table>
       </div>
     </div>
@@ -6258,6 +6267,8 @@ function renderKlasyfikacja() {
     : 'Bieg indywidualny M + Bieg drużynowy · Kobiety nie liczą się do klasyfikacji zespołowej';
   const thInd = document.getElementById('klas-th-ind');
   if (thInd) thInd.textContent = kOn ? 'Pkt ind. M+K' : 'Pkt ind. M';
+  const formLbl = document.getElementById('klas-formula-ind-label');
+  if (formLbl) formLbl.textContent = kOn ? 'Sys. punktowy — ind. M+K' : 'Sys. punktowy — ind. M';
   const { result, rankedMen, rankedTeams } = getTeamClassification();
   const N_men  = state.athletes.filter(a => a.gender === 'M').length;
   const N_team = TEAM_N_MODE() === 'ind' ? state.athletes.filter(a => a.gender === 'M' && !a.pk).length : rankedTeams.filter(r => r.rank !== null).length;
@@ -6322,7 +6333,7 @@ function renderKlasyfikacja() {
       const html = '<tr>' +
         '<td style="font-family:var(--font-h);font-size:28px;font-weight:800;padding:14px 10px;width:52px;text-align:center;">' + (medal || rank) + '</td>' +
         '<td style="font-weight:700;font-size:16px;padding:14px 10px;">' + esc(r.team) + '</td>' +
-        '<td style="text-align:center;font-family:var(--font-m);font-size:14px;color:var(--blue);padding:14px 10px;">' + r.indPts + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">ind. M</div></td>' +
+        '<td style="text-align:center;font-family:var(--font-m);font-size:14px;color:var(--blue);padding:14px 10px;">' + r.indPts + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">' + (kOn ? 'ind. M+K' : 'ind. M') + '</div></td>' +
         '<td style="text-align:center;font-family:var(--font-m);font-size:14px;color:var(--orange);padding:14px 10px;">' + r.teamPts + '<div style="font-size:9px;color:var(--text3);margin-top:2px;">drużyn.</div></td>' +
         '<td style="text-align:center;padding:14px 16px;border-left:2px solid var(--border);">' +
           '<div style="font-family:var(--font-h);font-size:36px;font-weight:900;color:var(--accent);line-height:1;">' + r.total + '</div>' +
@@ -6347,6 +6358,39 @@ function renderKlasyfikacja() {
         '<td style="text-align:right;font-family:var(--font-m);font-weight:700;color:var(--blue);">' + r.pts + '</td>' +
         '</tr>';
     }).join('');
+  }
+
+  // Szczegóły ind K — tylko gdy kobiety punktują
+  const kCard   = document.getElementById('klas-k-card');
+  const kTbody  = document.getElementById('klas-ind-k-tbody');
+  if (kCard && kTbody) {
+    if (kOn) {
+      kCard.style.display = '';
+      const N_men = state.athletes.filter(a => a.gender === 'M' && !a.pk).length;
+      const women = state.athletes.filter(a => a.gender === 'K' && !a.pk);
+      const rankedW = women.map(a => ({
+        athlete: a,
+        best:    bestTime(a.id),
+        bestSec: parseTime(bestTime(a.id))
+      })).sort((a,b) => a.bestSec - b.bestSec);
+      let wRank = 1;
+      kTbody.innerHTML = rankedW.map(r => {
+        const noBest = r.bestSec === Infinity;
+        const rank   = noBest ? null : wRank;
+        const pts    = noBest ? 0 : calcIndividualPoints(wRank, N_men);
+        if (!noBest) wRank++;
+        return '<tr>' +
+          '<td style="font-family:var(--font-h);font-size:14px;font-weight:700;">' + (rank===1?'🥇 ':rank===2?'🥈 ':rank===3?'🥉 ':'') + (rank || '—') + '</td>' +
+          '<td>' + esc(displayName(r.athlete)) + '</td>' +
+          '<td style="font-size:11px;color:var(--text3);">' + esc(r.athlete.team) + '</td>' +
+          '<td class="mono" style="font-size:12px;">' + (r.best || '—') + '</td>' +
+          '<td style="text-align:right;font-family:var(--font-m);font-weight:700;color:var(--female);">' + (pts || '—') + '</td>' +
+          '</tr>';
+      }).join('');
+    } else {
+      kCard.style.display = 'none';
+      kTbody.innerHTML = '';
+    }
   }
 
   // Szczegóły drużynowy
