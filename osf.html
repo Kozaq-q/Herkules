@@ -383,6 +383,31 @@ tr:last-child > td { border-bottom: none; }
           </button>
         </div>
 
+        <!-- ═══ SPEAKER — link mobilny ═══ -->
+        <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">🎙 Speaker — link mobilny</div>
+            <span id="sp-status-pill" style="font-family:var(--font-m);font-size:10px;padding:2px 7px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.4;margin-bottom:10px;">Wyślij speakerowi link — otworzy go na telefonie i zobaczy listy startowe oraz wyniki na żywo.</div>
+
+          <button id="sp-toggle-btn" onclick="toggleSpeakerEnabled()" style="width:100%;padding:10px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:8px;">
+            Aktywuj link
+          </button>
+
+          <div id="sp-link-row" style="display:none;margin-bottom:8px;">
+            <div style="font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Link</div>
+            <div style="display:flex;gap:6px;">
+              <input id="sp-link-input" readonly style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 9px;font-family:var(--font-m);font-size:10px;" onclick="this.select()" />
+              <button onclick="copySpeakerLink()" style="background:var(--green);color:#0a0c0e;border:none;border-radius:var(--radius);padding:7px 12px;font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1px;cursor:pointer;flex-shrink:0;">📋 Kopiuj</button>
+            </div>
+          </div>
+
+          <button id="sp-rotate-btn" onclick="regenerateSpeakerKey()" style="display:none;width:100%;padding:7px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
+            🔄 Wygeneruj nowy klucz (stary link przestanie działać)
+          </button>
+        </div>
+
         <!-- Ukryte inputy dla kompatybilności -->
         <div style="display:none;">
           <input type="text" id="ps-custom-title" />
@@ -2352,6 +2377,7 @@ function ensureStateDefaults() {
   if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
   if (!state.lockedPairs.s1) state.lockedPairs.s1 = [];
   if (!state.lockedPairs.s2) state.lockedPairs.s2 = [];
+  if (!state.cfg) state.cfg = {};
   if (!state.setup)      state.setup      = {
     accentColor: '#e8944d', name: '', city: '', date: '', org: '', notes: '',
     teamCount: 8, teamMin: 8, teamMultiplier: 3, teamMinStart: 8,
@@ -5874,6 +5900,7 @@ function toggleProjSettings() {
   if (pop.style.display === 'none' || pop.style.display === '') {
     pop.style.display = 'block';
     _updateProjTiles();
+    _renderSpeakerSection();
     setTimeout(() => {
       const handler = e => {
         if (!pop.contains(e.target) && !e.target.closest('[onclick*="toggleProjSettings"]')) {
@@ -5907,6 +5934,109 @@ function openProjektor() {
   localStorage.setItem('osf_proj_slot', STORAGE_KEY);
   window.open(url, 'osf_projektor', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
   document.getElementById('proj-settings-pop').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════
+// SPEAKER — link mobilny dla komentatora
+// ═══════════════════════════════════════════════════
+function _speakerKeyGen() {
+  // Losowy klucz 8-znakowy, base32-style (czytelne)
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let k = '';
+  for (let i = 0; i < 8; i++) k += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+  return k;
+}
+
+function _speakerUrl() {
+  if (!state.cfg || !state.cfg.speakerKey) return '';
+  // Bazowy URL: tylko ścieżka do osf-speaker.html — działa zarówno z GitHub Pages, jak i lokalnie
+  const base = window.location.href.replace(/[^/]*$/, '') + 'osf-speaker.html';
+  return base + '?slot=' + encodeURIComponent(STORAGE_KEY) + '&key=' + encodeURIComponent(state.cfg.speakerKey);
+}
+
+function _renderSpeakerSection() {
+  if (!state.cfg) state.cfg = {};
+  const enabled  = !!state.cfg.speakerEnabled;
+  const hasKey   = !!state.cfg.speakerKey;
+  const pill     = document.getElementById('sp-status-pill');
+  const btn      = document.getElementById('sp-toggle-btn');
+  const linkRow  = document.getElementById('sp-link-row');
+  const linkIn   = document.getElementById('sp-link-input');
+  const rotate   = document.getElementById('sp-rotate-btn');
+
+  if (!pill || !btn) return;
+
+  if (enabled && hasKey) {
+    pill.textContent = '● Aktywny';
+    pill.style.color = 'var(--green)';
+    pill.style.borderColor = 'rgba(80,200,144,.5)';
+    pill.style.background = 'rgba(80,200,144,.1)';
+    btn.textContent = 'Wyłącz dostęp';
+    btn.style.background = 'rgba(232,88,88,.1)';
+    btn.style.borderColor = 'rgba(232,88,88,.5)';
+    btn.style.color = 'var(--red)';
+    linkRow.style.display = 'block';
+    if (linkIn) linkIn.value = _speakerUrl();
+    rotate.style.display = 'block';
+  } else {
+    pill.textContent = '○ Wyłączony';
+    pill.style.color = 'var(--text3)';
+    pill.style.borderColor = 'var(--border)';
+    pill.style.background = 'var(--bg3)';
+    btn.textContent = 'Aktywuj link';
+    btn.style.background = 'rgba(80,200,144,.1)';
+    btn.style.borderColor = 'rgba(80,200,144,.5)';
+    btn.style.color = 'var(--green)';
+    linkRow.style.display = 'none';
+    rotate.style.display = 'none';
+  }
+}
+
+function toggleSpeakerEnabled() {
+  if (!state.cfg) state.cfg = {};
+  const wasEnabled = !!state.cfg.speakerEnabled;
+  if (wasEnabled) {
+    state.cfg.speakerEnabled = false;
+  } else {
+    state.cfg.speakerEnabled = true;
+    if (!state.cfg.speakerKey) state.cfg.speakerKey = _speakerKeyGen();
+  }
+  saveImmediate();
+  _renderSpeakerSection();
+  showToast(state.cfg.speakerEnabled ? '✓ Link speakera aktywny' : '⏸ Link speakera wyłączony',
+            state.cfg.speakerEnabled ? 'success' : 'warning');
+}
+
+function regenerateSpeakerKey() {
+  if (!state.cfg) state.cfg = {};
+  if (!confirm('Wygenerować nowy klucz?\n\nStary link przestanie działać — speaker, który go ma, zobaczy "Link wygasł" i musi dostać nowy.')) return;
+  state.cfg.speakerKey = _speakerKeyGen();
+  // Jeśli był wyłączony, włącz przy okazji
+  state.cfg.speakerEnabled = true;
+  saveImmediate();
+  _renderSpeakerSection();
+  showToast('✓ Wygenerowano nowy klucz — wyślij speakerowi nowy link', 'success');
+}
+
+function copySpeakerLink() {
+  const url = _speakerUrl();
+  if (!url) return;
+  // Spróbuj nowoczesne API, fallback na execCommand
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(
+      () => showToast('✓ Link skopiowany', 'success'),
+      () => { _speakerCopyFallback(url); }
+    );
+  } else {
+    _speakerCopyFallback(url);
+  }
+}
+function _speakerCopyFallback(url) {
+  const inp = document.getElementById('sp-link-input');
+  if (!inp) return;
+  inp.select(); inp.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); showToast('✓ Link skopiowany', 'success'); }
+  catch(e) { showToast('⚠ Skopiuj ręcznie z pola', 'warning'); }
 }
 
 function importJSON(e) {
