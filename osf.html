@@ -813,7 +813,7 @@ tr:last-child > td { border-bottom: none; }
   <div class="flex-between mb-12">
     <div>
       <div style="font-family:var(--font-h);font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--accent);">🏆 Klasyfikacja Zespołowa</div>
-      <div class="text-muted mt-4" style="font-size:12px;">Bieg indywidualny M + Bieg drużynowy · Kobiety nie liczą się do klasyfikacji zespołowej</div>
+      <div class="text-muted mt-4" style="font-size:12px;" id="klas-header-desc">Bieg indywidualny M + Bieg drużynowy</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <!-- Wydruki zbiorcze — popup -->
@@ -833,6 +833,9 @@ tr:last-child > td { border-bottom: none; }
             </button>
             <button onclick="printBiegDruz();togglePrintPanel('klas')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
               <div style="font-size:16px;">🏃</div><div style="font-size:11px;font-weight:700;color:var(--orange);margin-top:3px;">Drużynowy</div>
+            </button>
+            <button onclick="printKlasyfikacjaGeneralnaPDF();togglePrintPanel('klas')" style="grid-column:span 2;background:rgba(200,168,0,.08);border:1px solid rgba(200,168,0,.35);border-radius:6px;padding:10px 6px;cursor:pointer;text-align:center;">
+              <div style="font-size:16px;">🏆</div><div style="font-size:11px;font-weight:700;color:#c8a800;margin-top:3px;">Klas. zespołowa</div>
             </button>
           </div>
         </div>
@@ -870,7 +873,7 @@ tr:last-child > td { border-bottom: none; }
           <tr>
             <th style="width:40px;">Msc</th>
             <th>Drużyna</th>
-            <th style="width:80px;text-align:center;">Pkt ind. M</th>
+            <th style="width:80px;text-align:center;" id="klas-th-ind">Pkt ind. M</th>
             <th style="width:80px;text-align:center;">Pkt drużyn.</th>
             <th style="width:90px;text-align:center;font-size:14px;color:var(--accent);">SUMA</th>
           </tr>
@@ -6247,6 +6250,14 @@ function getTeamClassification() {
 // RENDER KLASYFIKACJI
 // ═══════════════════════════════════════════════════
 function renderKlasyfikacja() {
+  // Aktualizuj etykiety zależne od kScores
+  const kOn = K_SCORES();
+  const desc = document.getElementById('klas-header-desc');
+  if (desc) desc.textContent = kOn
+    ? 'Bieg indywidualny M + K + Bieg drużynowy · Kobiety punktują w skali N mężczyzn'
+    : 'Bieg indywidualny M + Bieg drużynowy · Kobiety nie liczą się do klasyfikacji zespołowej';
+  const thInd = document.getElementById('klas-th-ind');
+  if (thInd) thInd.textContent = kOn ? 'Pkt ind. M+K' : 'Pkt ind. M';
   const { result, rankedMen, rankedTeams } = getTeamClassification();
   const N_men  = state.athletes.filter(a => a.gender === 'M').length;
   const N_team = TEAM_N_MODE() === 'ind' ? state.athletes.filter(a => a.gender === 'M' && !a.pk).length : rankedTeams.filter(r => r.rank !== null).length;
@@ -6660,12 +6671,131 @@ function printBiegDruz() {
   openPrint(html, PREMIUM_PDF_CSS);
 }
 
+// ═══════════════════════════════════════════════════
+// PDF — KLASYFIKACJA GENERALNA (sama tabela + podium)
+// Rozbicie K+M+D drobnym drukiem pod nazwą drużyny
+// ═══════════════════════════════════════════════════
+function printKlasyfikacjaGeneralnaPDF() {
+  const kScores = K_SCORES();
+  const teams   = getTeams();
+  const N_men   = state.athletes.filter(a => a.gender === 'M' && !a.pk).length;
+  const mult    = getMultiplier();
+
+  // Punkty M per drużyna (z getRankedMen — uwzględnia MAX_SCORING_M)
+  const rankedMen = getRankedMen();
+  const mPts = {}; teams.forEach(t => mPts[t] = 0);
+  rankedMen.forEach(r => {
+    if (r.athlete.team && mPts[r.athlete.team] !== undefined) mPts[r.athlete.team] += r.pts;
+  });
+
+  // Punkty K per drużyna (tylko gdy kScores) — skala N mężczyzn
+  const kPts = {}; teams.forEach(t => kPts[t] = 0);
+  if (kScores) {
+    const women = state.athletes.filter(a => a.gender === 'K' && !a.pk);
+    const wRanked = women.map(a => ({
+      athlete: a, bestSec: parseTime(bestTime(a.id))
+    })).sort((a,b) => a.bestSec - b.bestSec);
+    let wr = 1;
+    wRanked.forEach(r => {
+      if (r.bestSec === Infinity) return;
+      const pts = calcIndividualPoints(wr, N_men);
+      if (r.athlete.team && kPts[r.athlete.team] !== undefined) kPts[r.athlete.team] += pts;
+      wr++;
+    });
+  }
+
+  // Punkty drużynowe (z getRankedTeams)
+  const rankedTeams = getRankedTeams();
+  const dPts = {}; teams.forEach(t => dPts[t] = 0);
+  rankedTeams.forEach(r => {
+    if (r.team) dPts[r.team] = r.pts;
+  });
+
+  // Wynik per drużyna
+  const result = teams.map(t => ({
+    team: t,
+    k: kPts[t] || 0,
+    m: mPts[t] || 0,
+    d: dPts[t] || 0,
+    total: (kPts[t] || 0) + (mPts[t] || 0) + (dPts[t] || 0)
+  })).sort((a,b) => b.total - a.total);
+
+  // Helper: rozbicie punktów drobnym drukiem
+  function breakdown(r) {
+    const parts = [];
+    if (kScores) parts.push('K: ' + r.k);
+    parts.push('M: ' + r.m);
+    parts.push('D: ' + r.d);
+    return parts.join(' + ');
+  }
+
+  // Podium top 3 — kolejność: 2. po lewej, 1. pośrodku, 3. po prawej
+  const top3 = result.slice(0, 3);
+  let podium = '';
+  if (top3.length >= 2) {
+    const podiumOrder = [top3[1] || null, top3[0] || null, top3[2] || null];
+    const podiumCls   = ['p2', 'p1', 'p3'];
+    const podiumMedal = ['🥈', '🥇', '🥉'];
+    podium = '<div class="podium-block">';
+    podiumOrder.forEach((r, i) => {
+      if (!r) { podium += '<div class="podium-place ' + podiumCls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + podiumCls[i] + '">' +
+        '<div class="podium-rank">' + podiumMedal[i] + '</div>' +
+        '<div class="podium-name">' + esc(r.team) + '</div>' +
+        '<div class="podium-pts">' + breakdown(r) + ' pkt</div>' +
+        '<div class="podium-time">' + r.total + ' PKT</div>' +
+        '</div>';
+    });
+    podium += '</div>';
+  }
+
+  let html = _pdfHeader('OSF', 'Klasyfikacja Generalna');
+  html += podium;
+  html += '<div class="section-title">Klasyfikacja końcowa — ' + result.length + ' drużyn</div>';
+  html += '<table><thead><tr>' +
+    '<th class="rank-col">Msc</th>' +
+    '<th>Drużyna</th>' +
+    '<th class="r" style="width:90px;">SUMA</th>' +
+    '</tr></thead><tbody>';
+  result.forEach((r, i) => {
+    const rank   = i + 1;
+    const topCls = rank===1?' top1':rank===2?' top2':rank===3?' top3':'';
+    const medal  = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+    html += '<tr class="' + topCls + '">' +
+      '<td class="rank-col">' + medal + rank + '</td>' +
+      '<td class="bold">' + esc(r.team) +
+        '<div style="font-size:9px;color:#888;font-weight:400;margin-top:2px;font-family:Consolas,\'Courier New\',monospace;">' + breakdown(r) + '</div>' +
+      '</td>' +
+      '<td class="r bold" style="font-size:17px;">' + r.total + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+
+  openPrint(html, PREMIUM_PDF_CSS);
+}
+
 function printKlasyfikacjaPDF() {
   const { result, rankedMen, rankedTeams } = getTeamClassification();
   const mult   = getMultiplier();
   const N_men  = state.athletes.filter(a => a.gender === 'M').length;
   const N_team = rankedTeams.filter(r => r.rank !== null).length;
   const medals = ['🥇','🥈','🥉'];
+  const kScores = K_SCORES();
+
+  // Ranking K dla sekcji "Bieg indywidualny K" — punkty tylko gdy kScores
+  const N_men_nopk = state.athletes.filter(a => a.gender === 'M' && !a.pk).length;
+  const rankedWomen = state.athletes
+    .filter(a => a.gender === 'K')
+    .map(a => ({
+      athlete: a,
+      best: bestTime(a.id),
+      bestSec: parseTime(bestTime(a.id))
+    }))
+    .sort((a, b) => {
+      if (a.athlete.pk && !b.athlete.pk) return 1;
+      if (!a.athlete.pk && b.athlete.pk) return -1;
+      return a.bestSec - b.bestSec;
+    });
 
   // Podium klasyfikacji — kolejność: 2. po lewej, 1. pośrodku, 3. po prawej
   const top3 = result.slice(0,3);
@@ -6743,6 +6873,32 @@ function printKlasyfikacjaPDF() {
       '</tr>';
   });
   html += '</tbody></table>';
+
+  // Szczegóły ind. K — na samym dole, tylko gdy kobiety punktują
+  if (kScores && rankedWomen.length > 0) {
+    html += '<div class="section-title">Bieg indywidualny K (skala N=' + N_men_nopk + ' M)</div>';
+    html += '<table><thead><tr>' +
+      '<th class="rank-col">Msc</th><th>Zawodniczka</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
+      '</tr></thead><tbody>';
+    let kRank = 1;
+    rankedWomen.forEach(r => {
+      const isPK = !!r.athlete.pk;
+      const noBest = r.bestSec === Infinity;
+      const pts = (isPK || noBest) ? 0 : calcIndividualPoints(kRank, N_men_nopk);
+      const rankDisp = isPK ? 'PK' : (noBest ? '—' : kRank);
+      const medal = (!isPK && !noBest) ? (kRank===1?'🥇':kRank===2?'🥈':kRank===3?'🥉':'') : '';
+      const topCls = (!isPK && !noBest) ? (kRank===1?' top1':kRank===2?' top2':kRank===3?' top3':'') : '';
+      html += '<tr class="' + topCls + '">' +
+        '<td class="rank-col">' + medal + rankDisp + '</td>' +
+        '<td class="bold">' + esc(displayName(r.athlete)) + '</td>' +
+        '<td class="small">' + esc(r.athlete.team) + '</td>' +
+        '<td class="c mono">' + (r.best||'—') + '</td>' +
+        '<td class="r bold">' + (pts || '—') + '</td>' +
+        '</tr>';
+      if (!isPK && !noBest) kRank++;
+    });
+    html += '</tbody></table>';
+  }
 
   openPrint(html, PREMIUM_PDF_CSS);
 }

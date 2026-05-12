@@ -753,6 +753,20 @@ function buildKlasRows() {
     if (!nb) { if (indPts[r.a.team]!==undefined) indPts[r.a.team] += calcIndPts(mr, N_men); mr++; }
   });
 
+  // pkt ind K — gdy kobiety punktują (skala = N mężczyzn)
+  const kScores = !!(state.setup && state.setup.kScores);
+  if (kScores) {
+    const women = (athletes || []).filter(a => a.gender === 'K' && !a.pk);
+    const wRanked = women.map(a => ({ a, sec: parseTime(bestTime(a.id)) }))
+                         .sort((x,y) => x.sec - y.sec);
+    let wr = 1;
+    wRanked.forEach(r => {
+      if (r.sec === Infinity) return;
+      if (indPts[r.a.team] !== undefined) indPts[r.a.team] += calcIndPts(wr, N_men);
+      wr++;
+    });
+  }
+
   // pkt drużynowy
   const tRows = teams.map(t=>({ t, ok: getTeamAthletes(t).length>=teamMin(), bestSec: parseTime(teamBestTimeEff(t)) }))
     .sort((a,b)=>{ if(!a.ok&&b.ok)return 1;if(a.ok&&!b.ok)return -1;return a.bestSec-b.bestSec; });
