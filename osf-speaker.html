@@ -306,6 +306,16 @@ button { font: inherit; cursor: pointer; }
   font-family: var(--font-m); font-weight: 600; color: var(--accent);
 }
 .pair-ath-sub .s1-time.dsq { color: var(--red); }
+
+/* Etykiety serii — kolorystycznie odróżnialne */
+.ser-tag {
+  font-family: var(--font-m); font-weight: 700;
+  font-size: 10px; letter-spacing: .5px;
+  padding: 0 4px; border-radius: 3px;
+  margin-right: 2px;
+}
+.ser-tag.s1 { color: var(--blue);  background: rgba(96,168,232,.14);  border: 1px solid rgba(96,168,232,.32); }
+.ser-tag.s2 { color: var(--green); background: rgba(80,200,144,.14); border: 1px solid rgba(80,200,144,.36); }
 .pair-ath-empty {
   color: var(--text3); font-style: italic; font-size: 12px;
 }
@@ -1065,15 +1075,16 @@ function athleteRowHTML(it, series) {
   const curD = isDisq(a.id, series);
   let timeLine = '';
   if (curT || curD) {
-    const lbl = series === 's1' ? 'S1' : 'S2';
-    timeLine = lbl + ': ' + (curD
+    const tagCls = series === 's1' ? 'ser-tag s1' : 'ser-tag s2';
+    const tagTxt = series === 's1' ? 'S1' : 'S2';
+    timeLine = '<span class="' + tagCls + '">' + tagTxt + '</span> ' + (curD
       ? '<span class="s1-time dsq">DSQ</span>'
       : '<span class="s1-time">' + esc(curT) + '</span>');
   } else if (series === 's2') {
     const s1 = getTime(a.id, 's1');
     const s1d = isDisq(a.id, 's1');
     if (s1 || s1d) {
-      timeLine = 'S1: ' + (s1d
+      timeLine = '<span class="ser-tag s1">S1</span> ' + (s1d
         ? '<span class="s1-time dsq">DSQ</span>'
         : '<span class="s1-time">' + esc(s1) + '</span>');
     }
@@ -1258,10 +1269,10 @@ function renderResultIndividual(series, gender) {
     if (posCls && posCls !== 'pk') cls.push(posCls);
     if (isDsq || isPK) cls.push('dsq');
 
-    // Pod nazwiskiem: oba czasy z badge'ami DSQ
+    // Pod nazwiskiem: oba czasy z badge'ami DSQ — etykiety S1/S2 kolorystycznie odróżnialne
     let timesHtml = '';
-    if (r.s1 || r.s1d) timesHtml += 'S1: ' + (r.s1d ? '<span class="dsq">DSQ</span>' : '<span class="ok">' + esc(r.s1) + '</span>');
-    if (r.s2 || r.s2d) timesHtml += (timesHtml ? ' · ' : '') + 'S2: ' + (r.s2d ? '<span class="dsq">DSQ</span>' : '<span class="ok">' + esc(r.s2) + '</span>');
+    if (r.s1 || r.s1d) timesHtml += '<span class="ser-tag s1">S1</span> ' + (r.s1d ? '<span class="dsq">DSQ</span>' : '<span class="ok">' + esc(r.s1) + '</span>');
+    if (r.s2 || r.s2d) timesHtml += (timesHtml ? ' · ' : '') + '<span class="ser-tag s2">S2</span> ' + (r.s2d ? '<span class="dsq">DSQ</span>' : '<span class="ok">' + esc(r.s2) + '</span>');
 
     let mainTime = '';
     if (series === 'final') {
