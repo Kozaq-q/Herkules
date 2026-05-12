@@ -4030,12 +4030,9 @@ function drawSeries1(gender) {
     if (state.setup && state.setup.ignoreLaneRule) {
       return Math.random() < 0.5 ? 'L' : 'P';
     }
-    const teamNum  = getTeamNum(a);
-    const athNum   = getBibNum(a);
-    // Drużyna nieparzysta: nieparzysty zawodnik → L, parzysty → P
-    // Drużyna parzysta:   nieparzysty zawodnik → P, parzysty → L
-    // Reguła: jeśli (teamNum + athNum) nieparzyste → L, parzyste → P
-    return (teamNum + athNum) % 2 === 0 ? 'L' : 'P';
+    const athNum = getBibNum(a);
+    // Nieparzysty zawodnik w drużynie → L, parzysty → P. Zawsze.
+    return athNum % 2 === 1 ? 'L' : 'P';
   }
 
   // Zachowaj zablokowane pary (klucz: "s1_M_3" itp.)
