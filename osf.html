@@ -1706,7 +1706,7 @@ tr:last-child > td { border-bottom: none; }
 <!-- ═══ MODAL: DOPISZ ZAWODNIKA DO S1 ═══ -->
 <!-- Modal: Kolejność drużyn -->
 <div class="modal-overlay" id="modal-team-numbering">
-  <div class="modal" id="team-order-modal-box" style="max-width:520px;width:95%;background:var(--bg2);transition:background .3s,border-color .3s;">
+  <div class="modal" id="team-order-modal-box" style="max-width:720px;width:95%;background:var(--bg2);transition:background .3s,border-color .3s;">
     <div class="modal-header">
       <div class="modal-title" id="team-order-title">↔ Kolejność drużyn</div>
       <button class="modal-close" onclick="closeModal('modal-team-numbering')">✕</button>
@@ -1729,16 +1729,15 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <!-- KLUCZ: row-gap = STAGGER (30px) — kafel z prawej kolumny przesunięty w dół o 30 ląduje
-         dokładnie tam, gdzie zaczynałby następny wiersz, więc nie nakłada się. -->
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:30px;max-height:62vh;overflow-y:auto;margin-bottom:12px;padding:4px 4px 36px;"></div>
+    <!-- Prosta siatka kwadratowych kafelków, auto-fill — czytelne i spójne z OSF -->
+    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:8px;max-height:55vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
 
-    <!-- Tryb FRESH: pula drużyn u góry + sloty do wypełnienia poniżej -->
+    <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
-      <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:700;">Pula drużyn — do umieszczenia</div>
-      <div id="team-fresh-pool" style="display:flex;flex-wrap:wrap;gap:6px;min-height:60px;background:var(--bg3);border:1px dashed var(--border2);border-radius:6px;padding:8px;margin-bottom:12px;"></div>
-      <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:700;">Sloty — wsadź drużyny w wybrane miejsca</div>
-      <div id="team-fresh-slots" style="display:grid;grid-template-columns:1fr;gap:4px;max-height:50vh;overflow-y:auto;"></div>
+      <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:700;">Pula drużyn — przeciągnij do slotu</div>
+      <div id="team-fresh-pool" style="display:flex;flex-wrap:wrap;gap:6px;min-height:48px;background:var(--bg3);border:1px dashed var(--border);border-radius:var(--radius);padding:8px;margin-bottom:14px;"></div>
+      <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:700;">Sloty</div>
+      <div id="team-fresh-slots" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:8px;max-height:50vh;overflow-y:auto;padding:4px;"></div>
     </div>
 
     <!-- Sekcja historii — widoczna tylko gdy są zapisane poprzednie układy -->
@@ -8668,12 +8667,6 @@ function _renderEditMode() {
   if (!container) return;
   container.innerHTML = '';
 
-  // F1 grid: parzyste idx (1,3,5...) w prawej kolumnie przesunięte w dół.
-  // KLUCZ: row-gap w gridzie = STAGGER_PX → kafel z prawej kolumny lądował
-  // dokładnie w tym miejscu w pionie, w którym powinien być następny rząd —
-  // żadnego nakładania.
-  const STAGGER_PX = 30;
-
   _teamOrderDraft.forEach((team, idx) => {
     const newNum = idx + 1;
     const ath = state.athletes.find(a => a.team === team);
@@ -8683,29 +8676,31 @@ function _renderEditMode() {
       return parts.length === 2 ? parseInt(parts[0]) : null;
     })();
     const willChange = oldX !== null && oldX !== newNum;
-    const isRightColumn = idx % 2 === 1;
-    const baseY = isRightColumn ? STAGGER_PX : 0;
 
     const tile = document.createElement('div');
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    tile.dataset.basey = String(baseY);
-    // Kompaktowy kafel: ~190×80 — bardziej kwadratowy niż dotąd, nie marnuje miejsca
-    tile.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;padding:6px 8px;cursor:grab;user-select:none;transform:translateY(' + baseY + 'px);transition:border-color .15s,opacity .15s;min-height:74px;';
+    // Kwadratowy kafel — styl spójny z innymi kartami w OSF
+    tile.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 8px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;min-height:108px;';
 
-    // Numer (kompaktowy, na górze)
+    // Numer — klikalny, otwiera input do zmiany
     const numEl = document.createElement('div');
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--accent);line-height:1;';
+    numEl.className = 'team-tile-num';
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:32px;font-weight:800;color:var(--accent);line-height:1;padding:2px 10px;border-radius:var(--radius);cursor:pointer;transition:background .15s;';
     numEl.textContent = newNum;
+    numEl.title = 'Kliknij aby zmienić numer';
+    numEl.onmouseenter = () => numEl.style.background = 'rgba(232,212,77,0.12)';
+    numEl.onmouseleave = () => numEl.style.background = '';
+    numEl.onclick = (e) => { e.stopPropagation(); _editTileNumber(idx); };
 
     // Nazwa drużyny
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--text1);word-break:break-word;line-height:1.2;';
+    nameEl.style.cssText = 'font-size:12px;font-weight:600;color:var(--text1);word-break:break-word;line-height:1.25;';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
-    // Status zmiany (mały)
+    // Status zmiany — mały, pod nazwą
     const changeEl = document.createElement('div');
     if (willChange) {
       changeEl.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--orange);font-weight:600;';
@@ -8722,7 +8717,7 @@ function _renderEditMode() {
     tile.appendChild(nameEl);
     tile.appendChild(changeEl);
 
-    // Drag & drop handlery — łączą staggering (translateY) z efektami drag
+    // Drag & drop — wciąż dostępny jako alternatywa dla klikania w numer
     tile.addEventListener('dragstart', (e) => {
       _draggingIdx = idx;
       tile.style.opacity = '0.4';
@@ -8731,11 +8726,9 @@ function _renderEditMode() {
     tile.addEventListener('dragend', () => {
       tile.style.opacity = '';
       _draggingIdx = null;
-      // Przywróć wszystkie tile do bazowego transformu
       document.querySelectorAll('.team-order-tile').forEach(t => {
-        t.style.borderColor = 'var(--border2)';
-        const by = parseFloat(t.dataset.basey || '0');
-        t.style.transform = 'translateY(' + by + 'px)';
+        t.style.borderColor = 'var(--border)';
+        t.style.background  = 'var(--bg3)';
       });
     });
     tile.addEventListener('dragover', (e) => {
@@ -8743,27 +8736,66 @@ function _renderEditMode() {
       e.preventDefault();
       try { e.dataTransfer.dropEffect = 'move'; } catch(_) {}
       tile.style.borderColor = 'var(--accent)';
-      const by = parseFloat(tile.dataset.basey || '0');
-      tile.style.transform = 'translateY(' + by + 'px) scale(1.03)';
+      tile.style.background  = 'rgba(232,212,77,0.06)';
     });
     tile.addEventListener('dragleave', () => {
-      tile.style.borderColor = 'var(--border2)';
-      const by = parseFloat(tile.dataset.basey || '0');
-      tile.style.transform = 'translateY(' + by + 'px)';
+      tile.style.borderColor = 'var(--border)';
+      tile.style.background  = 'var(--bg3)';
     });
     tile.addEventListener('drop', (e) => {
       e.preventDefault();
       if (_draggingIdx === null || _draggingIdx === idx) return;
+      // SWAP — żeby działanie było spójne z klikaniem w numer
       const from = _draggingIdx;
       const to   = idx;
-      const [moved] = _teamOrderDraft.splice(from, 1);
-      _teamOrderDraft.splice(to, 0, moved);
+      [_teamOrderDraft[from], _teamOrderDraft[to]] = [_teamOrderDraft[to], _teamOrderDraft[from]];
       _draggingIdx = null;
       state.teamOrderApproved = false;
       _renderTeamOrderModal();
     });
 
     container.appendChild(tile);
+  });
+}
+
+// Kliknięcie w numer kafelka → input do wpisania nowego numeru.
+// Po Enter/blur: swap z drużyną, która miała ten numer.
+function _editTileNumber(idx) {
+  const tile = document.querySelector('.team-order-tile[data-idx="' + idx + '"]');
+  if (!tile) return;
+  const numEl = tile.querySelector('.team-tile-num');
+  if (!numEl) return;
+
+  const total   = _teamOrderDraft.length;
+  const current = idx + 1;
+
+  const input = document.createElement('input');
+  input.type  = 'number';
+  input.min   = '1';
+  input.max   = String(total);
+  input.value = String(current);
+  input.style.cssText = 'font-family:var(--font-h);font-size:28px;font-weight:800;color:var(--accent);background:var(--bg2);border:2px solid var(--accent);border-radius:var(--radius);width:64px;text-align:center;padding:2px;outline:none;';
+  numEl.replaceWith(input);
+  setTimeout(() => { input.focus(); input.select(); }, 10);
+
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    if (save) {
+      const newNum = parseInt(input.value, 10);
+      if (Number.isFinite(newNum) && newNum >= 1 && newNum <= total && newNum !== current) {
+        const newIdx = newNum - 1;
+        [_teamOrderDraft[idx], _teamOrderDraft[newIdx]] = [_teamOrderDraft[newIdx], _teamOrderDraft[idx]];
+        state.teamOrderApproved = false;
+      }
+    }
+    _renderTeamOrderModal();
+  };
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')      { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
   });
 }
 
@@ -8813,56 +8845,56 @@ function _renderFreshSlots() {
   if (!slots) return;
   slots.innerHTML = '';
   _freshSlots.forEach((team, idx) => {
-    const slot = document.createElement('div');
     const filled = team !== null;
-    slot.style.cssText = 'display:flex;align-items:center;gap:10px;background:' + (filled ? 'var(--bg3)' : 'var(--bg2)') + ';border:2px ' + (filled ? 'solid' : 'dashed') + ' var(--border2);border-radius:6px;padding:8px 12px;min-height:42px;transition:border-color .15s,background .15s;';
+    // Kwadratowy kafel — taki sam wygląd jak w trybie edit. Pusty → przerywana ramka.
+    const slot = document.createElement('div');
+    slot.dataset.idx = idx;
+    slot.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:5px;background:' + (filled ? 'var(--bg3)' : 'var(--bg2)') + ';border:' + (filled ? '1px solid var(--border)' : '1px dashed var(--border)') + ';border-radius:var(--radius);padding:10px 8px;min-height:108px;transition:border-color .15s,background .15s;';
 
+    // Numer slotu
     const numEl = document.createElement('div');
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:20px;font-weight:800;color:' + (filled ? 'var(--accent)' : 'var(--text3)') + ';min-width:36px;text-align:center;line-height:1;flex-shrink:0;';
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:32px;font-weight:800;color:' + (filled ? 'var(--accent)' : 'var(--text3)') + ';line-height:1;padding:2px 10px;';
     numEl.textContent = (idx + 1);
-
     slot.appendChild(numEl);
 
-    if (team) {
+    if (filled) {
+      // Drużyna jako chip wewnątrz kafla (draggable — zwraca do puli przy drop na pulę)
       const chip = _makeFreshChip(team, 'slot', idx);
-      chip.style.flex = '1';
       slot.appendChild(chip);
     } else {
       const empty = document.createElement('div');
-      empty.style.cssText = 'flex:1;color:var(--text3);font-size:12px;font-style:italic;';
-      empty.textContent = '— przeciągnij drużynę tu —';
+      empty.style.cssText = 'font-family:var(--font-m);font-size:9px;color:var(--text3);font-style:italic;';
+      empty.textContent = '— upuść drużynę —';
       slot.appendChild(empty);
     }
 
-    // Drop na slot
+    // Slot jako drop target
     slot.ondragover = (e) => {
       e.preventDefault();
       slot.style.borderColor = 'var(--accent)';
+      slot.style.background  = 'rgba(232,212,77,0.06)';
     };
     slot.ondragleave = () => {
-      slot.style.borderColor = 'var(--border2)';
+      slot.style.borderColor = 'var(--border)';
+      slot.style.background  = filled ? 'var(--bg3)' : 'var(--bg2)';
     };
     slot.ondrop = (e) => {
       e.preventDefault();
-      slot.style.borderColor = 'var(--border2)';
       if (!_freshDragData) return;
 
       const targetIdx = idx;
-      const targetTeam = _freshSlots[targetIdx]; // może być null lub team
+      const targetTeam = _freshSlots[targetIdx];
 
       if (_freshDragData.source === 'pool') {
         const fromIdx = _freshDragData.idx;
         const movedTeam = _freshPool[fromIdx];
-        // Wsadź movedTeam do slot[targetIdx]
         _freshSlots[targetIdx] = movedTeam;
         _freshPool.splice(fromIdx, 1);
-        // Jeśli slot był zajęty — wyrzucony team wraca do puli
         if (targetTeam) _freshPool.push(targetTeam);
       } else if (_freshDragData.source === 'slot') {
         const fromIdx = _freshDragData.idx;
         if (fromIdx === targetIdx) { _freshDragData = null; return; }
         const movedTeam = _freshSlots[fromIdx];
-        // Swap
         _freshSlots[fromIdx]   = targetTeam;
         _freshSlots[targetIdx] = movedTeam;
       }
@@ -8878,7 +8910,8 @@ function _renderFreshSlots() {
 function _makeFreshChip(team, source, idx) {
   const chip = document.createElement('div');
   chip.draggable = true;
-  chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:5px;padding:6px 10px;cursor:grab;user-select:none;font-size:12px;font-weight:700;color:var(--text1);transition:opacity .15s;';
+  // Styl chipa spójny z OSF: bg2, border, mała czcionka
+  chip.style.cssText = 'display:inline-flex;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:5px 9px;cursor:grab;user-select:none;font-size:12px;font-weight:600;color:var(--text1);transition:opacity .15s,border-color .15s;max-width:100%;word-break:break-word;line-height:1.25;';
   chip.textContent = team || '(brak nazwy)';
   chip.title = team + ' — przeciągnij';
 
