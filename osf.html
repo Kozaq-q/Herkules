@@ -1713,16 +1713,31 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Pasek statusu — zmienia kolor po zatwierdzeniu -->
-    <div id="team-order-status" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);margin-bottom:12px;">
+    <div id="team-order-status" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);margin-bottom:10px;">
       <span id="team-order-status-icon" style="font-size:16px;">⚠</span>
       <span id="team-order-status-text" style="font-size:12px;color:var(--text2);flex:1;font-weight:600;">Niezatwierdzone — przeciągnij drużyny, potem zatwierdź</span>
     </div>
 
-    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
-      Pozycja kafla = numer bib drużyny. <strong>Złap kafel i upuść w nowym miejscu</strong> żeby zmienić kolejność. Po zatwierdzeniu wszyscy zawodnicy dostaną nowe numery (np. <span style="color:var(--orange);">3</span>/1, <span style="color:var(--orange);">3</span>/2…) i kolejność zostanie zapamiętana także dla nowo dopisanych.
+    <!-- Switch trybu: edycja vs nadawanie od zera -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;background:var(--bg3);padding:4px;border-radius:8px;border:1px solid var(--border);">
+      <button id="team-mode-edit-btn"  onclick="_setTeamOrderMode('edit')"  style="flex:1;padding:8px 10px;border:none;background:var(--bg4);color:var(--text1);border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;">📝 EDYTUJ KOLEJNOŚĆ</button>
+      <button id="team-mode-fresh-btn" onclick="_setTeamOrderMode('fresh')" style="flex:1;padding:8px 10px;border:none;background:transparent;color:var(--text3);border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;">🆕 NADAJ OD ZERA</button>
     </div>
 
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;max-height:50vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
+    <div id="team-order-help" style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5;">
+      Pozycja kafla = numer bib drużyny. <strong>Złap kafel i upuść w nowym miejscu</strong> żeby zmienić kolejność. Po zatwierdzeniu wszyscy zawodnicy dostaną nowe numery (np. <span style="color:var(--orange);">3</span>/1, <span style="color:var(--orange);">3</span>/2…).
+    </div>
+
+    <!-- Tryb EDIT: pionowa lista kafli z drag&drop reorderingiem -->
+    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:1fr;gap:5px;max-height:60vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
+
+    <!-- Tryb FRESH: pula drużyn u góry + sloty do wypełnienia poniżej -->
+    <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:700;">Pula drużyn — do umieszczenia</div>
+      <div id="team-fresh-pool" style="display:flex;flex-wrap:wrap;gap:6px;min-height:60px;background:var(--bg3);border:1px dashed var(--border2);border-radius:6px;padding:8px;margin-bottom:12px;"></div>
+      <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:700;">Sloty — wsadź drużyny w wybrane miejsca</div>
+      <div id="team-fresh-slots" style="display:grid;grid-template-columns:1fr;gap:4px;max-height:50vh;overflow-y:auto;"></div>
+    </div>
 
     <!-- Sekcja historii — widoczna tylko gdy są zapisane poprzednie układy -->
     <div id="team-order-history-wrap" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
@@ -8576,20 +8591,83 @@ function openTeamNumberingModal() {
     });
   }
 
-  _renderTeamOrderModal();
+  // Domyślnie tryb EDIT
+  _setTeamOrderMode('edit');
   document.getElementById('modal-team-numbering').classList.add('open');
 }
 
 let _draggingIdx = null;
+let _teamOrderMode = 'edit';   // 'edit' | 'fresh'
+let _freshPool     = [];        // drużyny jeszcze nieprzypisane do slotów (tryb fresh)
+let _freshSlots    = [];        // tablica długości N — slot[i] = team lub null (tryb fresh)
+let _freshDragData = null;      // {source: 'pool'|'slot', idx} dla drag&drop w trybie fresh
+
+function _setTeamOrderMode(mode) {
+  // Bezpieczeństwo: jeśli przechodzimy z fresh→edit a sędzia już coś przeciągnął do slotów,
+  // poproś o potwierdzenie żeby nie utracić pracy przez przypadek.
+  if (_teamOrderMode === 'fresh' && mode === 'edit') {
+    const filled = _freshSlots.filter(t => t !== null).length;
+    if (filled > 0) {
+      const ok = confirm('Anulować nadawanie od zera?\n\nMasz już ' + filled + ' przypisanych drużyn w slotach. Po anulowaniu wrócisz do poprzedniej listy i przeciąganie zostanie utracone.');
+      if (!ok) return;
+    }
+  }
+
+  _teamOrderMode = mode;
+  // Wyrównaj wygląd przełącznika
+  const editBtn  = document.getElementById('team-mode-edit-btn');
+  const freshBtn = document.getElementById('team-mode-fresh-btn');
+  if (editBtn && freshBtn) {
+    const onActive  = 'background:var(--bg4);color:var(--text1);';
+    const onInactive= 'background:transparent;color:var(--text3);';
+    editBtn.style.cssText  = (mode === 'edit'  ? onActive : onInactive) + 'flex:1;padding:8px 10px;border:none;border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;';
+    freshBtn.style.cssText = (mode === 'fresh' ? onActive : onInactive) + 'flex:1;padding:8px 10px;border:none;border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;';
+  }
+  // Pokaż/ukryj odpowiednie kontenery
+  const editC  = document.getElementById('team-numbering-tiles');
+  const freshC = document.getElementById('team-fresh-container');
+  const helpEl = document.getElementById('team-order-help');
+  if (mode === 'edit') {
+    if (editC)  editC.style.display  = '';
+    if (freshC) freshC.style.display = 'none';
+    if (helpEl) helpEl.innerHTML = 'Pozycja kafla = numer bib drużyny. <strong>Złap kafel i upuść w nowym miejscu</strong> żeby zmienić kolejność.';
+    // Po anulowaniu fresh — wyczyść jego stan żeby następne wejście było czyste
+    _freshPool  = [];
+    _freshSlots = [];
+  } else {
+    if (editC)  editC.style.display  = 'none';
+    if (freshC) freshC.style.display = '';
+    if (helpEl) helpEl.innerHTML = '<strong>Reset!</strong> Wszystkie drużyny w puli u góry. Przeciągnij każdą do wybranego slotu. <span style="color:var(--text2);">Możesz w każdej chwili anulować klikając "📝 Edytuj kolejność".</span>';
+    _initFreshMode();
+  }
+  _renderTeamOrderModal();
+}
+
+function _initFreshMode() {
+  // Wszystkie aktualne drużyny do puli, sloty puste
+  const teams = [...new Set(state.athletes.map(a => a.team).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'pl'));
+  _freshPool  = [...teams];
+  _freshSlots = Array(teams.length).fill(null);
+}
 
 function _renderTeamOrderModal() {
+  if (_teamOrderMode === 'fresh') {
+    _renderFreshMode();
+  } else {
+    _renderEditMode();
+  }
+  _updateTeamOrderStatus();
+  _renderTeamOrderHistory();
+}
+
+function _renderEditMode() {
   const container = document.getElementById('team-numbering-tiles');
   if (!container) return;
   container.innerHTML = '';
 
   _teamOrderDraft.forEach((team, idx) => {
     const newNum = idx + 1;
-    // Sprawdź obecny numer (X w bib) — pokażemy jeśli różni się od nowego
     const ath = state.athletes.find(a => a.team === team);
     const oldX = (() => {
       if (!ath) return null;
@@ -8602,46 +8680,37 @@ function _renderTeamOrderModal() {
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    tile.style.cssText = 'display:flex;flex-direction:column;gap:4px;background:var(--bg3);border:2px solid var(--border2);border-radius:8px;padding:10px 8px 8px;cursor:grab;user-select:none;position:relative;transition:transform .12s,border-color .15s,opacity .15s;';
-
-    // Górny pasek: numer + drag handle
-    const topRow = document.createElement('div');
-    topRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:4px;';
+    tile.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;padding:8px 12px;cursor:grab;user-select:none;transition:transform .12s,border-color .15s,opacity .15s;';
 
     const numEl = document.createElement('div');
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:26px;font-weight:800;color:var(--accent);line-height:1;';
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--accent);min-width:36px;text-align:center;line-height:1;flex-shrink:0;';
     numEl.textContent = newNum;
 
-    const handleEl = document.createElement('div');
-    handleEl.style.cssText = 'font-size:14px;color:var(--text3);line-height:1;cursor:grab;';
-    handleEl.textContent = '⋮⋮';
-    handleEl.title = 'Przeciągnij aby przenieść';
-
-    topRow.appendChild(numEl);
-    topRow.appendChild(handleEl);
-
-    // Nazwa drużyny
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:13px;font-weight:700;color:var(--text1);line-height:1.25;word-break:break-word;min-height:32px;';
+    nameEl.style.cssText = 'flex:1;font-size:13px;font-weight:700;color:var(--text1);min-width:0;word-break:break-word;line-height:1.3;';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
-    // Status zmiany
     const changeEl = document.createElement('div');
     if (willChange) {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--orange);font-weight:600;';
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--orange);font-weight:600;white-space:nowrap;flex-shrink:0;';
       changeEl.textContent = '↻ był: ' + oldX;
     } else if (oldX !== null) {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);';
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0;';
       changeEl.textContent = '✓ bez zmian';
     } else {
-      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);';
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0;';
       changeEl.textContent = 'nowa';
     }
 
-    tile.appendChild(topRow);
+    const handleEl = document.createElement('div');
+    handleEl.style.cssText = 'font-size:14px;color:var(--text3);line-height:1;flex-shrink:0;';
+    handleEl.textContent = '⋮⋮';
+
+    tile.appendChild(numEl);
     tile.appendChild(nameEl);
     tile.appendChild(changeEl);
+    tile.appendChild(handleEl);
 
     // Drag & drop handlery
     tile.addEventListener('dragstart', (e) => {
@@ -8652,7 +8721,6 @@ function _renderTeamOrderModal() {
     tile.addEventListener('dragend', () => {
       tile.style.opacity = '';
       _draggingIdx = null;
-      // wyczyść drop-target podświetlenie
       document.querySelectorAll('.team-order-tile').forEach(t => {
         t.style.borderColor = 'var(--border2)';
         t.style.transform = '';
@@ -8663,7 +8731,7 @@ function _renderTeamOrderModal() {
       e.preventDefault();
       try { e.dataTransfer.dropEffect = 'move'; } catch(_) {}
       tile.style.borderColor = 'var(--accent)';
-      tile.style.transform = 'scale(1.03)';
+      tile.style.transform = 'scale(1.02)';
     });
     tile.addEventListener('dragleave', () => {
       tile.style.borderColor = 'var(--border2)';
@@ -8683,9 +8751,132 @@ function _renderTeamOrderModal() {
 
     container.appendChild(tile);
   });
+}
 
-  _updateTeamOrderStatus();
-  _renderTeamOrderHistory();
+// ── TRYB FRESH ────────────────────────────────────────────
+function _renderFreshMode() {
+  _renderFreshPool();
+  _renderFreshSlots();
+}
+
+function _renderFreshPool() {
+  const pool = document.getElementById('team-fresh-pool');
+  if (!pool) return;
+  pool.innerHTML = '';
+  if (_freshPool.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'color:var(--green);font-size:12px;padding:8px;font-style:italic;';
+    empty.textContent = '✓ Wszystkie drużyny przypisane';
+    pool.appendChild(empty);
+  } else {
+    _freshPool.forEach((team, idx) => {
+      const chip = _makeFreshChip(team, 'pool', idx);
+      pool.appendChild(chip);
+    });
+  }
+  // Drop na pulę — zwraca team ze slotu
+  pool.ondragover = (e) => { e.preventDefault(); pool.style.borderColor = 'var(--orange)'; };
+  pool.ondragleave = () => { pool.style.borderColor = 'var(--border2)'; };
+  pool.ondrop = (e) => {
+    e.preventDefault();
+    pool.style.borderColor = 'var(--border2)';
+    if (!_freshDragData) return;
+    if (_freshDragData.source === 'slot') {
+      const team = _freshSlots[_freshDragData.idx];
+      if (team) {
+        _freshSlots[_freshDragData.idx] = null;
+        _freshPool.push(team);
+        state.teamOrderApproved = false;
+        _renderFreshMode();
+      }
+    }
+    _freshDragData = null;
+  };
+}
+
+function _renderFreshSlots() {
+  const slots = document.getElementById('team-fresh-slots');
+  if (!slots) return;
+  slots.innerHTML = '';
+  _freshSlots.forEach((team, idx) => {
+    const slot = document.createElement('div');
+    const filled = team !== null;
+    slot.style.cssText = 'display:flex;align-items:center;gap:10px;background:' + (filled ? 'var(--bg3)' : 'var(--bg2)') + ';border:2px ' + (filled ? 'solid' : 'dashed') + ' var(--border2);border-radius:6px;padding:8px 12px;min-height:42px;transition:border-color .15s,background .15s;';
+
+    const numEl = document.createElement('div');
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:20px;font-weight:800;color:' + (filled ? 'var(--accent)' : 'var(--text3)') + ';min-width:36px;text-align:center;line-height:1;flex-shrink:0;';
+    numEl.textContent = (idx + 1);
+
+    slot.appendChild(numEl);
+
+    if (team) {
+      const chip = _makeFreshChip(team, 'slot', idx);
+      chip.style.flex = '1';
+      slot.appendChild(chip);
+    } else {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'flex:1;color:var(--text3);font-size:12px;font-style:italic;';
+      empty.textContent = '— przeciągnij drużynę tu —';
+      slot.appendChild(empty);
+    }
+
+    // Drop na slot
+    slot.ondragover = (e) => {
+      e.preventDefault();
+      slot.style.borderColor = 'var(--accent)';
+    };
+    slot.ondragleave = () => {
+      slot.style.borderColor = 'var(--border2)';
+    };
+    slot.ondrop = (e) => {
+      e.preventDefault();
+      slot.style.borderColor = 'var(--border2)';
+      if (!_freshDragData) return;
+
+      const targetIdx = idx;
+      const targetTeam = _freshSlots[targetIdx]; // może być null lub team
+
+      if (_freshDragData.source === 'pool') {
+        const fromIdx = _freshDragData.idx;
+        const movedTeam = _freshPool[fromIdx];
+        // Wsadź movedTeam do slot[targetIdx]
+        _freshSlots[targetIdx] = movedTeam;
+        _freshPool.splice(fromIdx, 1);
+        // Jeśli slot był zajęty — wyrzucony team wraca do puli
+        if (targetTeam) _freshPool.push(targetTeam);
+      } else if (_freshDragData.source === 'slot') {
+        const fromIdx = _freshDragData.idx;
+        if (fromIdx === targetIdx) { _freshDragData = null; return; }
+        const movedTeam = _freshSlots[fromIdx];
+        // Swap
+        _freshSlots[fromIdx]   = targetTeam;
+        _freshSlots[targetIdx] = movedTeam;
+      }
+      _freshDragData = null;
+      state.teamOrderApproved = false;
+      _renderFreshMode();
+    };
+
+    slots.appendChild(slot);
+  });
+}
+
+function _makeFreshChip(team, source, idx) {
+  const chip = document.createElement('div');
+  chip.draggable = true;
+  chip.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:5px;padding:6px 10px;cursor:grab;user-select:none;font-size:12px;font-weight:700;color:var(--text1);transition:opacity .15s;';
+  chip.textContent = team || '(brak nazwy)';
+  chip.title = team + ' — przeciągnij';
+
+  chip.ondragstart = (e) => {
+    _freshDragData = { source, idx };
+    chip.style.opacity = '0.4';
+    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', team); } catch(_) {}
+  };
+  chip.ondragend = () => {
+    chip.style.opacity = '';
+  };
+  return chip;
 }
 
 function _renderTeamOrderHistory() {
@@ -8746,6 +8937,25 @@ function _loadTeamOrderFromHistory(idx) {
   _teamOrderDraft = [...fromHistory, ...newcomers];
   // Niezatwierdzone do czasu kliknięcia "Zatwierdź"
   state.teamOrderApproved = false;
+  // Jeśli byliśmy w trybie fresh — przełącz na edit żeby pokazać wczytany układ
+  // (omijamy confirm w _setTeamOrderMode — to świadoma akcja sędziego)
+  if (_teamOrderMode === 'fresh') {
+    _freshPool  = [];
+    _freshSlots = [];
+    _teamOrderMode = 'edit';
+    const editBtn  = document.getElementById('team-mode-edit-btn');
+    const freshBtn = document.getElementById('team-mode-fresh-btn');
+    const onActive = 'background:var(--bg4);color:var(--text1);';
+    const onInact  = 'background:transparent;color:var(--text3);';
+    if (editBtn)  editBtn.style.cssText  = onActive + 'flex:1;padding:8px 10px;border:none;border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;';
+    if (freshBtn) freshBtn.style.cssText = onInact   + 'flex:1;padding:8px 10px;border:none;border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;';
+    const editC  = document.getElementById('team-numbering-tiles');
+    const freshC = document.getElementById('team-fresh-container');
+    const helpEl = document.getElementById('team-order-help');
+    if (editC)  editC.style.display  = '';
+    if (freshC) freshC.style.display = 'none';
+    if (helpEl) helpEl.innerHTML = 'Pozycja kafla = numer bib drużyny. <strong>Złap kafel i upuść w nowym miejscu</strong> żeby zmienić kolejność.';
+  }
   _renderTeamOrderModal();
   showToast('↶ Załadowano historyczny układ — kliknij "Zatwierdź" żeby go zastosować', 'info');
 }
@@ -8789,6 +8999,28 @@ function _updateTeamOrderStatus() {
 }
 
 function applyTeamNumbering() {
+  // Jeśli tryb fresh — wymagaj wszystkich slotów wypełnionych, zbuduj draft ze slotów
+  if (_teamOrderMode === 'fresh') {
+    const empty = _freshSlots.filter(t => t === null).length;
+    if (empty > 0) {
+      showToast('⚠ Wsadź wszystkie ' + empty + ' brakujących drużyn do slotów', 'warning');
+      return;
+    }
+    _teamOrderDraft = [..._freshSlots];
+    // Przejdź do trybu edit żeby pokazać zatwierdzony stan
+    _teamOrderMode = 'edit';
+    const editC  = document.getElementById('team-numbering-tiles');
+    const freshC = document.getElementById('team-fresh-container');
+    if (editC)  editC.style.display  = '';
+    if (freshC) freshC.style.display = 'none';
+    const editBtn  = document.getElementById('team-mode-edit-btn');
+    const freshBtn = document.getElementById('team-mode-fresh-btn');
+    const onActive = 'background:var(--bg4);color:var(--text1);';
+    const onInact  = 'background:transparent;color:var(--text3);';
+    if (editBtn)  editBtn.style.cssText  = onActive + 'flex:1;padding:8px 10px;border:none;border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;';
+    if (freshBtn) freshBtn.style.cssText = onInact   + 'flex:1;padding:8px 10px;border:none;border-radius:5px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;';
+  }
+
   if (!_teamOrderDraft.length) return;
 
   // Dodaj POPRZEDNI układ do historii (jeśli istniał i różni się od nowego)
