@@ -453,14 +453,9 @@ tr:last-child > td { border-bottom: none; }
           <button id="fg-K"   onclick="setGenderFilter('K')"   style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;background:var(--bg3);color:var(--female);cursor:pointer;">♀ K</button>
         </div>
         <input type="hidden" id="filter-gender" value="all" />
-        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;" title="Schemat numeracji startowej">
-          <button id="bib-btn-team-alpha" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team-alpha')">X/Y A–Z</button>
-          <button id="bib-btn-team" class="btn btn-sm" style="border:none;border-radius:0;border-right:1px solid var(--border2);padding:4px 9px;" onclick="setBibScheme('team')">X/Y lista</button>
-          <button id="bib-btn-sequential" class="btn btn-sm" style="border:none;border-radius:0;padding:4px 9px;" onclick="setBibScheme('sequential')">1,2,3…</button>
-        </div>
         <button class="btn btn-sm" onclick="openImportModal()">↑ Import CSV/XLSX</button>
         <button class="btn btn-sm" onclick="removeDuplicateAthletes()" style="color:var(--text3);border-color:var(--border2);" title="Usuń zduplikowanych zawodników z listy">⊘ Duplikaty</button>
-        <button class="btn btn-sm" onclick="openTeamNumberingModal()" style="color:var(--accent);border-color:rgba(232,212,77,.4);" title="Ustaw numery drużyn">🔢 Numery drużyn</button>
+        <button class="btn btn-sm" id="team-order-btn" onclick="openTeamNumberingModal()" style="color:var(--accent);border-color:rgba(232,212,77,.4);" title="Ustaw kolejność i numery drużyn">↔ Kolejność drużyn</button>
         <button class="btn btn-sm btn-primary" onclick="openAddModal()">+ Dodaj</button>
       </div>
     </div>
@@ -1709,20 +1704,38 @@ tr:last-child > td { border-bottom: none; }
 </div>
 
 <!-- ═══ MODAL: DOPISZ ZAWODNIKA DO S1 ═══ -->
-<!-- Modal: Numerowanie drużyn -->
+<!-- Modal: Kolejność drużyn -->
 <div class="modal-overlay" id="modal-team-numbering">
-  <div class="modal" style="max-width:680px;width:95%;">
+  <div class="modal" id="team-order-modal-box" style="max-width:680px;width:95%;transition:background .3s,border-color .3s;">
     <div class="modal-header">
-      <div class="modal-title">🔢 Numery drużyn</div>
+      <div class="modal-title" id="team-order-title">↔ Kolejność drużyn</div>
       <button class="modal-close" onclick="closeModal('modal-team-numbering')">✕</button>
     </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">
-      Wpisz numer dla każdej drużyny. Zmieni się pierwsza cyfra bib wszystkich zawodników (np. <span style="color:var(--orange);">3</span>/1, <span style="color:var(--orange);">3</span>/2...).
+
+    <!-- Pasek statusu — zmienia kolor po zatwierdzeniu -->
+    <div id="team-order-status" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:6px;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);margin-bottom:12px;">
+      <span id="team-order-status-icon" style="font-size:16px;">⚠</span>
+      <span id="team-order-status-text" style="font-size:12px;color:var(--text2);flex:1;font-weight:600;">Niezatwierdzone — przesuń drużyny strzałkami, potem zatwierdź</span>
     </div>
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;max-height:60vh;overflow-y:auto;margin-bottom:16px;"></div>
+
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+      Pozycja drużyny w liście = jej numer bib. Przesuń strzałkami ↑↓. Po zatwierdzeniu wszyscy zawodnicy dostaną nowe numery (np. <span style="color:var(--orange);">3</span>/1, <span style="color:var(--orange);">3</span>/2…) i kolejność zostanie zapamiętana także dla nowo dopisanych zawodników.
+    </div>
+
+    <div id="team-numbering-tiles" style="display:flex;flex-direction:column;gap:6px;max-height:40vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
+
+    <!-- Sekcja historii — widoczna tylko gdy są zapisane poprzednie układy -->
+    <div id="team-order-history-wrap" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">↶ Historia układów</div>
+        <span id="team-order-history-count" style="font-family:var(--font-m);font-size:10px;color:var(--text3);"></span>
+      </div>
+      <div id="team-order-history-list" style="display:flex;flex-direction:column;gap:5px;max-height:22vh;overflow-y:auto;"></div>
+    </div>
+
     <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border);padding-top:14px;">
-      <button class="btn" onclick="closeModal('modal-team-numbering')">Anuluj</button>
-      <button class="btn btn-primary" onclick="applyTeamNumbering()">✓ Zastosuj wszystkie</button>
+      <button class="btn" onclick="closeModal('modal-team-numbering')">Zamknij</button>
+      <button class="btn btn-primary" id="team-order-approve-btn" onclick="applyTeamNumbering()">✓ Zatwierdź kolejność</button>
     </div>
   </div>
 </div>
@@ -2383,6 +2396,10 @@ function ensureStateDefaults() {
   if (!state.times)      state.times      = {};
   if (!state.disq)       state.disq       = {};
   if (!state.bibScheme)  state.bibScheme  = 'team';
+  // Manualna kolejność drużyn (nowy system "Kolejność drużyn") — jeśli istnieje, ma priorytet nad bibScheme przy assignBibs()
+  if (!state.teamOrderManual) state.teamOrderManual = null;       // null = nieustawione, [team1,team2,...] = ustawione
+  if (typeof state.teamOrderApproved !== 'boolean') state.teamOrderApproved = false;
+  if (!Array.isArray(state.teamOrderHistory)) state.teamOrderHistory = []; // {order:[], approvedAt} — od najnowszych, max 10
   if (!state.teamOrder)  state.teamOrder  = { s1: [], s2: [] };
   if (!state.teamOrder.s1) state.teamOrder.s1 = [];
   if (!state.teamOrder.s2) state.teamOrder.s2 = [];
@@ -3396,13 +3413,27 @@ function getSortedTeams(scheme) {
       });
 }
 
-// Przelicza numery startowe wszystkich zawodników wg aktualnego schematu
+// Przelicza numery startowe wszystkich zawodników wg aktualnego schematu.
+// Jeśli istnieje manualna kolejność (state.teamOrderManual) — ma priorytet.
 function assignBibs() {
-  const scheme    = state.bibScheme || 'team';
-  const teamOrder = getSortedTeams(scheme === 'team-alpha' ? 'alpha' : 'appearance');
+  const scheme = state.bibScheme || 'team';
+
+  // 1) Manualna kolejność z modalu "Kolejność drużyn" ma priorytet
+  const manual = Array.isArray(state.teamOrderManual) ? state.teamOrderManual : null;
+  const currentTeams = [...new Set(state.athletes.map(a => a.team).filter(Boolean))];
+
+  let teamOrder;
+  if (manual && manual.length) {
+    // Zaczynamy od manualnej kolejności; dopisz nowe drużyny (te których nie było, gdy sędzia zatwierdzał) na końcu wg kolejności pojawienia
+    const manualFiltered = manual.filter(t => currentTeams.includes(t));
+    const newcomers      = currentTeams.filter(t => !manualFiltered.includes(t));
+    teamOrder = [...manualFiltered, ...newcomers];
+  } else {
+    teamOrder = getSortedTeams(scheme === 'team-alpha' ? 'alpha' : 'appearance');
+  }
 
   if (scheme === 'sequential') {
-    // 1,2,3... osobno dla M i K
+    // 1,2,3... osobno dla M i K (zachowane dla istniejących slotów, ale UI do wyboru schematu został usunięty)
     let mIdx = 1, kIdx = 1;
     state.athletes.forEach(a => {
       a.bib = a.gender === 'M' ? mIdx++ : kIdx++;
@@ -3622,15 +3653,6 @@ function renderAthletes() {
       _sepTd.style.cssText = 'background:var(--bg2);border-top:1px solid var(--border);padding:4px 10px;';
       _sepTd.innerHTML = '<span style="font-family:var(--font-b);font-size:11px;color:var(--text2);">' + escTeam + '</span>'
         + (teamNum ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">(' + teamNum + ')</span>' : '');
-      const _renBtn = document.createElement('button');
-      _renBtn.className = 'ren-team-btn';
-      _renBtn.dataset.team = a.team;
-      _renBtn.dataset.num  = teamNum;
-      _renBtn.style.cssText = 'margin-left:8px;background:none;border:1px solid var(--border2);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--text3);cursor:pointer;';
-      _renBtn.title = 'Zmień numer drużyny';
-      _renBtn.textContent = '✎ nr';
-      _renBtn.addEventListener('click', () => openRenumberTeam(_renBtn.dataset.team, _renBtn.dataset.num));
-      _sepTd.appendChild(_renBtn);
       _sepRow.appendChild(_sepTd);
       tbody.appendChild(_sepRow);
     }
@@ -8521,184 +8543,240 @@ function _applyPairTimeAdj(key, pairNum) {
   const popup = document.getElementById('pair-time-popup');
   if (popup) popup.remove();
 }
-function openTeamNumberingModal() {
-  // Zbierz unikalne drużyny z aktualnym numerem
-  const teamMap = new Map(); // teamName → currentNum
-  state.athletes.forEach(a => {
-    if (!teamMap.has(a.team)) {
-      const parts = String(a.bib || '').split('/');
-      teamMap.set(a.team, parts.length === 2 ? parts[0] : '');
-    }
-  });
+// ═══════════════════════════════════════════════════
+// KOLEJNOŚĆ DRUŻYN — nowy modal z kafelkami i strzałkami
+// ═══════════════════════════════════════════════════
+// Robocza kolejność edytowana w modalu (nie zapisywana do state aż do kliknięcia "Zatwierdź")
+let _teamOrderDraft = [];
 
+function openTeamNumberingModal() {
+  // Punkt wyjścia: jeśli sędzia już raz zatwierdził kolejność, używamy jej; inaczej bieżąca kolejność wg bib.
+  const currentTeams = [...new Set(state.athletes.map(a => a.team).filter(Boolean))];
+  const manual = Array.isArray(state.teamOrderManual) ? state.teamOrderManual : null;
+
+  if (manual && manual.length) {
+    // Zacznij od manualnej, dopisz nowe drużyny na końcu
+    const manualFiltered = manual.filter(t => currentTeams.includes(t));
+    const newcomers      = currentTeams.filter(t => !manualFiltered.includes(t));
+    _teamOrderDraft = [...manualFiltered, ...newcomers];
+  } else {
+    // Brak manualnej — posortuj wg bib (X) jeśli istnieje, inaczej alfabetycznie
+    const teamFirstBib = new Map();
+    state.athletes.forEach(a => {
+      if (!teamFirstBib.has(a.team)) {
+        const parts = String(a.bib || '').split('/');
+        const x = parts.length === 2 ? parseInt(parts[0]) : NaN;
+        teamFirstBib.set(a.team, Number.isFinite(x) ? x : Infinity);
+      }
+    });
+    _teamOrderDraft = currentTeams.sort((a, b) => {
+      const xa = teamFirstBib.get(a), xb = teamFirstBib.get(b);
+      if (xa !== xb) return xa - xb;
+      return a.localeCompare(b, 'pl');
+    });
+  }
+
+  _renderTeamOrderModal();
+  document.getElementById('modal-team-numbering').classList.add('open');
+}
+
+function _renderTeamOrderModal() {
   const container = document.getElementById('team-numbering-tiles');
   if (!container) return;
   container.innerHTML = '';
 
-  [...teamMap.entries()].sort((a,b) => a[0].localeCompare(b[0], 'pl')).forEach(([team, num]) => {
-    const tile = document.createElement('div');
-    tile.style.cssText = 'background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px;';
+  _teamOrderDraft.forEach((team, idx) => {
+    const newNum = idx + 1;
+    // Sprawdź obecny numer (X w bib) — pokażemy jeśli różni się od nowego
+    const ath = state.athletes.find(a => a.team === team);
+    const oldX = (() => {
+      if (!ath) return null;
+      const parts = String(ath.bib || '').split('/');
+      return parts.length === 2 ? parseInt(parts[0]) : null;
+    })();
+    const willChange = oldX !== null && oldX !== newNum;
 
+    const tile = document.createElement('div');
+    tile.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;';
+
+    // Numer (duży, kolor akcentu)
+    const numEl = document.createElement('div');
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--accent);min-width:36px;text-align:center;line-height:1;';
+    numEl.textContent = newNum;
+
+    // Strzałka zmiana jeśli różni od starego
+    const changeEl = document.createElement('div');
+    if (willChange) {
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--orange);white-space:nowrap;min-width:50px;';
+      changeEl.textContent = '(był: ' + oldX + ')';
+    } else if (oldX !== null) {
+      changeEl.style.cssText = 'font-family:var(--font-m);font-size:10px;color:var(--text3);white-space:nowrap;min-width:50px;';
+      changeEl.textContent = '✓ bez zmian';
+    } else {
+      changeEl.style.cssText = 'min-width:50px;';
+    }
+
+    // Nazwa drużyny
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    nameEl.style.cssText = 'flex:1;font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+    // Strzałki ↑↓
+    const upBtn = document.createElement('button');
+    upBtn.textContent = '↑';
+    upBtn.disabled = idx === 0;
+    upBtn.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:16px;padding:4px 10px;cursor:pointer;' + (idx === 0 ? 'opacity:.3;cursor:not-allowed;' : '');
+    upBtn.onclick = () => _moveTeam(idx, -1);
 
-    const oldNum = document.createElement('span');
-    oldNum.style.cssText = 'font-family:var(--font-m);font-size:11px;color:var(--text3);white-space:nowrap;';
-    oldNum.textContent = num ? 'był: ' + num : 'brak nr';
+    const downBtn = document.createElement('button');
+    downBtn.textContent = '↓';
+    downBtn.disabled = idx === _teamOrderDraft.length - 1;
+    downBtn.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:16px;padding:4px 10px;cursor:pointer;' + (idx === _teamOrderDraft.length - 1 ? 'opacity:.3;cursor:not-allowed;' : '');
+    downBtn.onclick = () => _moveTeam(idx, +1);
 
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.min  = '1';
-    input.max  = '99';
-    input.placeholder = 'Nowy';
-    input.dataset.team = team;
-    input.dataset.oldnum = num;
-    input.value = num || '';
-    input.style.cssText = 'flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--accent);padding:6px 8px;font-size:18px;font-family:var(--font-m);font-weight:900;text-align:center;width:100%;';
-    input.classList.add('team-num-input');
-
-    row.appendChild(oldNum);
-    row.appendChild(input);
+    tile.appendChild(numEl);
+    tile.appendChild(changeEl);
     tile.appendChild(nameEl);
-    tile.appendChild(row);
+    tile.appendChild(upBtn);
+    tile.appendChild(downBtn);
     container.appendChild(tile);
   });
 
-  document.getElementById('modal-team-numbering').classList.add('open');
-  // Focus pierwszy input
-  const first = container.querySelector('input');
-  if (first) setTimeout(() => first.focus(), 50);
+  _updateTeamOrderStatus();
+  _renderTeamOrderHistory();
+}
+
+function _renderTeamOrderHistory() {
+  const wrap   = document.getElementById('team-order-history-wrap');
+  const list   = document.getElementById('team-order-history-list');
+  const countEl= document.getElementById('team-order-history-count');
+  if (!wrap || !list) return;
+  const hist = Array.isArray(state.teamOrderHistory) ? state.teamOrderHistory : [];
+  if (!hist.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  if (countEl) countEl.textContent = hist.length + ' / 10';
+
+  list.innerHTML = '';
+  hist.forEach((entry, idx) => {
+    const order = Array.isArray(entry.order) ? entry.order : [];
+    const date  = entry.approvedAt ? new Date(entry.approvedAt) : null;
+    const dateStr = date && !isNaN(date)
+      ? date.toLocaleString('pl-PL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+      : '—';
+    const previewN = 4;
+    const preview  = order.slice(0, previewN).join(', ')
+      + (order.length > previewN ? ' +' + (order.length - previewN) + ' więcej' : '');
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:7px 10px;';
+
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+    const dateLine = document.createElement('div');
+    dateLine.style.cssText = 'font-family:var(--font-m);font-size:11px;color:var(--text3);';
+    dateLine.textContent = dateStr;
+    const orderLine = document.createElement('div');
+    orderLine.style.cssText = 'font-size:11px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    orderLine.textContent = preview || '(pusto)';
+    orderLine.title = order.join(' → ');
+    info.appendChild(dateLine);
+    info.appendChild(orderLine);
+
+    const btn = document.createElement('button');
+    btn.textContent = '↶ Wczytaj';
+    btn.title = 'Wczytaj ten układ jako roboczy — wymaga ponownego zatwierdzenia';
+    btn.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text2);font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+    btn.onclick = () => _loadTeamOrderFromHistory(idx);
+
+    row.appendChild(info);
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+
+function _loadTeamOrderFromHistory(idx) {
+  const entry = state.teamOrderHistory[idx];
+  if (!entry || !Array.isArray(entry.order)) return;
+  // Wczytaj jako draft — dopisz brakujące drużyny (np. nowe od czasu zapisania) na końcu
+  const currentTeams = [...new Set(state.athletes.map(a => a.team).filter(Boolean))];
+  const fromHistory  = entry.order.filter(t => currentTeams.includes(t));
+  const newcomers    = currentTeams.filter(t => !fromHistory.includes(t));
+  _teamOrderDraft = [...fromHistory, ...newcomers];
+  // Niezatwierdzone do czasu kliknięcia "Zatwierdź"
+  state.teamOrderApproved = false;
+  _renderTeamOrderModal();
+  showToast('↶ Załadowano historyczny układ — kliknij "Zatwierdź" żeby go zastosować', 'info');
+}
+
+function _moveTeam(idx, dir) {
+  const j = idx + dir;
+  if (j < 0 || j >= _teamOrderDraft.length) return;
+  [_teamOrderDraft[idx], _teamOrderDraft[j]] = [_teamOrderDraft[j], _teamOrderDraft[idx]];
+  // Edycja unieważnia poprzednie zatwierdzenie — sędzia musi zatwierdzić ponownie
+  state.teamOrderApproved = false;
+  _renderTeamOrderModal();
+}
+
+function _updateTeamOrderStatus() {
+  const approved = !!state.teamOrderApproved;
+  const draftMatchesSaved = Array.isArray(state.teamOrderManual)
+    && state.teamOrderManual.length === _teamOrderDraft.length
+    && state.teamOrderManual.every((t, i) => t === _teamOrderDraft[i]);
+
+  const box      = document.getElementById('team-order-modal-box');
+  const statusBx = document.getElementById('team-order-status');
+  const statusIc = document.getElementById('team-order-status-icon');
+  const statusTx = document.getElementById('team-order-status-text');
+  const btn      = document.getElementById('team-order-approve-btn');
+
+  if (approved && draftMatchesSaved) {
+    // Zatwierdzone — zielony
+    if (box)      box.style.background     = 'linear-gradient(180deg, rgba(76,175,130,.06), var(--bg2) 30%)';
+    if (box)      box.style.borderColor    = 'rgba(76,175,130,.5)';
+    if (statusBx){ statusBx.style.background='rgba(76,175,130,.15)'; statusBx.style.borderColor='rgba(76,175,130,.55)'; }
+    if (statusIc) statusIc.textContent     = '✓';
+    if (statusTx){ statusTx.textContent    = 'Zatwierdzone przez sędziego'; statusTx.style.color = 'var(--green)'; }
+    if (btn){ btn.textContent = '✓ Już zatwierdzone'; btn.style.opacity = '.6'; btn.disabled = true; }
+  } else {
+    // Niezatwierdzone — pomarańczowy (lub po edycji)
+    if (box)      box.style.background     = 'var(--bg2)';
+    if (box)      box.style.borderColor    = '';
+    if (statusBx){ statusBx.style.background='rgba(232,148,77,.08)'; statusBx.style.borderColor='rgba(232,148,77,.3)'; }
+    if (statusIc) statusIc.textContent     = '⚠';
+    if (statusTx){ statusTx.textContent    = state.teamOrderApproved ? 'Edytujesz po zatwierdzeniu — zatwierdź ponownie' : 'Niezatwierdzone — przesuń drużyny strzałkami, potem zatwierdź'; statusTx.style.color = 'var(--text2)'; }
+    if (btn){ btn.textContent = '✓ Zatwierdź kolejność'; btn.style.opacity = '1'; btn.disabled = false; }
+  }
 }
 
 function applyTeamNumbering() {
-  const inputs = document.querySelectorAll('.team-num-input');
-  let changed = 0;
-  inputs.forEach(input => {
-    const team   = input.dataset.team;
-    const oldNum = input.dataset.oldnum;
-    const newNum = input.value.trim();
-    if (!newNum || newNum === oldNum) return; // Bez zmiany
-    const n = parseInt(newNum);
-    if (!n || n < 1 || n > 99) { input.style.borderColor = 'var(--red)'; return; }
-    // Zmień bib wszystkim zawodnikom tej drużyny
-    state.athletes.forEach(a => {
-      if (a.team !== team) return;
-      const parts = String(a.bib || '').split('/');
-      if (parts.length === 2) {
-        a.bib = n + '/' + parts[1];
-      }
-    });
-    changed++;
-  });
-  if (changed > 0) {
-    saveImmediate();
-    renderAthletes();
-    updateStats();
-  }
-  closeModal('modal-team-numbering');
-}
+  if (!_teamOrderDraft.length) return;
 
-
-// Zmiana numeru drużyny dla wszystkich zawodników w drużynie
-function openRenumberTeam(teamName, currentNum) {
-  const existing = document.getElementById('renumber-team-popup');
-  if (existing) existing.remove();
-
-  const popup = document.createElement('div');
-  popup.id = 'renumber-team-popup';
-  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:20px;width:280px;box-shadow:0 8px 40px rgba(0,0,0,.8);';
-
-  const label = document.createElement('div');
-  label.style.cssText = 'font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;';
-  label.textContent = 'Zmień numer drużyny: ' + teamName;
-
-  const row = document.createElement('div');
-  row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:14px;';
-
-  const oldLabel = document.createElement('span');
-  oldLabel.style.cssText = 'font-family:var(--font-m);font-size:22px;font-weight:700;color:var(--text3);min-width:30px;text-align:center;';
-  oldLabel.textContent = currentNum || '?';
-
-  const arrow = document.createElement('span');
-  arrow.style.cssText = 'color:var(--text3);font-size:16px;';
-  arrow.textContent = '→';
-
-  const input = document.createElement('input');
-  input.type = 'number';
-  input.id   = 'renumber-input';
-  input.min  = '1';
-  input.max  = '99';
-  input.placeholder = 'Nowy numer';
-  input.style.cssText = 'flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-size:18px;font-family:var(--font-m);text-align:center;font-weight:700;';
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') applyRenumber(teamName); });
-
-  row.appendChild(oldLabel);
-  row.appendChild(arrow);
-  row.appendChild(input);
-
-  const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:8px;';
-
-  const okBtn = document.createElement('button');
-  okBtn.textContent = '✓ Zmień';
-  okBtn.style.cssText = 'flex:1;background:var(--accent);color:#000;border:none;border-radius:var(--radius);padding:8px;font-weight:700;cursor:pointer;font-size:13px;';
-  okBtn.addEventListener('click', () => applyRenumber(teamName));
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = '✕';
-  cancelBtn.style.cssText = 'background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:8px 14px;color:var(--text3);cursor:pointer;font-size:13px;';
-  cancelBtn.addEventListener('click', () => popup.remove());
-
-  btnRow.appendChild(okBtn);
-  btnRow.appendChild(cancelBtn);
-
-  popup.appendChild(label);
-  popup.appendChild(row);
-  popup.appendChild(btnRow);
-  document.body.appendChild(popup);
-  input.focus();
-
-  // Overlay do zamknięcia
-  const overlay = document.createElement('div');
-  overlay.id = 'renumber-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;';
-  overlay.addEventListener('click', () => { popup.remove(); overlay.remove(); });
-  document.body.appendChild(overlay);
-}
-
-function applyRenumber(teamName) {
-  const input = document.getElementById('renumber-input');
-  if (!input) return;
-  const newNum = parseInt(input.value);
-  if (!newNum || newNum < 1 || newNum > 99) {
-    input.style.borderColor = 'var(--red)';
-    input.focus();
-    return;
-  }
-  // Zmień bib wszystkim zawodnikom tej drużyny
-  let changed = 0;
-  state.athletes.forEach(a => {
-    if (a.team !== teamName) return;
-    const parts = String(a.bib || '').split('/');
-    if (parts.length === 2) {
-      a.bib = newNum + '/' + parts[1];
-    } else {
-      // Bib bez formatu X/Y — nie zmieniaj
+  // Dodaj POPRZEDNI układ do historii (jeśli istniał i różni się od nowego)
+  if (Array.isArray(state.teamOrderManual) && state.teamOrderManual.length) {
+    const prev = state.teamOrderManual;
+    const isSame = prev.length === _teamOrderDraft.length
+      && prev.every((t, i) => t === _teamOrderDraft[i]);
+    if (!isSame) {
+      if (!Array.isArray(state.teamOrderHistory)) state.teamOrderHistory = [];
+      state.teamOrderHistory.unshift({
+        order: [...prev],
+        approvedAt: new Date().toISOString()
+      });
+      // Limit do 10 ostatnich
+      if (state.teamOrderHistory.length > 10) state.teamOrderHistory.length = 10;
     }
-    changed++;
-  });
-  document.getElementById('renumber-team-popup')?.remove();
-  document.getElementById('renumber-overlay')?.remove();
-  if (changed > 0) {
-    saveImmediate();
-    renderAthletes();
-    updateStats();
   }
+
+  state.teamOrderManual  = [..._teamOrderDraft];
+  state.teamOrderApproved = true;
+  assignBibs();
+  saveImmediate();
+  renderAthletes();
+  updateStats();
+  // Renderuj modal w stanie "zatwierdzone" — sędzia widzi zielone tło i badge
+  _renderTeamOrderModal();
+  showToast('✓ Kolejność drużyn zatwierdzona — numery bib zaktualizowane', 'success');
 }
 
 // ═══════════════════════════════════════════════════
