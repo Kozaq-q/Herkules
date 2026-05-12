@@ -8677,15 +8677,37 @@ function _renderEditMode() {
     // Explicit width+height — żadnej niejednoznaczności co do rozmiaru
     tile.style.cssText = 'width:86px;height:86px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
 
-    // Numer — klikalny, otwiera input do zmiany
-    const numEl = document.createElement('div');
-    numEl.className = 'team-tile-num';
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:20px;font-weight:800;color:var(--accent);line-height:1;padding:1px 6px;border-radius:var(--radius);cursor:pointer;transition:background .15s;';
-    numEl.textContent = newNum;
-    numEl.title = 'Kliknij aby zmienić numer';
-    numEl.onmouseenter = () => numEl.style.background = 'rgba(232,212,77,0.12)';
-    numEl.onmouseleave = () => numEl.style.background = '';
-    numEl.onclick = (e) => { e.stopPropagation(); _editTileNumber(idx); };
+    // Numer — input widoczny od razu, można wpisywać bez wcześniejszego klikania
+    const numEl = document.createElement('input');
+    numEl.type = 'number';
+    numEl.min = '1';
+    numEl.max = String(_teamOrderDraft.length);
+    numEl.value = String(newNum);
+    numEl.dataset.original = String(newNum);
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--accent);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);width:42px;text-align:center;padding:1px;outline:none;cursor:text;';
+    numEl.title = 'Wpisz nowy numer (Enter zapisuje, Escape anuluje)';
+    // Zapobiegnij dragstart z inputu — żeby kliknięcie/typing nie konfliktowało z drag&drop
+    numEl.addEventListener('mousedown', (e) => e.stopPropagation());
+    numEl.addEventListener('dragstart', (e) => e.preventDefault());
+    numEl.addEventListener('focus', () => { numEl.select(); numEl.style.borderColor = 'var(--accent)'; });
+    numEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter')      { e.preventDefault(); numEl.blur(); }
+      else if (e.key === 'Escape'){ e.preventDefault(); numEl.value = numEl.dataset.original; numEl.blur(); }
+    });
+    numEl.addEventListener('blur', () => {
+      numEl.style.borderColor = 'var(--border)';
+      const newVal = parseInt(numEl.value, 10);
+      const total  = _teamOrderDraft.length;
+      const current = idx + 1;
+      if (!Number.isFinite(newVal) || newVal < 1 || newVal > total || newVal === current) {
+        _renderTeamOrderModal();
+        return;
+      }
+      const newIdx = newVal - 1;
+      [_teamOrderDraft[idx], _teamOrderDraft[newIdx]] = [_teamOrderDraft[newIdx], _teamOrderDraft[idx]];
+      state.teamOrderApproved = false;
+      _renderTeamOrderModal();
+    });
 
     // Nazwa drużyny — mała, zawijana
     const nameEl = document.createElement('div');
