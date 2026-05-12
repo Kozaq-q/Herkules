@@ -1729,8 +1729,8 @@ tr:last-child > td { border-bottom: none; }
     </div>
 
     <!-- Tryb EDIT: 2-kolumnowy grid w stylu F1 (parzyste kafle przesunięte w dół) -->
-    <!-- Prosta siatka kwadratowych kafelków, auto-fill — czytelne i spójne z OSF -->
-    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(95px, 1fr));gap:6px;max-height:62vh;overflow-y:auto;margin-bottom:12px;padding:4px;"></div>
+    <!-- Małe kwadratowe kafelki, wszystkie widoczne (bez scrolla). aspect-ratio:1 wymusza kwadrat. -->
+    <div id="team-numbering-tiles" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(85px, 1fr));gap:5px;margin-bottom:12px;padding:4px;"></div>
 
     <!-- Tryb FRESH: pula drużyn u góry + sloty (ten sam grid co tryb edit) poniżej -->
     <div id="team-fresh-container" style="display:none;margin-bottom:12px;">
@@ -8674,22 +8674,22 @@ function _renderEditMode() {
     tile.className = 'team-order-tile';
     tile.draggable = true;
     tile.dataset.idx = idx;
-    // Kompaktowy kwadratowy kafel
-    tile.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;min-height:64px;';
+    // Kwadratowy kafel (aspect-ratio:1) — wymusza kwadrat niezależnie od liczby kolumn
+    tile.style.cssText = 'aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px;cursor:grab;user-select:none;transition:border-color .15s,opacity .15s,background .15s;overflow:hidden;';
 
     // Numer — klikalny, otwiera input do zmiany
     const numEl = document.createElement('div');
     numEl.className = 'team-tile-num';
-    numEl.style.cssText = 'font-family:var(--font-h);font-size:24px;font-weight:800;color:var(--accent);line-height:1;padding:1px 8px;border-radius:var(--radius);cursor:pointer;transition:background .15s;';
+    numEl.style.cssText = 'font-family:var(--font-h);font-size:20px;font-weight:800;color:var(--accent);line-height:1;padding:1px 6px;border-radius:var(--radius);cursor:pointer;transition:background .15s;';
     numEl.textContent = newNum;
     numEl.title = 'Kliknij aby zmienić numer';
     numEl.onmouseenter = () => numEl.style.background = 'rgba(232,212,77,0.12)';
     numEl.onmouseleave = () => numEl.style.background = '';
     numEl.onclick = (e) => { e.stopPropagation(); _editTileNumber(idx); };
 
-    // Nazwa drużyny
+    // Nazwa drużyny — mała, zawijana
     const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:11px;font-weight:600;color:var(--text1);word-break:break-word;line-height:1.2;';
+    nameEl.style.cssText = 'font-size:10px;font-weight:600;color:var(--text1);word-break:break-word;line-height:1.15;overflow:hidden;';
     nameEl.textContent = team || '(brak nazwy)';
     nameEl.title = team;
 
@@ -8753,7 +8753,7 @@ function _editTileNumber(idx) {
   input.min   = '1';
   input.max   = String(total);
   input.value = String(current);
-  input.style.cssText = 'font-family:var(--font-h);font-size:22px;font-weight:800;color:var(--accent);background:var(--bg2);border:2px solid var(--accent);border-radius:var(--radius);width:50px;text-align:center;padding:1px;outline:none;';
+  input.style.cssText = 'font-family:var(--font-h);font-size:18px;font-weight:800;color:var(--accent);background:var(--bg2);border:2px solid var(--accent);border-radius:var(--radius);width:42px;text-align:center;padding:1px;outline:none;';
   numEl.replaceWith(input);
   setTimeout(() => { input.focus(); input.select(); }, 10);
 
