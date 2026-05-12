@@ -3557,6 +3557,7 @@ function renderAthletes() {
     }
   }
 
+  tbody.innerHTML = ''; // Wyczyść przed odbudową
   let html = '';
   let lastGender = null;
   let lastTeam   = null;
@@ -3609,7 +3610,7 @@ function renderAthletes() {
     html += '<button class="btn btn-xs btn-danger" onclick="removeAthlete(' + a.id + ')" title="Usuń">✕</button>';
     html += '</td></tr>';
   });
-  tbody.innerHTML = html;
+  tbody.insertAdjacentHTML('beforeend', html);
 }
 
 // ═══════════════════════════════════════════════════
