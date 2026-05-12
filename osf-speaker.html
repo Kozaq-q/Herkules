@@ -1056,31 +1056,32 @@ function athleteRowHTML(it, series) {
   }
   const team = a.team || '';
 
-  // Zbierz czasy do pokazania:
-  // - W widoku S2: zawsze pokaż S1 (jeśli jest)
-  // - Zawsze pokaż czas bieżącej serii (jeśli jest — czyli para zakończyła ten bieg)
-  const timeParts = [];
-  if (series === 's2') {
+  // Reguła pokazywania czasów:
+  // - W widoku S1: pokaż czas S1 tylko gdy zawodnik go już ma (para ukończona)
+  // - W widoku S2:
+  //   • para ukończona (zawodnik ma czas S2)        → pokaż TYLKO S2
+  //   • para nieukończona (brak czasu S2 u zawodnika) → pokaż TYLKO S1 (jeśli jest)
+  const curT = getTime(a.id, series);
+  const curD = isDisq(a.id, series);
+  let timeLine = '';
+  if (curT || curD) {
+    const lbl = series === 's1' ? 'S1' : 'S2';
+    timeLine = lbl + ': ' + (curD
+      ? '<span class="s1-time dsq">DSQ</span>'
+      : '<span class="s1-time">' + esc(curT) + '</span>');
+  } else if (series === 's2') {
     const s1 = getTime(a.id, 's1');
     const s1d = isDisq(a.id, 's1');
     if (s1 || s1d) {
-      timeParts.push('S1: ' + (s1d
+      timeLine = 'S1: ' + (s1d
         ? '<span class="s1-time dsq">DSQ</span>'
-        : '<span class="s1-time">' + esc(s1) + '</span>'));
+        : '<span class="s1-time">' + esc(s1) + '</span>');
     }
-  }
-  const curT = getTime(a.id, series);
-  const curD = isDisq(a.id, series);
-  if (curT || curD) {
-    const lbl = series === 's1' ? 'S1' : 'S2';
-    timeParts.push(lbl + ': ' + (curD
-      ? '<span class="s1-time dsq">DSQ</span>'
-      : '<span class="s1-time">' + esc(curT) + '</span>'));
   }
 
   let sub = team;
-  if (timeParts.length) {
-    sub = (team ? team + ' · ' : '') + timeParts.join(' · ');
+  if (timeLine) {
+    sub = (team ? team + ' · ' : '') + timeLine;
   }
 
   return '<div class="pair-ath">'
