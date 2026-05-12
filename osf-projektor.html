@@ -93,15 +93,19 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .scroll-track { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
 
 /* ── RANKING ROWS (CSS Grid, div-based — taki sam wzorzec jak .klas-row) ── */
-/* Każdy wiersz to grid 4 kolumn: [pos][nazwa][czas][spacer 1fr].
-   Pos+name+time siedzą zwarte po lewej, spacer (pusty) zjada nadmiar szerokości.
-   Tło wiersza pokrywa całą szerokość sekcji — bez czarnych pasów po bokach. */
+/* DEFAULT (multi-sekcja): [pos][nazwa max-content][czas auto][spacer 1fr] —
+   nazwa szeroka jak treść, treść wypełnia naturalnie wąską sekcję.
+   SINGLE SECTION (body.single-section): centrowane z 1fr-spacerami po obu
+   stronach i stałą szerokością nazwy, żeby czasy ustawiały się w jednej linii. */
 .rank-table { width: 100%; }
 .rank-row {
   display: grid;
   grid-template-columns: 60px minmax(0, max-content) auto 1fr;
   align-items: center;
   border-bottom: 1px solid var(--border);
+}
+body.single-section .rank-row {
+  grid-template-columns: 1fr 60px var(--rank-name-width, 440px) auto 1fr;
 }
 .rank-row.even { background: var(--bg2); }
 .rank-row.odd  { background: var(--bg3); }
@@ -117,8 +121,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-pos.p3 { color: #d4a060; }
 .rank-pos.other { color: var(--text3); font-size: .85em; }
 
-/* Kolumna nazwy — cap max-width żeby czas trzymał się blisko */
-.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; max-width: 600px; min-width: 0; }
+/* Kolumna nazwy — szerokość ustalana przez grid (var --rank-name-width) */
+.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; min-width: 0; }
 .rank-name {
   font-family: var(--font-b); font-weight: 700;
   display: block;
@@ -132,23 +136,26 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   margin-top: 2px; padding-right: 4px;
 }
 
-/* Czas — sticks tuż za nazwą, nie pcha się na sam prawy kraniec */
+/* Czas — sticks tuż za nazwą (mały lewy padding = blisko do nazwiska) */
 .rank-time-cell {
   font-family: var(--font-m); font-weight: 500; color: var(--green);
   text-align: left; white-space: nowrap;
-  padding: 10px 16px 10px 10px;
-  min-width: 90px;
+  padding: 10px 12px 10px 4px;
+  min-width: 80px;
 }
 .rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: left; margin-top: 2px; }
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 
 /* ── KLASYFIKACJA WIERSZE ── */
-/* Grid: [pos][nazwa drużyny][punkty][spacer] — punkty tuż za nazwą, reszta pusta po prawej */
+/* DEFAULT (multi): naturalne wypełnienie. SINGLE: centrowane z fixed name width */
 .klas-row {
   display: grid;
   grid-template-columns: 60px minmax(0, max-content) auto 1fr;
   align-items: center;
   border-bottom: 1px solid var(--border);
+}
+body.single-section .klas-row {
+  grid-template-columns: 1fr 60px var(--rank-name-width, 440px) auto 1fr;
 }
 .klas-row.even { background: var(--bg2); }
 .klas-row.odd  { background: var(--bg3); }
@@ -558,6 +565,10 @@ function buildLayout() {
   const n = sections.length || 1;
   const main = document.getElementById('proj-main');
   main.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+
+  // Centrowanie + stała szerokość nazwy tylko gdy 1 sekcja na ekranie
+  document.body.classList.toggle('single-section', n === 1);
+  if (n === 1) document.documentElement.style.setProperty('--rank-name-width', '440px');
 
   main.innerHTML = sections.map(s =>
     `<div class="proj-section" id="section-${s.id}">
