@@ -1067,6 +1067,7 @@ tr:last-child > td { border-bottom: none; }
     <button id="dr-who-starts-btn" class="btn btn-sm" onclick="openTeamS2WhoStarts()"
       style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">👥 Kto startuje</button>
     <button id="dr-s1-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s1')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO</button>
+    <button id="dr-s1-add-team-btn" class="btn btn-sm" onclick="openAddTeamToS1Modal()" style="display:none;color:var(--green);border-color:rgba(76,175,130,.4);font-size:11px;">+ Dodaj drużynę</button>
     <button id="dr-s2-solo-btn" class="btn btn-sm" onclick="openTeamSoloModal('s2')" style="display:none;color:var(--text3);border-color:var(--border2);font-size:11px;">+ SOLO</button>
   </div>
 
@@ -1889,6 +1890,21 @@ tr:last-child > td { border-bottom: none; }
 </div>
 
 <!-- ═══ MODAL: DODAJ DRUŻYNĘ SOLO (drużynowy) ═══ -->
+<!-- Modal: Dodaj drużynę do S1 (edycja awaryjna) -->
+<div class="modal-overlay" id="modal-add-team-s1">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">+ Dodaj drużynę do S1</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;">
+      Wybierz drużynę z listy. Zostanie dodana jako <strong>SOLO na końcu</strong> kolejności S1.
+      Drużyny z niepełnym składem (DSQ) też są dostępne.
+    </div>
+    <div id="add-team-s1-list" style="max-height:50vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-add-team-s1')">Zamknij</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-team-solo">
   <div class="modal" style="max-width:380px;">
     <div class="modal-title">+ Dodaj drużynę SOLO</div>
@@ -2984,6 +3000,7 @@ function switchDrTab(tab) {
   const whoBtn     = document.getElementById('dr-who-starts-btn');
   const s1solo     = document.getElementById('dr-s1-solo-btn');
   const s2solo     = document.getElementById('dr-s2-solo-btn');
+  const s1addTeam  = document.getElementById('dr-s1-add-team-btn');
 
   // Generuj i Edycja — tylko dla S1 i S2
   if (genBtn)  genBtn.style.display  = tab === 'wyniki' ? 'none' : '';
@@ -2994,6 +3011,8 @@ function switchDrTab(tab) {
   // SOLO — tylko w trybie edycji aktywnej zakładki
   if (s1solo) s1solo.style.display = (tab === 's1' && _teamEditMode['s1']) ? '' : 'none';
   if (s2solo) s2solo.style.display = (tab === 's2' && _teamEditMode['s2']) ? '' : 'none';
+  // "+ Dodaj drużynę" — tylko w edycji awaryjnej S1
+  if (s1addTeam) s1addTeam.style.display = (tab === 's1' && _teamEditMode['s1']) ? '' : 'none';
 
   // Zaktualizuj stan przycisku edycji
   if (editBtn && tab !== 'wyniki') {
@@ -3066,6 +3085,10 @@ function renderTeamOrderSection(series) {
     const teamEscaped = esc(item.team).replace(/'/g, '&#39;');
     if (_teamEditMode[series]) {
       h += '<button onclick="event.stopPropagation();activateTeamSwap(\'' + teamEscaped + '\',' + idxInOrder + ',\'' + series + '\')" class="swap-trigger-btn" style="font-size:11px;padding:2px 8px;border:1px solid rgba(224,85,85,.4);border-radius:var(--radius);background:rgba(224,85,85,.08);color:var(--red);cursor:pointer;line-height:1.5;" title="Zamień drużynę">↔</button>';
+      // Usuwanie z S1 — tylko w S1
+      if (series === 's1') {
+        h += '<button onclick="event.stopPropagation();removeTeamFromS1WithConfirm(\'' + teamEscaped + '\',' + idxInOrder + ')" style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 8px;border:1px solid rgba(224,85,85,.4);border-radius:var(--radius);background:rgba(224,85,85,.08);color:var(--red);cursor:pointer;line-height:1.5;" title="Usuń drużynę z S1">− S1</button>';
+      }
     }
     h += '</div></div>';
     h += '<div class="pair-athlete-meta" style="margin-bottom:8px;">';
@@ -4495,6 +4518,101 @@ function addTeamSoloPair() {
   save();
   renderTeamView();
   showToast('+ Dodano pusty slot SOLO (Tor ' + lane + ')', 'success');
+}
+
+// ── REMOVE TEAM FROM S1 (tylko w edycji awaryjnej) ─────────────────
+function removeTeamFromS1WithConfirm(teamName, idx) {
+  if (!confirm('Usunąć drużynę ' + teamName + ' z Serii 1?\n\nNa jej miejscu zostanie pusty slot. Drużyna zniknie też z Serii 2.')) return;
+  removeTeamFromS1(idx);
+}
+function removeTeamFromS1(idx) {
+  const order = state.teamOrder.s1;
+  if (!order[idx]) return;
+  const removedTeam = order[idx].team || '';
+  const removedLane = order[idx].lane;
+
+  // Jeśli usuwany element to drużyna w solo (przed nim jest null lub na końcu jest null)
+  // możemy po prostu usunąć całą parę. Inaczej — zostaw null jako placeholder.
+  const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
+  const partner   = order[partnerIdx] || null;
+
+  if (!partner) {
+    // Para z nullem — usuń całą parę (oba sloty)
+    const lo = Math.min(idx, partnerIdx), hi = Math.max(idx, partnerIdx);
+    order.splice(lo, hi - lo + 1);
+  } else {
+    // Para z partnerem — zostaw null żeby partner został w swojej pozycji (jak w S1 M)
+    order[idx] = null;
+    // Jeśli null jest pierwszym w parze (idx parzysty), zamień miejscami żeby zostająca drużyna była na slot 'a'
+    if (idx % 2 === 0) {
+      order[idx]     = order[partnerIdx];
+      order[partnerIdx] = null;
+    }
+  }
+  // Przenumeruj startNum
+  order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+
+  save();
+  renderTeamView();
+  showToast('✕ Usunięto ' + removedTeam + ' z S1 — dostępna w "+ Dodaj drużynę"', 'success');
+}
+
+// ── ADD TEAM TO S1 — modal z listą wszystkich drużyn (też DSQ) ───────
+function openAddTeamToS1Modal() {
+  // Zbierz drużyny które NIE są jeszcze w S1
+  const inOrder = new Set(
+    (state.teamOrder.s1 || []).filter(it => it && it.team).map(it => it.team)
+  );
+  const allTeams = [...new Set(state.athletes.map(a => a.team).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'pl'))
+    .filter(t => !inOrder.has(t));
+
+  const container = document.getElementById('add-team-s1-list');
+  if (!container) return;
+
+  if (!allTeams.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;">Wszystkie drużyny są już w Serii 1.</div>';
+  } else {
+    container.innerHTML = allTeams.map(team => {
+      const athletes = getTeamAthletes(team);
+      const ok = athletes.length >= TEAM_MIN_VAL();
+      const badge = ok
+        ? '<span style="font-size:10px;color:var(--green);">' + athletes.length + ' M</span>'
+        : '<span style="font-size:10px;color:var(--red);">⚠ tylko ' + athletes.length + ' M (DSQ — min ' + TEAM_MIN_VAL() + ')</span>';
+      const teamEsc = esc(team).replace(/'/g, '&#39;');
+      return '<button onclick="addTeamToS1(\'' + teamEsc + '\')" ' +
+        'style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;' +
+        'background:var(--bg3);border:1px solid ' + (ok ? 'var(--border2)' : 'rgba(224,85,85,.4)') + ';' +
+        'border-radius:var(--radius);padding:10px 14px;cursor:pointer;margin-bottom:6px;color:var(--text1);">' +
+        '<span style="font-weight:700;font-size:13px;">' + esc(team) + '</span>' +
+        badge +
+        '</button>';
+    }).join('');
+  }
+  document.getElementById('modal-add-team-s1').classList.add('open');
+}
+
+function addTeamToS1(teamName) {
+  const order = state.teamOrder.s1;
+  // Wstaw jako SOLO na końcu (tor L domyślnie) — sędzia może potem zmienić strzałkami
+  const athletes = getTeamAthletes(teamName);
+  const newSlot = {
+    team: teamName,
+    lane: 'L',
+    startNum: order.length + 1,
+    sum: getTeamIndividualSum(teamName),
+    count: athletes.length,
+    _solo: true,
+    _manual: true
+  };
+  order.push(newSlot);
+  // Przenumeruj
+  order.forEach((item, i) => { if (item) item.startNum = i + 1; });
+
+  closeModal('modal-add-team-s1');
+  save();
+  renderTeamView();
+  showToast('+ Dodano ' + teamName + ' do S1 (jako SOLO na końcu)', 'success');
 }
 
 let _s1ActiveTab = 'M';
