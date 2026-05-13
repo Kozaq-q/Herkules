@@ -1152,42 +1152,106 @@ function renderListTeamBody() {
     return;
   }
 
-  // Znajdź następną drużynę (pierwszą bez czasu)
-  let nextIdx = -1;
-  for (let i = 0; i < order.length; i++) {
-    const it = order[i];
-    if (!it) continue;
-    const hasT = !!getTeamTime(it.team, ser);
-    const dsq  = isTeamDisq(it.team, ser);
-    if (!hasT && !dsq) { nextIdx = i; break; }
+  // Grupuj order[] po parach (idx 0+1, 2+3...) — analogicznie jak w panelu sędziowskim.
+  // null w order[] = placeholder dla SOLO (brak partnera).
+  const pairs = [];
+  for (let i = 0; i < order.length; i += 2) {
+    const a = order[i]   || null;
+    const b = order[i+1] || null;
+    if (!a && !b) continue; // skip kompletnie pustych par (np. usunięte)
+    pairs.push({ a, b, idxA: i, idxB: i+1, pairNum: Math.floor(i/2) + 1 });
   }
 
-  const rows = order.map((it, idx) => {
-    if (!it) return '';
+  // Status drużyny: 'done' (czas lub DSQ) | 'open'
+  function teamStatus(it) {
+    if (!it) return null;
     const hasT = !!getTeamTime(it.team, ser);
     const dsq  = isTeamDisq(it.team, ser);
-    const done = hasT || dsq;
-    const isNext = idx === nextIdx;
-    const cls = ['team-row'];
-    if (done) cls.push('done');
+    return { hasT, dsq, done: hasT || dsq, time: hasT ? getTeamTime(it.team, ser) : '' };
+  }
+
+  // Znajdź pierwszą parę z niezakończoną drużyną
+  let nextPairNum = -1;
+  for (const p of pairs) {
+    const sa = teamStatus(p.a);
+    const sb = teamStatus(p.b);
+    const aOpen = sa && !sa.done;
+    const bOpen = sb && !sb.done;
+    if (aOpen || bOpen) { nextPairNum = p.pairNum; break; }
+  }
+
+  // Helper: render karty pojedynczej drużyny w parze (lub placeholder solo)
+  function teamCard(it, isSoloEmpty) {
+    if (isSoloEmpty) {
+      return '<div class="pair-ath" style="opacity:.45;">'
+           +   '<span class="lane-badge ' + (isSoloEmpty.lane || 'L') + '">' + (isSoloEmpty.lane || 'L') + '</span>'
+           +   '<div class="pair-ath-info"><span class="pair-solo-tag">SOLO</span></div>'
+           + '</div>';
+    }
+    if (!it) {
+      return '<div class="pair-ath">'
+           +   '<div class="pair-ath-info"><div class="pair-ath-empty">— brak —</div></div>'
+           + '</div>';
+    }
+    const st = teamStatus(it);
+    const lane = it.lane || 'L';
+    const time = st && st.dsq ? '<span class="s1-time dsq">DSQ</span>'
+              : (st && st.hasT ? '<span class="s1-time">' + esc(st.time) + '</span>' : '');
+    return '<div class="pair-ath">'
+         +   '<span class="lane-badge ' + lane + '">' + lane + '</span>'
+         +   '<div class="pair-ath-info">'
+         +     '<div class="pair-ath-name">' + esc(it.team) + '</div>'
+         +     '<div class="pair-ath-sub">'
+         +       (it.count ? it.count + ' zaw.' : '')
+         +       (time ? (it.count ? ' · ' : '') + time : '')
+         +     '</div>'
+         +   '</div>'
+         + '</div>';
+  }
+
+  const rows = pairs.map(p => {
+    const sa = teamStatus(p.a);
+    const sb = teamStatus(p.b);
+    // Para "zakończona" tylko gdy obecne drużyny mają wpis
+    const aDone = !p.a || (sa && sa.done);
+    const bDone = !p.b || (sb && sb.done);
+    const isDone = (p.a || p.b) && aDone && bDone;
+    const isSolo = !p.a || !p.b;
+    const isNext = p.pairNum === nextPairNum;
+
+    const cls = ['pair-row'];
+    if (isDone) cls.push('done');
     else if (isNext) cls.push('next');
 
-    const time = hasT ? getTeamTime(it.team, ser) : '';
-    const status = dsq ? '<span class="pair-status" style="color:var(--red);background:rgba(232,88,88,.1);border:1px solid rgba(232,88,88,.4);">DSQ</span>'
-                  : (hasT ? '<span class="pair-status done">' + esc(time) + '</span>'
-                  : (isNext ? '<span class="pair-status next">▶</span>' : ''));
+    const status = isDone ? '<span class="pair-status done">✓ ZAKOŃCZONA</span>'
+                  : (isNext ? '<span class="pair-status next">▶ NASTĘPNA</span>' : '');
 
-    const laneBadge = it.lane ? '<span class="lane-badge ' + it.lane + ' team-row-lane">' + it.lane + '</span>' : '';
-    const sub = 'Tor ' + (it.lane || '—')
-              + (it.count ? ' · ' + it.count + ' zaw.' : '')
-              + (it._solo ? ' · SOLO' : '');
+    // Lewa i prawa karta wg tor L/P (analogicznie do widoku par indywidualnych)
+    let aHTML, bHTML;
+    if (isSolo) {
+      const solo = p.a || p.b;
+      const soloLane = solo && solo.lane === 'P' ? 'P' : 'L';
+      const otherLane = soloLane === 'L' ? 'P' : 'L';
+      if (soloLane === 'L') {
+        aHTML = teamCard(solo);
+        bHTML = teamCard(null, { lane: otherLane });
+      } else {
+        aHTML = teamCard(null, { lane: otherLane });
+        bHTML = teamCard(solo);
+      }
+    } else {
+      const aIsL = p.a.lane === 'L';
+      const left  = aIsL ? p.a : p.b;
+      const right = aIsL ? p.b : p.a;
+      aHTML = teamCard(left);
+      bHTML = teamCard(right);
+    }
 
     return '<div class="' + cls.join(' ') + '">'
-         +   '<div class="team-row-num">' + (it.startNum || (idx + 1)) + '</div>'
-         +   laneBadge
-         +   '<div class="team-row-info">'
-         +     '<div class="team-row-name">' + esc(it.team) + '</div>'
-         +     '<div class="team-row-sub">' + sub + '</div>'
+         +   '<div class="pair-num">' + p.pairNum + '</div>'
+         +   '<div class="pair-athletes">'
+         +     aHTML
+         +     bHTML
          +   '</div>'
          +   status
          + '</div>';
