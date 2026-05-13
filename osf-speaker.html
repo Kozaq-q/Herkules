@@ -1466,7 +1466,8 @@ function renderKlasyfikacja() {
   if (_mode === 'manual' && Number.isFinite(_manualN) && _manualN > 0) {
     N_teams = _manualN;
   } else if (_mode === 'ind') {
-    N_teams = (state.setup && state.setup.teamCount) || 8;
+    // N = liczba zawodników M (bez PK) — zgodnie z opisem w UI "N z ind. M"
+    N_teams = (state.athletes || []).filter(a => a.gender === 'M' && !a.pk).length || 1;
   } else {
     N_teams = tRows.filter(r => {
       if (!r.ok) return false;
