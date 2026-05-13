@@ -496,9 +496,25 @@ function parseTime(t) {
 
 function getTime(id, ser) { return state.times?.[id]?.[ser] || ''; }
 function isDisq(id, ser)  { return !!(state.disq?.[id]?.[ser]); }
+function isTimeMarker(v)  { return v === 'DNF' || v === 'DNS'; }
+function bestMarker(id) {
+  const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
+  if (s1 === 'DNF' || s2 === 'DNF') return 'DNF';
+  if (s1 === 'DNS' || s2 === 'DNS') return 'DNS';
+  return '';
+}
+function markerBadge(mark) {
+  if (mark !== 'DNF' && mark !== 'DNS') return '';
+  const colors = mark === 'DNF'
+    ? 'background:rgba(96,168,232,.10);border:1px solid rgba(96,168,232,.45);color:var(--blue);'
+    : 'background:rgba(138,152,152,.12);border:1px solid rgba(138,152,152,.45);color:var(--text2);';
+  return '<span style="display:inline-block;font-family:var(--font-h);font-size:.85em;font-weight:800;letter-spacing:1px;padding:1px 6px;border-radius:3px;line-height:1.3;' + colors + '">' + mark + '</span>';
+}
 function bestTime(id) {
   const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
-  const ok1 = s1 && !isDisq(id,'s1'), ok2 = s2 && !isDisq(id,'s2');
+  // Markery DNF/DNS to nie są czasy — bestTime() je pomija (tak jak DSQ)
+  const ok1 = s1 && !isDisq(id,'s1') && !isTimeMarker(s1);
+  const ok2 = s2 && !isDisq(id,'s2') && !isTimeMarker(s2);
   if (!ok1 && !ok2) return '';
   if (!ok1) return s2; if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
@@ -520,7 +536,12 @@ function teamCnt()  { return state.setup?.teamCount || 8; }
 function mult()     { return state.setup?.teamMultiplier || 3; }
 
 function calcIndPts(rank, N)        { return rank===1 ? N+1 : Math.max(0, N-rank+1); }
-function calcTeamPts(rank, N, m)    { return rank===1 ? N*m+1 : Math.max(0, N*m-rank+1); }
+// Punkty drużynowe (te same wzory co w panelu sędziowskim):
+// 1 msc: (N+1)*m, k msc: (N+1-k)*m
+function calcTeamPts(rank, N, m) {
+  if (rank === 1) return (N + 1) * m;
+  return Math.max(0, (N + 1 - rank) * m);
+}
 
 // ═══════════════════════════════════════════════
 // LAYOUT — buduj sekcje wg ustawień
@@ -608,16 +629,19 @@ function buildIndRows(gender) {
     a, best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
     s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
     s1d: isDisq(a.id,'s1'), s2d: isDisq(a.id,'s2'),
+    marker: bestMarker(a.id),
     allDsq: isDisq(a.id,'s1') && isDisq(a.id,'s2'),
     hasAnyResult: !!(getTime(a.id,'s1') || getTime(a.id,'s2'))
   }));
 
-  // Filtruj: pokaż tylko tych co mają jakikolwiek wynik LUB DSQ; ukryj zupełnie bez wyniku
+  // Filtruj: pokaż tylko tych co mają jakikolwiek wynik LUB DSQ LUB marker; ukryj zupełnie bez wpisu
   const withResult = ranked.filter(r => r.hasAnyResult);
-  // Sortuj: z wynikiem wg czasu, DSQ na końcu
+  // Sortuj tier-style: czas → DNF → DNS → DSQ. DSQ na końcu (po markerach).
   const withTime   = withResult.filter(r => r.bestSec < Infinity).sort((x,y) => x.bestSec - y.bestSec);
-  const dsqOnly    = withResult.filter(r => r.bestSec === Infinity);
-  const shown0     = [...withTime, ...dsqOnly];
+  const dnfOnly    = withResult.filter(r => r.bestSec === Infinity && r.marker === 'DNF');
+  const dnsOnly    = withResult.filter(r => r.bestSec === Infinity && r.marker === 'DNS');
+  const dsqOnly    = withResult.filter(r => r.bestSec === Infinity && !r.marker);
+  const shown0     = [...withTime, ...dnfOnly, ...dnsOnly, ...dsqOnly];
 
   const topN = cfg.topN > 0 ? cfg.topN : shown0.length;
   const shown = shown0.slice(0, topN);
@@ -642,11 +666,24 @@ function buildIndRows(gender) {
                    : baseSize + 'px';
     const timeSize = N > 24 ? '13px' : N > 16 ? '15px' : '17px';
 
+    function s1S2Cell(val, dsq) {
+      if (dsq) return '<span class="rank-dsq-label">DSQ</span>';
+      if (isTimeMarker(val)) return markerBadge(val);
+      return val;
+    }
     let timeSub = '';
-    if (cfg.showS1 && r.s1) timeSub += 'S1: ' + (r.s1d ? '<span class="rank-dsq-label">DSQ</span>' : r.s1);
-    if (cfg.showS2 && r.s2) timeSub += (timeSub ? ' &nbsp; ' : '') + 'S2: ' + (r.s2d ? '<span class="rank-dsq-label">DSQ</span>' : r.s2);
+    if (cfg.showS1 && r.s1) timeSub += 'S1: ' + s1S2Cell(r.s1, r.s1d);
+    if (cfg.showS2 && r.s2) timeSub += (timeSub ? ' &nbsp; ' : '') + 'S2: ' + s1S2Cell(r.s2, r.s2d);
 
-    const posDisp = isDsq ? 'DSQ' : (noBest ? '—' : posIdx);
+    // Główna komórka wyniku: czas, marker (DNF/DNS), DSQ, lub '—'
+    const bestCellHtml = r.best
+      ? r.best
+      : r.marker
+        ? markerBadge(r.marker)
+        : (isDsq ? '<span style="color:var(--red);">DSQ</span>' : '<span style="color:var(--text3);">—</span>');
+
+    const posDisp = (noBest && !r.marker && isDsq) ? 'DSQ'
+                  : (noBest ? '—' : posIdx);
     if (!noBest) rank++;
     return `<tr class="rank-row ${rowCls}">
         <td class="rank-pos ${posCls}" style="font-size:${posSize}px;">${posDisp}</td>
@@ -655,7 +692,7 @@ function buildIndRows(gender) {
           <span class="rank-team-sub" style="font-size:${subSize}px;">${esc(r.a.team)}</span>
         </td>
         <td class="rank-time-cell" style="font-size:${timeSize};">
-          ${r.best || '<span style="color:var(--text3);">—</span>'}
+          ${bestCellHtml}
           ${timeSub ? `<span class="rank-sub-time">${timeSub}</span>` : ''}
         </td>
       </tr>`;
@@ -770,7 +807,23 @@ function buildKlasRows() {
   // pkt drużynowy
   const tRows = teams.map(t=>({ t, ok: getTeamAthletes(t).length>=teamMin(), bestSec: parseTime(teamBestTimeEff(t)) }))
     .sort((a,b)=>{ if(!a.ok&&b.ok)return 1;if(a.ok&&!b.ok)return -1;return a.bestSec-b.bestSec; });
-  const N_teams = tRows.filter(r=>r.ok&&r.bestSec<Infinity).length;
+  // N drużyn dla punktacji — szanuj setup.teamNMode/teamNManual z panelu sędziowskiego.
+  // DNF/DNS liczą się do N (drużyny które STARTOWAŁY).
+  const mode = state.setup && state.setup.teamNMode;
+  const manualN = parseInt(state.setup && state.setup.teamNManual, 10);
+  let N_teams;
+  if (mode === 'manual' && Number.isFinite(manualN) && manualN > 0) {
+    N_teams = manualN;
+  } else if (mode === 'ind') {
+    N_teams = (state.setup && state.setup.teamCount) || 8;
+  } else {
+    // 'teams' (domyślnie): drużyny które startowały (mają jakikolwiek wpis — czas, DNF lub DNS)
+    N_teams = tRows.filter(r => {
+      if (!r.ok) return false;
+      const s1 = getTeamTime(r.t,'s1'), s2 = getTeamTime(r.t,'s2');
+      return !!(s1 || s2);
+    }).length;
+  }
   const teamPts = {}; teams.forEach(t=>teamPts[t]=0);
   let tr = 1;
   tRows.forEach(r=>{ if(r.ok&&r.bestSec<Infinity){ teamPts[r.t]=calcTeamPts(tr,N_teams,M); tr++; } });
@@ -1167,13 +1220,21 @@ function buildStartlistRows(pairs, athletes, series) {
              : nameSize;
     const sTime = getTime(ath.id, series);
     const sDsq  = !!(state.disq && state.disq[ath.id] && state.disq[ath.id][series]);
+    const sMark = isTimeMarker(sTime);
     const s1time = series === 's2' ? getTime(ath.id, 's1') : '';
     const s1dsq  = series === 's2' && !!(state.disq && state.disq[ath.id] && state.disq[ath.id].s1);
+    const s1mark = series === 's2' && isTimeMarker(s1time);
     const badge  = rankBadge(ath.id);
     const pk     = pkBadge(ath);
     const timeDisp = sTime
-      ? `<span style="color:${sDsq ? 'var(--red)' : 'var(--green)'};">${sDsq ? 'DSQ' : sTime}</span>`
-      : (s1time ? `S1: <span style="color:${s1dsq ? 'var(--red)' : 'var(--text2)'};">${s1dsq ? 'DSQ' : s1time}</span>` : '');
+      ? (sDsq
+          ? `<span style="color:var(--red);">DSQ</span>`
+          : (sMark ? markerBadge(sTime) : `<span style="color:var(--green);">${sTime}</span>`))
+      : (s1time
+          ? `S1: ` + (s1dsq
+              ? `<span style="color:var(--red);">DSQ</span>`
+              : (s1mark ? markerBadge(s1time) : `<span style="color:var(--text2);">${s1time}</span>`))
+          : '');
     return `<div class="sl-athlete lane-${lane}">
       <div class="sl-lane-badge ${lane}">${lane}</div>
       <div class="sl-athlete-name" style="font-size:${fs}px;">${esc(ath.name)}${pk}${ath.m36 ? '<span class="m36-badge">M36+</span>' : ''}${badge}</div>

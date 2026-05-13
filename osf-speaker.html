@@ -939,9 +939,25 @@ function parseTime(t) {
 }
 function getTime(id, ser) { return (state.times && state.times[id] && state.times[id][ser]) || ''; }
 function isDisq(id, ser)  { return !!(state.disq  && state.disq[id]  && state.disq[id][ser]); }
+function isTimeMarker(v)  { return v === 'DNF' || v === 'DNS'; }
+function bestMarker(id) {
+  const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
+  if (s1 === 'DNF' || s2 === 'DNF') return 'DNF';
+  if (s1 === 'DNS' || s2 === 'DNS') return 'DNS';
+  return '';
+}
+function markerBadge(mark) {
+  if (mark !== 'DNF' && mark !== 'DNS') return '';
+  const colors = mark === 'DNF'
+    ? 'background:rgba(96,168,232,.12);border:1px solid rgba(96,168,232,.45);color:var(--blue);'
+    : 'background:rgba(107,122,144,.16);border:1px solid rgba(107,122,144,.5);color:var(--text2);';
+  return '<span style="display:inline-block;font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1px;padding:1px 6px;border-radius:3px;line-height:1.3;' + colors + '">' + mark + '</span>';
+}
 function bestTime(id) {
   const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
-  const ok1 = s1 && !isDisq(id,'s1'), ok2 = s2 && !isDisq(id,'s2');
+  // Markery DNF/DNS to nie czas — bestTime() je pomija
+  const ok1 = s1 && !isDisq(id,'s1') && !isTimeMarker(s1);
+  const ok2 = s2 && !isDisq(id,'s2') && !isTimeMarker(s2);
   if (!ok1 && !ok2) return '';
   if (!ok1) return s2;
   if (!ok2) return s1;
@@ -960,11 +976,18 @@ function getTeamTime(team, ser) { return (state.teamTimes && state.teamTimes[tea
 function isTeamDisq(team, ser)  { return !!(state.teamDisq  && state.teamDisq[team]  && state.teamDisq[team][ser]); }
 function teamBestTimeEff(team) {
   const s1 = getTeamTime(team,'s1'), s2 = getTeamTime(team,'s2');
-  const ok1 = s1 && !isTeamDisq(team,'s1'), ok2 = s2 && !isTeamDisq(team,'s2');
+  const ok1 = s1 && !isTeamDisq(team,'s1') && !isTimeMarker(s1);
+  const ok2 = s2 && !isTeamDisq(team,'s2') && !isTimeMarker(s2);
   if (!ok1 && !ok2) return '';
   if (!ok1) return s2;
   if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
+}
+function teamBestMarker(team) {
+  const s1 = getTeamTime(team,'s1'), s2 = getTeamTime(team,'s2');
+  if (s1 === 'DNF' || s2 === 'DNF') return 'DNF';
+  if (s1 === 'DNS' || s2 === 'DNS') return 'DNS';
+  return '';
 }
 function teamMin()  { return (state.setup && state.setup.teamMin)  || 8; }
 function multCfg() { return (state.setup && state.setup.teamMultiplier) || 3; }
@@ -1073,20 +1096,21 @@ function athleteRowHTML(it, series) {
   //   • para nieukończona (brak czasu S2 u zawodnika) → pokaż TYLKO S1 (jeśli jest)
   const curT = getTime(a.id, series);
   const curD = isDisq(a.id, series);
+  function valueHtml(val, dsq) {
+    if (dsq) return '<span class="s1-time dsq">DSQ</span>';
+    if (isTimeMarker(val)) return markerBadge(val);
+    return '<span class="s1-time">' + esc(val) + '</span>';
+  }
   let timeLine = '';
   if (curT || curD) {
     const tagCls = series === 's1' ? 'ser-tag s1' : 'ser-tag s2';
     const tagTxt = series === 's1' ? 'S1' : 'S2';
-    timeLine = '<span class="' + tagCls + '">' + tagTxt + '</span> ' + (curD
-      ? '<span class="s1-time dsq">DSQ</span>'
-      : '<span class="s1-time">' + esc(curT) + '</span>');
+    timeLine = '<span class="' + tagCls + '">' + tagTxt + '</span> ' + valueHtml(curT, curD);
   } else if (series === 's2') {
     const s1 = getTime(a.id, 's1');
     const s1d = isDisq(a.id, 's1');
     if (s1 || s1d) {
-      timeLine = '<span class="ser-tag s1">S1</span> ' + (s1d
-        ? '<span class="s1-time dsq">DSQ</span>'
-        : '<span class="s1-time">' + esc(s1) + '</span>');
+      timeLine = '<span class="ser-tag s1">S1</span> ' + valueHtml(s1, s1d);
     }
   }
 
@@ -1238,7 +1262,8 @@ function renderResultIndividual(series, gender) {
     s2: getTime(a.id, 's2'),
     s1d: isDisq(a.id, 's1'),
     s2d: isDisq(a.id, 's2'),
-    bestT: series === 'final' ? bestTime(a.id) : (isDisq(a.id, 's1') ? '' : getTime(a.id, 's1'))
+    marker: bestMarker(a.id),
+    bestT: series === 'final' ? bestTime(a.id) : (isDisq(a.id, 's1') || isTimeMarker(getTime(a.id, 's1')) ? '' : getTime(a.id, 's1'))
   }));
 
   // Filtr: tylko ukończeni — czas istnieje (lub DSQ z innej serii)
@@ -1246,20 +1271,27 @@ function renderResultIndividual(series, gender) {
     rows = rows.filter(r => r.bestT || (series === 'final' && (r.s1 || r.s2)));
   }
 
-  // Sortowanie: czas rosnąco; bez czasu / brak na koniec
-  rows.sort((x, y) => {
-    if (x.sec === Infinity && y.sec === Infinity) return 0;
-    if (x.sec === Infinity) return 1;
-    if (y.sec === Infinity) return -1;
-    return x.sec - y.sec;
+  // Tier-style sort: czas (0) > DNF (1) > DNS (2) > brak/DSQ (3)
+  rows.forEach(r => {
+    if (r.sec < Infinity) r.tier = 0;
+    else if (r.marker === 'DNF') r.tier = 1;
+    else if (r.marker === 'DNS') r.tier = 2;
+    else r.tier = 3;
   });
+  rows.sort((x, y) => x.tier !== y.tier ? x.tier - y.tier : x.sec - y.sec);
+
+  function valueHtml(val, dsq) {
+    if (dsq) return '<span class="dsq">DSQ</span>';
+    if (isTimeMarker(val)) return markerBadge(val);
+    return '<span class="ok">' + esc(val) + '</span>';
+  }
 
   // Ranking: ranking wśród NIE-PK (PK pokazujemy z badge'em zamiast miejsca)
   let rank = 1;
   const html = rows.map(r => {
     const isPK = !!r.a.pk;
     const noBest = r.sec === Infinity;
-    const isDsq  = noBest && ((series === 'final' && r.s1d && r.s2d) || (series === 's1' && r.s1d));
+    const isDsq  = noBest && !r.marker && ((series === 'final' && r.s1d && r.s2d) || (series === 's1' && r.s1d));
     let posDisp = '—', posCls = '';
     if (isPK) { posDisp = '<span class="pk-badge">PK</span>'; posCls = 'pk'; }
     else if (isDsq) { posDisp = 'DSQ'; posCls = 'dsq'; }
@@ -1269,20 +1301,27 @@ function renderResultIndividual(series, gender) {
     if (posCls && posCls !== 'pk') cls.push(posCls);
     if (isDsq || isPK) cls.push('dsq');
 
-    // Pod nazwiskiem: oba czasy z badge'ami DSQ — etykiety S1/S2 kolorystycznie odróżnialne
+    // Pod nazwiskiem: oba czasy z badge'ami DSQ/markerów
     let timesHtml = '';
-    if (r.s1 || r.s1d) timesHtml += '<span class="ser-tag s1">S1</span> ' + (r.s1d ? '<span class="dsq">DSQ</span>' : '<span class="ok">' + esc(r.s1) + '</span>');
-    if (r.s2 || r.s2d) timesHtml += (timesHtml ? ' · ' : '') + '<span class="ser-tag s2">S2</span> ' + (r.s2d ? '<span class="dsq">DSQ</span>' : '<span class="ok">' + esc(r.s2) + '</span>');
+    if (r.s1 || r.s1d) timesHtml += '<span class="ser-tag s1">S1</span> ' + valueHtml(r.s1, r.s1d);
+    if (r.s2 || r.s2d) timesHtml += (timesHtml ? ' · ' : '') + '<span class="ser-tag s2">S2</span> ' + valueHtml(r.s2, r.s2d);
 
     let mainTime = '';
     if (series === 'final') {
-      mainTime = r.bestT ? '<span>' + esc(r.bestT) + '</span>' : (isDsq ? 'DSQ' : '—');
+      if (r.bestT) mainTime = '<span>' + esc(r.bestT) + '</span>';
+      else if (r.marker) mainTime = markerBadge(r.marker);
+      else if (isDsq) mainTime = 'DSQ';
+      else mainTime = '—';
     } else {
-      mainTime = (r.s1d ? 'DSQ' : (r.s1 ? esc(r.s1) : '—'));
+      // 's1'
+      if (r.s1d) mainTime = 'DSQ';
+      else if (isTimeMarker(r.s1)) mainTime = markerBadge(r.s1);
+      else if (r.s1) mainTime = esc(r.s1);
+      else mainTime = '—';
     }
     const mainCls = ['rank-time-main'];
     if (isDsq) mainCls.push('dsq');
-    else if (noBest) mainCls.push('empty');
+    else if (noBest && !r.marker) mainCls.push('empty');
 
     return '<div class="' + cls.join(' ') + '">'
          +   '<div class="rank-pos ' + posCls + '">' + posDisp + '</div>'
@@ -1318,22 +1357,24 @@ function renderResultTeamBody() {
     const ok   = getTeamAthletes(team).length >= teamMin();
     const t    = getTeamTime(team, ser);
     const d    = isTeamDisq(team, ser);
-    const sec  = (!ok || d || !t) ? Infinity : parseTime(t);
-    return { team, ok, time: t, dsq: d, sec };
+    const isMark = isTimeMarker(t);
+    const sec  = (!ok || d || !t || isMark) ? Infinity : parseTime(t);
+    return { team, ok, time: t, dsq: d, marker: isMark ? t : '', sec };
   });
 
   if (_filterFinished) {
     rows = rows.filter(r => r.time || r.dsq);
   }
 
-  rows.sort((a,b) => {
-    if (!a.ok && b.ok) return 1;
-    if (a.ok && !b.ok) return -1;
-    if (a.sec === Infinity && b.sec === Infinity) return 0;
-    if (a.sec === Infinity) return 1;
-    if (b.sec === Infinity) return -1;
-    return a.sec - b.sec;
+  // Tier-style sort: czas (0) > DNF (1) > DNS (2) > brak/DSQ (3)
+  rows.forEach(r => {
+    if (!r.ok)              r.tier = 4;       // DSQ z powodu min składu — najniżej
+    else if (r.sec < Infinity) r.tier = 0;
+    else if (r.marker === 'DNF') r.tier = 1;
+    else if (r.marker === 'DNS') r.tier = 2;
+    else                      r.tier = 3;
   });
+  rows.sort((a,b) => a.tier !== b.tier ? a.tier - b.tier : a.sec - b.sec);
 
   let rank = 1;
   const html = rows.map(r => {
@@ -1351,6 +1392,7 @@ function renderResultTeamBody() {
     let timeCls = 'rank-time-main';
     if (!r.ok) { timeMain = 'min ' + teamMin() + ' M'; timeCls += ' dsq'; }
     else if (r.dsq) { timeMain = 'DSQ'; timeCls += ' dsq'; }
+    else if (r.marker) { timeMain = markerBadge(r.marker); }
     else if (!r.time) { timeMain = '—'; timeCls += ' empty'; }
     else timeMain = esc(r.time);
 
@@ -1416,7 +1458,22 @@ function renderKlasyfikacja() {
     if (a.ok && !b.ok) return -1;
     return a.sec - b.sec;
   });
-  const N_teams = tRows.filter(r => r.ok && r.sec < Infinity).length;
+  // N drużyn dla punktacji — szanuj setup.teamNMode/teamNManual z panelu sędziowskiego.
+  // DNF/DNS liczą się do N (drużyny które STARTOWAŁY).
+  const _mode = state.setup && state.setup.teamNMode;
+  const _manualN = parseInt(state.setup && state.setup.teamNManual, 10);
+  let N_teams;
+  if (_mode === 'manual' && Number.isFinite(_manualN) && _manualN > 0) {
+    N_teams = _manualN;
+  } else if (_mode === 'ind') {
+    N_teams = (state.setup && state.setup.teamCount) || 8;
+  } else {
+    N_teams = tRows.filter(r => {
+      if (!r.ok) return false;
+      const s1 = getTeamTime(r.t,'s1'), s2 = getTeamTime(r.t,'s2');
+      return !!(s1 || s2);
+    }).length;
+  }
   const teamPts = {}; teams.forEach(t => teamPts[t] = 0);
   let tr = 1;
   tRows.forEach(r => {
