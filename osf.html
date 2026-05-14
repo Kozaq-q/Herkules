@@ -4661,7 +4661,14 @@ function addTeamSoloPair() {
 
 // ── REMOVE TEAM FROM S1 (tylko w edycji awaryjnej) ─────────────────
 function removeTeamFromS1WithConfirm(teamName, idx) {
-  if (!confirm('Usunąć drużynę ' + teamName + ' z Serii 1?\n\nNa jej miejscu zostanie pusty slot. Drużyna zniknie też z Serii 2.')) return;
+  // Ostrzejszy confirm — drużyna znika też z S2
+  const hasS2 = (state.teamOrder.s2 || []).some(it => it && it.team === teamName);
+  const msg = '⚠️ Usunięcie drużyny ' + teamName + ' z S1 spowoduje:\n' +
+              '• zniknięcie z S1\n' +
+              (hasS2 ? '• zniknięcie z S2 (była tam też)\n' : '') +
+              '• czasów się nie kasuje, ale drużyna nie będzie biegać\n\n' +
+              'Możesz cofnąć przez 10 sekund po usunięciu.\nKontynuować?';
+  if (!confirm(msg)) return;
   removeTeamFromS1(idx);
 }
 function removeTeamFromS1(idx) {
@@ -4669,6 +4676,10 @@ function removeTeamFromS1(idx) {
   if (!order[idx]) return;
   const removedTeam = order[idx].team || '';
   const removedLane = order[idx].lane;
+
+  // Snapshot do "Cofnij" — pełne kopie obu kolejek
+  const snapshotS1 = JSON.parse(JSON.stringify(state.teamOrder.s1 || []));
+  const snapshotS2 = JSON.parse(JSON.stringify(state.teamOrder.s2 || []));
 
   // Jeśli usuwany element to drużyna w solo (przed nim jest null lub na końcu jest null)
   // możemy po prostu usunąć całą parę. Inaczej — zostaw null jako placeholder.
@@ -4693,7 +4704,19 @@ function removeTeamFromS1(idx) {
 
   save();
   renderTeamView();
-  showToast('✕ Usunięto ' + removedTeam + ' z S1 — dostępna w "+ Dodaj drużynę"', 'success');
+  // Toast z "Cofnij" — przywraca obie kolejki ze snapshotu
+  showToastWithAction(
+    '✕ Usunięto ' + removedTeam + ' z S1',
+    'Cofnij',
+    () => {
+      state.teamOrder.s1 = snapshotS1;
+      state.teamOrder.s2 = snapshotS2;
+      save();
+      renderTeamView();
+      showToast('↩ Cofnięto', 'success', 1800);
+    },
+    10000
+  );
 }
 
 // ── ADD TEAM TO S1 — modal z listą wszystkich drużyn (też DSQ) ───────
@@ -10020,6 +10043,39 @@ function showToast(msg, type, duration) {
   container.appendChild(t);
   requestAnimationFrame(() => { requestAnimationFrame(() => t.classList.add('show')); });
   setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, duration);
+}
+
+// Toast z przyciskiem akcji (np. "Cofnij") — zostaje dłużej, dopóki user nie kliknie
+function showToastWithAction(msg, actionLabel, onAction, duration) {
+  duration = duration || 10000;
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast info';
+  t.style.display = 'flex';
+  t.style.alignItems = 'center';
+  t.style.gap = '12px';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  span.style.flex = '1';
+  const btn = document.createElement('button');
+  btn.textContent = actionLabel;
+  btn.style.cssText = 'background:var(--accent);color:#111;border:none;border-radius:var(--radius);padding:4px 12px;font-family:var(--font-h);font-weight:700;font-size:11px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;';
+  let consumed = false;
+  btn.addEventListener('click', () => {
+    if (consumed) return; consumed = true;
+    try { onAction(); } catch(e) { console.error(e); }
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  });
+  t.appendChild(span);
+  t.appendChild(btn);
+  container.appendChild(t);
+  requestAnimationFrame(() => { requestAnimationFrame(() => t.classList.add('show')); });
+  setTimeout(() => {
+    if (consumed) return;
     t.classList.remove('show');
     setTimeout(() => t.remove(), 300);
   }, duration);
