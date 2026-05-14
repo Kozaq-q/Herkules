@@ -2541,11 +2541,26 @@ function ensureStateDefaults() {
   if (!state.lockedPairs.s1) state.lockedPairs.s1 = [];
   if (!state.lockedPairs.s2) state.lockedPairs.s2 = [];
   if (!state.cfg) state.cfg = {};
-  if (!state.setup)      state.setup      = {
+  // Defaulty setup. Merge — żeby stare sloty dostały nowe pola, a nie nadpisywały starych.
+  const SETUP_DEFAULTS = {
     accentColor: '#e8944d', name: '', city: '', date: '', org: '', notes: '',
     teamCount: 8, teamMin: 8, teamMultiplier: 3, teamMinStart: 8,
-    allowSoloPair: false
+    allowSoloPair: false,
+    // Nowsze pola (dodane po pierwszym releasie) — wymuszamy default jeśli brak
+    maxScoringM: 0,        // 0 = brak limitu punktujących M
+    teamNManual: 0,        // 0 = brak ręcznego N drużyn
+    teamNMode: 'teams',    // 'teams' | 'ind' | 'manual'
+    kScores: false,        // czy K punktują w klasyfikacji
+    pkAtEnd: false,        // czy PK na końcu losowania
+    ignoreLaneRule: false  // czy ignorować zasadę torów
   };
+  if (!state.setup) state.setup = { ...SETUP_DEFAULTS };
+  else {
+    // Merge: zachowaj istniejące wartości, dodaj brakujące
+    for (const k in SETUP_DEFAULTS) {
+      if (state.setup[k] === undefined) state.setup[k] = SETUP_DEFAULTS[k];
+    }
+  }
 }
 
 function load() {
@@ -2567,6 +2582,7 @@ function startContest() {
   state.contest = { name, city, date };
   save();
   launchApp();
+  if (date) _notePastDateIfNeeded(date);
   startRealtimeSync();
   startPolling();
 }
@@ -3564,9 +3580,20 @@ function assignBibs() {
   let teamOrder;
   if (manual && manual.length) {
     // Zaczynamy od manualnej kolejności; dopisz nowe drużyny (te których nie było, gdy sędzia zatwierdzał) na końcu wg kolejności pojawienia
-    const manualFiltered = manual.filter(t => currentTeams.includes(t));
-    const newcomers      = currentTeams.filter(t => !manualFiltered.includes(t));
+    // Deduplikacja: jeśli w manual są duchy/duplikaty, zachowaj tylko pierwsze wystąpienie istniejących drużyn
+    const seen = new Set();
+    const manualFiltered = manual.filter(t => {
+      if (!currentTeams.includes(t)) return false;
+      if (seen.has(t)) return false;
+      seen.add(t);
+      return true;
+    });
+    const newcomers = currentTeams.filter(t => !seen.has(t));
     teamOrder = [...manualFiltered, ...newcomers];
+    // Trwałe oczyszczenie state.teamOrderManual ze starych/duplikatów (zapobiega narastaniu śmieci)
+    if (manualFiltered.length !== manual.length) {
+      state.teamOrderManual = manualFiltered;
+    }
   } else {
     teamOrder = getSortedTeams(scheme === 'team-alpha' ? 'alpha' : 'appearance');
   }
@@ -3914,6 +3941,25 @@ function saveEditAthlete() {
   const newBib = document.getElementById('edit-bib').value.trim();
 
   if (!name) { alert('Podaj imię i nazwisko.'); return; }
+
+  // Walidacja: zmiana gender/bib gdy zawodnik jest w parach S1/S2 może rozjechać losowanie
+  const aPre = state.athletes.find(x => x.id === id);
+  if (aPre) {
+    const inS1 = (state.s1pairs || []).some(p => p.aId === id || p.bId === id);
+    const inS2 = (state.s2pairs || []).some(p => p.aId === id || p.bId === id);
+    const genderChanged = gender !== aPre.gender;
+    const bibChanged    = newBib && String(newBib) !== String(aPre.bib);
+    if ((genderChanged || bibChanged) && (inS1 || inS2)) {
+      const where = [inS1 ? 'S1' : null, inS2 ? 'S2' : null].filter(Boolean).join(' i ');
+      const what  = [genderChanged ? 'płci' : null, bibChanged ? 'numeru startowego' : null].filter(Boolean).join(' i ');
+      const msg = '⚠️ Zawodnik jest już w parach ' + where + '. Zmiana ' + what + ' nie zmieni przypisanej pary ani toru — czasy mogą zostać przy złym zawodniku.\n\nKontynuować?';
+      if (!confirm(msg)) {
+        // Anuluj — przywróć modal
+        document.getElementById('modal-edit').classList.add('open');
+        return;
+      }
+    }
+  }
 
   // Zamknij modal NAJPIERW — niezależnie od błędów
   document.getElementById('modal-edit').classList.remove('open');
@@ -6157,6 +6203,20 @@ function renderSetupPage() {
   updatePairingRulesSummary();
 }
 
+// Subtelny toast gdy data zawodów < dzisiaj (informacja, nie blokada)
+let _lastPastDateNoted = '';
+function _notePastDateIfNeeded(dateStr) {
+  if (!dateStr || dateStr === _lastPastDateNoted) return;
+  // YYYY-MM-DD lokalny porównanie
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return;
+  if (d < today) {
+    _lastPastDateNoted = dateStr;
+    showToast('ℹ️ Data zawodów jest w przeszłości', 'info', 2500);
+  }
+}
+
 function saveSetup() {
   if (!state.setup) state.setup = {};
   const getVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
@@ -6166,6 +6226,7 @@ function saveSetup() {
   state.setup.name  = getVal('osf-setup-name');
   state.setup.city  = getVal('osf-setup-city');
   state.setup.date  = getVal('osf-setup-date');
+  _notePastDateIfNeeded(state.setup.date);
   state.setup.org   = getVal('osf-setup-org');
   state.setup.notes = getVal('osf-setup-notes');
   state.setup.teamCount      = getNum('osf-team-count', 8);
