@@ -1722,13 +1722,6 @@ tr:last-child > td { border-bottom: none; }
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;">
       <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
-        <input type="checkbox" id="osf-allow-same-team-pair" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text2);">Parowanie wewnątrz drużyny</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Gdy zostają sami zawodnicy jednej drużyny — zezwól na parowanie wewnątrzdrużynowe.</div>
-        </div>
-      </label>
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
         <input type="checkbox" id="osf-allow-solo-pair" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text2);">Sparuj wszystkich (ignoruj wymóg toru)</div>
@@ -2031,7 +2024,6 @@ let state = {
     kScores: false,    // czy kobiety punktują
     teamMin: 8,        // min. skład do startu (poniżej → DSQ, brak pary, brak pkt)
     teamMultiplier: 3, // mnożnik punktowy dla biegu drużynowego
-    allowSameTeamPair: false,
     allowSoloPair: false,
     pkAtEnd: false,
     ignoreLaneRule: false  // gdy true — tor z numeru bib ignorowany, dowolne parowanie
@@ -2552,7 +2544,7 @@ function ensureStateDefaults() {
   if (!state.setup)      state.setup      = {
     accentColor: '#e8944d', name: '', city: '', date: '', org: '', notes: '',
     teamCount: 8, teamMin: 8, teamMultiplier: 3, teamMinStart: 8,
-    allowSameTeamPair: false, allowSoloPair: false
+    allowSoloPair: false
   };
 }
 
@@ -4245,8 +4237,12 @@ function drawSeries1(gender) {
   }
 
   // Zachowaj zablokowane pary (klucz: "s1_M_3" itp.)
+  // FIX: filtrujemy TYLKO pary płci aktualnie losowanej. Inaczej zablokowane
+  // pary płci nie-losowanej (np. M zablokowane gdy losujemy tylko K) trafiały
+  // równocześnie do lockedPairsOld i keptPairs → duplikaty w state.s1pairs.
   const lockedKeys     = (state.lockedPairs && state.lockedPairs.s1) || [];
   const lockedPairsOld = state.s1pairs.filter(p => {
+    if (!genders.includes(p.gender)) return false;
     const key = lockKey('s1', p.gender, p.pairNum);
     return lockedKeys.includes(key);
   });
@@ -4352,8 +4348,8 @@ function drawSeries1(gender) {
       return ordered;
     }
 
-    // W S1 zakaz pary z tej samej drużyny jest BEZWZGLĘDNY — nawet przy ustawieniu allowSameTeamPair
-    const allowSameTeam = false; // S1 — zawsze false, zasada drużynowa
+    // W S1 zakaz pary z tej samej drużyny jest BEZWZGLĘDNY (regulamin)
+    const allowSameTeam = false;
     const allowSoloPair = state.setup && state.setup.allowSoloPair;
 
     // PK zawodnicy — paruj między sobą (bez reguły drużyn, losowo)
@@ -5260,12 +5256,36 @@ function isPersonalBest(id, series, val) {
 function bestTime(id) {
   const s1    = getTime(id, 's1');
   const s2    = getTime(id, 's2');
-  const s1ok  = s1 && !isDisq(id, 's1');
-  const s2ok  = s2 && !isDisq(id, 's2');
+  const s1ok  = s1 && !isDisq(id, 's1') && !isTimeMarker(s1);
+  const s2ok  = s2 && !isDisq(id, 's2') && !isTimeMarker(s2);
   if (!s1ok && !s2ok) return '';
   if (!s1ok) return s2;
   if (!s2ok) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
+}
+
+// Suma czasów S1+S2 (pomija DSQ i markery DNF/DNS). Używana jako tie-breaker
+// przy identycznych bestTime. Zwraca Infinity gdy brak czasów.
+function sumTime(id) {
+  const s1    = getTime(id, 's1');
+  const s2    = getTime(id, 's2');
+  const s1ok  = s1 && !isDisq(id, 's1') && !isTimeMarker(s1);
+  const s2ok  = s2 && !isDisq(id, 's2') && !isTimeMarker(s2);
+  if (!s1ok && !s2ok) return Infinity;
+  if (!s1ok) return parseTime(s2);
+  if (!s2ok) return parseTime(s1);
+  return parseTime(s1) + parseTime(s2);
+}
+// To samo dla drużyn
+function teamSumTime(team) {
+  const s1    = getTeamTime(team, 's1');
+  const s2    = getTeamTime(team, 's2');
+  const s1ok  = s1 && !isTeamDisq(team, 's1') && !isTimeMarker(s1);
+  const s2ok  = s2 && !isTeamDisq(team, 's2') && !isTimeMarker(s2);
+  if (!s1ok && !s2ok) return Infinity;
+  if (!s1ok) return parseTime(s2);
+  if (!s2ok) return parseTime(s1);
+  return parseTime(s1) + parseTime(s2);
 }
 
 function teamBestTimeEffective(team) {
@@ -5532,25 +5552,36 @@ function renderResultsForGender(gender, tbodyId) {
       s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
       s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
       best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
+      sumSec: sumTime(a.id),
       marker: bestMarker(a.id) // 'DNF' | 'DNS' | ''
     };
+    // Czy zawodnik ma JAKIKOLWIEK wpis (czas, marker lub DSQ)?
+    r.hasAnyEntry = !!(r.s1 || r.s2 || r.s1dsq || r.s2dsq);
     // Tier dla sortowania (tier-style):
-    //   0 = ma czas (sortowane po bestSec)
+    //   0 = ma czas (sortowane po bestSec, tie-breaker: sumSec)
     //   1 = DNF (wystartował, nie ukończył)
     //   2 = DNS (nie wystartował)
-    //   3 = brak żadnego wpisu (na samym dole)
+    //   3 = ma DSQ lub brak — na dole (bez miejsca, bez punktów)
+    // UWAGA: jeśli zawodnik ma DSQ i jednocześnie marker w drugiej serii,
+    // DSQ "wygrywa" — traktujemy go jak DSQ (najniższy tier), żeby nie dostał
+    // miejsca przez DNF/DNS.
+    const hasDsq = r.s1dsq || r.s2dsq;
     if (r.bestSec < Infinity) r.tier = 0;
+    else if (hasDsq)            r.tier = 3; // DSQ przebija marker — na dole
     else if (r.marker === 'DNF') r.tier = 1;
     else if (r.marker === 'DNS') r.tier = 2;
     else r.tier = 3;
+    // Marker pokazujemy tylko gdy nie ma DSQ (jeśli DSQ — wyświetlamy '—' w wyniku)
+    r.effectiveMarker = hasDsq ? '' : r.marker;
     return r;
   }
 
-  // Sortuj: najpierw tier, w obrębie tieru — po czasie (jeśli tier=0)
+  // Sortuj: najpierw tier, w obrębie tieru po czasie, przy remisie — po sumie S1+S2
   function sortRows(rows) {
     return rows.sort((a, b) => {
       if (a.tier !== b.tier) return a.tier - b.tier;
-      return a.bestSec - b.bestSec;
+      if (a.bestSec !== b.bestSec) return a.bestSec - b.bestSec;
+      return a.sumSec - b.sumSec;
     });
   }
   const ranked   = sortRows(normalAthletes.map(toRow));
@@ -5595,8 +5626,9 @@ function renderResultsForGender(gender, tbodyId) {
     const pts       = givesPts ? calcIndividualPoints(myRank, ptsN) : null;
     const s1disp   = timeOrMarkerHTML(r.s1, r.s1dsq);
     const s2disp   = timeOrMarkerHTML(r.s2, r.s2dsq);
-    // Komórka "Wynik": jeśli ma czas → czas, jeśli jest marker (DNF/DNS) → badge, inaczej —
-    const bestDisp = r.best ? r.best : (r.marker ? markerBadge(r.marker, {big:true}) : '—');
+    // Komórka "Wynik": jeśli ma czas → czas, jeśli ma DNF/DNS bez DSQ → badge, inaczej —
+    // (gdy zawodnik ma DSQ + marker → tylko '—', bo DSQ przebija marker)
+    const bestDisp = r.best ? r.best : (r.effectiveMarker ? markerBadge(r.effectiveMarker, {big:true}) : '—');
     const rankDisp = isPK ? '<span class="pk-badge" style="font-size:10px;">PK</span>' : (noBest ? '—' : myRank);
     // Badge "nie punktuje" — tylko dla M bez PK gdy limit aktywny i nie punktuje
     const noScoreBadge = (gender === 'M' && !isPK && !noBest && MAX_SCORING_M() > 0 && !scores)
@@ -5645,16 +5677,24 @@ function renderResultsM36() {
     s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
     s1dsq: isDisq(a.id,'s1'), s2dsq: isDisq(a.id,'s2'),
     best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
+    sumSec: sumTime(a.id),
     marker: bestMarker(a.id)
   }));
-  // Tier-style sort: czas → DNF → DNS → brak wpisu
+  // Tier-style sort + tie-breaker po sumie S1+S2. DSQ przebija marker.
   rows.forEach(r => {
+    const hasDsq = r.s1dsq || r.s2dsq;
     if (r.bestSec < Infinity) r.tier = 0;
+    else if (hasDsq)            r.tier = 3;
     else if (r.marker === 'DNF') r.tier = 1;
     else if (r.marker === 'DNS') r.tier = 2;
     else r.tier = 3;
+    r.effectiveMarker = hasDsq ? '' : r.marker;
   });
-  rows.sort((a,b) => a.tier !== b.tier ? a.tier - b.tier : a.bestSec - b.bestSec);
+  rows.sort((a,b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.bestSec !== b.bestSec) return a.bestSec - b.bestSec;
+    return a.sumSec - b.sumSec;
+  });
 
   let rank = 1;
   let html = '';
@@ -5665,7 +5705,7 @@ function renderResultsM36() {
     const medal   = myRank===1?'🥇 ':myRank===2?'🥈 ':myRank===3?'🥉 ':'';
     const s1disp  = timeOrMarkerHTML(r.s1, r.s1dsq);
     const s2disp  = timeOrMarkerHTML(r.s2, r.s2dsq);
-    const bestDisp= r.best ? r.best : (r.marker ? markerBadge(r.marker, {big:true}) : '—');
+    const bestDisp= r.best ? r.best : (r.effectiveMarker ? markerBadge(r.effectiveMarker, {big:true}) : '—');
     html += '<tr>'
       + '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;" class="' + rankCls + '">' + medal + (myRank||'—') + '</td>'
       + '<td style="font-weight:600;">' + esc(displayName(r.athlete)) + ' <span class="m36-badge">M36+</span>' + (r.athlete.bib ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:4px;">#' + r.athlete.bib + '</span>' : '') + '</td>'
@@ -6104,7 +6144,6 @@ function renderSetupPage() {
   updateTeamNModeButtons(s.teamNMode || 'teams');
   setVal('osf-team-min-start',   s.teamMin        !== undefined ? s.teamMin : (s.teamCount || 8));
   setVal('osf-team-multiplier',  s.teamMultiplier || 3);
-  setChk('osf-allow-same-team-pair', s.allowSameTeamPair);
   setChk('osf-allow-solo-pair',      s.allowSoloPair);
   setChk('osf-pk-at-end',            s.pkAtEnd);
   setChk('osf-ignore-lane-rule',     s.ignoreLaneRule);
@@ -6136,7 +6175,6 @@ function saveSetup() {
   state.setup.kScores        = getChk('osf-k-scores');
   state.setup.teamMin        = getNum('osf-team-min-start', state.setup.teamCount || 8);
   state.setup.teamMultiplier = getNum('osf-team-multiplier', 3);
-  state.setup.allowSameTeamPair = getChk('osf-allow-same-team-pair');
   state.setup.allowSoloPair     = getChk('osf-allow-solo-pair');
   state.setup.pkAtEnd           = getChk('osf-pk-at-end');
   state.setup.ignoreLaneRule    = getChk('osf-ignore-lane-rule');
@@ -6609,8 +6647,13 @@ function getRankedMen() {
   const ranked = men.map(a => ({
     athlete: a,
     best: bestTime(a.id),
-    bestSec: parseTime(bestTime(a.id))
-  })).sort((a, b) => a.bestSec - b.bestSec);
+    bestSec: parseTime(bestTime(a.id)),
+    sumSec: sumTime(a.id)
+  })).sort((a, b) => {
+    if (a.bestSec !== b.bestSec) return a.bestSec - b.bestSec;
+    // Tie-breaker: mniejsza suma S1+S2 wygrywa
+    return a.sumSec - b.sumSec;
+  });
 
   // Precompute scoring sets per team jeśli limit aktywny
   const limit = MAX_SCORING_M();
@@ -6661,11 +6704,14 @@ function getRankedTeams() {
     const ok      = getTeamAthletes(team).length >= TEAM_MIN_VAL();
     const best    = teamBestTimeEffective(team);
     const bestSec = parseTime(best);
-    return { team, ok, best, bestSec };
+    const sumSec  = teamSumTime(team);
+    return { team, ok, best, bestSec, sumSec };
   }).sort((a, b) => {
     if (!a.ok && b.ok) return 1;
     if (a.ok && !b.ok) return -1;
-    return a.bestSec - b.bestSec;
+    if (a.bestSec !== b.bestSec) return a.bestSec - b.bestSec;
+    // Tie-breaker: mniejsza suma S1+S2 wygrywa
+    return a.sumSec - b.sumSec;
   });
 
   let rank = 1;
@@ -8679,12 +8725,11 @@ function updatePairingRulesSummary() {
   if (!el) return;
   const s = state.setup || {};
   const parts = [];
-  if (!s.allowSameTeamPair && !s.allowSoloPair && !s.ignoreLaneRule) {
+  if (!s.allowSoloPair && !s.ignoreLaneRule) {
     el.textContent = 'Ustawienia domyślne — algorytm działa regulaminowo.';
     el.style.color = 'var(--text3)';
     return;
   }
-  if (s.allowSameTeamPair) parts.push('parowanie wewnątrz drużyny');
   if (s.allowSoloPair)     parts.push('ignorowanie wymogu toru');
   if (s.ignoreLaneRule)    parts.push('brak zasady toru z bib');
   el.innerHTML = '⚠ Aktywne: <span style="color:var(--orange);">' + parts.join(', ') + '</span>';

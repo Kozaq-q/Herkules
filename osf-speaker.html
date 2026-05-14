@@ -963,6 +963,16 @@ function bestTime(id) {
   if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
 }
+// Suma czasów S1+S2 (pomija DSQ i markery). Tie-breaker dla rankingu.
+function sumTime(id) {
+  const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
+  const ok1 = s1 && !isDisq(id,'s1') && !isTimeMarker(s1);
+  const ok2 = s2 && !isDisq(id,'s2') && !isTimeMarker(s2);
+  if (!ok1 && !ok2) return Infinity;
+  if (!ok1) return parseTime(s2);
+  if (!ok2) return parseTime(s1);
+  return parseTime(s1) + parseTime(s2);
+}
 function findAthlete(id) {
   return (state.athletes || []).find(a => a.id === id) || null;
 }
@@ -1319,30 +1329,42 @@ function renderResultIndividual(series, gender) {
     : (a) => isDisq(a.id, 's1') ? Infinity : parseTime(getTime(a.id, 's1'));
 
   // Budujemy listę
-  let rows = athletes.map(a => ({
-    a,
-    sec: valueFn(a),
-    s1: getTime(a.id, 's1'),
-    s2: getTime(a.id, 's2'),
-    s1d: isDisq(a.id, 's1'),
-    s2d: isDisq(a.id, 's2'),
-    marker: bestMarker(a.id),
-    bestT: series === 'final' ? bestTime(a.id) : (isDisq(a.id, 's1') || isTimeMarker(getTime(a.id, 's1')) ? '' : getTime(a.id, 's1'))
-  }));
+  let rows = athletes.map(a => {
+    const r = {
+      a,
+      sec: valueFn(a),
+      s1: getTime(a.id, 's1'),
+      s2: getTime(a.id, 's2'),
+      s1d: isDisq(a.id, 's1'),
+      s2d: isDisq(a.id, 's2'),
+      marker: bestMarker(a.id),
+      bestT: series === 'final' ? bestTime(a.id) : (isDisq(a.id, 's1') || isTimeMarker(getTime(a.id, 's1')) ? '' : getTime(a.id, 's1'))
+    };
+    r.hasAnyDsq = r.s1d || r.s2d;
+    // DSQ przebija marker — gdy DSQ+DNF, pokażemy '—' i tier=3
+    r.effectiveMarker = r.hasAnyDsq ? '' : r.marker;
+    return r;
+  });
 
   // Filtr: tylko ukończeni — czas istnieje (lub DSQ z innej serii)
   if (_filterFinished) {
     rows = rows.filter(r => r.bestT || (series === 'final' && (r.s1 || r.s2)));
   }
 
-  // Tier-style sort: czas (0) > DNF (1) > DNS (2) > brak/DSQ (3)
+  // Tier-style sort + tie-breaker po sumie S1+S2. DSQ przebija marker.
   rows.forEach(r => {
     if (r.sec < Infinity) r.tier = 0;
+    else if (r.hasAnyDsq)        r.tier = 3; // DSQ przebija marker — na dole
     else if (r.marker === 'DNF') r.tier = 1;
     else if (r.marker === 'DNS') r.tier = 2;
     else r.tier = 3;
+    r.sumSec = sumTime(r.a.id);
   });
-  rows.sort((x, y) => x.tier !== y.tier ? x.tier - y.tier : x.sec - y.sec);
+  rows.sort((x, y) => {
+    if (x.tier !== y.tier) return x.tier - y.tier;
+    if (x.sec !== y.sec) return x.sec - y.sec;
+    return x.sumSec - y.sumSec;
+  });
 
   function valueHtml(val, dsq) {
     if (dsq) return '<span class="dsq">DSQ</span>';
@@ -1373,7 +1395,7 @@ function renderResultIndividual(series, gender) {
     let mainTime = '';
     if (series === 'final') {
       if (r.bestT) mainTime = '<span>' + esc(r.bestT) + '</span>';
-      else if (r.marker) mainTime = markerBadge(r.marker);
+      else if (r.effectiveMarker) mainTime = markerBadge(r.effectiveMarker);
       else if (isDsq) mainTime = 'DSQ';
       else mainTime = '—';
     } else {
@@ -1385,7 +1407,7 @@ function renderResultIndividual(series, gender) {
     }
     const mainCls = ['rank-time-main'];
     if (isDsq) mainCls.push('dsq');
-    else if (noBest && !r.marker) mainCls.push('empty');
+    else if (noBest && !r.effectiveMarker) mainCls.push('empty');
 
     return '<div class="' + cls.join(' ') + '">'
          +   '<div class="rank-pos ' + posCls + '">' + posDisp + '</div>'

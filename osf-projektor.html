@@ -519,6 +519,16 @@ function bestTime(id) {
   if (!ok1) return s2; if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
 }
+// Suma czasów S1+S2 (tie-breaker)
+function sumTime(id) {
+  const s1 = getTime(id,'s1'), s2 = getTime(id,'s2');
+  const ok1 = s1 && !isDisq(id,'s1') && !isTimeMarker(s1);
+  const ok2 = s2 && !isDisq(id,'s2') && !isTimeMarker(s2);
+  if (!ok1 && !ok2) return Infinity;
+  if (!ok1) return parseTime(s2);
+  if (!ok2) return parseTime(s1);
+  return parseTime(s1) + parseTime(s2);
+}
 
 function getTeams() { return [...new Set((state.athletes||[]).map(a=>a.team).filter(Boolean))].sort(); }
 function getTeamAthletes(team) { return (state.athletes||[]).filter(a=>a.team===team && a.gender==='M'); }
@@ -526,7 +536,9 @@ function getTeamTime(team, ser) { return state.teamTimes?.[team]?.[ser] || ''; }
 function isTeamDisq(team, ser)  { return !!(state.teamDisq?.[team]?.[ser]); }
 function teamBestTimeEff(team) {
   const s1 = getTeamTime(team,'s1'), s2 = getTeamTime(team,'s2');
-  const ok1 = s1 && !isTeamDisq(team,'s1'), ok2 = s2 && !isTeamDisq(team,'s2');
+  // Markery DNF/DNS pomijane — to nie są czasy (fix: wcześniej projektor liczył markery jako "czas")
+  const ok1 = s1 && !isTeamDisq(team,'s1') && !isTimeMarker(s1);
+  const ok2 = s2 && !isTeamDisq(team,'s2') && !isTimeMarker(s2);
   if (!ok1 && !ok2) return '';
   if (!ok1) return s2; if (!ok2) return s1;
   return parseTime(s1) <= parseTime(s2) ? s1 : s2;
@@ -625,22 +637,35 @@ function refillTrack(id, { html, count }) {
 function buildIndRows(gender) {
   const athletes = (state.athletes||[]).filter(a => a.gender === gender);
 
-  let ranked = athletes.map(a => ({
-    a, best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
-    s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
-    s1d: isDisq(a.id,'s1'), s2d: isDisq(a.id,'s2'),
-    marker: bestMarker(a.id),
-    allDsq: isDisq(a.id,'s1') && isDisq(a.id,'s2'),
-    hasAnyResult: !!(getTime(a.id,'s1') || getTime(a.id,'s2'))
-  }));
+  let ranked = athletes.map(a => {
+    const r = {
+      a, best: bestTime(a.id), bestSec: parseTime(bestTime(a.id)),
+      s1: getTime(a.id,'s1'), s2: getTime(a.id,'s2'),
+      s1d: isDisq(a.id,'s1'), s2d: isDisq(a.id,'s2'),
+      marker: bestMarker(a.id)
+    };
+    r.allDsq      = r.s1d && r.s2d;
+    r.hasAnyDsq   = r.s1d || r.s2d;
+    r.hasAnyResult = !!(r.s1 || r.s2 || r.s1d || r.s2d);
+    // DSQ przebija marker: gdy zawodnik ma DSQ + DNF, traktuj jak DSQ (effectiveMarker='')
+    r.effectiveMarker = r.hasAnyDsq ? '' : r.marker;
+    return r;
+  });
 
-  // Filtruj: pokaż tylko tych co mają jakikolwiek wynik LUB DSQ LUB marker; ukryj zupełnie bez wpisu
+  // Filtruj: pokaż tylko tych co mają jakikolwiek wpis; ukryj zupełnie bez wpisu
   const withResult = ranked.filter(r => r.hasAnyResult);
-  // Sortuj tier-style: czas → DNF → DNS → DSQ. DSQ na końcu (po markerach).
-  const withTime   = withResult.filter(r => r.bestSec < Infinity).sort((x,y) => x.bestSec - y.bestSec);
-  const dnfOnly    = withResult.filter(r => r.bestSec === Infinity && r.marker === 'DNF');
-  const dnsOnly    = withResult.filter(r => r.bestSec === Infinity && r.marker === 'DNS');
-  const dsqOnly    = withResult.filter(r => r.bestSec === Infinity && !r.marker);
+  // Sortuj tier-style: czas → DNF (czysty) → DNS (czysty) → DSQ. Tie-breaker: suma S1+S2.
+  // Zawodnicy z DSQ lądują na samym dole (effectiveMarker pusty → traktowani jak DSQ).
+  const withTime   = withResult
+    .filter(r => r.bestSec < Infinity)
+    .map(r => ({ ...r, sumSec: sumTime(r.a.id) }))
+    .sort((x, y) => {
+      if (x.bestSec !== y.bestSec) return x.bestSec - y.bestSec;
+      return x.sumSec - y.sumSec;
+    });
+  const dnfOnly    = withResult.filter(r => r.bestSec === Infinity && r.effectiveMarker === 'DNF');
+  const dnsOnly    = withResult.filter(r => r.bestSec === Infinity && r.effectiveMarker === 'DNS');
+  const dsqOnly    = withResult.filter(r => r.bestSec === Infinity && !r.effectiveMarker);
   const shown0     = [...withTime, ...dnfOnly, ...dnsOnly, ...dsqOnly];
 
   const topN = cfg.topN > 0 ? cfg.topN : shown0.length;
@@ -675,14 +700,15 @@ function buildIndRows(gender) {
     if (cfg.showS1 && r.s1) timeSub += 'S1: ' + s1S2Cell(r.s1, r.s1d);
     if (cfg.showS2 && r.s2) timeSub += (timeSub ? ' &nbsp; ' : '') + 'S2: ' + s1S2Cell(r.s2, r.s2d);
 
-    // Główna komórka wyniku: czas, marker (DNF/DNS), DSQ, lub '—'
+    // Główna komórka wyniku: czas, marker (DNF/DNS bez DSQ), DSQ, lub '—'
+    // DSQ przebija marker — gdy zawodnik ma DSQ+DNF, pokazujemy '—' (effectiveMarker='')
     const bestCellHtml = r.best
       ? r.best
-      : r.marker
-        ? markerBadge(r.marker)
+      : r.effectiveMarker
+        ? markerBadge(r.effectiveMarker)
         : (isDsq ? '<span style="color:var(--red);">DSQ</span>' : '<span style="color:var(--text3);">—</span>');
 
-    const posDisp = (noBest && !r.marker && isDsq) ? 'DSQ'
+    const posDisp = (noBest && !r.effectiveMarker && isDsq) ? 'DSQ'
                   : (noBest ? '—' : posIdx);
     if (!noBest) rank++;
     return `<tr class="rank-row ${rowCls}">
@@ -715,10 +741,18 @@ function buildTeamRows() {
     const s1 = getTeamTime(team,'s1'), s2 = getTeamTime(team,'s2');
     const s1d = isTeamDisq(team,'s1'), s2d = isTeamDisq(team,'s2');
     const best = teamBestTimeEff(team);
-    return { team, ok, s1, s2, s1d, s2d, best, bestSec: parseTime(best) };
+    // Suma S1+S2 (tie-breaker)
+    const s1ok = s1 && !s1d && !isTimeMarker(s1);
+    const s2ok = s2 && !s2d && !isTimeMarker(s2);
+    let sumSec = Infinity;
+    if (s1ok && s2ok) sumSec = parseTime(s1) + parseTime(s2);
+    else if (s1ok) sumSec = parseTime(s1);
+    else if (s2ok) sumSec = parseTime(s2);
+    return { team, ok, s1, s2, s1d, s2d, best, bestSec: parseTime(best), sumSec };
   }).sort((a,b) => {
     if (!a.ok&&b.ok) return 1; if (a.ok&&!b.ok) return -1;
-    return a.bestSec - b.bestSec;
+    if (a.bestSec !== b.bestSec) return a.bestSec - b.bestSec;
+    return a.sumSec - b.sumSec;
   });
 
   const topN = cfg.topN > 0 ? cfg.topN : rows.length;
