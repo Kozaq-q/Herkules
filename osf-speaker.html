@@ -677,6 +677,14 @@ function checkAccess() {
       msg: 'Twój link nie pasuje do aktywnego klucza. Poproś sędziego o nowy link.'
     };
   }
+  // TTL — wygaszanie ręczne ustawione przez sędziego
+  if (cfg.speakerKeyExpiresAt && Date.now() > cfg.speakerKeyExpiresAt) {
+    return {
+      ok: false,
+      title: 'Link wygasł',
+      msg: 'Czas aktywności linku minął. Poproś sędziego o przedłużenie lub nowy link.'
+    };
+  }
   return { ok: true };
 }
 

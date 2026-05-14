@@ -1339,6 +1339,18 @@ tr:last-child > td { border-bottom: none; }
           </div>
         </div>
 
+        <!-- Wygaszanie linku — TTL ustawiany ręcznie -->
+        <div id="sp-expire-row" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Link wygasa</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="datetime-local" id="sp-expire-input" oninput="setSpeakerExpiry(this.value)"
+              style="flex:1;min-width:170px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 9px;font-family:var(--font-m);font-size:12px;" />
+            <button onclick="setSpeakerExpiry('+24h')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--text2);cursor:pointer;">+24h</button>
+            <button onclick="setSpeakerExpiry('')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--text2);cursor:pointer;">Bezterminowo</button>
+          </div>
+          <div id="sp-expire-status" style="margin-top:6px;font-size:11px;color:var(--text3);"></div>
+        </div>
+
         <button id="sp-rotate-btn" onclick="regenerateSpeakerKey()" style="display:none;width:100%;padding:8px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
           🔄 Wygeneruj nowy klucz (stary link przestanie działać)
         </button>
@@ -6642,6 +6654,44 @@ function _speakerUrl() {
   return base + '?slot=' + encodeURIComponent(STORAGE_KEY) + '&key=' + encodeURIComponent(state.cfg.speakerKey);
 }
 
+// Wygaszanie linku speakera — TTL ustawiany ręcznie
+// value: '' = bezterminowo, '+24h' = za 24h, lub 'YYYY-MM-DDTHH:MM' (datetime-local)
+function setSpeakerExpiry(value) {
+  if (!state.cfg) state.cfg = {};
+  if (value === '+24h') {
+    state.cfg.speakerKeyExpiresAt = Date.now() + 24 * 3600 * 1000;
+  } else if (!value) {
+    state.cfg.speakerKeyExpiresAt = null;
+  } else {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return;
+    state.cfg.speakerKeyExpiresAt = d.getTime();
+  }
+  saveImmediate();
+  _renderSpeakerSection();
+  if (!value) showToast('✓ Link bezterminowy', 'success', 1800);
+  else showToast('✓ Wygaszanie zaktualizowane', 'success', 1800);
+}
+
+function _isSpeakerExpired() {
+  if (!state.cfg || !state.cfg.speakerKeyExpiresAt) return false;
+  return Date.now() > state.cfg.speakerKeyExpiresAt;
+}
+
+function _fmtLocalDateTime(ts) {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' +
+         pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function _fmtFriendlyDate(ts) {
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' +
+         pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
 function _renderSpeakerSection() {
   if (!state.cfg) state.cfg = {};
   const enabled  = !!state.cfg.speakerEnabled;
@@ -6651,14 +6701,25 @@ function _renderSpeakerSection() {
   const linkRow  = document.getElementById('sp-link-row');
   const linkIn   = document.getElementById('sp-link-input');
   const rotate   = document.getElementById('sp-rotate-btn');
+  const expireRow= document.getElementById('sp-expire-row');
+  const expireIn = document.getElementById('sp-expire-input');
+  const expireSt = document.getElementById('sp-expire-status');
 
   if (!pill || !btn) return;
 
   if (enabled && hasKey) {
-    pill.textContent = '● Aktywny';
-    pill.style.color = 'var(--green)';
-    pill.style.borderColor = 'rgba(80,200,144,.5)';
-    pill.style.background = 'rgba(80,200,144,.1)';
+    const expired = _isSpeakerExpired();
+    if (expired) {
+      pill.textContent = '⌛ Wygasł';
+      pill.style.color = 'var(--orange)';
+      pill.style.borderColor = 'rgba(232,148,77,.5)';
+      pill.style.background = 'rgba(232,148,77,.1)';
+    } else {
+      pill.textContent = '● Aktywny';
+      pill.style.color = 'var(--green)';
+      pill.style.borderColor = 'rgba(80,200,144,.5)';
+      pill.style.background = 'rgba(80,200,144,.1)';
+    }
     btn.textContent = 'Wyłącz dostęp';
     btn.style.background = 'rgba(232,88,88,.1)';
     btn.style.borderColor = 'rgba(232,88,88,.5)';
@@ -6666,6 +6727,17 @@ function _renderSpeakerSection() {
     linkRow.style.display = 'block';
     if (linkIn) linkIn.value = _speakerUrl();
     rotate.style.display = 'block';
+    if (expireRow) expireRow.style.display = 'block';
+    if (expireIn) {
+      const ts = state.cfg.speakerKeyExpiresAt;
+      expireIn.value = ts ? _fmtLocalDateTime(ts) : '';
+    }
+    if (expireSt) {
+      const ts = state.cfg.speakerKeyExpiresAt;
+      if (!ts) expireSt.textContent = 'Bez terminu wygaśnięcia — link działa do ręcznego wyłączenia.';
+      else if (expired) expireSt.textContent = '⌛ Wygasł ' + _fmtFriendlyDate(ts) + ' — speaker zobaczy "Link nieaktywny".';
+      else expireSt.textContent = 'Wygasa: ' + _fmtFriendlyDate(ts);
+    }
   } else {
     pill.textContent = '○ Wyłączony';
     pill.style.color = 'var(--text3)';
@@ -6677,6 +6749,7 @@ function _renderSpeakerSection() {
     btn.style.color = 'var(--green)';
     linkRow.style.display = 'none';
     rotate.style.display = 'none';
+    if (expireRow) expireRow.style.display = 'none';
   }
 }
 
