@@ -444,6 +444,8 @@ function ensureStateDefaults() {
   if (!state.teamOrder.s2) state.teamOrder.s2 = [];
   if (!state.teamTimes) state.teamTimes = {};
   if (!state.teamDisq) state.teamDisq = {};
+  if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
+  if (!state.teamLockedPairs) state.teamLockedPairs = { s1: [], s2: [] };
   if (!state.cfg) state.cfg = {};
   const SETUP_DEFAULTS = {
     accentColor: '#e8944d', name: '', city: '', date: '', org: '', notes: '',

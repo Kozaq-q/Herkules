@@ -793,6 +793,11 @@ tr:last-child > td { border-bottom: none; }
       style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">
       ♀ Kobiety
     </button>
+    <!-- Kłódka wszystkich par S2 — po prawej -->
+    <div style="flex:1;"></div>
+    <button id="s2-lock-all-btn" onclick="toggleLockAllPairs('s2')"
+      title="Zablokuj / odblokuj wszystkie pary"
+      style="background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 9px;font-size:15px;cursor:pointer;color:var(--text3);margin-bottom:4px;line-height:1.4;">🔒</button>
   </div>
 
   <div id="s2-section-M" style="display:none;">
@@ -1104,6 +1109,12 @@ tr:last-child > td { border-bottom: none; }
       <button onclick="disableTeamEditMode('s1')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj</button>
     </div>
     <div id="dr-alert-s1" class="alert alert-info" style="display:none;"></div>
+    <!-- Przycisk: zablokuj wszystkie pary -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+      <button id="dr-s1-lock-all-btn" onclick="toggleLockAllTeamPairs('s1')"
+        title="Zablokuj / odblokuj wszystkie pary"
+        style="display:none;background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 9px;font-size:15px;cursor:pointer;color:var(--text3);line-height:1.4;">🔒</button>
+    </div>
     <div id="dr-s1-teams"></div>
   </div>
 
@@ -1114,6 +1125,11 @@ tr:last-child > td { border-bottom: none; }
       <button onclick="disableTeamEditMode('s2')" style="margin-left:12px;background:var(--red);color:#fff;border:none;border-radius:var(--radius);padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;">🔒 Zablokuj</button>
     </div>
     <div id="dr-alert-s2" class="alert alert-info" style="display:none;"></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+      <button id="dr-s2-lock-all-btn" onclick="toggleLockAllTeamPairs('s2')"
+        title="Zablokuj / odblokuj wszystkie pary"
+        style="display:none;background:none;border:1px solid var(--border2);border-radius:var(--radius);padding:3px 9px;font-size:15px;cursor:pointer;color:var(--text3);line-height:1.4;">🔒</button>
+    </div>
     <div id="dr-s2-teams"></div>
   </div>
 
@@ -2544,6 +2560,10 @@ function ensureStateDefaults() {
   if (!state.lockedPairs) state.lockedPairs = { s1: [], s2: [] };
   if (!state.lockedPairs.s1) state.lockedPairs.s1 = [];
   if (!state.lockedPairs.s2) state.lockedPairs.s2 = [];
+  // Kłódki par drużynowych (klucze = pairNum z renderTeamOrderSection)
+  if (!state.teamLockedPairs) state.teamLockedPairs = { s1: [], s2: [] };
+  if (!state.teamLockedPairs.s1) state.teamLockedPairs.s1 = [];
+  if (!state.teamLockedPairs.s2) state.teamLockedPairs.s2 = [];
   if (!state.cfg) state.cfg = {};
   // Defaulty setup. Merge — żeby stare sloty dostały nowe pola, a nie nadpisywały starych.
   const SETUP_DEFAULTS = {
@@ -2826,6 +2846,22 @@ function buildTeamSeries1() {
   const minStart = TEAM_MIN_VAL(); // min. skład do startu (poniżej → DSQ)
   const N        = TEAM_COUNT();   // N najlepszych do sumy ind.
 
+  // Zachowaj zablokowane pary: mapa pairNum → [slot a, slot b]
+  const lockedNums = (state.teamLockedPairs && state.teamLockedPairs.s1) || [];
+  const lockedSlots = new Map(); // pairNum → { a, b }
+  const lockedTeams = new Set();
+  const oldOrder = state.teamOrder.s1 || [];
+  lockedNums.forEach(pn => {
+    const i = (pn - 1) * 2;
+    const a = oldOrder[i]   || null;
+    const b = oldOrder[i+1] || null;
+    if (a || b) {
+      lockedSlots.set(pn, { a, b });
+      if (a && a.team) lockedTeams.add(a.team);
+      if (b && b.team) lockedTeams.add(b.team);
+    }
+  });
+
   // Podziel drużyny na kwalifikujące się i DSQ
   const allTeams = teams.map(team => ({
     team,
@@ -2833,7 +2869,8 @@ function buildTeamSeries1() {
     sum:      getTeamIndividualSum(team),
   }));
 
-  const eligible = allTeams.filter(t => t.athletes.length >= minStart);
+  // Z eligible wykluczamy drużyny które są w zablokowanych parach
+  const eligible = allTeams.filter(t => t.athletes.length >= minStart && !lockedTeams.has(t.team));
   const disqTeams = allTeams.filter(t => t.athletes.length < minStart);
 
   if (eligible.length === 0) {
@@ -2880,8 +2917,24 @@ function buildTeamSeries1() {
     });
   }
 
+  // Wstaw zablokowane pary na ich pozycje (pairNum × 2 = idx w order)
+  // Jeśli pairNum większy niż order.length/2, pad nullami żeby nie zgubić
+  if (lockedSlots.size > 0) {
+    lockedSlots.forEach((slots, pairNum) => {
+      const i = (pairNum - 1) * 2;
+      while (order.length < i + 2) order.push(null);
+      order.splice(i, 2, slots.a, slots.b);
+    });
+    // Renumeruj startNum po wstawieniu
+    let sn = 1;
+    order.forEach(item => { if (item) { item.startNum = sn++; } else { sn++; } });
+  }
+
   state.teamOrder.s1 = order;
-  state.teamOrder.s2 = [];
+  // Nie czyść S2 jeśli są zablokowane pary w S2 (S2 może zostać niezależnie)
+  if (!((state.teamLockedPairs?.s2 || []).length)) {
+    state.teamOrder.s2 = [];
+  }
 
   // Generowanie resetuje tryb edycji awaryjnej
   disableTeamEditMode('s1');
@@ -2901,9 +2954,25 @@ function buildTeamSeries2() {
   // Wykluczone drużyny z modalu "Kto startuje"
   const teamS2skip = getTeamS2Skip();
 
+  // Zachowaj zablokowane pary S2 — drużyny w zablokowanych parach nie wchodzą do losowania
+  const lockedNumsS2 = (state.teamLockedPairs && state.teamLockedPairs.s2) || [];
+  const lockedSlotsS2 = new Map();
+  const lockedTeamsS2 = new Set();
+  const oldOrderS2 = state.teamOrder.s2 || [];
+  lockedNumsS2.forEach(pn => {
+    const i = (pn - 1) * 2;
+    const a = oldOrderS2[i]   || null;
+    const b = oldOrderS2[i+1] || null;
+    if (a || b) {
+      lockedSlotsS2.set(pn, { a, b });
+      if (a && a.team) lockedTeamsS2.add(a.team);
+      if (b && b.team) lockedTeamsS2.add(b.team);
+    }
+  });
+
   // Weź drużyny z S1, uzupełnij o czas S1 i wymagany tor S2
   const pool = state.teamOrder.s1
-    .filter(item => item && item.team && !teamS2skip.includes(item.team))
+    .filter(item => item && item.team && !teamS2skip.includes(item.team) && !lockedTeamsS2.has(item.team))
     .map(item => {
       const rawTime = getTeamTime(item.team, 's1');
       const dsq     = isTeamDisq(item.team, 's1');
@@ -2962,6 +3031,18 @@ function buildTeamSeries2() {
     order.push({ team: a.team, lane: 'L', startNum, sum: a.sum, count: a.count });
     order.push({ team: b.team, lane: 'P', startNum: startNum + 1, sum: b.sum, count: b.count });
     startNum += 2;
+  }
+
+  // Wstaw zablokowane pary S2 na ich pozycje
+  if (lockedSlotsS2.size > 0) {
+    lockedSlotsS2.forEach((slots, pairNum) => {
+      const i = (pairNum - 1) * 2;
+      while (order.length < i + 2) order.push(null);
+      order.splice(i, 2, slots.a, slots.b);
+    });
+    // Renumeruj startNum
+    let sn = 1;
+    order.forEach(item => { if (item) { item.startNum = sn++; } else { sn++; } });
   }
 
   state.teamOrder.s2 = order;
@@ -3140,7 +3221,8 @@ function renderTeamOrderSection(series) {
     const isLast    = idx === total - 1;
     const isFirstP  = p.pairNum === 1;
     const isLastP   = p.pairNum === total;
-    html += '<div class="pair-card' + (isLast&&!p.isSolo ? ' last-pair' : '') + '">';
+    const _tLockedCls = isTeamPairLocked(series, p.pairNum) ? ' pair-locked' : '';
+    html += '<div class="pair-card' + (isLast&&!p.isSolo ? ' last-pair' : '') + _tLockedCls + '">';
     // Czas startu pary — data-* zamiast inline onclick
     const schedKey = series === 's1' ? 'drS1' : 'drS2';
     const pairStartTime = getPairStartTime(schedKey, p.pairNum);
@@ -3179,6 +3261,12 @@ function renderTeamOrderSection(series) {
     if (p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;">SOLO</span>';
     if (isLast && !p.isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);background:rgba(232,148,77,.12);border:1px solid rgba(232,148,77,.3);padding:2px 7px;border-radius:2px;">OSTATNIA</span>';
     if (p._manual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);background:rgba(224,85,85,.08);border:1px solid rgba(224,85,85,.25);padding:2px 7px;border-radius:2px;" title="Para dobrana ręcznie — poza regulaminowym algorytmem">⚠ ręczna</span>';
+    // Kłódka pary drużynowej (po prawej)
+    const tLocked = isTeamPairLocked(series, p.pairNum);
+    html += '<div style="flex:1;"></div>';
+    html += '<button class="team-lock-btn" onclick="event.stopPropagation();toggleTeamPairLock(\'' + series + '\',' + p.pairNum + ')" ' +
+      'title="' + (tLocked ? 'Odblokuj parę' : 'Zablokuj parę') + '" ' +
+      'style="background:' + (tLocked ? 'rgba(232,148,77,.12)' : 'transparent') + ';border:1px solid ' + (tLocked ? 'var(--orange)' : 'var(--border2)') + ';border-radius:var(--radius);padding:2px 8px;font-size:13px;cursor:pointer;color:' + (tLocked ? 'var(--orange)' : 'var(--text3)') + ';margin-left:6px;line-height:1.4;">' + (tLocked ? '🔒' : '🔓') + '</button>';
     html += '</div>';
     html += '<div class="pair-athletes">';
     // L zawsze po lewej, P po prawej
@@ -3224,6 +3312,7 @@ function renderTeamOrderSection(series) {
       openPairTimeAdjust(this.dataset.sk, parseInt(this.dataset.pn), this.dataset.pt || '', this);
     });
   });
+  _updateTeamLockAllBtn(series);
 }
 
 function renderTeamResults() {
@@ -4739,7 +4828,7 @@ function renderPairsHTML(containerId, pairs, isS2) {
   const container = document.getElementById(containerId);
   if (!pairs.length) { container.innerHTML = ''; return; }
   const series = isS2 ? 's2' : 's1';
-  if (!isS2) _updateLockAllBtn('s1');
+  _updateLockAllBtn(isS2 ? 's2' : 's1');
   let html = '';
   const total = pairs.length;
   pairs.forEach((p, idx) => {
@@ -5495,6 +5584,7 @@ function switchS2Tab(gender) {
   tabK.style.cssText = gender === 'K' ? activeStyle('var(--female)') : inactiveStyle;
   tabM.style.display = hasM ? '' : 'none';
   tabK.style.display = hasK ? '' : 'none';
+  _updateLockAllBtn('s2');
 }
 
 function renderSeries2View() {
@@ -7700,6 +7790,7 @@ function togglePairLock(series, gender, pairNum) {
   else arr.splice(idx, 1);
   save();
   updatePairLockVisual(series, gender, pairNum);
+  _updateLockAllBtn(series);
 }
 
 function updatePairLockVisual(series, gender, pairNum) {
@@ -7717,6 +7808,59 @@ function updatePairLockVisual(series, gender, pairNum) {
     btn.style.background  = locked ? 'rgba(232,148,77,.12)' : 'transparent';
     btn.textContent    = locked ? '🔒' : '🔓';
   }
+}
+
+// ── Kłódki par drużynowych ─────────────────────
+function isTeamPairLocked(series, pairNum) {
+  if (!state.teamLockedPairs) return false;
+  return (state.teamLockedPairs[series] || []).includes(pairNum);
+}
+
+function toggleTeamPairLock(series, pairNum) {
+  if (!state.teamLockedPairs) state.teamLockedPairs = { s1: [], s2: [] };
+  if (!state.teamLockedPairs[series]) state.teamLockedPairs[series] = [];
+  const arr = state.teamLockedPairs[series];
+  const idx = arr.indexOf(pairNum);
+  if (idx === -1) arr.push(pairNum);
+  else arr.splice(idx, 1);
+  save();
+  renderTeamOrderSection(series);
+  _updateTeamLockAllBtn(series);
+}
+
+function toggleLockAllTeamPairs(series) {
+  if (!state.teamLockedPairs) state.teamLockedPairs = { s1: [], s2: [] };
+  if (!state.teamLockedPairs[series]) state.teamLockedPairs[series] = [];
+  const order = state.teamOrder[series] || [];
+  if (!order.length) return;
+  const allPairNums = [];
+  for (let i = 0; i < order.length; i += 2) allPairNums.push(Math.floor(i/2) + 1);
+  const current = state.teamLockedPairs[series];
+  const allLocked = allPairNums.length > 0 && allPairNums.every(n => current.includes(n));
+  if (allLocked) {
+    state.teamLockedPairs[series] = current.filter(n => !allPairNums.includes(n));
+  } else {
+    allPairNums.forEach(n => { if (!current.includes(n)) current.push(n); });
+  }
+  save();
+  renderTeamOrderSection(series);
+  _updateTeamLockAllBtn(series);
+}
+
+function _updateTeamLockAllBtn(series) {
+  const btn = document.getElementById('dr-' + series + '-lock-all-btn');
+  if (!btn) return;
+  const order = state.teamOrder[series] || [];
+  if (!order.length) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  const pairCount = Math.ceil(order.length / 2);
+  const allPairNums = []; for (let i = 1; i <= pairCount; i++) allPairNums.push(i);
+  const current = (state.teamLockedPairs && state.teamLockedPairs[series]) || [];
+  const allLocked = allPairNums.length > 0 && allPairNums.every(n => current.includes(n));
+  btn.textContent  = allLocked ? '🔓' : '🔒';
+  btn.title        = allLocked ? 'Odblokuj wszystkie pary' : 'Zablokuj wszystkie pary';
+  btn.style.color  = allLocked ? 'var(--accent)' : 'var(--text3)';
+  btn.style.borderColor = allLocked ? 'rgba(232,212,77,.3)' : 'var(--border2)';
 }
 
 function autoLockPairOnTime(series, gender, pairNum) {
@@ -8366,15 +8510,15 @@ function toggleLockAllPairs(series) {
 }
 
 function _updateLockAllBtn(series) {
-  if (series !== 's1') return;
-  const btn = document.getElementById('s1-lock-all-btn');
+  const btnId = series === 's1' ? 's1-lock-all-btn' : 's2-lock-all-btn';
+  const btn = document.getElementById(btnId);
   if (!btn) return;
-  // Sprawdź stan tylko dla aktywnej płci
-  const activeGender = _s1ActiveTab || 'M';
-  const gPairs  = state.s1pairs.filter(p => p.gender === activeGender);
+  const activeGender = series === 's1' ? (_s1ActiveTab || 'M') : (_s2ActiveTab || 'M');
+  const allPairs = series === 's1' ? state.s1pairs : state.s2pairs;
+  const gPairs   = allPairs.filter(p => p.gender === activeGender);
   if (!gPairs.length) return;
-  const allKeys   = gPairs.map(p => lockKey('s1', p.gender, p.pairNum));
-  const current   = (state.lockedPairs && state.lockedPairs.s1) || [];
+  const allKeys   = gPairs.map(p => lockKey(series, p.gender, p.pairNum));
+  const current   = (state.lockedPairs && state.lockedPairs[series]) || [];
   const allLocked = allKeys.length > 0 && allKeys.every(k => current.includes(k));
   btn.textContent  = allLocked ? '🔓' : '🔒';
   btn.title        = allLocked ? 'Odblokuj wszystkie pary (' + activeGender + ')' : 'Zablokuj wszystkie pary (' + activeGender + ')';
