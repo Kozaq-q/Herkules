@@ -4516,16 +4516,17 @@ function drawSeries1(gender) {
   const keptPairs = state.s1pairs.filter(p => !genders.includes(p.gender));
 
   if (lockedPairsOld.length > 0) {
-    const usedNums = new Set(lockedPairsOld.map(p => p.pairNum));
-    let nextM = 1, nextK = 1;
+    // FIX: oddzielne Sety per płeć — zapobiega kolizjom M↔K
+    // (poprzedni kod używał jednego Setu z numerami obu płci, więc np. M3 i K3
+    // wpadały tak samo i renumeracja K mogła pomijać niezajęte numery)
+    const usedByGender = { M: new Set(), K: new Set() };
+    lockedPairsOld.forEach(p => { usedByGender[p.gender]?.add(p.pairNum); });
+    const next = { M: 1, K: 1 };
     newPairs.forEach(p => {
-      if (p.gender === 'M') {
-        while (usedNums.has(nextM)) nextM++;
-        p.pairNum = nextM++; usedNums.add(p.pairNum);
-      } else {
-        while (usedNums.has(nextK + 1000)) nextK++;
-        p.pairNum = nextK++; usedNums.add(p.pairNum + 1000);
-      }
+      const g = p.gender;
+      while (usedByGender[g].has(next[g])) next[g]++;
+      p.pairNum = next[g]++;
+      usedByGender[g].add(p.pairNum);
     });
     state.s1pairs = [...lockedPairsOld, ...newPairs, ...keptPairs];
   } else {
