@@ -1473,6 +1473,28 @@ tr:last-child > td { border-bottom: none; }
   </div>
 </div>
 
+<!-- ═══ MODAL: PODGLĄD IMPORTU ═══ -->
+<div class="modal-overlay" id="modal-import-preview">
+  <div class="modal" style="max-width:680px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title">Podgląd importu</div>
+    <div id="import-preview-stats" style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6;"></div>
+    <div id="import-preview-warnings" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.4);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.6;color:var(--text2);"></div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Pierwsze 10 wierszy</div>
+    <div style="overflow:auto;flex:1;min-height:0;border:1px solid var(--border);border-radius:var(--radius);">
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead style="background:var(--bg3);position:sticky;top:0;">
+          <tr style="text-align:left;"><th style="padding:6px 10px;">#</th><th style="padding:6px 10px;">Nazwisko / Imię</th><th style="padding:6px 10px;">Płeć</th><th style="padding:6px 10px;">Drużyna</th></tr>
+        </thead>
+        <tbody id="import-preview-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer" style="margin-top:14px;">
+      <button class="btn" onclick="closeModal('modal-import-preview')">Anuluj</button>
+      <button class="btn btn-primary" id="import-preview-confirm-btn">Importuj</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: WYCZYŚĆ ZAWODNIKÓW ═══ -->
 <div class="modal-overlay" id="modal-clear-athletes">
   <div class="modal" style="max-width:420px;">
@@ -10494,6 +10516,89 @@ function parseImportRows(raw) {
 
 function applyImportRows(rows) {
   if (!rows.length) { showToast('Brak danych do importu — sprawdź format pliku.', 'error'); return; }
+  // Pokaż podgląd przed importem (zamiast importować od razu)
+  _showImportPreview(rows);
+}
+
+function _showImportPreview(rows) {
+  // Liczby
+  const total = rows.length;
+  const m = rows.filter(r => r.gender === 'M').length;
+  const k = rows.filter(r => r.gender === 'K').length;
+  const teams = [...new Set(rows.map(r => r.team).filter(Boolean))];
+
+  // Duplikaty wewnętrzne w samej liście (po nazwisku — case-insensitive)
+  const nameCount = new Map();
+  rows.forEach(r => {
+    const n = (r.name || '').trim().toLowerCase();
+    if (!n) return;
+    nameCount.set(n, (nameCount.get(n) || 0) + 1);
+  });
+  const dupNames = [...nameCount.entries()].filter(([_, c]) => c > 1).map(([n, c]) => ({ n, c }));
+
+  // Konflikty z istniejącymi zawodnikami (po name|team|gender)
+  const existingKeys = new Set(
+    state.athletes.map(a => (a.name + '|' + a.team + '|' + a.gender).toLowerCase())
+  );
+  const existingConflicts = rows.filter(r =>
+    existingKeys.has((r.name + '|' + r.team + '|' + r.gender).toLowerCase())
+  ).length;
+
+  // Statystyki
+  const statsEl = document.getElementById('import-preview-stats');
+  statsEl.innerHTML =
+    '<strong>' + total + '</strong> zawodników · ' +
+    '<span style="color:var(--male);">♂ ' + m + ' M</span> · ' +
+    '<span style="color:var(--female);">♀ ' + k + ' K</span> · ' +
+    '<strong>' + teams.length + '</strong> drużyn' +
+    (existingConflicts > 0 ? ' · <span style="color:var(--text3);">' + existingConflicts + ' już istnieje (zostanie pominięte)</span>' : '');
+
+  // Ostrzeżenia
+  const warnEl = document.getElementById('import-preview-warnings');
+  const warnings = [];
+  if (total > 0 && (m / total) > 0.92 && total >= 10) {
+    warnings.push('⚠ <strong>' + Math.round(m/total*100) + '% mężczyzn</strong> — sprawdź czy kolumna płci jest poprawnie rozpoznana (możliwy domyślny "M" dla wszystkich).');
+  }
+  if (total > 0 && (k / total) > 0.92 && total >= 10) {
+    warnings.push('⚠ <strong>' + Math.round(k/total*100) + '% kobiet</strong> — sprawdź kolumnę płci.');
+  }
+  if (dupNames.length > 0) {
+    const sample = dupNames.slice(0, 5).map(d => '<strong>' + esc(d.n) + '</strong> (×' + d.c + ')').join(', ');
+    warnings.push('⚠ Duplikaty nazwisk w liście: ' + sample + (dupNames.length > 5 ? ' i ' + (dupNames.length - 5) + ' więcej' : '') + ' — mogą być dwie różne osoby, ale sprawdź.');
+  }
+  if (warnings.length) {
+    warnEl.innerHTML = warnings.join('<br>');
+    warnEl.style.display = 'block';
+  } else {
+    warnEl.style.display = 'none';
+  }
+
+  // Pierwsze 10 wierszy
+  const tbody = document.getElementById('import-preview-tbody');
+  tbody.innerHTML = rows.slice(0, 10).map((r, i) =>
+    '<tr style="border-top:1px solid var(--border);">' +
+      '<td style="padding:5px 10px;color:var(--text3);">' + (i + 1) + '</td>' +
+      '<td style="padding:5px 10px;">' + esc(r.name) + '</td>' +
+      '<td style="padding:5px 10px;color:' + (r.gender === 'M' ? 'var(--male)' : 'var(--female)') + ';">' + r.gender + '</td>' +
+      '<td style="padding:5px 10px;color:var(--text3);">' + esc(r.team) + '</td>' +
+    '</tr>'
+  ).join('');
+
+  // Confirm button odpala faktyczny import
+  const btn = document.getElementById('import-preview-confirm-btn');
+  // Wyczyść stary handler
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', () => {
+    closeModal('modal-import-preview');
+    _doImportRows(rows);
+  });
+
+  closeModal('modal-import');
+  document.getElementById('modal-import-preview').classList.add('open');
+}
+
+function _doImportRows(rows) {
   if (!checkImportDuplicate(rows)) return; // użytkownik anulował
 
   // WARSTWA 1: pomiń zawodników którzy już istnieją (po nazwisku + drużyna + płeć)
