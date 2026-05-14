@@ -1707,7 +1707,8 @@ tr:last-child > td { border-bottom: none; }
     <div id="sl-view-search" style="display:none;overflow-y:auto;flex:1;min-height:0;"></div>
 
     <div class="modal-footer" style="flex-shrink:0;margin-top:12px;">
-      <button class="btn btn-primary" onclick="closeModal('modal-s2-startlist')">Gotowe</button>
+      <button class="btn" onclick="cancelS2Startlist()">Anuluj</button>
+      <button class="btn btn-primary" onclick="confirmS2Startlist()">Zatwierdź</button>
     </div>
   </div>
 </div>
@@ -1830,15 +1831,18 @@ tr:last-child > td { border-bottom: none; }
   <div class="modal" style="max-width:620px;width:95%;">
     <div class="modal-header">
       <div class="modal-title">👥 Kto startuje — S2 drużynowy</div>
-      <button class="modal-close" onclick="closeModal('modal-team-s2-who')">✕</button>
+      <button class="modal-close" onclick="cancelTeamS2Startlist()">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
       Kliknij drużynę żeby wykluczyć ją z S2. Wykluczone drużyny nie są brane pod uwagę przy generowaniu kolejności.
     </div>
     <div id="team-s2-who-tiles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;max-height:55vh;overflow-y:auto;"></div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+    <div style="display:flex;justify-content:space-between;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
       <button class="btn" onclick="clearTeamS2Skip()">Wszyscy startują</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-team-s2-who')">Gotowe</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="cancelTeamS2Startlist()">Anuluj</button>
+        <button class="btn btn-primary" onclick="confirmTeamS2Startlist()">Zatwierdź</button>
+      </div>
     </div>
   </div>
 </div>
@@ -8033,14 +8037,23 @@ function setTeamS2Skip(arr) {
   _ts2BlockRT = Date.now() + 3000;
   saveImmediate();
 }
+
+// Bufor drużynowy (lustro indywidualnego)
+let _teamS2skipBuffer = null;
+let _teamS2skipOriginal = null;
+function currentTeamS2Skip() { return _teamS2skipBuffer !== null ? _teamS2skipBuffer : getTeamS2Skip(); }
+
 function openTeamS2WhoStarts() {
+  // Inicjuj bufor kopią aktualnego stanu
+  _teamS2skipBuffer = [...getTeamS2Skip()];
+  _teamS2skipOriginal = [...getTeamS2Skip()];
   const teams = [...new Set(state.athletes.filter(a => a.gender === 'M').map(a => a.team))].filter(Boolean).sort();
   const container = document.getElementById('team-s2-who-tiles');
   if (!container) return;
 
   container.innerHTML = '';
   teams.forEach(team => {
-    const skips = getTeamS2Skip().includes(team);
+    const skips = _teamS2skipBuffer.includes(team);
     const btn = document.createElement('button');
     btn.dataset.team = team;
     btn.style.cssText = 'background:' + (skips ? 'rgba(224,85,85,.08)' : 'var(--bg3)') + ';' +
@@ -8059,12 +8072,12 @@ function openTeamS2WhoStarts() {
 }
 
 function toggleTeamS2Skip(team, btn) {
-  const skip = getTeamS2Skip();
-  const idx = skip.indexOf(team);
+  // Modyfikujemy bufor; zatwierdzenie dopiero przy "Zatwierdź"
+  if (_teamS2skipBuffer === null) _teamS2skipBuffer = [...getTeamS2Skip()];
+  const idx = _teamS2skipBuffer.indexOf(team);
   const nowSkips = idx === -1;
-  if (nowSkips) skip.push(team);
-  else          skip.splice(idx, 1);
-  setTeamS2Skip(skip);  // tylko localStorage — natychmiastowe, nie async
+  if (nowSkips) _teamS2skipBuffer.push(team);
+  else          _teamS2skipBuffer.splice(idx, 1);
   if (btn) {
     btn.style.background  = nowSkips ? 'rgba(224,85,85,.08)' : 'var(--bg3)';
     btn.style.borderColor = nowSkips ? 'var(--red)' : 'var(--border2)';
@@ -8076,8 +8089,41 @@ function toggleTeamS2Skip(team, btn) {
 }
 
 function clearTeamS2Skip() {
-  setTeamS2Skip([]);
+  // Wyczyść bufor (operacja w UI), nie zapisuj — czeka na "Zatwierdź"
+  _teamS2skipBuffer = [];
   openTeamS2WhoStarts();
+}
+
+function confirmTeamS2Startlist() {
+  if (_teamS2skipBuffer === null) { closeModal('modal-team-s2-who'); return; }
+  const before = new Set(_teamS2skipOriginal || []);
+  const after  = new Set(_teamS2skipBuffer);
+  let added = 0, removed = 0;
+  after.forEach(t => { if (!before.has(t)) added++; });
+  before.forEach(t => { if (!after.has(t)) removed++; });
+  setTeamS2Skip([..._teamS2skipBuffer]);
+  _teamS2skipBuffer = null;
+  _teamS2skipOriginal = null;
+  closeModal('modal-team-s2-who');
+  if (added === 0 && removed === 0) {
+    showToast('Bez zmian', 'info', 1800);
+  } else {
+    const parts = [];
+    if (added) parts.push(added + ' wykluczono');
+    if (removed) parts.push(removed + ' przywrócono');
+    showToast('✓ Zaktualizowano (' + parts.join(', ') + ')', 'success', 2800);
+  }
+}
+
+function cancelTeamS2Startlist() {
+  if (_teamS2skipBuffer !== null && _teamS2skipOriginal !== null) {
+    const same = _teamS2skipBuffer.length === _teamS2skipOriginal.length &&
+                 _teamS2skipBuffer.every(t => _teamS2skipOriginal.includes(t));
+    if (!same && !confirm('Porzucić niezapisane zmiany?')) return;
+  }
+  _teamS2skipBuffer = null;
+  _teamS2skipOriginal = null;
+  closeModal('modal-team-s2-who');
 }
 
 function activateTeamSwap(teamName, idx, series) {
@@ -8337,10 +8383,19 @@ function _updateLockAllBtn(series) {
 }
 
 // ═══════════════════════════════════════
-// KTO STARTUJE W S2
+// KTO STARTUJE W S2 — z buforem (zmiany dopiero po "Zatwierdź")
 // ═══════════════════════════════════════
+// Bufor: gdy modal otwarty, wszystkie zmiany lecą tu zamiast do state.s2skip.
+// To eliminuje race condition przy szybkim klikaniu (każde toggle robiło save → RT → polling → echo gubiło ostatnie kliki).
+let _s2skipBuffer = null;       // null = modal zamknięty, używamy state.s2skip
+let _s2skipOriginal = null;     // snapshot do liczenia różnicy w toast
+function currentS2Skip() { return _s2skipBuffer !== null ? _s2skipBuffer : (state.s2skip || []); }
+
 function openS2StartlistModal() {
   if (!state.s2skip) state.s2skip = [];
+  // Inicjuj bufor kopią aktualnego stanu
+  _s2skipBuffer = [...state.s2skip];
+  _s2skipOriginal = [...state.s2skip];
   // Schowaj wyszukiwarkę przy otwarciu
   const sw = document.getElementById('sl-search-wrap');
   const si = document.getElementById('sl-search-input');
@@ -8350,6 +8405,42 @@ function openS2StartlistModal() {
   if (sv) sv.style.display = 'none';
   document.getElementById('modal-s2-startlist').classList.add('open');
   showS2Teams();
+}
+
+// Zatwierdź zmiany z bufora → state + save + toast
+function confirmS2Startlist() {
+  if (_s2skipBuffer === null) { closeModal('modal-s2-startlist'); return; }
+  const before = new Set(_s2skipOriginal || []);
+  const after  = new Set(_s2skipBuffer);
+  let added = 0, removed = 0;
+  after.forEach(id => { if (!before.has(id)) added++; });
+  before.forEach(id => { if (!after.has(id)) removed++; });
+  state.s2skip = [..._s2skipBuffer];
+  _s2skipBuffer = null;
+  _s2skipOriginal = null;
+  save();
+  closeModal('modal-s2-startlist');
+  if (added === 0 && removed === 0) {
+    showToast('Bez zmian', 'info', 1800);
+  } else {
+    const parts = [];
+    if (added) parts.push(added + ' wykluczono');
+    if (removed) parts.push(removed + ' przywrócono');
+    showToast('✓ Zaktualizowano (' + parts.join(', ') + ')', 'success', 2800);
+  }
+}
+
+// Anuluj — porzuć bufor, zamknij modal bez zapisu
+function cancelS2Startlist() {
+  if (_s2skipBuffer !== null && _s2skipOriginal !== null) {
+    // Sprawdź czy są zmiany — jeśli tak, zapytaj
+    const same = _s2skipBuffer.length === _s2skipOriginal.length &&
+                 _s2skipBuffer.every(id => _s2skipOriginal.includes(id));
+    if (!same && !confirm('Porzucić niezapisane zmiany?')) return;
+  }
+  _s2skipBuffer = null;
+  _s2skipOriginal = null;
+  closeModal('modal-s2-startlist');
 }
 
 function showS2Teams() {
@@ -8382,10 +8473,11 @@ function _renderTeamTiles() {
     return;
   }
 
+  const buf = currentS2Skip();
   teamsView.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">' +
     teams.map(team => {
       const ids      = getTeamAthleteIdsFromS1(team);
-      const skipping = ids.filter(id => state.s2skip && state.s2skip.includes(id)).length;
+      const skipping = ids.filter(id => buf.includes(id)).length;
       const allSkip  = skipping === ids.length;
       const someSkip = skipping > 0 && !allSkip;
       return '<button data-t="' + esc(team) + '" onclick="showS2TeamAthletes(this.dataset.t)" ' +
@@ -8414,9 +8506,10 @@ function _renderAthleteTiles(athletes, container) {
   // Renderuje kafelki zawodników do podanego kontenera
   // NIE przebudowuje całego widoku - każdy kafelek aktualizuje się sam przez toggleS2SkipTile
   if (!container) return;
+  const buf = currentS2Skip();
   container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;">' +
     athletes.map(a => {
-      const skips = !!(state.s2skip && state.s2skip.includes(a.id));
+      const skips = buf.includes(a.id);
       const team  = a.team || '';
       return '<button id="sl-tile-' + a.id + '" ' +
         'data-t="' + esc(team) + '" ' +
@@ -8455,12 +8548,12 @@ function showS2TeamAthletes(team) {
 
 function toggleS2SkipTile(id, btn) {
   // btn = element przycisku (this z onclick)
-  if (!state.s2skip) state.s2skip = [];
-  const idx = state.s2skip.indexOf(id);
+  // Modyfikujemy bufor; zatwierdzenie dopiero przy "Zatwierdź"
+  if (_s2skipBuffer === null) _s2skipBuffer = [...(state.s2skip || [])];
+  const idx = _s2skipBuffer.indexOf(id);
   const nowSkips = idx === -1;
-  if (nowSkips) state.s2skip.push(id);
-  else          state.s2skip.splice(idx, 1);
-  save();
+  if (nowSkips) _s2skipBuffer.push(id);
+  else          _s2skipBuffer.splice(idx, 1);
 
   // Aktualizuj tylko ten kafelek — bez przebudowy całego widoku
   if (btn) {
@@ -8595,7 +8688,7 @@ function _buildS2StartlistModal(filter) {
         'text-transform:uppercase;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px;">' +
         label + ' — ' + athletes.length + '</div>' +
       athletes.map(a => {
-        const skips = !!(state.s2skip && state.s2skip.includes(a.id));
+        const skips = currentS2Skip().includes(a.id);
         return '<div onclick="toggleS2SkipRow(' + a.id + ', this)" ' +
           'style="display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius);cursor:pointer;' +
           'background:' + (skips ? 'rgba(224,85,85,.06)' : 'transparent') + ';' +
@@ -8627,39 +8720,36 @@ function filterS2Startlist() {
 }
 
 function toggleS2SkipRow(id, rowEl) {
-  if (!state.s2skip) state.s2skip = [];
-  const idx = state.s2skip.indexOf(id);
-  if (idx === -1) state.s2skip.push(id);
-  else state.s2skip.splice(idx, 1);
-  save();
+  if (_s2skipBuffer === null) _s2skipBuffer = [...(state.s2skip || [])];
+  const idx = _s2skipBuffer.indexOf(id);
+  if (idx === -1) _s2skipBuffer.push(id);
+  else _s2skipBuffer.splice(idx, 1);
   // Przebuduj bez czyszczenia wyszukiwarki
   const q = document.getElementById('s2-startlist-search').value;
   _buildS2StartlistModal(q);
 }
 
 function toggleS2Skip(id) {
-  if (!state.s2skip) state.s2skip = [];
-  const idx = state.s2skip.indexOf(id);
-  if (idx === -1) state.s2skip.push(id);
-  else state.s2skip.splice(idx, 1);
-  save();
+  if (_s2skipBuffer === null) _s2skipBuffer = [...(state.s2skip || [])];
+  const idx = _s2skipBuffer.indexOf(id);
+  if (idx === -1) _s2skipBuffer.push(id);
+  else _s2skipBuffer.splice(idx, 1);
   const q = (document.getElementById('s2-startlist-search') || {}).value || '';
   _buildS2StartlistModal(q);
 }
 
 function setAllS2Start(starts) {
-  if (!state.s2skip) state.s2skip = [];
+  if (_s2skipBuffer === null) _s2skipBuffer = [...(state.s2skip || [])];
   const allIds = [];
   state.s1pairs.forEach(p => {
     if (p.aId) allIds.push(p.aId);
     if (p.bId) allIds.push(p.bId);
   });
   if (starts) {
-    state.s2skip = state.s2skip.filter(id => !allIds.includes(id));
+    _s2skipBuffer = _s2skipBuffer.filter(id => !allIds.includes(id));
   } else {
-    allIds.forEach(id => { if (!state.s2skip.includes(id)) state.s2skip.push(id); });
+    allIds.forEach(id => { if (!_s2skipBuffer.includes(id)) _s2skipBuffer.push(id); });
   }
-  save();
   const q = (document.getElementById('s2-startlist-search') || {}).value || '';
   _buildS2StartlistModal(q);
 }
