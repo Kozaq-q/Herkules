@@ -5596,7 +5596,7 @@ function renderResultsForGender(gender, tbodyId) {
     ? [...ranked].sort((a,b) => (a.athlete.team||'').localeCompare(b.athlete.team||'', 'pl') || a.bestSec - b.bestSec)
     : ranked;
   const displayPkRanked = _resultsSort === 'team'
-    ? [...pkRanked].sort((a,b) => (a.athlete.team||'').localeCompare(b.athlete.team||'', 'pl'))
+    ? [...pkRanked].sort((a,b) => (a.athlete.team||'').localeCompare(b.athlete.team||'', 'pl') || a.bestSec - b.bestSec || a.sumSec - b.sumSec)
     : pkRanked;
 
   let html = '';
@@ -7674,6 +7674,10 @@ function autoLockPairOnTime(series, gender, pairNum) {
 function getPairsWithTimes(series) {
   const pairs = series === 's1' ? state.s1pairs : state.s2pairs;
   return pairs.filter(p => {
+    // Pomijaj pary z PK — PK zawsze startują, ich czasy są normalne, nie powód do alertu
+    const aAth = state.athletes.find(a => a.id === p.aId);
+    const bAth = p.bId ? state.athletes.find(a => a.id === p.bId) : null;
+    if (aAth?.pk || bAth?.pk) return false;
     const aTime = getTime(p.aId, series);
     const bTime = p.bId ? getTime(p.bId, series) : '';
     return aTime || bTime;

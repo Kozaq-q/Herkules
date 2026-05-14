@@ -1445,7 +1445,13 @@ function renderResultTeamBody() {
     const d    = isTeamDisq(team, ser);
     const isMark = isTimeMarker(t);
     const sec  = (!ok || d || !t || isMark) ? Infinity : parseTime(t);
-    return { team, ok, time: t, dsq: d, marker: isMark ? t : '', sec };
+    // Tie-breaker: suma S1+S2; jeśli któraś z dwóch jest DSQ/marker/brak — Infinity (jak w indywidualnych)
+    const s1t = getTeamTime(team, 's1'), s2t = getTeamTime(team, 's2');
+    const s1d = isTeamDisq(team, 's1'), s2d = isTeamDisq(team, 's2');
+    const s1ok = ok && s1t && !s1d && !isTimeMarker(s1t);
+    const s2ok = ok && s2t && !s2d && !isTimeMarker(s2t);
+    const sumSec = (s1ok && s2ok) ? (parseTime(s1t) + parseTime(s2t)) : Infinity;
+    return { team, ok, time: t, dsq: d, marker: isMark ? t : '', sec, sumSec };
   });
 
   if (_filterFinished) {
@@ -1460,7 +1466,11 @@ function renderResultTeamBody() {
     else if (r.marker === 'DNS') r.tier = 2;
     else                      r.tier = 3;
   });
-  rows.sort((a,b) => a.tier !== b.tier ? a.tier - b.tier : a.sec - b.sec);
+  rows.sort((a,b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.sec !== b.sec) return a.sec - b.sec;
+    return a.sumSec - b.sumSec; // tie-breaker: suma S1+S2 (Infinity gdy któraś niegotowa)
+  });
 
   let rank = 1;
   const html = rows.map(r => {

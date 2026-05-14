@@ -531,7 +531,7 @@ function sumTime(id) {
 }
 
 function getTeams() { return [...new Set((state.athletes||[]).map(a=>a.team).filter(Boolean))].sort(); }
-function getTeamAthletes(team) { return (state.athletes||[]).filter(a=>a.team===team && a.gender==='M'); }
+function getTeamAthletes(team) { return (state.athletes||[]).filter(a=>a.team===team && a.gender==='M' && !a.pk); }
 function getTeamTime(team, ser) { return state.teamTimes?.[team]?.[ser] || ''; }
 function isTeamDisq(team, ser)  { return !!(state.teamDisq?.[team]?.[ser]); }
 function teamBestTimeEff(team) {
