@@ -2270,6 +2270,18 @@ window.addEventListener('beforeunload', () => {
 let _remoteRenderTimer = null;
 
 function _applyRemoteState(stateJson) {
+  // Jeśli user właśnie wpisuje w input — odroć parse przez setTimeout żeby nie blokować klawiatury
+  // (parse dużego state może trwać 5-15ms na słabszym sprzęcie, co powoduje stutter typing)
+  const active = document.activeElement;
+  const userTyping = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+  if (userTyping) {
+    setTimeout(() => _applyRemoteStateNow(stateJson), 0);
+    return;
+  }
+  _applyRemoteStateNow(stateJson);
+}
+
+function _applyRemoteStateNow(stateJson) {
   try {
     const incoming = JSON.parse(stateJson);
     // Ignoruj własne zapisy (Realtime echo naszego upsert)
@@ -2284,10 +2296,12 @@ function _applyRemoteState(stateJson) {
     }
     state = incoming;
     ensureStateDefaults();
-    // Zaktualizuj cache LS
-    if (state.teamS2skip) {
-      try { localStorage.setItem('osf_ts2skip_' + STORAGE_KEY, JSON.stringify(state.teamS2skip)); } catch(e) {}
-    }
+    // Zaktualizuj cache LS — ZAWSZE (nie tylko gdy truthy)
+    // Inaczej gdy zdalny teamS2skip jest pustą tablicą [], cache LS pozostaje stara → getTeamS2Skip() zwraca nieaktualne
+    try {
+      const ts2 = state.teamS2skip || [];
+      localStorage.setItem('osf_ts2skip_' + STORAGE_KEY, JSON.stringify(ts2));
+    } catch(e) {}
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     // Sprawdź duplikaty po synchronizacji ze zdalnym stanem
     setTimeout(checkAndWarnDuplicates, 500);
@@ -2334,6 +2348,15 @@ function _tryRemoteRender() {
 
 // ── Realtime WebSocket (główny kanał, ~200ms latencja) ────────────────
 let _realtimeChannel = null;
+// ── RT health — gdy WebSocket pada, polling przyspiesza z 2s do 1s ───
+let _rtHealthy = false;
+function _setRtHealthy(healthy) {
+  if (_rtHealthy === healthy) return;
+  _rtHealthy = healthy;
+  // Restart pollingu z nowym interwałem
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; startPolling(); }
+}
+
 function startRealtimeSync() {
   if (_realtimeChannel) return;
   const db   = getSupabase();
@@ -2354,8 +2377,10 @@ function startRealtimeSync() {
       if (!rtEl) return;
       if (status === 'SUBSCRIBED') {
         rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)';
+        _setRtHealthy(true);
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         rtEl.textContent = 'RT: błąd'; rtEl.style.color = 'var(--red)';
+        _setRtHealthy(false);
         // Próba reconnectu po 3s
         getSupabase().removeChannel(_realtimeChannel);
         _realtimeChannel = null;
@@ -2364,12 +2389,13 @@ function startRealtimeSync() {
     });
 }
 
-// ── Polling co 2s — fallback gdy WebSocket nie dostarczy eventu ───────
-// Porównuje updated_at zamiast całego JSON — lekki i niezawodny
+// ── Polling — fallback gdy WebSocket nie dostarczy eventu ───────
+// Interwał adaptacyjny: 2s gdy RT healthy, 1s gdy padło (krótsze okno utraty)
 let _pollTimer      = null;
 let _lastUpdatedAt  = '';
 function startPolling() {
   if (_pollTimer) return;
+  const interval = _rtHealthy ? 2000 : 1000;
   _pollTimer = setInterval(async () => {
     if (_isSaving) return;
     try {
@@ -2385,7 +2411,7 @@ function startPolling() {
         if (data.state_json) _applyRemoteState(data.state_json);
       }
     } catch(e) {}
-  }, 2000);
+  }, interval);
 }
 
 function save() {

@@ -380,26 +380,38 @@ async function boot(s) {
   startClock();
   startRealtime();
 
-  // Polling co 2s jako fallback gdy WebSocket padnie lub Realtime zgubi event
-  // Porównuje updated_at zamiast całego JSON — lekki i niezawodny
+  // Polling — fallback gdy WebSocket padnie lub Realtime zgubi event
+  // Adaptive: 2s gdy RT healthy, 1s gdy nie (krótsze okno utraty)
   let _lastUpdatedAt = '';
-  setInterval(async () => {
-    try {
-      const { data } = await getDB().from('osf_state').select('state_json, updated_at').eq('slot_id', slotId).single();
-      if (!data) return;
-      if (data.updated_at && data.updated_at !== _lastUpdatedAt) {
-        _lastUpdatedAt = data.updated_at;
-        if (data.state_json) {
-          state = JSON.parse(data.state_json);
-          ensureStateDefaults();
-          softRender();
-          flashSync();
+  let _pollTimer = null;
+  let _rtHealthy = false;
+  function _startProjPolling() {
+    if (_pollTimer) clearInterval(_pollTimer);
+    const interval = _rtHealthy ? 2000 : 1000;
+    _pollTimer = setInterval(async () => {
+      try {
+        const { data } = await getDB().from('osf_state').select('state_json, updated_at').eq('slot_id', slotId).single();
+        if (!data) return;
+        if (data.updated_at && data.updated_at !== _lastUpdatedAt) {
+          _lastUpdatedAt = data.updated_at;
+          if (data.state_json) {
+            state = JSON.parse(data.state_json);
+            ensureStateDefaults();
+            softRender();
+            flashSync();
+          }
         }
+      } catch(e) {
+        console.warn('Projektor poll error:', e);
       }
-    } catch(e) {
-      console.warn('Projektor poll error:', e);
-    }
-  }, 2000);
+    }, interval);
+  }
+  window._setRtHealthy = function(h) {
+    if (_rtHealthy === h) return;
+    _rtHealthy = h;
+    _startProjPolling();
+  };
+  _startProjPolling();
 
   // Reconnect realtime co 5s jeśli połączenie zerwane
   setInterval(() => {
@@ -483,9 +495,11 @@ function startRealtime() {
       if (status === 'SUBSCRIBED') {
         if (dot) dot.classList.remove('off');
         if (lbl) lbl.textContent = 'LIVE';
+        if (window._setRtHealthy) window._setRtHealthy(true);
       } else {
         if (dot) dot.classList.add('off');
         if (lbl) lbl.textContent = 'OFFLINE';
+        if (window._setRtHealthy) window._setRtHealthy(false);
         // Próba reconnectu po 3s
         setTimeout(() => {
           if (rtChannel) { try { getDB().removeChannel(rtChannel); } catch(e) {} rtChannel = null; }

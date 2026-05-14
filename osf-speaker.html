@@ -733,16 +733,19 @@ function startSyncWaitingForAccess() {
 // ═══════════════════════════════════════════════════════════
 // SYNC (realtime + polling)
 // ═══════════════════════════════════════════════════════════
-function startSync() {
-  startRealtime();
-  // Polling co 3s jako fallback i sprawdzenie deaktywacji
-  let lastUpdatedAt = '';
-  setInterval(async () => {
+let _spkPollTimer = null;
+let _spkLastUpdatedAt = '';
+let _spkRtHealthy = false;
+function _startSpkPolling() {
+  if (_spkPollTimer) clearInterval(_spkPollTimer);
+  // Adaptive: 3s gdy RT healthy, 1.5s gdy padł
+  const interval = _spkRtHealthy ? 3000 : 1500;
+  _spkPollTimer = setInterval(async () => {
     try {
       const { data } = await getDB().from('osf_state').select('state_json, updated_at').eq('slot_id', slotId).single();
       if (!data) return;
-      if (data.updated_at && data.updated_at !== lastUpdatedAt) {
-        lastUpdatedAt = data.updated_at;
+      if (data.updated_at && data.updated_at !== _spkLastUpdatedAt) {
+        _spkLastUpdatedAt = data.updated_at;
         if (data.state_json) {
           state = JSON.parse(data.state_json);
           ensureStateDefaults();
@@ -750,7 +753,17 @@ function startSync() {
         }
       }
     } catch(e) {}
-  }, 3000);
+  }, interval);
+}
+function _setSpkRtHealthy(h) {
+  if (_spkRtHealthy === h) return;
+  _spkRtHealthy = h;
+  _startSpkPolling();
+}
+
+function startSync() {
+  startRealtime();
+  _startSpkPolling();
 }
 
 function startRealtime() {
@@ -767,10 +780,12 @@ function startRealtime() {
         })
     .subscribe((status) => {
       const dot = document.getElementById('sync-dot');
-      if (!dot) return;
-      if (status === 'SUBSCRIBED') dot.classList.remove('off');
-      else {
-        dot.classList.add('off');
+      if (status === 'SUBSCRIBED') {
+        if (dot) dot.classList.remove('off');
+        _setSpkRtHealthy(true);
+      } else {
+        if (dot) dot.classList.add('off');
+        _setSpkRtHealthy(false);
         setTimeout(() => {
           if (rtChannel) { try { getDB().removeChannel(rtChannel); } catch(e) {} rtChannel = null; }
           startRealtime();
