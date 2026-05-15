@@ -471,7 +471,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
           <div class="card-title" style="margin:0;padding:0;border:none;">🎲 Pary biegu patrolowego</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="openModal('modal-draw')">⚙ Losuj pary</button>
+            <button class="btn btn-primary" onclick="openDrawModal()">⚙ Losuj pary</button>
             <button class="btn" onclick="toggleLockAllPatrolPairs()" id="ptr-lockall-btn" title="Zablokuj / odblokuj wszystkie pary aktywnej płci">🔒</button>
           </div>
         </div>
@@ -942,6 +942,14 @@ function showTab(id) {
   if (page) page.classList.add('active');
   if (tab)  tab.classList.add('active');
   localStorage.setItem('patrol_tab_' + SLOT_ID, id);
+  // Wywołaj render zawartości — bez tego zakładka pokazuje stary stan
+  try {
+    if (id === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
+    else if (id === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); if (typeof updateAthleteStats === 'function') updateAthleteStats(); }
+    else if (id === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
+    else if (id === 'times' && typeof renderTimesView === 'function') renderTimesView();
+    else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
+  } catch(e) { console.error('Render error:', e); }
 }
 
 function renderHeader() {
@@ -1734,14 +1742,7 @@ function openDrawModal() {
   }
   openModal('modal-draw');
 }
-// Override otwarcia z menu — używamy openDrawModal z warningiem
-document.addEventListener('DOMContentLoaded', () => {
-  const oldOpen = window.openModal;
-  window.openModal = function(id) {
-    if (id === 'modal-draw') return openDrawModal();
-    oldOpen(id);
-  };
-});
+// (openDrawModal jest wywoływany bezpośrednio z onclick — bez override openModal)
 
 function doDrawPairs() {
   const gender = document.getElementById('draw-gender').value;
@@ -1952,26 +1953,7 @@ function athleteCardHTML(a, lane) {
   '</div>';
 }
 
-// Bind tab switching to render functions
-function _renderActiveTab() {
-  const active = document.querySelector('.nav-tab.active');
-  if (!active) return;
-  const id = active.id.replace('tab-', '');
-  if (id === 'setup') renderSetupPage();
-  else if (id === 'athletes') { renderAthletes(); updateAthleteStats(); }
-  else if (id === 'pairs') renderPairsView();
-}
-
-// Hook na showTab (overrride)
-const _origShowTab = showTab;
-showTab = function(id) {
-  _origShowTab(id);
-  if (id === 'setup') renderSetupPage();
-  else if (id === 'athletes') { renderAthletes(); updateAthleteStats(); }
-  else if (id === 'pairs') renderPairsView();
-  else if (id === 'times') renderTimesView();
-  else if (id === 'results') renderResultsView();
-};
+// (showTab() już wywołuje rendery — definicja w sekcji UI wyżej)
 
 // Swatch listeners
 document.addEventListener('DOMContentLoaded', () => {
