@@ -3052,8 +3052,24 @@ function renderTimerPairHTML(p, role) {
   const pairNum = p.pairNum;
   const run = getRun(gender, pairNum);
   const started = !!(run && run.startedAt);
-  const aFinished = !!(started && run.finishedAt && run.finishedAt[p.aId]);
-  const bFinished = p.bId ? !!(started && run.finishedAt && run.finishedAt[p.bId]) : true;
+  // Zawodnik jest "skończony" jeśli ma finishedAt z auto-stop LUB ma wpisany total ręcznie
+  function getEffectiveFinishedAt(id) {
+    if (!id) return null;
+    if (started && run.finishedAt && run.finishedAt[id]) return run.finishedAt[id];
+    // Ręczny czas META — przelicz na fakt że zawodnik skończył
+    const t = state.times?.[id]?.total;
+    if (started && t && !isTimeMarker(t)) {
+      const sec = parseTime(t);
+      if (Number.isFinite(sec) && sec > 0 && sec !== Infinity) {
+        return run.startedAt + sec * 1000;
+      }
+    }
+    return null;
+  }
+  const aFinishedAt = getEffectiveFinishedAt(p.aId);
+  const bFinishedAt = getEffectiveFinishedAt(p.bId);
+  const aFinished = !!aFinishedAt;
+  const bFinished = p.bId ? !!bFinishedAt : true;
   const allFinished = started && aFinished && bFinished;
 
   let statusCls, statusTxt;
@@ -3075,8 +3091,8 @@ function renderTimerPairHTML(p, role) {
   // Lecący czas (lub końcowy)
   let displayMs;
   if (allFinished) {
-    // Pokaż czas ostatniego zawodnika
-    const last = Math.max(...Object.values(run.finishedAt));
+    // Pokaż czas ostatniego zawodnika (z auto-stop lub z ręcznego total)
+    const last = Math.max(aFinishedAt || 0, bFinishedAt || 0);
     displayMs = last - run.startedAt;
     head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '" data-finished="1">' + formatRunTime(displayMs) + '</div>';
   } else if (started) {
