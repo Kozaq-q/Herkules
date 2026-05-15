@@ -315,6 +315,43 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   .result-row .res-hide-mobile { display: none; }
 }
 
+/* RESULTS — siatka dwukolumnowa (M | K) */
+.ptr-results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ptr-results-col { min-width: 0; }
+.ptr-results-col-title { font-family: var(--font-h); font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 0 8px; border-bottom: 2px solid var(--border); margin-bottom: 10px; }
+/* W trybie dwukolumnowym kolumny są węższe — chowamy OSF i zwężamy */
+.ptr-results-grid .result-row { grid-template-columns: 38px 1fr 70px 50px 60px; gap: 8px; padding: 8px 10px; }
+.ptr-results-grid .result-row .res-hide-osf { display: none; }
+.ptr-results-grid .result-rank { font-size: 18px; }
+.ptr-results-grid .result-name { font-size: 13px; }
+.ptr-results-grid .result-team { font-size: 10px; }
+.ptr-results-grid .result-time { font-size: 13px; }
+.ptr-results-grid .result-hits { font-size: 13px; }
+.ptr-results-grid .result-pts { font-size: 15px; }
+@media (max-width: 900px) {
+  .ptr-results-grid { grid-template-columns: 1fr; gap: 22px; }
+  .ptr-results-grid .result-row { grid-template-columns: 36px 1fr 64px 60px; }
+  .ptr-results-grid .result-row .res-hide-mobile { display: none; }
+}
+
+/* TEAM CLASSIFICATION */
+.team-row { display: grid; grid-template-columns: 50px 1fr 90px 90px 100px; gap: 10px; align-items: center; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 4px; transition: background .12s; }
+.team-row:hover { background: var(--bg3); }
+.team-row.rank-1 { border-color: rgba(232,212,77,.5); background: rgba(232,212,77,.05); }
+.team-row.rank-2 { border-color: rgba(192,192,192,.5); background: rgba(192,192,192,.04); }
+.team-row.rank-3 { border-color: rgba(205,127,50,.5); background: rgba(205,127,50,.05); }
+.team-rank { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--text1); text-align: center; }
+.team-row.rank-1 .team-rank { color: var(--accent); }
+.team-name { font-size: 14px; font-weight: 700; color: var(--text1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-meta { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team-stat { font-family: var(--font-m); font-size: 13px; font-weight: 700; color: var(--text2); text-align: center; }
+.team-stat .lbl { display: block; font-family: var(--font-h); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-weight: 700; }
+.team-pts { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--orange); text-align: center; }
+@media (max-width: 700px) {
+  .team-row { grid-template-columns: 40px 1fr 70px 80px; }
+  .team-row .team-hide-mobile { display: none; }
+}
+
 /* MODAL */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
@@ -760,7 +797,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
           <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Wyniki</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:4px 10px;">
-            ⚠ Punktacja w przygotowaniu — kolumna PKT jest placeholderem
+            ⚠ Punktacja w przygotowaniu — kolumna PKT i drużynowa są placeholderem
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
@@ -769,14 +806,30 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <div id="ptr-results-no-data" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text3);">
           Brak wpisanych wyników. Przejdź do zakładki <strong>⏱ Wpisywanie wyników</strong> aby wpisać czasy.
         </div>
-        <div id="ptr-results-tabs" style="display:none;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);">
-          <button id="ptr-results-tab-M" onclick="switchResultsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
-          <button id="ptr-results-tab-K" onclick="switchResultsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+        <div id="ptr-results-grid" class="ptr-results-grid" style="display:none;">
+          <div class="ptr-results-col">
+            <div class="ptr-results-col-title" style="color:var(--male);border-bottom-color:var(--male);">♂ Mężczyźni <span id="ptr-results-count-M" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:6px;"></span></div>
+            <div id="ptr-results-M"></div>
+          </div>
+          <div class="ptr-results-col">
+            <div class="ptr-results-col-title" style="color:var(--female);border-bottom-color:var(--female);">♀ Kobiety <span id="ptr-results-count-K" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:6px;"></span></div>
+            <div id="ptr-results-K"></div>
+          </div>
         </div>
-        <div style="overflow-x:auto;">
-          <div id="ptr-results-M"></div>
-          <div id="ptr-results-K" style="display:none;"></div>
+      </div>
+
+      <div class="card mb-12" id="ptr-team-card" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Klasyfikacja drużynowa</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:4px 10px;">
+            ⚠ Reguły do uzupełnienia — obecnie suma punktów wszystkich zawodników z drużyny
+          </div>
         </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          Wynik drużyny = suma punktów jej zawodników (M + K razem). DSQ/DNF/DNS = 0 pkt.
+          Drużyna musi mieć minimum <strong>1</strong> sklasyfikowanego zawodnika.
+        </div>
+        <div id="ptr-team-list"></div>
       </div>
     </div>
 
@@ -3817,21 +3870,7 @@ function renderTimesTable(gender) {
 // ═══════════════════════════════════════════════════════════════
 // RESULTS — klasyfikacja
 // ═══════════════════════════════════════════════════════════════
-let _resultsActiveTab = 'M';
-
-function switchResultsTab(g) {
-  _resultsActiveTab = g;
-  document.getElementById('ptr-results-M').style.display = g === 'M' ? '' : 'none';
-  document.getElementById('ptr-results-K').style.display = g === 'K' ? '' : 'none';
-  const tM = document.getElementById('ptr-results-tab-M');
-  const tK = document.getElementById('ptr-results-tab-K');
-  if (tM && tK) {
-    const activeStyle = c => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + c + ';background:rgba(255,255,255,.05);color:' + c + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
-    const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
-    tM.style.cssText = g === 'M' ? activeStyle('var(--male)') : inactiveStyle;
-    tK.style.cssText = g === 'K' ? activeStyle('var(--female)') : inactiveStyle;
-  }
-}
+// (switchResultsTab — usunięte: kategorie pokazujemy obok siebie)
 
 // Placeholder punktacji — do zaktualizowania gdy poznasz reguły
 function calcPatrolPoints(athlete, row) {
@@ -3840,33 +3879,36 @@ function calcPatrolPoints(athlete, row) {
   return 1000;
 }
 
+function _patrolBuildRow(a) {
+  const total = getPatrolTime(a.id, 'total');
+  const osf   = getPatrolTime(a.id, 'osf');
+  const hits  = state.times?.[a.id]?.hits;
+  const dsq   = isDsq(a.id);
+  const totalIsMarker = isTimeMarker(total);
+  const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
+  let tier = 3;
+  let marker = '';
+  if (dsq) tier = 3;
+  else if (totalSec < Infinity) tier = 0;
+  else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
+  else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
+  const hasAny = !!(total || osf || hits !== undefined || dsq);
+  return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
+}
+
 function renderResultsView() {
-  // Zbierz zawodników którzy mają cokolwiek wpisane (czas, marker, DSQ)
   function buildRows(gender) {
-    const list = state.athletes.filter(a => a.gender === gender);
-    return list.map(a => {
-      const total = getPatrolTime(a.id, 'total');
-      const osf   = getPatrolTime(a.id, 'osf');
-      const hits  = state.times?.[a.id]?.hits;
-      const dsq   = isDsq(a.id);
-      const totalIsMarker = isTimeMarker(total);
-      const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
-      let tier = 3; // brak/DSQ
-      let marker = '';
-      if (dsq) tier = 3;
-      else if (totalSec < Infinity) tier = 0;
-      else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
-      else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
-      const hasAny = !!(total || osf || hits !== undefined || dsq);
-      return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
-    });
+    return state.athletes.filter(a => a.gender === gender).map(_patrolBuildRow);
   }
 
   function renderList(containerId, gender) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const rows = buildRows(gender).filter(r => r.hasAny);
-    if (!rows.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Brak wpisanych wyników.</div>'; return; }
+    if (!rows.length) {
+      el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak wpisanych wyników.</div>';
+      return;
+    }
     rows.sort((a, b) => {
       if (a.tier !== b.tier) return a.tier - b.tier;
       return a.totalSec - b.totalSec;
@@ -3880,7 +3922,6 @@ function renderResultsView() {
       const rankDisp = r.dsq ? '<span class="dsq-badge">DSQ</span>' :
                        r.marker ? '<span class="marker-badge ' + r.marker + '">' + r.marker + '</span>' :
                        (myRank !== null) ? (myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : myRank) : '—';
-      // DSQ ukrywa czasy (jak w OSF)
       const totalDisp = r.dsq ? '—' : (isTimeMarker(r.total) ? '<span class="marker-badge ' + r.total + '">' + r.total + '</span>' : (r.total || '—'));
       const osfDisp   = r.dsq ? '—' : (isTimeMarker(r.osf) ? '<span class="marker-badge ' + r.osf + '">' + r.osf + '</span>' : (r.osf || '—'));
       const hitsDisp  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
@@ -3892,9 +3933,9 @@ function renderResultsView() {
           '<div class="result-team">' + esc(r.ath.team || '') + '</div>' +
         '</div>' +
         '<div class="result-time"><span class="lbl">Całkowity</span>' + totalDisp + '</div>' +
-        '<div class="result-time muted res-hide-mobile"><span class="lbl">OSF</span>' + osfDisp + '</div>' +
-        '<div class="result-hits res-hide-mobile"><span class="lbl" style="display:block;font-family:var(--font-h);font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;font-weight:700;">Trafienia</span>' + hitsDisp + '</div>' +
-        '<div class="result-pts"><span class="lbl" style="display:block;font-family:var(--font-h);font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;font-weight:700;">Pkt</span>' + pts + '</div>' +
+        '<div class="result-time muted res-hide-osf res-hide-mobile"><span class="lbl">OSF</span>' + osfDisp + '</div>' +
+        '<div class="result-hits res-hide-mobile"><span class="lbl">Traf</span>' + hitsDisp + '</div>' +
+        '<div class="result-pts"><span class="lbl">Pkt</span>' + pts + '</div>' +
       '</div>';
     }).join('');
   }
@@ -3903,16 +3944,87 @@ function renderResultsView() {
   const allK = buildRows('K').filter(r => r.hasAny);
   const hasAny = allM.length > 0 || allK.length > 0;
   document.getElementById('ptr-results-no-data').style.display = hasAny ? 'none' : 'block';
-  document.getElementById('ptr-results-tabs').style.display = hasAny ? 'flex' : 'none';
-  document.getElementById('ptr-results-M').style.display = hasAny ? '' : 'none';
-  document.getElementById('ptr-results-K').style.display = 'none';
-  if (!hasAny) return;
-  renderList('ptr-results-M', 'M');
-  renderList('ptr-results-K', 'K');
-  // Aktywna zakładka
-  if (_resultsActiveTab === 'M' && !allM.length && allK.length) _resultsActiveTab = 'K';
-  if (_resultsActiveTab === 'K' && !allK.length && allM.length) _resultsActiveTab = 'M';
-  switchResultsTab(_resultsActiveTab);
+  document.getElementById('ptr-results-grid').style.display = hasAny ? 'grid' : 'none';
+  // Liczniki przy nagłówkach
+  const cM = document.getElementById('ptr-results-count-M');
+  const cK = document.getElementById('ptr-results-count-K');
+  if (cM) cM.textContent = allM.length ? '(' + allM.length + ')' : '';
+  if (cK) cK.textContent = allK.length ? '(' + allK.length + ')' : '';
+  if (hasAny) {
+    renderList('ptr-results-M', 'M');
+    renderList('ptr-results-K', 'K');
+  }
+  renderTeamView();
+}
+
+// ─── KLASYFIKACJA DRUŻYNOWA ─────────────────────────────────────
+// Placeholder: suma punktów wszystkich zawodników z drużyny.
+// Gdy znane będą reguły (np. top N, kara za DNF) — podmień calcTeamScore.
+function calcTeamScore(rows) {
+  // rows = wszyscy zawodnicy drużyny z _patrolBuildRow(a)
+  let total = 0, classified = 0, dnf = 0, dns = 0, dsq = 0;
+  rows.forEach(r => {
+    if (r.dsq) { dsq++; return; }
+    if (r.totalSec < Infinity) {
+      total += calcPatrolPoints(r.ath, r);
+      classified++;
+    } else if (r.marker === 'DNF') dnf++;
+    else if (r.marker === 'DNS') dns++;
+  });
+  return { total, classified, dnf, dns, dsq };
+}
+
+function renderTeamView() {
+  const card = document.getElementById('ptr-team-card');
+  const list = document.getElementById('ptr-team-list');
+  if (!card || !list) return;
+
+  // Grupowanie po drużynie
+  const byTeam = {};
+  state.athletes.forEach(a => {
+    const t = (a.team || '').trim();
+    if (!t) return;
+    if (!byTeam[t]) byTeam[t] = [];
+    byTeam[t].push(_patrolBuildRow(a));
+  });
+
+  const teams = Object.keys(byTeam).map(name => {
+    const rows = byTeam[name];
+    const anyResult = rows.some(r => r.hasAny);
+    const score = calcTeamScore(rows);
+    const counts = { M: 0, K: 0 };
+    rows.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
+    return { name, rows, anyResult, score, counts };
+  }).filter(t => t.anyResult && t.score.classified >= 1);
+
+  if (!teams.length) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+  teams.sort((a, b) => b.score.total - a.score.total);
+
+  list.innerHTML = teams.map((t, i) => {
+    const rank = i + 1;
+    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const rankDisp = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+    const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
+    const extras = [];
+    if (t.score.dnf) extras.push(t.score.dnf + '×DNF');
+    if (t.score.dns) extras.push(t.score.dns + '×DNS');
+    if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
+    const extrasDisp = extras.length ? ' · ' + extras.join(' · ') : '';
+    return '<div class="team-row ' + rankCls + '">' +
+      '<div class="team-rank">' + rankDisp + '</div>' +
+      '<div style="min-width:0;">' +
+        '<div class="team-name">' + esc(t.name) + '</div>' +
+        '<div class="team-meta">' + esc(composition + extrasDisp) + '</div>' +
+      '</div>' +
+      '<div class="team-stat team-hide-mobile"><span class="lbl">Zawodników</span>' + t.rows.length + '</div>' +
+      '<div class="team-stat"><span class="lbl">Sklasyf.</span>' + t.score.classified + '</div>' +
+      '<div class="team-pts"><span class="lbl">Suma pkt</span>' + t.score.total + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
