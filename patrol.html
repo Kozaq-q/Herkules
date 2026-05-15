@@ -170,9 +170,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 /* RUNNING — pomaranczowa gruba ramka + glow + tło */
 .timer-pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.10), var(--bg2) 40%); box-shadow: 0 0 0 3px rgba(232,148,77,.15), 0 4px 16px rgba(232,148,77,.18); animation: card-running-glow 2s ease-in-out infinite; }
 @keyframes card-running-glow { 0%,100% { box-shadow: 0 0 0 3px rgba(232,148,77,.15), 0 4px 16px rgba(232,148,77,.18); } 50% { box-shadow: 0 0 0 4px rgba(232,148,77,.25), 0 6px 24px rgba(232,148,77,.28); } }
-/* FINISHED — zielona ramka + tło + stempel */
+/* FINISHED — zielona ramka + tło */
 .timer-pair-card.finished { border-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.10), var(--bg2) 40%); opacity: .92; }
-.timer-pair-card.finished::after { content: '✓ KONIEC'; position: absolute; top: 14px; right: 16px; font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 2px; color: var(--green); background: rgba(76,175,130,.15); border: 1px solid rgba(76,175,130,.5); padding: 3px 8px; border-radius: 3px; transform: rotate(2deg); pointer-events: none; z-index: 2; }
 
 .timer-pair-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; transition: background .2s; }
 .timer-pair-card.running .timer-pair-head { background: rgba(232,148,77,.08); border-bottom-color: rgba(232,148,77,.3); }
@@ -198,6 +197,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .btn-timer-start:hover { background: var(--green); filter: brightness(1.15); }
 .btn-timer-reset { background: var(--red); color: #fff; }
 .btn-timer-reset:hover { background: var(--red); filter: brightness(1.15); }
+.btn-timer-reset-small { background: transparent; color: var(--text3); border: 1px solid var(--border2); font-family: var(--font-h); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: lowercase; padding: 4px 10px; border-radius: var(--radius); cursor: pointer; transition: all .12s; }
+.btn-timer-reset-small:hover { color: var(--text2); border-color: var(--text3); }
 .btn-timer-stop { background: var(--red); color: #fff; }
 .btn-timer-stop:hover { background: var(--red); filter: brightness(1.15); }
 .btn-timer-undo { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
@@ -724,6 +725,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           Pierwsza para o <strong id="auto-start-preview-first">10:00:00</strong>, każda kolejna co <strong id="auto-start-preview-interval">60</strong> s.
           Można potem zmienić godzinę konkretnej pary klikając ✏ przy niej.
         </div>
+      </div>
+
+      <!-- Taby M / K + akcja awaryjna -->
+      <div id="timer-tabs-row" style="display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;">
+        <div style="display:flex;gap:4px;">
+          <button id="timer-tab-M" onclick="switchTimerTab('M')" class="timer-tab" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
+          <button id="timer-tab-K" onclick="switchTimerTab('K')" class="timer-tab" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+        </div>
+        <button id="timer-emergency-reset" onclick="emergencyResetRunning()" style="display:none;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;font-family:var(--font-h);letter-spacing:1px;text-transform:lowercase;padding:4px 10px;cursor:pointer;" title="Zatrzymaj i zresetuj wszystkie biegnące pary (awaryjne)">↺ reset biegnących</button>
       </div>
 
       <div id="timer-empty" style="display:none;text-align:center;padding:50px 20px;color:var(--text3);border:1px dashed var(--border);border-radius:var(--radius);">
@@ -2806,7 +2816,11 @@ function generateAutoStartSchedule() {
   const now = new Date(nowMs());
   const firstDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s, 0);
   let firstTs = firstDate.getTime();
-  // Jeśli pierwsza para jest w przeszłości (np. po 10:00, ustawiono 10:00) — zostaw (może to być dziś rano dla późniejszego sprawdzenia)
+  // Walidacja: jeśli pierwsza para w przeszłości — wymagaj potwierdzenia (inaczej startuje natychmiast)
+  if (firstTs < nowMs()) {
+    const secAgo = Math.round((nowMs() - firstTs) / 1000);
+    if (!confirm('⚠ Godzina pierwszej pary jest ' + secAgo + ' s w przeszłości!\n\nPara wystartuje natychmiast po wygenerowaniu, a następne wg interwału.\nKontynuować?')) return;
+  }
   // Posortuj pary po gender+pairNum
   const pairs = (state.pairs || []).slice().sort((a, b) => {
     if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
@@ -2872,9 +2886,15 @@ function editPairStartTime(gender, pairNum) {
   if (h > 23 || mi > 59 || s > 59) { showToast('Nieprawidłowa godzina', 'error'); return; }
   const now = new Date(nowMs());
   const newDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s, 0);
+  const newTs = newDate.getTime();
+  // Walidacja: czas w przeszłości
+  if (newTs < nowMs()) {
+    const secAgo = Math.round((nowMs() - newTs) / 1000);
+    if (!confirm('⚠ Godzina jest ' + secAgo + ' s w przeszłości — para wystartuje natychmiast. Kontynuować?')) return;
+  }
   if (!state.runs) state.runs = {};
   if (!state.runs[k]) state.runs[k] = {};
-  state.runs[k].scheduledStartAt = newDate.getTime();
+  state.runs[k].scheduledStartAt = newTs;
   saveImmediate();
   renderTimerView();
   showToast('⏰ Para ' + pairNum + ' o ' + newStr, 'success', 1800);
@@ -3042,20 +3062,81 @@ function renderTimerView() {
 
   const emptyEl = document.getElementById('timer-empty');
   const listEl = document.getElementById('timer-list');
+  const tabsRow = document.getElementById('timer-tabs-row');
   if (!pairs.length) {
     if (emptyEl) emptyEl.style.display = 'block';
     if (listEl) listEl.innerHTML = '';
+    if (tabsRow) tabsRow.style.display = 'none';
     return;
   }
   if (emptyEl) emptyEl.style.display = 'none';
   if (!listEl) return;
 
-  listEl.innerHTML = pairs.map(p => renderTimerPairHTML(p, role)).join('');
+  // Pokaż taby gdy są pary obu płci, w przeciwnym razie tylko jedna sekcja
+  const hasM = pairs.some(p => p.gender === 'M');
+  const hasK = pairs.some(p => p.gender === 'K');
+  if (tabsRow) {
+    tabsRow.style.display = (hasM || hasK) ? 'flex' : 'none';
+    document.getElementById('timer-tab-M').style.display = hasM ? '' : 'none';
+    document.getElementById('timer-tab-K').style.display = hasK ? '' : 'none';
+  }
+  // Wybór płci — domyślnie M jeśli istnieje, else K
+  if (_timerTab === 'M' && !hasM && hasK) _timerTab = 'K';
+  if (_timerTab === 'K' && !hasK && hasM) _timerTab = 'M';
+  _applyTimerTabStyle();
+
+  // Akcja awaryjna — widoczna gdy są pary biegnące i rola pozwala
+  const runningCount = pairs.filter(p => {
+    const r = getRun(p.gender, p.pairNum);
+    return r && r.startedAt && !((r.finishedAt && p.aId && r.finishedAt[p.aId]) && (!p.bId || (r.finishedAt && r.finishedAt[p.bId])));
+  }).length;
+  const emergencyBtn = document.getElementById('timer-emergency-reset');
+  if (emergencyBtn) emergencyBtn.style.display = (runningCount > 0 && (role === 'STARTER' || role === 'ADMIN')) ? '' : 'none';
+
+  // Filtruj wg aktywnej zakładki
+  const visiblePairs = pairs.filter(p => p.gender === _timerTab);
+  listEl.innerHTML = visiblePairs.map(p => renderTimerPairHTML(p, role)).join('');
 
   // Restart ticker
   if (_timerTickInterval) clearInterval(_timerTickInterval);
   _timerTickInterval = setInterval(tickTimers, 100);
   tickTimers();
+}
+
+let _timerTab = 'M';
+function switchTimerTab(g) {
+  _timerTab = g;
+  renderTimerView();
+}
+function _applyTimerTabStyle() {
+  const tM = document.getElementById('timer-tab-M');
+  const tK = document.getElementById('timer-tab-K');
+  if (!tM || !tK) return;
+  const activeStyle = c => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + c + ';background:rgba(255,255,255,.05);color:' + c + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  tM.style.cssText = _timerTab === 'M' ? activeStyle('var(--male)') : inactiveStyle;
+  tK.style.cssText = _timerTab === 'K' ? activeStyle('var(--female)') : inactiveStyle;
+}
+
+// Awaryjny reset wszystkich biegnących par
+function emergencyResetRunning() {
+  const pairs = (state.pairs || []);
+  const running = pairs.filter(p => {
+    const r = getRun(p.gender, p.pairNum);
+    return r && r.startedAt;
+  });
+  if (!running.length) { showToast('Brak biegnących par', 'info'); return; }
+  if (!confirm('⚠ AWARYJNY RESET\n\nZatrzymać i zresetować ' + running.length + ' biegnącą/ych parę/par?\n\nWszystkie czasy łączne tych par zostaną usunięte. Można potem znów wystartować.')) return;
+  running.forEach(p => {
+    const k = p.gender + '_' + p.pairNum;
+    if (state.runs && state.runs[k]) delete state.runs[k];
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      if (state.times?.[id]?.total) delete state.times[id].total;
+    });
+  });
+  save();
+  renderTimerView();
+  showToast('↺ Zresetowano ' + running.length + ' biegnącą/ych parę/par', 'warning', 3000);
 }
 
 function renderTimerPairHTML(p, role) {
@@ -3136,6 +3217,9 @@ function renderTimerPairHTML(p, role) {
     if (canStartReset) {
       if (!started) {
         actionsBar += '<button class="btn-timer btn-timer-start" onclick="startPair(\'' + gender + '\',' + pairNum + ')">▶ START</button>';
+      } else if (allFinished) {
+        // Para skończyła — reset rzadko potrzebny, więc mały i szary
+        actionsBar += '<button class="btn-timer btn-timer-reset-small" onclick="resetPair(\'' + gender + '\',' + pairNum + ')" title="Reset całej pary (rzadko potrzebne)">↺ reset</button>';
       } else {
         actionsBar += '<button class="btn-timer btn-timer-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
       }

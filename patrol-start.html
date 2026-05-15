@@ -74,9 +74,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 /* RUNNING — pomaranczowa gruba ramka + glow + tło */
 .pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.12), var(--bg2) 40%); box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); animation: card-glow 2s ease-in-out infinite; }
 @keyframes card-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); } 50% { box-shadow: 0 0 0 5px rgba(232,148,77,.30), 0 6px 28px rgba(232,148,77,.32); } }
-/* FINISHED — zielona ramka + tło + stempel */
+/* FINISHED — zielona ramka + tło */
 .pair-card.finished { border-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.12), var(--bg2) 40%); opacity: .94; }
-.pair-card.finished::after { content: '✓ KONIEC'; position: absolute; top: 16px; right: 18px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--green); background: rgba(76,175,130,.18); border: 1px solid rgba(76,175,130,.55); padding: 4px 10px; border-radius: 4px; transform: rotate(2deg); pointer-events: none; z-index: 2; }
 
 .pair-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
 .pair-num { font-family: var(--font-h); font-size: 36px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 50px; text-align: center; }
@@ -111,6 +110,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .btn-reset { background: var(--red); color: #fff; box-shadow: 0 4px 16px rgba(224,85,85,.25); }
 .btn-reset:hover { filter: brightness(1.15); }
 .btn-reset:active { transform: scale(.97); }
+.btn-reset-small { background: transparent; color: var(--text3); border: 1px solid var(--border2); font-family: var(--font-h); font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: lowercase; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; transition: all .12s; align-self: flex-start; }
+.btn-reset-small:hover { color: var(--text2); border-color: var(--text3); }
 .btn-start:disabled, .btn-reset:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.5); }
 
 .start-time-info { font-size: 12px; color: var(--text3); font-family: var(--font-m); margin-top: 2px; }
@@ -159,6 +160,13 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   </header>
 
   <div class="main">
+    <div id="ps-tabs-row" style="display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;">
+      <div style="display:flex;gap:4px;">
+        <button id="ps-tab-M" onclick="switchPsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
+        <button id="ps-tab-K" onclick="switchPsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+      </div>
+      <button id="ps-emergency-reset" onclick="emergencyResetRunning()" style="display:none;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;font-family:var(--font-h);letter-spacing:1px;text-transform:lowercase;padding:4px 10px;cursor:pointer;" title="Awaryjny reset biegnących par">↺ reset biegnących</button>
+    </div>
     <div id="pairs-list"></div>
   </div>
 </div>
@@ -452,8 +460,35 @@ function getRun(gender, pairNum) {
   return (state.runs && state.runs[k]) || null;
 }
 
+let _psTab = 'M';
+function switchPsTab(g) {
+  _psTab = g;
+  renderPairs();
+}
+
+function emergencyResetRunning() {
+  const pairs = (state.pairs || []);
+  const running = pairs.filter(p => {
+    const r = getRun(p.gender, p.pairNum);
+    return r && r.startedAt;
+  });
+  if (!running.length) { showToast('Brak biegnących par', 'info'); return; }
+  if (!confirm('⚠ AWARYJNY RESET\n\nZatrzymać i zresetować ' + running.length + ' biegnącą/ych parę/par?\n\nWszystkie czasy łączne tych par zostaną usunięte.')) return;
+  running.forEach(p => {
+    const k = p.gender + '_' + p.pairNum;
+    if (state.runs && state.runs[k]) delete state.runs[k];
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      if (state.times?.[id]?.total) delete state.times[id].total;
+    });
+  });
+  saveState();
+  renderPairs();
+  showToast('↺ Zresetowano ' + running.length + ' par', 'warning', 3000);
+}
+
 function renderPairs() {
   const listEl = document.getElementById('pairs-list');
+  const tabsRow = document.getElementById('ps-tabs-row');
   // Tryb offline — START nieaktywny
   if (state.cfg && state.cfg.offlineMode) {
     listEl.innerHTML = '<div class="empty" style="border-color:rgba(232,148,77,.5);background:rgba(232,148,77,.04);">' +
@@ -462,6 +497,7 @@ function renderPairs() {
       '<div style="line-height:1.6;">Sędzia główny włączył tryb offline (sieć niestabilna).<br>' +
       '<strong>Użyj fizycznego stopera</strong> i przekaż czas startu pozostałym sędziom.<br>' +
       'Wpisanie czasów odbywa się ręcznie w aplikacji głównej.</div></div>';
+    if (tabsRow) tabsRow.style.display = 'none';
     return;
   }
   const pairs = (state.pairs || []).slice().sort((a, b) => {
@@ -470,9 +506,40 @@ function renderPairs() {
   });
   if (!pairs.length) {
     listEl.innerHTML = '<div class="empty"><div class="empty-icon">🎲</div><div class="empty-title">Brak par</div><div>Sędzia główny jeszcze nie wylosował par.</div></div>';
+    if (tabsRow) tabsRow.style.display = 'none';
     return;
   }
-  listEl.innerHTML = pairs.map(p => renderPairCard(p)).join('');
+  // Taby M/K
+  const hasM = pairs.some(p => p.gender === 'M');
+  const hasK = pairs.some(p => p.gender === 'K');
+  if (tabsRow) {
+    tabsRow.style.display = 'flex';
+    document.getElementById('ps-tab-M').style.display = hasM ? '' : 'none';
+    document.getElementById('ps-tab-K').style.display = hasK ? '' : 'none';
+  }
+  if (_psTab === 'M' && !hasM && hasK) _psTab = 'K';
+  if (_psTab === 'K' && !hasK && hasM) _psTab = 'M';
+  _applyPsTabStyle();
+  // Reset awaryjny — widoczny gdy są biegnące
+  const runningCount = pairs.filter(p => {
+    const r = getRun(p.gender, p.pairNum);
+    return r && r.startedAt;
+  }).length;
+  const emergencyBtn = document.getElementById('ps-emergency-reset');
+  if (emergencyBtn) emergencyBtn.style.display = runningCount > 0 ? '' : 'none';
+  // Filtruj
+  const visible = pairs.filter(p => p.gender === _psTab);
+  listEl.innerHTML = visible.map(p => renderPairCard(p)).join('');
+}
+
+function _applyPsTabStyle() {
+  const tM = document.getElementById('ps-tab-M');
+  const tK = document.getElementById('ps-tab-K');
+  if (!tM || !tK) return;
+  const activeStyle = c => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + c + ';background:rgba(255,255,255,.05);color:' + c + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+  tM.style.cssText = _psTab === 'M' ? activeStyle('var(--male)') : inactiveStyle;
+  tK.style.cssText = _psTab === 'K' ? activeStyle('var(--female)') : inactiveStyle;
 }
 
 function renderPairCard(p) {
@@ -506,6 +573,9 @@ function renderPairCard(p) {
   let actionHtml = '';
   if (!started) {
     actionHtml = '<button class="btn-start" onclick="startPair(\'' + gender + '\',' + pairNum + ')">▶ START</button>';
+  } else if (allFinished) {
+    // Para skończyła — reset rzadko potrzebny, więc mały i szary
+    actionHtml = '<button class="btn-reset-small" onclick="resetPair(\'' + gender + '\',' + pairNum + ')" title="Reset całej pary (rzadko potrzebne)">↺ reset</button>';
   } else {
     actionHtml = '<button class="btn-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
   }
@@ -690,6 +760,11 @@ function confirmGenerateSchedule() {
   const now = new Date(nowMs());
   const firstDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s, 0);
   const firstTs = firstDate.getTime();
+  // Walidacja: pierwsza para w przeszłości
+  if (firstTs < nowMs()) {
+    const secAgo = Math.round((nowMs() - firstTs) / 1000);
+    if (!confirm('⚠ Godzina jest ' + secAgo + ' s w przeszłości — pierwsza para wystartuje natychmiast. Kontynuować?')) return;
+  }
   const pairs = (state.pairs || []).slice().sort((a, b) => {
     if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
     return a.pairNum - b.pairNum;
@@ -753,9 +828,14 @@ function editPairStartTime(gender, pairNum) {
   if (h > 23 || mi > 59 || s > 59) { showToast('Nieprawidłowa godzina', 'error'); return; }
   const now = new Date(nowMs());
   const newDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s, 0);
+  const newTs = newDate.getTime();
+  if (newTs < nowMs()) {
+    const secAgo = Math.round((nowMs() - newTs) / 1000);
+    if (!confirm('⚠ Godzina jest ' + secAgo + ' s w przeszłości — para wystartuje natychmiast. Kontynuować?')) return;
+  }
   if (!state.runs) state.runs = {};
   if (!state.runs[k]) state.runs[k] = {};
-  state.runs[k].scheduledStartAt = newDate.getTime();
+  state.runs[k].scheduledStartAt = newTs;
   saveState();
   renderPairs();
   showToast('⏰ Para ' + pairNum + ' o ' + newStr, 'success', 1500);
