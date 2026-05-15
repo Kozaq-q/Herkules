@@ -1315,13 +1315,16 @@ tr:last-child > td { border-bottom: none; }
         <div id="tip-mult" style="display:none;font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6;background:var(--bg3);padding:8px 10px;border-radius:var(--radius);border-left:2px solid var(--accent);">
           <strong style="color:var(--accent);">Mnożnik:</strong> 1. miejsce dostaje (N+1)×mnożnik pkt, każde kolejne mniej. Przykład: 8 drużyn × 3 → 1msc=27, 2msc=21, 3msc=18, ostatnie=3.
         </div>
+      </div>
 
-        <!-- Kobiety punktują — kompakt, na końcu karty -->
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;">
-          <input type="checkbox" id="osf-k-scores" onchange="saveSetup();renderResults();renderKlasyfikacja()" style="width:14px;height:14px;accent-color:var(--female);" />
+      <!-- ♀ Klasyfikacja kobiet — osobna karta -->
+      <div class="card mb-12">
+        <div class="card-title" style="margin-bottom:10px;">♀ Klasyfikacja kobiet</div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;">
+          <input type="checkbox" id="osf-k-scores" onchange="saveSetup();renderResults();renderKlasyfikacja()" style="width:16px;height:16px;accent-color:var(--female);flex-shrink:0;" />
           <div style="flex:1;">
-            <div style="font-size:12px;font-weight:700;color:var(--female);">♀ Kobiety punktują</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:1px;">Najlepsza K dostaje tyle samo pkt co najlepszy M</div>
+            <div style="font-size:13px;font-weight:700;color:var(--female);">Kobiety punktują do klasyfikacji generalnej</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5;">Najlepsza K dostaje tyle samo pkt co najlepszy M (N = liczba zawodników M). Bez tej opcji kobiety mają osobną klasyfikację, ale nie wpływają na wynik drużynowy.</div>
           </div>
         </label>
       </div>
@@ -1382,16 +1385,25 @@ tr:last-child > td { border-bottom: none; }
           </div>
         </div>
 
-        <!-- Wygaszanie linku — TTL ustawiany ręcznie -->
-        <div id="sp-expire-row" style="display:none;margin-bottom:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);">
-          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Link wygasa</div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <input type="datetime-local" id="sp-expire-input" oninput="setSpeakerExpiry(this.value)"
-              style="flex:1;min-width:170px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 9px;font-family:var(--font-m);font-size:12px;" />
-            <button onclick="setSpeakerExpiry('+24h')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--text2);cursor:pointer;">+24h</button>
-            <button onclick="setSpeakerExpiry('')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--text2);cursor:pointer;">Bezterminowo</button>
+        <!-- Wygaszanie linku — zwinięte do paska z ikoną, rozwija się po kliknięciu -->
+        <div id="sp-expire-row" style="display:none;margin-bottom:10px;">
+          <!-- Pasek (zwinięty) — pokazuje aktualny status + ikonkę rozwijania -->
+          <button id="sp-expire-toggle" onclick="toggleSpeakerExpireExpanded()" type="button"
+            style="width:100%;display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 11px;cursor:pointer;text-align:left;color:var(--text2);">
+            <span style="font-size:14px;flex-shrink:0;">⏲</span>
+            <span id="sp-expire-status" style="flex:1;font-size:11px;color:var(--text3);font-family:var(--font-m);">—</span>
+            <span id="sp-expire-arrow" style="font-size:10px;color:var(--text3);flex-shrink:0;">▶</span>
+          </button>
+          <!-- Panel rozwinięty (sterowanie) -->
+          <div id="sp-expire-expanded" style="display:none;margin-top:8px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ustaw datę wygaszenia</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="datetime-local" id="sp-expire-input" oninput="setSpeakerExpiry(this.value)"
+                style="flex:1;min-width:170px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 9px;font-family:var(--font-m);font-size:12px;" />
+              <button onclick="setSpeakerExpiry('+24h')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--text2);cursor:pointer;">+24h</button>
+              <button onclick="setSpeakerExpiry('')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--text2);cursor:pointer;">Bezterminowo</button>
+            </div>
           </div>
-          <div id="sp-expire-status" style="margin-top:6px;font-size:11px;color:var(--text3);"></div>
         </div>
 
         <button id="sp-rotate-btn" onclick="regenerateSpeakerKey()" style="display:none;width:100%;padding:8px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
@@ -1830,8 +1842,8 @@ tr:last-child > td { border-bottom: none; }
       <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(232,148,77,.04);border-radius:var(--radius);border:1px solid rgba(232,148,77,.25);">
         <input type="checkbox" id="osf-ignore-lane-rule" onchange="saveSetup();updatePairingRulesSummary()" style="margin-top:2px;flex-shrink:0;" />
         <div>
-          <div style="font-size:13px;font-weight:600;color:var(--orange);">Pomiń zasadę toru</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Wyłącza zasadę bib parzysty/nieparzysty = tor P/L. Dotyczy S1, S2 i biegu drużynowego.</div>
+          <div style="font-size:13px;font-weight:600;color:var(--orange);">Losuj tory zamiast wg numeru startowego</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Domyślnie tor wynika z numeru startowego (parzysty&nbsp;=&nbsp;P, nieparzysty&nbsp;=&nbsp;L), a w S2 i biegu drużynowym zawodnik dostaje tor przeciwny do S1. Zaznacz, aby tory były losowane niezależnie od numeru — nie wpływa to na zmienność toru S1→S2 (to działa zawsze, gdy parowanie jest możliwe).</div>
         </div>
       </label>
     </div>
@@ -6903,9 +6915,9 @@ function _renderSpeakerSection() {
     }
     if (expireSt) {
       const ts = state.cfg.speakerKeyExpiresAt;
-      if (!ts) expireSt.textContent = 'Bez terminu wygaśnięcia — link działa do ręcznego wyłączenia.';
-      else if (expired) expireSt.textContent = '⌛ Wygasł ' + _fmtFriendlyDate(ts) + ' — speaker zobaczy "Link nieaktywny".';
-      else expireSt.textContent = 'Wygasa: ' + _fmtFriendlyDate(ts);
+      if (!ts) { expireSt.textContent = 'Bezterminowo'; expireSt.style.color = 'var(--text3)'; }
+      else if (expired) { expireSt.textContent = '⌛ Wygasł ' + _fmtFriendlyDate(ts); expireSt.style.color = 'var(--orange)'; }
+      else { expireSt.textContent = 'Wygasa: ' + _fmtFriendlyDate(ts); expireSt.style.color = 'var(--text2)'; }
     }
   } else {
     pill.textContent = '○ Wyłączony';
@@ -9354,6 +9366,16 @@ function _updateInfoCollapsedLine(forceCollapse) {
 }
 
 // ═══ Popover kolor akcentu ═══
+// Toggle dla sekcji wygaszania linku speakera (kafelek "Speaker — link mobilny")
+function toggleSpeakerExpireExpanded() {
+  const panel = document.getElementById('sp-expire-expanded');
+  const arrow = document.getElementById('sp-expire-arrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
 function toggleAccentPalette() {
   const pop = document.getElementById('osf-accent-popover');
   if (!pop) return;
@@ -9419,8 +9441,8 @@ function updatePairingRulesSummary() {
     el.style.color = 'var(--text3)';
     return;
   }
-  if (s.allowSoloPair)     parts.push('ignorowanie wymogu toru');
-  if (s.ignoreLaneRule)    parts.push('brak zasady toru z bib');
+  if (s.allowSoloPair)     parts.push('parowanie zawodników z tego samego toru');
+  if (s.ignoreLaneRule)    parts.push('losowanie torów (niezależnie od numeru startowego)');
   el.innerHTML = '⚠ Aktywne: <span style="color:var(--orange);">' + parts.join(', ') + '</span>';
   el.style.color = '';
 }
