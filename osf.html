@@ -3024,32 +3024,51 @@ function buildTeamSeries1() {
   const minStart = TEAM_MIN_VAL(); // min. skład do startu (poniżej → DSQ)
   const N        = TEAM_COUNT();   // N najlepszych do sumy ind.
 
-  // Zachowaj zablokowane pary: mapa pairNum → [slot a, slot b]
-  const lockedNums = (state.teamLockedPairs && state.teamLockedPairs.s1) || [];
-  const lockedSlots = new Map(); // pairNum → { a, b }
-  const lockedTeams = new Set();
-  const oldOrder = state.teamOrder.s1 || [];
-  lockedNums.forEach(pn => {
-    const i = (pn - 1) * 2;
-    const a = oldOrder[i]   || null;
-    const b = oldOrder[i+1] || null;
-    if (a || b) {
-      lockedSlots.set(pn, { a, b });
-      if (a && a.team) lockedTeams.add(a.team);
-      if (b && b.team) lockedTeams.add(b.team);
-    }
-  });
-
-  // Podziel drużyny na kwalifikujące się i DSQ
+  // Podziel drużyny na kwalifikujące się i DSQ (na podstawie AKTUALNEGO składu i minStart)
   const allTeams = teams.map(team => ({
     team,
     athletes: getTeamAthletes(team),
     sum:      getTeamIndividualSum(team),
   }));
-
-  // Z eligible wykluczamy drużyny które są w zablokowanych parach
-  const eligible = allTeams.filter(t => t.athletes.length >= minStart && !lockedTeams.has(t.team));
   const disqTeams = allTeams.filter(t => t.athletes.length < minStart);
+  const disqTeamNames = new Set(disqTeams.map(t => t.team));
+
+  // Zachowaj zablokowane pary: mapa pairNum → [slot a, slot b]
+  // ALE: pomijaj pary których drużyna nie spełnia już minStart — kłódka znika, drużyna leci do disq.
+  const lockedNumsRaw = (state.teamLockedPairs && state.teamLockedPairs.s1) || [];
+  const lockedSlots = new Map(); // pairNum → { a, b }
+  const lockedTeams = new Set();
+  const oldOrder = state.teamOrder.s1 || [];
+  const keepLocked = [];   // nowa lista zablokowanych pairNum (po filtrowaniu)
+  const droppedLocked = []; // drużyny które wypadły z kłódki
+  lockedNumsRaw.forEach(pn => {
+    const i = (pn - 1) * 2;
+    const a = oldOrder[i]   || null;
+    const b = oldOrder[i+1] || null;
+    if (!a && !b) return;
+    // Sprawdź czy obie drużyny (jeśli istnieją) nadal spełniają minStart
+    const aTeam = a && a.team;
+    const bTeam = b && b.team;
+    const aBad = aTeam && disqTeamNames.has(aTeam);
+    const bBad = bTeam && disqTeamNames.has(bTeam);
+    if (aBad || bBad) {
+      if (aBad && aTeam) droppedLocked.push(aTeam);
+      if (bBad && bTeam) droppedLocked.push(bTeam);
+      return; // pomiń całą parę
+    }
+    lockedSlots.set(pn, { a, b });
+    if (aTeam) lockedTeams.add(aTeam);
+    if (bTeam) lockedTeams.add(bTeam);
+    keepLocked.push(pn);
+  });
+  // Trwałe oczyszczenie state.teamLockedPairs.s1 ze starych kłódek
+  if (keepLocked.length !== lockedNumsRaw.length) {
+    if (!state.teamLockedPairs) state.teamLockedPairs = { s1: [], s2: [] };
+    state.teamLockedPairs.s1 = keepLocked;
+  }
+
+  // Z eligible wykluczamy drużyny które są w zablokowanych parach (te już są w order)
+  const eligible = allTeams.filter(t => t.athletes.length >= minStart && !lockedTeams.has(t.team));
 
   if (eligible.length === 0) {
     alert('Żadna drużyna nie spełnia minimalnego składu (' + minStart + ' zawodników M). Zmień próg w Konfiguracji.');
@@ -3124,6 +3143,10 @@ function buildTeamSeries1() {
   if (dsqCount > 0) {
     showToast('⛔ ' + dsqCount + ' drużyn' + (dsqCount === 1 ? 'a' : '') + ' DSQ (poniżej ' + minStart + ' zawodników M): ' + disqTeams.map(t => t.team).join(', '), 'warning');
   }
+  if (droppedLocked.length > 0) {
+    const unique = [...new Set(droppedLocked)];
+    showToast('🔓 Kłódka zdjęta — drużyny nie spełniają min. składu: ' + unique.join(', '), 'warning', 4500);
+  }
 }
 
 function buildTeamSeries2() {
@@ -3132,25 +3155,42 @@ function buildTeamSeries2() {
   // Wykluczone drużyny z modalu "Kto startuje"
   const teamS2skip = getTeamS2Skip();
 
+  // Drużyny które nie spełniają już minStart (np. user zmienił min lub usunął zawodników po S1)
+  const minStartS2 = TEAM_MIN_VAL();
+  const disqByMin = new Set();
+  state.teamOrder.s1.forEach(item => {
+    if (item && item.team && getTeamAthletes(item.team).length < minStartS2) disqByMin.add(item.team);
+  });
+
   // Zachowaj zablokowane pary S2 — drużyny w zablokowanych parach nie wchodzą do losowania
-  const lockedNumsS2 = (state.teamLockedPairs && state.teamLockedPairs.s2) || [];
+  // ALE: pomijaj te których drużyna nie spełnia już minStart
+  const lockedNumsS2Raw = (state.teamLockedPairs && state.teamLockedPairs.s2) || [];
   const lockedSlotsS2 = new Map();
   const lockedTeamsS2 = new Set();
   const oldOrderS2 = state.teamOrder.s2 || [];
-  lockedNumsS2.forEach(pn => {
+  const keepLockedS2 = [];
+  lockedNumsS2Raw.forEach(pn => {
     const i = (pn - 1) * 2;
     const a = oldOrderS2[i]   || null;
     const b = oldOrderS2[i+1] || null;
-    if (a || b) {
-      lockedSlotsS2.set(pn, { a, b });
-      if (a && a.team) lockedTeamsS2.add(a.team);
-      if (b && b.team) lockedTeamsS2.add(b.team);
-    }
+    if (!a && !b) return;
+    const aBad = a && a.team && disqByMin.has(a.team);
+    const bBad = b && b.team && disqByMin.has(b.team);
+    if (aBad || bBad) return; // pomiń kłódkę gdy drużyna już niepełna
+    lockedSlotsS2.set(pn, { a, b });
+    if (a && a.team) lockedTeamsS2.add(a.team);
+    if (b && b.team) lockedTeamsS2.add(b.team);
+    keepLockedS2.push(pn);
   });
+  if (keepLockedS2.length !== lockedNumsS2Raw.length) {
+    if (!state.teamLockedPairs) state.teamLockedPairs = { s1: [], s2: [] };
+    state.teamLockedPairs.s2 = keepLockedS2;
+  }
 
   // Weź drużyny z S1, uzupełnij o czas S1 i wymagany tor S2
+  // Wyklucz drużyny: w S2-skip, w zablokowanych parach S2, oraz te które nie spełniają już minStart
   const pool = state.teamOrder.s1
-    .filter(item => item && item.team && !teamS2skip.includes(item.team) && !lockedTeamsS2.has(item.team))
+    .filter(item => item && item.team && !teamS2skip.includes(item.team) && !lockedTeamsS2.has(item.team) && !disqByMin.has(item.team))
     .map(item => {
       const rawTime = getTeamTime(item.team, 's1');
       const dsq     = isTeamDisq(item.team, 's1');
