@@ -341,14 +341,20 @@ function startRealtime() {
     });
 }
 
+let _lastUpdatedAt = '';
 function startPolling() {
   if (_pollTimer) clearInterval(_pollTimer);
   const interval = _rtHealthy ? 2000 : 1000;
   _pollTimer = setInterval(async () => {
     if (_isSaving) return;
     try {
-      const { data } = await getDB().from('patrol_state').select('state_json').eq('slot_id', STORAGE_KEY).single();
-      if (data && data.state_json) applyRemoteState(data.state_json);
+      const { data } = await getDB().from('patrol_state').select('state_json, updated_at').eq('slot_id', STORAGE_KEY).single();
+      if (!data) return;
+      // Renderuj tylko gdy timestamp się zmienił — eliminuje "flicker" co 2s
+      if (data.updated_at && data.updated_at !== _lastUpdatedAt) {
+        _lastUpdatedAt = data.updated_at;
+        if (data.state_json) applyRemoteState(data.state_json);
+      }
     } catch(e) {}
   }, interval);
 }
