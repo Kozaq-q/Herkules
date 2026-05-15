@@ -294,6 +294,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <span class="dot"></span>
         <span id="sync-label">—</span>
       </div>
+      <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
     </div>
   </header>
@@ -684,6 +685,105 @@ let _sb = null;
 function getSupabase() {
   if (!_sb) _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   return _sb;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SERVER CLOCK SYNC
+// ═══════════════════════════════════════════════════════════════
+// Wszystkie urządzenia używają WSPÓLNEGO zegara serwera Supabase.
+// Eliminuje drift między laptopami (lokalne zegary mogą się różnić o sekundy).
+// nowMs() zwraca estymowany czas serwera (Date.now() + offset).
+//
+// Mechanizm: pobieramy header `Date` z dowolnego HTTP response Supabase
+// (zawsze obecny zgodnie ze standardem HTTP). Dokładność: ±1s (rozdzielczość
+// Date headera). Korekta o połowę round-trip dla lepszej dokładności.
+
+let _serverClockOffset = 0;   // ms — Date.now() + offset = serverNow
+let _clockSyncedAt = 0;        // kiedy ostatnio synchronizowaliśmy
+let _clockSyncOk = false;      // czy kiedykolwiek udało się zsynchronizować
+
+function nowMs() {
+  return Date.now() + _serverClockOffset;
+}
+
+async function syncServerClock() {
+  try {
+    const before = Date.now();
+    const resp = await fetch(SUPABASE_URL + '/rest/v1/patrol_state?select=slot_id&limit=1', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
+      cache: 'no-store'
+    });
+    const after = Date.now();
+    const dateHeader = resp.headers.get('Date') || resp.headers.get('date');
+    if (!dateHeader) return false;
+    const serverTime = new Date(dateHeader).getTime();
+    if (!Number.isFinite(serverTime)) return false;
+    // Korekta o połowę round-trip (zakładamy że serwer odebrał query w środku)
+    const roundTrip = after - before;
+    const estServerNow = serverTime + Math.round(roundTrip / 2);
+    _serverClockOffset = estServerNow - after;
+    _clockSyncedAt = Date.now();
+    _clockSyncOk = true;
+    updateClockStatus();
+    return true;
+  } catch(e) {
+    _clockSyncOk = false;
+    updateClockStatus();
+    return false;
+  }
+}
+
+// Status driftu (do UI):
+//   'ok'    — offset <2s
+//   'warn'  — offset 2-10s (ostrzeżenie)
+//   'block' — offset >10s (blokada akcji stopera)
+//   'unknown' — jeszcze nie zsynchronizowano lub fail
+function getClockDriftStatus() {
+  if (!_clockSyncOk) return { status: 'unknown', driftMs: 0 };
+  const drift = Math.abs(_serverClockOffset);
+  if (drift > 10000) return { status: 'block', driftMs: _serverClockOffset };
+  if (drift > 2000)  return { status: 'warn',  driftMs: _serverClockOffset };
+  return { status: 'ok', driftMs: _serverClockOffset };
+}
+
+function updateClockStatus() {
+  // Render w headerze — wskaźnik obok sync indicator
+  const el = document.getElementById('ptr-clock-status');
+  if (!el) return;
+  const { status, driftMs } = getClockDriftStatus();
+  const driftSec = Math.round(driftMs / 100) / 10; // dziesiate sekundy
+  const sign = driftMs > 0 ? '+' : '';
+  if (status === 'ok') {
+    el.style.display = 'none';
+  } else if (status === 'warn') {
+    el.style.display = 'inline-flex';
+    el.style.color = 'var(--orange)';
+    el.style.borderColor = 'rgba(232,148,77,.5)';
+    el.style.background = 'rgba(232,148,77,.08)';
+    el.title = 'Zegar systemowy różni się od serwera o ' + sign + driftSec + ' s — skoryguj w ustawieniach systemu, inaczej stoper może być niezgodny.';
+    el.innerHTML = '⚠ zegar ' + sign + driftSec + 's';
+  } else if (status === 'block') {
+    el.style.display = 'inline-flex';
+    el.style.color = 'var(--red)';
+    el.style.borderColor = 'rgba(224,85,85,.5)';
+    el.style.background = 'rgba(224,85,85,.1)';
+    el.title = 'Zegar systemowy różni się od serwera o ' + sign + driftSec + ' s — stoper zablokowany. Skoryguj zegar.';
+    el.innerHTML = '⛔ zegar ' + sign + driftSec + 's';
+  } else {
+    // unknown — pokaż dyskretnie szary
+    el.style.display = 'inline-flex';
+    el.style.color = 'var(--text3)';
+    el.style.borderColor = 'var(--border)';
+    el.style.background = 'var(--bg3)';
+    el.title = 'Synchronizacja zegara serwera niedostępna (offline?).';
+    el.innerHTML = '⌛ zegar ?';
+  }
+}
+
+// Pętla synchronizacji co 60 s
+function startClockSyncLoop() {
+  syncServerClock();
+  setInterval(syncServerClock, 60000);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2585,6 +2685,7 @@ async function boot() {
   }
   startRealtimeSync();
   startPolling();
+  startClockSyncLoop();
   showSyncStatus('ok');
 }
 
