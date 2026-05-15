@@ -364,11 +364,26 @@ const COMPETITION_TYPES = {
     color: '#4caf82',         // green
     colorBg: 'rgba(76,175,130,.12)',
     colorBorder: 'rgba(76,175,130,.35)',
-    desc: 'Konkurencja drużynowa · w przygotowaniu',
+    desc: 'Bieg + OSF + strzelanie · M/K · indywidualny',
     storageKey: 'patrol_slot_',
-    enabled: false,           // disabled — wkrótce
-    open: function() { alert('Bieg patrolowy — w przygotowaniu. Wkrótce dostępny.'); },
-    fallbackLocalStats: function() { return null; }
+    enabled: true,
+    open: function(panelId) {
+      window.location.href = 'patrol.html?slot=' + panelId;
+    },
+    fallbackLocalStats: function(slot) {
+      const raw = localStorage.getItem('patrol_slot_' + slot.id);
+      if (!raw) return null;
+      try {
+        const d = JSON.parse(raw);
+        const ath = (d.athletes||[]);
+        return {
+          athletes: ath.length,
+          teams: new Set(ath.map(a=>a.team).filter(Boolean)).size,
+          status: '',
+          accentColor: (d.setup && d.setup.accentColor) || ''
+        };
+      } catch(e) { return null; }
+    }
   }
 };
 
