@@ -137,6 +137,51 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .lock-btn.active { background: rgba(76,175,130,.12); border-color: var(--orange); color: var(--orange); }
 .bib-inline { font-family: var(--font-m); font-size: 11px; color: var(--text3); font-weight: 400; margin-left: 4px; }
 
+/* TIMES TABLE */
+.times-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.times-table th { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 8px 10px; border-bottom: 2px solid var(--border); text-align: left; white-space: nowrap; }
+.times-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.times-table tr:hover td { background: rgba(255,255,255,.02); }
+.times-table tr.dsq td { opacity: .55; }
+.times-table .bib-cell { font-family: var(--font-m); font-weight: 700; color: var(--orange); white-space: nowrap; }
+.times-table input.t-time { width: 110px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 4px 7px; font-family: var(--font-m); font-size: 13px; font-weight: 600; }
+.times-table input.t-time:focus { outline: none; border-color: var(--orange); background: var(--bg4); }
+.times-table input.t-time.marker { color: var(--blue); font-weight: 800; letter-spacing: 1px; }
+.times-table input.t-hits { width: 56px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 4px 7px; font-family: var(--font-m); font-size: 13px; font-weight: 600; text-align: center; }
+.times-table input.t-hits:focus { outline: none; border-color: var(--orange); background: var(--bg4); }
+.times-table input:disabled { opacity: .4; cursor: not-allowed; }
+.times-table .dsq-btn { font-family: var(--font-h); font-size: 10px; font-weight: 700; padding: 3px 8px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg3); color: var(--text3); cursor: pointer; }
+.times-table .dsq-btn.on { background: rgba(224,85,85,.15); border-color: rgba(224,85,85,.5); color: var(--red); }
+.lane-mini { display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 2px; }
+.lane-mini.L { background: rgba(91,155,213,.15); color: var(--male); }
+.lane-mini.P { background: rgba(213,123,155,.15); color: var(--female); }
+
+/* RESULTS */
+.result-row { display: grid; grid-template-columns: 50px 1fr 90px 90px 70px 80px; gap: 10px; align-items: center; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 4px; transition: background .12s; }
+.result-row:hover { background: var(--bg3); }
+.result-row.rank-1 { border-color: rgba(232,212,77,.5); background: rgba(232,212,77,.05); }
+.result-row.rank-2 { border-color: rgba(192,192,192,.5); background: rgba(192,192,192,.04); }
+.result-row.rank-3 { border-color: rgba(205,127,50,.5); background: rgba(205,127,50,.05); }
+.result-row.dsq { opacity: .55; }
+.result-rank { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--text1); text-align: center; }
+.result-row.rank-1 .result-rank { color: var(--accent); }
+.result-name { font-size: 14px; font-weight: 600; color: var(--text1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-team { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result-time { font-family: var(--font-m); font-size: 14px; font-weight: 700; color: var(--text1); text-align: center; }
+.result-time.muted { color: var(--text3); font-size: 12px; }
+.result-time .lbl { display: block; font-family: var(--font-h); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-weight: 700; }
+.result-hits { font-family: var(--font-m); font-size: 14px; font-weight: 700; color: var(--text2); text-align: center; }
+.result-pts { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--orange); text-align: center; }
+.dsq-badge { display: inline-block; font-family: var(--font-h); font-size: 11px; font-weight: 800; padding: 2px 8px; background: rgba(224,85,85,.15); color: var(--red); border: 1px solid rgba(224,85,85,.4); border-radius: 3px; }
+.marker-badge { display: inline-block; font-family: var(--font-h); font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 3px; }
+.marker-badge.DNF { background: rgba(91,155,213,.15); color: var(--blue); border: 1px solid rgba(91,155,213,.4); }
+.marker-badge.DNS { background: rgba(138,152,152,.15); color: var(--text2); border: 1px solid rgba(138,152,152,.4); }
+
+@media (max-width: 900px) {
+  .result-row { grid-template-columns: 40px 1fr 70px 70px; }
+  .result-row .res-hide-mobile { display: none; }
+}
+
 /* MODAL */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
@@ -400,22 +445,57 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
     <!-- WPISYWANIE WYNIKÓW -->
     <div class="page" id="page-times">
-      <div class="placeholder">
-        <div class="placeholder-icon">⏱</div>
-        <div class="placeholder-title">Wpisywanie wyników — wkrótce</div>
-        <div class="placeholder-sub">3 pola per zawodnik:<br>
-          <strong>Czas całkowity</strong> (od startu do ostatniego strzału)<br>
-          <strong>Czas OSF</strong> (z fotokomórki na torze)<br>
-          <strong>Trafienia</strong> (0-5 strzałów)</div>
+      <div class="card mb-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">⏱ Wpisywanie wyników</div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.5;">
+            Pola: <strong style="color:var(--text2);">Czas całkowity</strong> · <strong style="color:var(--text2);">Czas OSF</strong> · <strong style="color:var(--text2);">Trafienia (0-5)</strong> · DSQ.
+            Akceptowane markery: <strong>DNF, DNS</strong>.
+          </div>
+        </div>
+        <div id="ptr-times-no-pairs" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);">
+          Brak par. Najpierw wylosuj pary w zakładce <strong>🎲 Pary</strong>.
+        </div>
+        <div id="ptr-times-tabs" style="display:none;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);">
+          <button id="ptr-times-tab-M" onclick="switchTimesTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
+          <button id="ptr-times-tab-K" onclick="switchTimesTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="times-table" id="ptr-times-M-table">
+            <thead><tr><th>Bib</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas całkowity</th><th>Czas OSF</th><th>Trafienia</th><th>DSQ</th></tr></thead>
+            <tbody id="ptr-times-M-tbody"></tbody>
+          </table>
+          <table class="times-table" id="ptr-times-K-table" style="display:none;">
+            <thead><tr><th>Bib</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas całkowity</th><th>Czas OSF</th><th>Trafienia</th><th>DSQ</th></tr></thead>
+            <tbody id="ptr-times-K-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- WYNIKI -->
     <div class="page" id="page-results">
-      <div class="placeholder">
-        <div class="placeholder-icon">🏆</div>
-        <div class="placeholder-title">Wyniki — wkrótce</div>
-        <div class="placeholder-sub">Klasyfikacja indywidualna M i K po czasie całkowitym.<br>Punktacja (1000 - kary) dodana gdy poznasz reguły.</div>
+      <div class="card mb-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Wyniki</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:4px 10px;">
+            ⚠ Punktacja w przygotowaniu — kolumna PKT jest placeholderem
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          Sortowanie po czasie całkowitym (najszybszy pierwszy). DSQ na dole bez czasu. DNF/DNS poniżej tych z czasem.
+        </div>
+        <div id="ptr-results-no-data" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text3);">
+          Brak wpisanych wyników. Przejdź do zakładki <strong>⏱ Wpisywanie wyników</strong> aby wpisać czasy.
+        </div>
+        <div id="ptr-results-tabs" style="display:none;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);">
+          <button id="ptr-results-tab-M" onclick="switchResultsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
+          <button id="ptr-results-tab-K" onclick="switchResultsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <div id="ptr-results-M"></div>
+          <div id="ptr-results-K" style="display:none;"></div>
+        </div>
       </div>
     </div>
 
@@ -800,6 +880,8 @@ function _applyRemoteStateNow(stateJson) {
       if (tabId === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
       else if (tabId === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); updateAthleteStats(); }
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
+      else if (tabId === 'times' && typeof renderTimesView === 'function') renderTimesView();
+      else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     showSyncStatus('ok');
   } catch(e) { console.error('Remote state parse error:', e); }
@@ -1707,6 +1789,8 @@ showTab = function(id) {
   if (id === 'setup') renderSetupPage();
   else if (id === 'athletes') { renderAthletes(); updateAthleteStats(); }
   else if (id === 'pairs') renderPairsView();
+  else if (id === 'times') renderTimesView();
+  else if (id === 'results') renderResultsView();
 };
 
 // Swatch listeners
@@ -1715,6 +1799,319 @@ document.addEventListener('DOMContentLoaded', () => {
     sw.addEventListener('click', () => setAccentColor(sw.dataset.color));
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// TIMES — parser, walidacja, wpisywanie
+// ═══════════════════════════════════════════════════════════════
+function isTimeMarker(v) { return v === 'DNF' || v === 'DNS'; }
+
+function parseTime(t) {
+  if (!t) return Infinity;
+  const sec = timeToSeconds(t);
+  return sec === null ? Infinity : sec;
+}
+
+function timeToSeconds(t) {
+  if (!t) return null;
+  t = String(t).trim();
+  if (!t) return null;
+  if (/^(DNF|DNS)$/i.test(t)) return null;
+  t = t.replace(/,/g, '.').replace(/-/g, '.');
+  t = t.replace(/[^\d.:]/g, '');
+  if (!t) return null;
+  const colonCount = (t.match(/:/g) || []).length;
+  if (colonCount >= 2) {
+    const firstColon = t.indexOf(':');
+    const secondColon = t.indexOf(':', firstColon + 1);
+    const minsRaw = t.slice(0, firstColon).replace(/\./g, '');
+    const secsRaw = t.slice(firstColon + 1, secondColon).replace(/[.:]/g, '');
+    const fracRaw = t.slice(secondColon + 1).replace(/[.:]/g, '');
+    const mins = parseInt(minsRaw, 10) || 0;
+    const secs = parseInt(secsRaw, 10);
+    if (!Number.isFinite(secs) || secs >= 60) return null;
+    const frac = fracRaw ? parseFloat('0.' + fracRaw) : 0;
+    return mins * 60 + secs + (Number.isFinite(frac) ? frac : 0);
+  }
+  if (colonCount === 1) {
+    const parts = t.split(':');
+    const mins = parseInt(parts[0].replace(/\./g, ''), 10);
+    const restMatch = parts[1].match(/^(\d{1,2})(?:\.(\d+))?$/);
+    if (restMatch && Number.isFinite(mins)) {
+      const secs = parseInt(restMatch[1], 10);
+      if (secs >= 60) return null;
+      const frac = restMatch[2] ? parseFloat('0.' + restMatch[2]) : 0;
+      return mins * 60 + secs + frac;
+    }
+    return null;
+  }
+  const val = parseFloat(t);
+  return Number.isFinite(val) ? val : null;
+}
+
+// Normalizuje czas do formatu m:ss.cc lub ss.cc — używane przy commit
+function normalizeTime(raw) {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (/^(DNF|DNS)$/i.test(trimmed)) return trimmed.toUpperCase();
+  const sec = timeToSeconds(trimmed);
+  if (sec === null) return trimmed; // zostaw user input, nawet jeśli błędny
+  if (sec >= 60) {
+    const m = Math.floor(sec / 60);
+    const s = sec - m * 60;
+    return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+  }
+  return sec.toFixed(2);
+}
+
+function getPatrolTime(id, field) {
+  return state.times?.[id]?.[field] || '';
+}
+
+function setPatrolTime(id, field, val) {
+  if (!state.times) state.times = {};
+  if (!state.times[id]) state.times[id] = {};
+  if (val === '' || val === undefined || val === null) {
+    delete state.times[id][field];
+    if (!Object.keys(state.times[id]).length) delete state.times[id];
+  } else {
+    state.times[id][field] = val;
+  }
+}
+
+function saveTimeField(input) {
+  const id = parseInt(input.dataset.id);
+  const field = input.dataset.field;
+  const val = input.value.trim();
+  setPatrolTime(id, field, val);
+  // Live update — bez normalizacji jeszcze (sędzia pisze)
+  save();
+  // Marker styling
+  if (field === 'total' || field === 'osf') {
+    input.classList.toggle('marker', isTimeMarker(val.toUpperCase()));
+  }
+}
+
+function commitTimeField(input) {
+  const id = parseInt(input.dataset.id);
+  const field = input.dataset.field;
+  const val = input.value.trim();
+  if (!val) { setPatrolTime(id, field, ''); save(); return; }
+  if (field === 'total' || field === 'osf') {
+    const norm = normalizeTime(val);
+    input.value = norm;
+    setPatrolTime(id, field, norm);
+    input.classList.toggle('marker', isTimeMarker(norm));
+  } else if (field === 'hits') {
+    let h = parseInt(val);
+    if (isNaN(h) || h < 0) h = 0;
+    if (h > 5) h = 5;
+    input.value = h;
+    setPatrolTime(id, field, h);
+  }
+  save();
+}
+
+function handleTimeKey(e, input) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    commitTimeField(input);
+    input.blur();
+  } else if (e.key === 'Tab') {
+    commitTimeField(input);
+  }
+}
+
+function isDsq(id) { return !!(state.disq && state.disq[id]); }
+
+function toggleDsq(id) {
+  if (!state.disq) state.disq = {};
+  state.disq[id] = !state.disq[id];
+  if (!state.disq[id]) delete state.disq[id];
+  save();
+  renderTimesView();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TIMES VIEW — tabela wpisywania
+// ═══════════════════════════════════════════════════════════════
+let _timesActiveTab = 'M';
+
+function switchTimesTab(g) {
+  _timesActiveTab = g;
+  document.getElementById('ptr-times-M-table').style.display = g === 'M' ? '' : 'none';
+  document.getElementById('ptr-times-K-table').style.display = g === 'K' ? '' : 'none';
+  const tM = document.getElementById('ptr-times-tab-M');
+  const tK = document.getElementById('ptr-times-tab-K');
+  if (tM && tK) {
+    const activeStyle = c => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + c + ';background:rgba(255,255,255,.05);color:' + c + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+    const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+    tM.style.cssText = g === 'M' ? activeStyle('var(--male)') : inactiveStyle;
+    tK.style.cssText = g === 'K' ? activeStyle('var(--female)') : inactiveStyle;
+  }
+}
+
+function renderTimesView() {
+  const hasPairs = (state.pairs || []).length > 0;
+  document.getElementById('ptr-times-no-pairs').style.display = hasPairs ? 'none' : 'block';
+  document.getElementById('ptr-times-tabs').style.display = hasPairs ? 'flex' : 'none';
+  document.getElementById('ptr-times-M-table').style.display = hasPairs ? '' : 'none';
+  document.getElementById('ptr-times-K-table').style.display = 'none';
+  if (!hasPairs) return;
+  renderTimesTable('M');
+  renderTimesTable('K');
+  // Pokaż właściwą zakładkę
+  const hasM = state.pairs.some(p => p.gender === 'M');
+  const hasK = state.pairs.some(p => p.gender === 'K');
+  if (_timesActiveTab === 'M' && !hasM && hasK) _timesActiveTab = 'K';
+  if (_timesActiveTab === 'K' && !hasK && hasM) _timesActiveTab = 'M';
+  switchTimesTab(_timesActiveTab);
+}
+
+function renderTimesTable(gender) {
+  const tbody = document.getElementById('ptr-times-' + gender + '-tbody');
+  if (!tbody) return;
+  const gPairs = state.pairs.filter(p => p.gender === gender).sort((a, b) => a.pairNum - b.pairNum);
+  if (!gPairs.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:30px;">Brak par tej płci.</td></tr>'; return; }
+  // Zbierz zawodników z par
+  const rows = [];
+  gPairs.forEach(p => {
+    if (p.aId) {
+      const a = state.athletes.find(x => x.id === p.aId);
+      if (a) rows.push({ ath: a, lane: p.aLane || 'L', pairNum: p.pairNum });
+    }
+    if (p.bId) {
+      const b = state.athletes.find(x => x.id === p.bId);
+      if (b) rows.push({ ath: b, lane: p.bLane || 'P', pairNum: p.pairNum });
+    }
+  });
+  // Sortuj po bib (Y)
+  rows.sort((x, y) => {
+    const xY = getBibY(x.ath), yY = getBibY(y.ath);
+    if (xY !== yY) return xY - yY;
+    return String(x.ath.bib||'').localeCompare(String(y.ath.bib||''));
+  });
+  tbody.innerHTML = rows.map(r => {
+    const id = r.ath.id;
+    const dsq = isDsq(id);
+    const total = getPatrolTime(id, 'total');
+    const osf = getPatrolTime(id, 'osf');
+    const hits = state.times?.[id]?.hits;
+    const totalIsMarker = isTimeMarker(total);
+    const osfIsMarker = isTimeMarker(osf);
+    return '<tr class="' + (dsq ? 'dsq' : '') + '">' +
+      '<td class="bib-cell">' + esc(r.ath.bib || '—') + '</td>' +
+      '<td>' + esc(displayName(r.ath)) + '</td>' +
+      '<td style="color:var(--text3);font-size:12px;">' + esc(r.ath.team || '') + '</td>' +
+      '<td><span class="lane-mini ' + r.lane + '">' + r.lane + '</span></td>' +
+      '<td style="font-family:var(--font-m);font-size:12px;color:var(--text3);">' + r.pairNum + '</td>' +
+      '<td><input type="text" class="t-time ' + (totalIsMarker ? 'marker' : '') + '" data-id="' + id + '" data-field="total" value="' + esc(total) + '" placeholder="0:00.00 / DNF" oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' + (dsq ? ' disabled' : '') + ' /></td>' +
+      '<td><input type="text" class="t-time ' + (osfIsMarker ? 'marker' : '') + '" data-id="' + id + '" data-field="osf" value="' + esc(osf) + '" placeholder="0:00.00" oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' + (dsq ? ' disabled' : '') + ' /></td>' +
+      '<td><input type="number" min="0" max="5" class="t-hits" data-id="' + id + '" data-field="hits" value="' + (hits !== undefined ? hits : '') + '" placeholder="0-5" onchange="commitTimeField(this)" onblur="commitTimeField(this)"' + (dsq ? ' disabled' : '') + ' /></td>' +
+      '<td><button class="dsq-btn ' + (dsq ? 'on' : '') + '" onclick="toggleDsq(' + id + ')" title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESULTS — klasyfikacja
+// ═══════════════════════════════════════════════════════════════
+let _resultsActiveTab = 'M';
+
+function switchResultsTab(g) {
+  _resultsActiveTab = g;
+  document.getElementById('ptr-results-M').style.display = g === 'M' ? '' : 'none';
+  document.getElementById('ptr-results-K').style.display = g === 'K' ? '' : 'none';
+  const tM = document.getElementById('ptr-results-tab-M');
+  const tK = document.getElementById('ptr-results-tab-K');
+  if (tM && tK) {
+    const activeStyle = c => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + c + ';background:rgba(255,255,255,.05);color:' + c + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+    const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
+    tM.style.cssText = g === 'M' ? activeStyle('var(--male)') : inactiveStyle;
+    tK.style.cssText = g === 'K' ? activeStyle('var(--female)') : inactiveStyle;
+  }
+}
+
+// Placeholder punktacji — do zaktualizowania gdy poznasz reguły
+function calcPatrolPoints(athlete, row) {
+  // Każdy zawodnik startuje z 1000pkt. Reguły kar nieznane.
+  // TODO: implementacja gdy będą znane (czas, OSF, trafienia)
+  return 1000;
+}
+
+function renderResultsView() {
+  // Zbierz zawodników którzy mają cokolwiek wpisane (czas, marker, DSQ)
+  function buildRows(gender) {
+    const list = state.athletes.filter(a => a.gender === gender);
+    return list.map(a => {
+      const total = getPatrolTime(a.id, 'total');
+      const osf   = getPatrolTime(a.id, 'osf');
+      const hits  = state.times?.[a.id]?.hits;
+      const dsq   = isDsq(a.id);
+      const totalIsMarker = isTimeMarker(total);
+      const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
+      let tier = 3; // brak/DSQ
+      let marker = '';
+      if (dsq) tier = 3;
+      else if (totalSec < Infinity) tier = 0;
+      else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
+      else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
+      const hasAny = !!(total || osf || hits !== undefined || dsq);
+      return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
+    });
+  }
+
+  function renderList(containerId, gender) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const rows = buildRows(gender).filter(r => r.hasAny);
+    if (!rows.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Brak wpisanych wyników.</div>'; return; }
+    rows.sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      return a.totalSec - b.totalSec;
+    });
+    let rank = 1;
+    el.innerHTML = rows.map(r => {
+      const noTime = r.totalSec === Infinity;
+      const rankCls = (!noTime && rank === 1) ? 'rank-1' : (!noTime && rank === 2) ? 'rank-2' : (!noTime && rank === 3) ? 'rank-3' : '';
+      const dsqCls = r.dsq ? ' dsq' : '';
+      const myRank = (!noTime) ? rank++ : null;
+      const rankDisp = r.dsq ? '<span class="dsq-badge">DSQ</span>' :
+                       r.marker ? '<span class="marker-badge ' + r.marker + '">' + r.marker + '</span>' :
+                       (myRank !== null) ? (myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : myRank) : '—';
+      // DSQ ukrywa czasy (jak w OSF)
+      const totalDisp = r.dsq ? '—' : (isTimeMarker(r.total) ? '<span class="marker-badge ' + r.total + '">' + r.total + '</span>' : (r.total || '—'));
+      const osfDisp   = r.dsq ? '—' : (isTimeMarker(r.osf) ? '<span class="marker-badge ' + r.osf + '">' + r.osf + '</span>' : (r.osf || '—'));
+      const hitsDisp  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
+      const pts = (r.dsq || noTime) ? 0 : calcPatrolPoints(r.ath, r);
+      return '<div class="result-row ' + rankCls + dsqCls + '">' +
+        '<div class="result-rank">' + rankDisp + '</div>' +
+        '<div style="min-width:0;">' +
+          '<div class="result-name">' + esc(displayName(r.ath)) + '</div>' +
+          '<div class="result-team">' + esc(r.ath.team || '') + '</div>' +
+        '</div>' +
+        '<div class="result-time"><span class="lbl">Całkowity</span>' + totalDisp + '</div>' +
+        '<div class="result-time muted res-hide-mobile"><span class="lbl">OSF</span>' + osfDisp + '</div>' +
+        '<div class="result-hits res-hide-mobile"><span class="lbl" style="display:block;font-family:var(--font-h);font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;font-weight:700;">Trafienia</span>' + hitsDisp + '</div>' +
+        '<div class="result-pts"><span class="lbl" style="display:block;font-family:var(--font-h);font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;font-weight:700;">Pkt</span>' + pts + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  const allM = buildRows('M').filter(r => r.hasAny);
+  const allK = buildRows('K').filter(r => r.hasAny);
+  const hasAny = allM.length > 0 || allK.length > 0;
+  document.getElementById('ptr-results-no-data').style.display = hasAny ? 'none' : 'block';
+  document.getElementById('ptr-results-tabs').style.display = hasAny ? 'flex' : 'none';
+  document.getElementById('ptr-results-M').style.display = hasAny ? '' : 'none';
+  document.getElementById('ptr-results-K').style.display = 'none';
+  if (!hasAny) return;
+  renderList('ptr-results-M', 'M');
+  renderList('ptr-results-K', 'K');
+  // Aktywna zakładka
+  if (_resultsActiveTab === 'M' && !allM.length && allK.length) _resultsActiveTab = 'K';
+  if (_resultsActiveTab === 'K' && !allK.length && allM.length) _resultsActiveTab = 'M';
+  switchResultsTab(_resultsActiveTab);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // BOOT
@@ -1750,6 +2147,8 @@ async function boot() {
     if (tabId === 'setup') renderSetupPage();
     else if (tabId === 'athletes') { renderAthletes(); updateAthleteStats(); }
     else if (tabId === 'pairs') renderPairsView();
+    else if (tabId === 'times') renderTimesView();
+    else if (tabId === 'results') renderResultsView();
   }
   startRealtimeSync();
   startPolling();
