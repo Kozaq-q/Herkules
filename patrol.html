@@ -148,6 +148,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .pair-athletes { display: flex; gap: 10px; align-items: stretch; }
 .pair-athlete { flex: 1; background: var(--bg3); border-radius: var(--radius); padding: 8px 10px; border: 1px solid var(--border); }
 .pair-vs { display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 14px; font-weight: 800; letter-spacing: 2px; color: var(--text3); padding: 0 8px; flex-shrink: 0; }
+
+/* SWAP MODE */
+.swap-mode .pair-athlete { cursor: pointer; transition: border-color .15s, background .15s; }
+.swap-mode .pair-athlete:hover { border-color: var(--orange); background: rgba(232,148,77,.06); }
+.pair-athlete.swap-active-athlete { border-color: var(--orange) !important; background: rgba(232,148,77,.12) !important; box-shadow: 0 0 0 2px rgba(232,148,77,.3); }
+.swap-mode .solo-empty-slot { cursor: pointer; transition: border-color .15s, background .15s, opacity .15s; }
+.swap-mode .solo-empty-slot:hover { border-color: var(--orange); background: rgba(232,148,77,.08); opacity: 1; }
+.swap-trigger-btn { font-size: 11px; padding: 2px 8px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg3); color: var(--text3); cursor: pointer; line-height: 1.4; flex-shrink: 0; }
+.swap-trigger-btn:hover { color: var(--orange); border-color: var(--orange); }
 .qe-time { transition: border-color .12s; }
 .qe-time:focus { outline: none; border-color: var(--orange) !important; background: var(--bg4) !important; }
 .qe-time.marker { color: var(--blue) !important; font-weight: 800; letter-spacing: 1px; }
@@ -265,6 +274,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
     </div>
   </header>
+
+  <!-- PASEK SWAP (widoczny tylko podczas wybierania z kim zamienić) -->
+  <div id="ptr-swap-cancel-bar" style="display:none;background:rgba(232,148,77,.12);border-bottom:1px solid rgba(232,148,77,.4);padding:8px 24px;align-items:center;gap:10px;font-size:13px;color:var(--orange);font-family:var(--font-b);position:sticky;top:58px;z-index:90;">
+    <span id="ptr-swap-cancel-info" style="flex:1;">↔ Wybierz z kim zamienić</span>
+    <button onclick="cancelPtrSwapMode()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;padding:5px 12px;cursor:pointer;">✕ Anuluj (Esc)</button>
+  </div>
 
   <!-- NAV TABS -->
   <nav class="nav">
@@ -1938,17 +1953,19 @@ function renderPairsList(containerId, pairs, gender) {
     html += '<button class="lock-btn' + (locked ? ' active' : '') + '" onclick="togglePairLock(\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '" style="margin-left:auto;">' + (locked ? '🔒' : '🔓') + '</button>';
     html += '</div>';
     html += '<div class="pair-athletes">';
-    html += athleteCardHTML(leftAth, 'L');
+    // Określ tor pustego slotu (jeśli SOLO)
+    const emptyLane = (leftAth ? 'P' : 'L');
+    const soloEmptySlot = '<div class="pair-athlete solo-empty-slot" data-pair-num="' + p.pairNum + '" data-gender="' + gender + '" data-lane="' + emptyLane + '" onclick="handlePtrEmptySlotClick(this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;cursor:pointer;" title="Kliknij aby przenieść tu zaznaczonego zawodnika"><span class="lane-badge lane-' + emptyLane + '" style="font-size:16px;">' + emptyLane + '</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += leftAth ? athleteCardHTML(leftAth, 'L', p.pairNum, gender) : soloEmptySlot;
     html += '<div class="pair-vs">VS</div>';
-    html += rightAth ? athleteCardHTML(rightAth, 'P')
-                     : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += rightAth ? athleteCardHTML(rightAth, 'P', p.pairNum, gender) : soloEmptySlot;
     html += '</div>';
     html += '</div>';
     return html;
   }).join('');
 }
 
-function athleteCardHTML(a, lane) {
+function athleteCardHTML(a, lane, pairNum, gender) {
   if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name" style="color:var(--text3);">—</div></div>';
   const dsq = isDsq(a.id);
   const total = getPatrolTime(a.id, 'total');
@@ -1956,13 +1973,20 @@ function athleteCardHTML(a, lane) {
   const hits = state.times?.[a.id]?.hits;
   const totalIsMarker = isTimeMarker(total);
   const osfIsMarker = isTimeMarker(osf);
-  return '<div class="pair-athlete" style="' + (dsq ? 'opacity:.6;' : '') + '">' +
-    // Nagłówek: nazwisko + bib + lane
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
+  const pickAttr = pairNum
+    ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + gender + '" onclick="handlePtrAthleteClick(this)"'
+    : '';
+  const swapBtn = pairNum
+    ? '<button class="swap-trigger-btn" onclick="event.stopPropagation();activatePtrSwap(' + a.id + ',' + pairNum + ',\'' + gender + '\')" title="Zamień zawodnika">↔</button>'
+    : '';
+  return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
+    // Nagłówek: nazwisko + bib + przycisk swap + lane
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
       '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) +
         (a.pk ? ' <span class="pk-badge" style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '') +
         ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:3px;">#' + esc(a.bib) + '</span>' +
       '</span>' +
+      swapBtn +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:6px;">' + esc(a.team || '') + '</div>' +
@@ -2044,6 +2068,116 @@ function jumpPtrPairTo(gender, fromPairNum, toPos) {
   target.pairNum = toPos;
   save();
   renderPairsView();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SWAP — zamiana zawodników między parami (klon mechaniki OSF)
+// ═══════════════════════════════════════════════════════════════
+let _ptrSwapSource = null; // { athleteId, pairNum, gender }
+
+function activatePtrSwap(athleteId, pairNum, gender) {
+  if (_ptrSwapSource && _ptrSwapSource.athleteId === athleteId) {
+    cancelPtrSwapMode(); return;
+  }
+  _ptrSwapSource = { athleteId, pairNum, gender };
+  document.querySelectorAll('.pair-athlete').forEach(el => el.classList.remove('swap-active-athlete'));
+  document.querySelectorAll('[data-athlete-id="' + athleteId + '"]').forEach(el => el.classList.add('swap-active-athlete'));
+  ['ptr-pairs-M', 'ptr-pairs-K'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('swap-mode'); });
+  const a = state.athletes.find(x => x.id === athleteId);
+  const bar = document.getElementById('ptr-swap-cancel-bar');
+  const info = document.getElementById('ptr-swap-cancel-info');
+  if (info) info.innerHTML = '↔ Wybierz z kim zamienić: <strong>' + esc(displayName(a)) + '</strong> · kliknij innego zawodnika lub pusty tor';
+  if (bar) bar.style.display = 'flex';
+  document.addEventListener('keydown', _ptrSwapEscHandler);
+}
+
+function _ptrSwapEscHandler(e) {
+  if (e.key === 'Escape') cancelPtrSwapMode();
+}
+
+function cancelPtrSwapMode() {
+  _ptrSwapSource = null;
+  document.querySelectorAll('.pair-athlete').forEach(el => el.classList.remove('swap-active-athlete'));
+  document.querySelectorAll('.swap-mode').forEach(el => el.classList.remove('swap-mode'));
+  const bar = document.getElementById('ptr-swap-cancel-bar');
+  if (bar) bar.style.display = 'none';
+  document.removeEventListener('keydown', _ptrSwapEscHandler);
+}
+
+function handlePtrAthleteClick(el) {
+  if (!_ptrSwapSource) return;  // bez aktywnego swap — nic nie rób
+  const targetId   = parseInt(el.dataset.athleteId);
+  const targetPair = parseInt(el.dataset.pairNum);
+  const gender     = el.dataset.gender;
+  if (targetId === _ptrSwapSource.athleteId) { cancelPtrSwapMode(); return; }
+  if (gender !== _ptrSwapSource.gender) { showToast('Można zamieniać tylko zawodników tej samej płci', 'warning'); return; }
+  // Blokada — kłódka chroni
+  if (isPairLocked(_ptrSwapSource.gender, _ptrSwapSource.pairNum)) {
+    showToast('Para źródłowa jest zablokowana 🔒', 'warning'); return;
+  }
+  if (isPairLocked(gender, targetPair)) {
+    showToast('Para docelowa jest zablokowana 🔒', 'warning'); return;
+  }
+  const srcPair = state.pairs.find(p => p.pairNum === _ptrSwapSource.pairNum && p.gender === gender);
+  const tgtPair = state.pairs.find(p => p.pairNum === targetPair && p.gender === gender);
+  if (!srcPair || !tgtPair) { cancelPtrSwapMode(); return; }
+  // Tory zostają — zamieniamy ID
+  const srcSlot = srcPair.aId === _ptrSwapSource.athleteId ? 'a' : 'b';
+  const tgtSlot = tgtPair.aId === targetId ? 'a' : 'b';
+  if (srcSlot === 'a') srcPair.aId = targetId; else srcPair.bId = targetId;
+  if (tgtSlot === 'a') tgtPair.aId = _ptrSwapSource.athleteId; else tgtPair.bId = _ptrSwapSource.athleteId;
+  const a1 = state.athletes.find(x => x.id === _ptrSwapSource.athleteId);
+  const a2 = state.athletes.find(x => x.id === targetId);
+  cancelPtrSwapMode();
+  save();
+  renderPairsView();
+  showToast('↔ Zamieniono: ' + displayName(a1) + ' ↔ ' + displayName(a2), 'success');
+}
+
+function handlePtrEmptySlotClick(el) {
+  if (!_ptrSwapSource) return;
+  const pairNum = parseInt(el.dataset.pairNum);
+  const gender = el.dataset.gender;
+  const lane = el.dataset.lane;
+  if (gender !== _ptrSwapSource.gender) { showToast('Można zamieniać tylko zawodników tej samej płci', 'warning'); return; }
+  if (isPairLocked(_ptrSwapSource.gender, _ptrSwapSource.pairNum)) {
+    showToast('Para źródłowa jest zablokowana 🔒', 'warning'); return;
+  }
+  if (isPairLocked(gender, pairNum)) {
+    showToast('Para docelowa jest zablokowana 🔒', 'warning'); return;
+  }
+  const srcPair = state.pairs.find(p => p.pairNum === _ptrSwapSource.pairNum && p.gender === gender);
+  const tgtPair = state.pairs.find(p => p.pairNum === pairNum && p.gender === gender);
+  if (!srcPair || !tgtPair) { cancelPtrSwapMode(); return; }
+  const samePair = (srcPair === tgtPair);
+  // Wyczyść z pary źródłowej
+  if (srcPair.aId === _ptrSwapSource.athleteId) srcPair.aId = null;
+  else srcPair.bId = null;
+  // Wstaw do toru w parze docelowej
+  if (tgtPair.aLane === lane) { tgtPair.aId = _ptrSwapSource.athleteId; tgtPair.aLane = lane; }
+  else                        { tgtPair.bId = _ptrSwapSource.athleteId; tgtPair.bLane = lane; }
+  // Normalizuj: jeśli pair ma tylko zawodnika w bId — przenieś do aId
+  if (!tgtPair.aId && tgtPair.bId) {
+    tgtPair.aId = tgtPair.bId; tgtPair.aLane = tgtPair.bLane;
+    tgtPair.bId = null; tgtPair.bLane = tgtPair.aLane === 'L' ? 'P' : 'L';
+  }
+  if (!samePair && !srcPair.aId && srcPair.bId) {
+    srcPair.aId = srcPair.bId; srcPair.aLane = srcPair.bLane;
+    srcPair.bId = null; srcPair.bLane = srcPair.aLane === 'L' ? 'P' : 'L';
+  }
+  // Jeśli źródłowa pusta (inny niż docelowy) — usuń + renumeruj
+  if (!samePair && !srcPair.aId && !srcPair.bId) {
+    const idx = state.pairs.indexOf(srcPair);
+    if (idx >= 0) state.pairs.splice(idx, 1);
+    state.pairs.filter(p => p.gender === gender)
+      .sort((x, y) => x.pairNum - y.pairNum)
+      .forEach((p, i) => { p.pairNum = i + 1; });
+  }
+  const a = state.athletes.find(x => x.id === _ptrSwapSource.athleteId);
+  cancelPtrSwapMode();
+  save();
+  renderPairsView();
+  showToast('→ ' + displayName(a) + ' → Tor ' + lane, 'success');
 }
 
 // (showTab() już wywołuje rendery — definicja w sekcji UI wyżej)
