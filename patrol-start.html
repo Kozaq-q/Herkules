@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Patrol — Sędzia startu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:      #0d0f0f;
+  --bg2:     #141717;
+  --bg3:     #1c2020;
+  --bg4:     #232828;
+  --border:  #2e3535;
+  --border2: #3d4646;
+  --text1:   #f0f2f2;
+  --text2:   #c8cfcf;
+  --text3:   #8a9898;
+  --accent:  #e8d44d;
+  --green:   #4caf82;
+  --red:     #e05555;
+  --blue:    #5b9bd5;
+  --orange:  #e8944d;
+  --male:    #5b9bd5;
+  --female:  #d57b9b;
+  --font-h:  'Barlow Condensed', sans-serif;
+  --font-b:  'Barlow', sans-serif;
+  --font-m:  'JetBrains Mono', monospace;
+  --radius:  6px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); font-size: 14px; line-height: 1.5; min-height: 100vh; overscroll-behavior: none; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* SPLASH */
+#splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--bg); z-index: 1000; }
+.splash-logo { font-family: var(--font-h); font-size: 42px; font-weight: 800; letter-spacing: 4px; color: var(--orange); text-transform: uppercase; }
+.splash-sub { font-family: var(--font-m); font-size: 11px; color: var(--text3); letter-spacing: 2px; text-transform: uppercase; margin-top: 8px; margin-bottom: 30px; }
+.splash-msg { font-size: 14px; color: var(--text2); text-align: center; max-width: 360px; line-height: 1.6; }
+.splash-err { display: none; font-family: var(--font-h); font-size: 22px; color: var(--red); margin-top: 18px; letter-spacing: 1.5px; text-transform: uppercase; }
+.splash-hint { display: none; font-size: 13px; color: var(--text3); margin-top: 10px; text-align: center; max-width: 360px; }
+
+/* HEADER */
+.header { background: var(--bg2); border-bottom: 3px solid var(--orange); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 50; }
+.header-left { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+.header-title { font-family: var(--font-h); font-size: 22px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: var(--orange); white-space: nowrap; }
+.header-sub { font-family: var(--font-m); font-size: 10px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-contest { font-size: 13px; color: var(--text2); font-weight: 600; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.hdr-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); }
+.hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
+.hdr-status.ok .dot { background: var(--green); animation: pulse 2s infinite; }
+.hdr-status.err .dot { background: var(--red); }
+.hdr-status.warn { color: var(--orange); border-color: rgba(232,148,77,.5); }
+.hdr-status.block { color: var(--red); border-color: rgba(224,85,85,.5); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* MAIN */
+.main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.empty { text-align: center; padding: 60px 20px; color: var(--text3); border: 1px dashed var(--border); border-radius: var(--radius); }
+.empty-icon { font-size: 50px; opacity: .4; margin-bottom: 14px; }
+.empty-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
+
+/* PARA CARDS */
+.pair-card { background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.pair-card.running { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(232,148,77,.12); }
+.pair-card.finished { border-color: rgba(76,175,130,.4); opacity: .8; }
+
+.pair-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+.pair-num { font-family: var(--font-h); font-size: 36px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 50px; text-align: center; }
+.pair-gender { font-size: 22px; }
+.pair-status { font-family: var(--font-h); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 5px 12px; border-radius: 4px; }
+.pair-status.idle { background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
+.pair-status.running { background: rgba(232,148,77,.18); color: var(--orange); border: 1px solid rgba(232,148,77,.5); animation: pulse 1.5s infinite; }
+.pair-status.finished { background: rgba(76,175,130,.18); color: var(--green); border: 1px solid rgba(76,175,130,.5); }
+
+.timer-display { font-family: var(--font-m); font-size: 48px; font-weight: 800; color: var(--text1); letter-spacing: 1.5px; line-height: 1; font-variant-numeric: tabular-nums; padding: 0 8px; }
+.pair-card.running .timer-display { color: var(--orange); }
+.pair-card.finished .timer-display { color: var(--green); }
+
+.pair-athletes { padding: 12px 18px; background: var(--bg2); display: grid; grid-template-columns: 1fr 1fr; gap: 12px; border-bottom: 1px solid var(--border); }
+.pair-ath { background: var(--bg3); border-radius: var(--radius); padding: 10px 14px; }
+.pair-ath-name { font-size: 14px; font-weight: 700; color: var(--text1); }
+.pair-ath-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.lane-badge { display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 2px 7px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+.lane-L { background: rgba(91,155,213,.15); color: var(--male); border: 1px solid rgba(91,155,213,.4); }
+.lane-P { background: rgba(213,123,155,.15); color: var(--female); border: 1px solid rgba(213,123,155,.4); }
+
+.pair-action { padding: 14px 18px; display: flex; gap: 10px; align-items: center; }
+.btn-start, .btn-reset { flex: 1; font-family: var(--font-h); font-size: 22px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 22px 24px; border: none; border-radius: var(--radius); cursor: pointer; transition: transform .08s, filter .12s; }
+.btn-start { background: var(--green); color: #fff; box-shadow: 0 4px 16px rgba(76,175,130,.3); }
+.btn-start:hover { filter: brightness(1.15); }
+.btn-start:active { transform: scale(.97); }
+.btn-reset { background: var(--red); color: #fff; box-shadow: 0 4px 16px rgba(224,85,85,.25); }
+.btn-reset:hover { filter: brightness(1.15); }
+.btn-reset:active { transform: scale(.97); }
+.btn-start:disabled, .btn-reset:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.5); }
+
+.start-time-info { font-size: 12px; color: var(--text3); font-family: var(--font-m); margin-top: 2px; }
+
+@media (max-width: 700px) {
+  .pair-athletes { grid-template-columns: 1fr; }
+  .pair-num { font-size: 28px; min-width: 40px; }
+  .timer-display { font-size: 32px; }
+  .btn-start, .btn-reset { font-size: 18px; padding: 18px 16px; }
+}
+
+/* TOAST */
+#toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; pointer-events: none; }
+.toast { background: var(--bg3); border: 1px solid var(--border2); border-left: 3px solid var(--text3); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--text1); box-shadow: 0 4px 12px rgba(0,0,0,.3); transform: translateX(120%); transition: transform .25s; max-width: 320px; pointer-events: auto; }
+.toast.show { transform: translateX(0); }
+.toast.success { border-left-color: var(--green); }
+.toast.error { border-left-color: var(--red); }
+.toast.warning { border-left-color: var(--orange); }
+</style>
+</head>
+<body>
+
+<!-- SPLASH (auth/load) -->
+<div id="splash">
+  <div class="splash-logo">🎬 PATROL · START</div>
+  <div class="splash-sub">Sędzia startu</div>
+  <div class="splash-msg" id="splash-msg">Łączenie z serwerem...</div>
+  <div class="splash-err" id="splash-err"></div>
+  <div class="splash-hint" id="splash-hint"></div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+
+  <header class="header">
+    <div class="header-left">
+      <span class="header-title">🎬 START</span>
+      <span class="header-sub" id="contest-sub">—</span>
+    </div>
+    <div class="header-right">
+      <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
+      <div class="hdr-status" id="clock-status" style="display:none;cursor:help;"></div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div id="pairs-list"></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// AUTH / PARAMS
+// ═══════════════════════════════════════════════════════════════
+const SLOT_ID  = new URLSearchParams(window.location.search).get('slot') || '';
+const URL_KEY  = new URLSearchParams(window.location.search).get('key') || '';
+const STORAGE_KEY = SLOT_ID;
+
+// ═══════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
+let _sb = null;
+function getDB() {
+  if (!_sb) _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  return _sb;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SERVER CLOCK SYNC (kopia z patrol.html)
+// ═══════════════════════════════════════════════════════════════
+let _serverClockOffset = 0;
+let _clockSyncOk = false;
+
+function nowMs() { return Date.now() + _serverClockOffset; }
+
+async function syncServerClock() {
+  try {
+    const before = Date.now();
+    const resp = await fetch(SUPABASE_URL + '/rest/v1/patrol_state?select=slot_id&limit=1', {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY },
+      cache: 'no-store'
+    });
+    const after = Date.now();
+    const dateHeader = resp.headers.get('Date') || resp.headers.get('date');
+    if (!dateHeader) return;
+    const serverTime = new Date(dateHeader).getTime();
+    if (!Number.isFinite(serverTime)) return;
+    const roundTrip = after - before;
+    _serverClockOffset = (serverTime + Math.round(roundTrip / 2)) - after;
+    _clockSyncOk = true;
+    _updateClockStatus();
+  } catch(e) { _clockSyncOk = false; _updateClockStatus(); }
+}
+
+function getClockDriftStatus() {
+  if (!_clockSyncOk) return { status: 'unknown', driftMs: 0 };
+  const d = Math.abs(_serverClockOffset);
+  if (d > 10000) return { status: 'block', driftMs: _serverClockOffset };
+  if (d > 2000)  return { status: 'warn',  driftMs: _serverClockOffset };
+  return { status: 'ok', driftMs: _serverClockOffset };
+}
+
+function _updateClockStatus() {
+  const el = document.getElementById('clock-status');
+  if (!el) return;
+  const { status, driftMs } = getClockDriftStatus();
+  const driftSec = Math.round(driftMs / 100) / 10;
+  const sign = driftMs > 0 ? '+' : '';
+  el.classList.remove('warn', 'block');
+  if (status === 'ok') { el.style.display = 'none'; return; }
+  el.style.display = 'inline-flex';
+  if (status === 'warn') { el.classList.add('warn'); el.innerHTML = '⚠ zegar ' + sign + driftSec + 's'; el.title = 'Twój zegar systemowy różni się od serwera o ' + sign + driftSec + 's — skoryguj w ustawieniach.'; }
+  else if (status === 'block') { el.classList.add('block'); el.innerHTML = '⛔ zegar ' + sign + driftSec + 's'; el.title = 'Zegar zbyt dużo różni się od serwera — START zablokowany. Skoryguj zegar.'; }
+  else { el.innerHTML = '⌛ zegar ?'; el.title = 'Synchronizacja zegara serwera niedostępna.'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let state = null;
+let _isSaving = false;
+let _myWriteTag = '';
+const SESSION_ID = 'sess_' + Math.random().toString(36).slice(2, 10);
+
+function ensureStateDefaults() {
+  if (!state) return;
+  if (!state.athletes) state.athletes = [];
+  if (!state.pairs) state.pairs = [];
+  if (!state.times) state.times = {};
+  if (!state.disq) state.disq = {};
+  if (!state.runs) state.runs = {};
+  if (!state.cfg) state.cfg = {};
+}
+
+async function loadState() {
+  try {
+    const { data } = await getDB().from('patrol_state').select('state_json').eq('slot_id', STORAGE_KEY).single();
+    if (!data) return false;
+    state = JSON.parse(data.state_json);
+    ensureStateDefaults();
+    _myWriteTag = state._writerTag || '';
+    return true;
+  } catch(e) { return false; }
+}
+
+function checkAccess() {
+  const cfg = (state && state.cfg) || {};
+  const enabled = !!cfg.startEnabled;
+  const expectedKey = cfg.startKey || '';
+  if (!enabled) return { ok: false, title: 'Link nieaktywny', msg: 'Sędzia główny jeszcze nie aktywował dostępu lub go wyłączył. Spróbuj ponownie za chwilę.' };
+  if (expectedKey && URL_KEY !== expectedKey) return { ok: false, title: 'Link wygasł', msg: 'Twój link nie pasuje do aktywnego klucza. Poproś sędziego o nowy link.' };
+  if (cfg.startKeyExpiresAt && Date.now() > cfg.startKeyExpiresAt) return { ok: false, title: 'Link wygasł', msg: 'Czas aktywności linku minął. Poproś sędziego o przedłużenie lub nowy link.' };
+  return { ok: true };
+}
+
+function showSplashError(title, msg) {
+  document.getElementById('splash-msg').style.display = 'none';
+  const errEl = document.getElementById('splash-err');
+  const hintEl = document.getElementById('splash-hint');
+  errEl.textContent = title; errEl.style.display = 'block';
+  hintEl.textContent = msg; hintEl.style.display = 'block';
+}
+
+function enterApp() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderHeader();
+  renderPairs();
+  showSyncStatus('ok');
+}
+
+function renderHeader() {
+  const c = state.contest || {};
+  const sub = [c.city, c.date].filter(Boolean).join(' · ') || 'Bieg patrolowy';
+  document.getElementById('contest-sub').textContent = sub;
+  if (state.setup && state.setup.accentColor) {
+    document.documentElement.style.setProperty('--orange', state.setup.accentColor);
+  }
+}
+
+function showSyncStatus(s) {
+  const ind = document.getElementById('sync-indicator');
+  const lbl = document.getElementById('sync-label');
+  if (!ind || !lbl) return;
+  ind.classList.remove('ok', 'err');
+  if (s === 'saving') lbl.textContent = 'zapis...';
+  else if (s === 'ok') { ind.classList.add('ok'); lbl.textContent = 'live'; }
+  else if (s === 'err') { ind.classList.add('err'); lbl.textContent = 'błąd'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SAVE
+// ═══════════════════════════════════════════════════════════════
+async function saveState() {
+  if (_isSaving) { setTimeout(saveState, 200); return; }
+  _isSaving = true;
+  try {
+    const now = new Date().toISOString();
+    const tag = SESSION_ID + '_' + Date.now();
+    _myWriteTag = tag;
+    state._savedAt = now;
+    state._writerTag = tag;
+    const stateJson = JSON.stringify(state);
+    const { error } = await getDB().from('patrol_state').upsert({
+      slot_id: STORAGE_KEY,
+      state_json: stateJson,
+      updated_at: now
+    }, { onConflict: 'slot_id' });
+    if (error) { console.error('Save error:', error); _myWriteTag = ''; showSyncStatus('err'); }
+    else { showSyncStatus('ok'); }
+  } catch(e) { console.error(e); _myWriteTag = ''; showSyncStatus('err'); }
+  finally { _isSaving = false; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REALTIME + POLLING
+// ═══════════════════════════════════════════════════════════════
+let _rtChannel = null;
+let _pollTimer = null;
+let _rtHealthy = false;
+
+function startRealtime() {
+  if (_rtChannel) return;
+  _rtChannel = getDB().channel('patrol_start_' + STORAGE_KEY)
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'patrol_state', filter: 'slot_id=eq.' + STORAGE_KEY },
+        (payload) => { applyRemoteState(payload.new?.state_json); })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') { _rtHealthy = true; startPolling(); }
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        _rtHealthy = false; startPolling();
+        getDB().removeChannel(_rtChannel); _rtChannel = null;
+        setTimeout(startRealtime, 3000);
+      }
+    });
+}
+
+function startPolling() {
+  if (_pollTimer) clearInterval(_pollTimer);
+  const interval = _rtHealthy ? 2000 : 1000;
+  _pollTimer = setInterval(async () => {
+    if (_isSaving) return;
+    try {
+      const { data } = await getDB().from('patrol_state').select('state_json').eq('slot_id', STORAGE_KEY).single();
+      if (data && data.state_json) applyRemoteState(data.state_json);
+    } catch(e) {}
+  }, interval);
+}
+
+function applyRemoteState(json) {
+  if (!json) return;
+  try {
+    const incoming = JSON.parse(json);
+    if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
+    if (_isSaving) return;
+    state = incoming;
+    ensureStateDefaults();
+    // Czy dostęp dalej OK?
+    const access = checkAccess();
+    if (!access.ok) {
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('splash').style.display = 'flex';
+      showSplashError(access.title, access.msg);
+      return;
+    }
+    renderHeader();
+    renderPairs();
+  } catch(e) { console.error('applyRemoteState:', e); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER PAR
+// ═══════════════════════════════════════════════════════════════
+function formatRunTime(ms) {
+  if (!Number.isFinite(ms) || ms < 0) ms = 0;
+  const sec = Math.floor(ms / 1000);
+  const cs = Math.floor((ms % 1000) / 10);
+  const m = Math.floor(sec / 60);
+  const s = sec - m * 60;
+  const csStr = (cs < 10 ? '0' : '') + cs;
+  if (m > 0) return m + ':' + (s < 10 ? '0' : '') + s + '.' + csStr;
+  return s + '.' + csStr;
+}
+
+function formatClockTime(ms) {
+  const d = new Date(ms);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g, '&#39;');
+}
+
+function displayName(a) {
+  return ((a.rank || '') + ' ' + (a.name || '')).trim() || '—';
+}
+
+function getRun(gender, pairNum) {
+  const k = gender + '_' + pairNum;
+  return (state.runs && state.runs[k]) || null;
+}
+
+function renderPairs() {
+  const listEl = document.getElementById('pairs-list');
+  const pairs = (state.pairs || []).slice().sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
+    return a.pairNum - b.pairNum;
+  });
+  if (!pairs.length) {
+    listEl.innerHTML = '<div class="empty"><div class="empty-icon">🎲</div><div class="empty-title">Brak par</div><div>Sędzia główny jeszcze nie wylosował par.</div></div>';
+    return;
+  }
+  listEl.innerHTML = pairs.map(p => renderPairCard(p)).join('');
+}
+
+function renderPairCard(p) {
+  const gender = p.gender;
+  const pairNum = p.pairNum;
+  const run = getRun(gender, pairNum);
+  const started = !!(run && run.startedAt);
+  const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
+  const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+  const aFinished = !!(started && run.finishedAt && run.finishedAt[p.aId]);
+  const bFinished = p.bId ? !!(started && run.finishedAt && run.finishedAt[p.bId]) : true;
+  const allFinished = started && aFinished && bFinished;
+
+  let statusCls, statusTxt;
+  if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
+  else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
+  else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
+
+  // Timer display
+  let timerHtml;
+  if (allFinished) {
+    const last = Math.max(...Object.values(run.finishedAt));
+    timerHtml = '<div class="timer-display" data-finished="1">' + formatRunTime(last - run.startedAt) + '</div>';
+  } else if (started) {
+    timerHtml = '<div class="timer-display" data-running="1" data-pair="' + gender + '_' + pairNum + '">0.00</div>';
+  } else {
+    timerHtml = '<div class="timer-display" style="color:var(--text3);font-weight:400;">—</div>';
+  }
+
+  // Akcja
+  let actionHtml = '';
+  if (!started) {
+    actionHtml = '<button class="btn-start" onclick="startPair(\'' + gender + '\',' + pairNum + ')">▶ START</button>';
+  } else {
+    actionHtml = '<button class="btn-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
+  }
+  const startTimeInfo = started ? '<div class="start-time-info">Start: ' + formatClockTime(run.startedAt) + '</div>' : '';
+
+  // Header
+  const head = '<div class="pair-head">' +
+    '<div style="display:flex;align-items:center;gap:12px;">' +
+      '<span class="pair-num">' + pairNum + '</span>' +
+      '<span class="pair-gender">' + (gender === 'M' ? '♂' : '♀') + '</span>' +
+      '<span class="pair-status ' + statusCls + '">' + statusTxt + '</span>' +
+    '</div>' +
+    timerHtml +
+  '</div>';
+
+  // Athletes
+  const renderAth = (ath, lane) => {
+    if (!ath) return '<div class="pair-ath" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak ' + lane + '</div>';
+    return '<div class="pair-ath">' +
+      '<div class="pair-ath-name">' + esc(displayName(ath)) + '<span class="lane-badge lane-' + lane + '">' + lane + '</span></div>' +
+      '<div class="pair-ath-meta">' + esc(ath.team || '') + ' · #' + esc(ath.bib) + '</div>' +
+    '</div>';
+  };
+  const aIsL = (p.aLane || 'L') === 'L';
+  const leftAth = aIsL ? a : b;
+  const rightAth = aIsL ? b : a;
+  const athletes = '<div class="pair-athletes">' + renderAth(leftAth, 'L') + renderAth(rightAth, 'P') + '</div>';
+  const action = '<div class="pair-action" style="flex-direction:column;align-items:stretch;">' + actionHtml + startTimeInfo + '</div>';
+
+  const cls = 'pair-card' + (allFinished ? ' finished' : (started ? ' running' : ''));
+  return '<div class="' + cls + '">' + head + athletes + action + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AKCJE START/RESET
+// ═══════════════════════════════════════════════════════════════
+function startPair(gender, pairNum) {
+  const drift = getClockDriftStatus();
+  if (drift.status === 'block') {
+    showToast('Zegar systemowy ma drift > 10s — skoryguj zanim wystartujesz', 'error', 4000);
+    return;
+  }
+  const k = gender + '_' + pairNum;
+  if (state.runs && state.runs[k] && state.runs[k].startedAt) {
+    if (!confirm('Para ' + pairNum + ' już biegnie. Resetować i zacząć od nowa? (Falstart)')) return;
+  }
+  if (!state.runs) state.runs = {};
+  state.runs[k] = { startedAt: nowMs(), finishedAt: {} };
+  // Wyczyść total dla zawodników tej pary
+  const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
+  if (p) {
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      if (state.times?.[id]?.total) delete state.times[id].total;
+    });
+  }
+  saveState();
+  renderPairs();
+  showToast('▶ Para ' + pairNum + ' (' + gender + ') wystartowała', 'success', 1800);
+}
+
+function resetPair(gender, pairNum) {
+  if (!confirm('Resetować start pary ' + pairNum + '? Wszystkie czasy łączne tej pary zostaną usunięte (falstart).')) return;
+  const k = gender + '_' + pairNum;
+  if (state.runs) delete state.runs[k];
+  const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
+  if (p) {
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      if (state.times?.[id]?.total) delete state.times[id].total;
+    });
+  }
+  saveState();
+  renderPairs();
+  showToast('↺ Reset pary ' + pairNum, 'warning', 2000);
+}
+
+// Ticker — co 100ms aktualizuje lecące liczniki
+setInterval(() => {
+  document.querySelectorAll('.timer-display[data-running="1"]').forEach(el => {
+    const [gender, pairNum] = el.dataset.pair.split('_');
+    const run = getRun(gender, parseInt(pairNum));
+    if (!run || !run.startedAt) return;
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
+}, 100);
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function showToast(msg, type, duration) {
+  type = type || 'info';
+  duration = duration || 2500;
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  container.appendChild(t);
+  requestAnimationFrame(() => { requestAnimationFrame(() => t.classList.add('show')); });
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, duration);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+async function boot() {
+  if (!SLOT_ID) {
+    showSplashError('Brak ID zawodów', 'Otwórz link z panelu MSS (powinien zawierać ?slot=...)');
+    return;
+  }
+  if (!URL_KEY) {
+    showSplashError('Brak klucza', 'Twój link nie zawiera klucza dostępu. Poproś sędziego głównego o pełny link.');
+    return;
+  }
+  // Sync zegar zaraz
+  syncServerClock();
+  setInterval(syncServerClock, 60000);
+  // Load state
+  const ok = await loadState();
+  if (!ok || !state) {
+    showSplashError('Brak danych', 'Nie udało się wczytać zawodów. Spróbuj odświeżyć stronę.');
+    return;
+  }
+  const access = checkAccess();
+  if (!access.ok) { showSplashError(access.title, access.msg); return; }
+  enterApp();
+  startRealtime();
+  startPolling();
+}
+
+boot();
+</script>
+</body>
+</html>

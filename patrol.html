@@ -506,6 +506,47 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
               <button onclick="finishContest()" class="btn" style="width:100%;padding:12px;text-align:center;background:rgba(76,175,130,.08);border-color:rgba(76,175,130,.35);color:var(--green);margin-bottom:14px;">
                 ✓ Zakończ zawody · wróć do panelu
               </button>
+
+              <!-- 🎬 Sędzia startu — link mobilny -->
+              <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                  <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;">🎬 Sędzia startu</div>
+                  <span id="start-status-pill" style="font-family:var(--font-m);font-size:10px;padding:3px 9px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
+                </div>
+                <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px;">
+                  Link dla sędziego na starcie — otworzy na telefonie/laptopie osobną apkę z dużymi przyciskami START/RESET dla każdej pary.
+                </div>
+                <button id="start-toggle-btn" onclick="toggleStartEnabled()" style="width:100%;padding:10px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:10px;">
+                  Aktywuj link
+                </button>
+                <div id="start-link-row" style="display:none;margin-bottom:10px;">
+                  <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Link dla sędziego</div>
+                  <div style="display:flex;gap:6px;">
+                    <input id="start-link-input" readonly style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:11px;" onclick="this.select()" />
+                    <button onclick="copyStartLink()" style="background:var(--green);color:#0a0c0e;border:none;border-radius:var(--radius);padding:7px 14px;font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1px;cursor:pointer;flex-shrink:0;">📋 Kopiuj</button>
+                  </div>
+                </div>
+                <!-- TTL (wygaszanie) -->
+                <div id="start-expire-row" style="display:none;margin-bottom:8px;">
+                  <button id="start-expire-toggle" onclick="toggleStartExpireExpanded()" type="button" style="width:100%;display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;cursor:pointer;text-align:left;color:var(--text2);">
+                    <span style="font-size:13px;">⏲</span>
+                    <span id="start-expire-status" style="flex:1;font-size:11px;color:var(--text3);font-family:var(--font-m);">—</span>
+                    <span id="start-expire-arrow" style="font-size:10px;color:var(--text3);">▶</span>
+                  </button>
+                  <div id="start-expire-expanded" style="display:none;margin-top:6px;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);">
+                    <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Ustaw datę wygaszenia</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      <input type="datetime-local" id="start-expire-input" oninput="setStartExpiry(this.value)" style="flex:1;min-width:160px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-family:var(--font-m);font-size:12px;" />
+                      <button onclick="setStartExpiry('+24h')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:5px 9px;font-size:10px;color:var(--text2);cursor:pointer;">+24h</button>
+                      <button onclick="setStartExpiry('')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:5px 9px;font-size:10px;color:var(--text2);cursor:pointer;">Bezterminowo</button>
+                    </div>
+                  </div>
+                </div>
+                <button id="start-rotate-btn" onclick="regenerateStartKey()" style="display:none;width:100%;padding:6px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
+                  🔄 Wygeneruj nowy klucz (stary link przestanie działać)
+                </button>
+              </div>
+
               <div style="border-top:1px solid var(--border);padding-top:12px;">
                 <div style="font-size:11px;color:var(--orange);margin-bottom:10px;">⚠ Operacje destrukcyjne:</div>
                 <div style="display:flex;flex-direction:column;gap:6px;">
@@ -902,6 +943,10 @@ function ensureStateDefaults() {
   // Stoper: state.runs[gender + '_' + pairNum] = { startedAt: ms, finishedAt: {id: ms} }
   if (!state.runs) state.runs = {};
   if (!state.cfg) state.cfg = {};
+  // Sędzia startu — dane dostępu jak speaker w OSF
+  if (state.cfg.startEnabled === undefined) state.cfg.startEnabled = false;
+  if (!state.cfg.startKey) state.cfg.startKey = '';
+  if (state.cfg.startKeyExpiresAt === undefined) state.cfg.startKeyExpiresAt = null;
   const SETUP_DEFAULTS = {
     accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: '',
     allowSoloPair: false, pkAtEnd: false, ignoreLaneRule: false
@@ -1355,6 +1400,158 @@ function toggleOps() {
   const open = panel.style.display !== 'none';
   panel.style.display = open ? 'none' : 'block';
   if (arrow) arrow.textContent = open ? '▶' : '▼';
+  if (!open) _renderStartSection(); // jak otwieramy, odśwież sekcję sędziego startu
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STARTER LINK — sędzia startu (analogicznie do speakera w OSF)
+// ═══════════════════════════════════════════════════════════════
+function _genStartKey() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let k = '';
+  for (let i = 0; i < 8; i++) k += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+  return k;
+}
+
+function _buildStartUrl() {
+  if (!state.cfg || !state.cfg.startKey) return '';
+  const base = window.location.href.replace(/[^/]*$/, '') + 'patrol-start.html';
+  return base + '?slot=' + encodeURIComponent(STORAGE_KEY) + '&key=' + encodeURIComponent(state.cfg.startKey);
+}
+
+function toggleStartEnabled() {
+  if (!state.cfg) state.cfg = {};
+  const wasEnabled = !!state.cfg.startEnabled;
+  if (wasEnabled) {
+    state.cfg.startEnabled = false;
+  } else {
+    state.cfg.startEnabled = true;
+    if (!state.cfg.startKey) state.cfg.startKey = _genStartKey();
+  }
+  saveImmediate();
+  _renderStartSection();
+  showToast(state.cfg.startEnabled ? '✓ Link sędziego startu aktywny' : '⏸ Link sędziego startu wyłączony',
+            state.cfg.startEnabled ? 'success' : 'warning');
+}
+
+function regenerateStartKey() {
+  if (!confirm('Wygenerować nowy klucz?\n\nStary link przestanie działać — sędzia, który go ma, zobaczy "Link wygasł".')) return;
+  state.cfg.startKey = _genStartKey();
+  state.cfg.startEnabled = true;
+  saveImmediate();
+  _renderStartSection();
+  showToast('✓ Nowy klucz — wyślij sędziemu nowy link', 'success');
+}
+
+function copyStartLink() {
+  const url = _buildStartUrl();
+  if (!url) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(
+      () => showToast('📋 Skopiowano link', 'success', 1500),
+      () => _copyFallback(url)
+    );
+  } else _copyFallback(url);
+}
+function _copyFallback(url) {
+  const input = document.getElementById('start-link-input');
+  if (input) { input.select(); document.execCommand('copy'); showToast('📋 Skopiowano', 'success', 1500); }
+}
+
+function setStartExpiry(value) {
+  if (!state.cfg) state.cfg = {};
+  if (value === '+24h') state.cfg.startKeyExpiresAt = Date.now() + 24*3600*1000;
+  else if (!value)      state.cfg.startKeyExpiresAt = null;
+  else {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return;
+    state.cfg.startKeyExpiresAt = d.getTime();
+  }
+  saveImmediate();
+  _renderStartSection();
+}
+
+function toggleStartExpireExpanded() {
+  const panel = document.getElementById('start-expire-expanded');
+  const arrow = document.getElementById('start-expire-arrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+function _isStartExpired() {
+  if (!state.cfg || !state.cfg.startKeyExpiresAt) return false;
+  return Date.now() > state.cfg.startKeyExpiresAt;
+}
+
+function _fmtFriendlyDateStart(ts) {
+  const d = new Date(ts);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function _renderStartSection() {
+  if (!state.cfg) state.cfg = {};
+  const enabled = !!state.cfg.startEnabled;
+  const hasKey = !!state.cfg.startKey;
+  const pill = document.getElementById('start-status-pill');
+  const btn = document.getElementById('start-toggle-btn');
+  const linkRow = document.getElementById('start-link-row');
+  const linkIn = document.getElementById('start-link-input');
+  const rotate = document.getElementById('start-rotate-btn');
+  const expireRow = document.getElementById('start-expire-row');
+  const expireIn = document.getElementById('start-expire-input');
+  const expireSt = document.getElementById('start-expire-status');
+  if (!pill || !btn) return;
+  if (enabled && hasKey) {
+    const expired = _isStartExpired();
+    if (expired) {
+      pill.textContent = '⌛ Wygasł';
+      pill.style.color = 'var(--orange)';
+      pill.style.borderColor = 'rgba(232,148,77,.5)';
+      pill.style.background = 'rgba(232,148,77,.1)';
+    } else {
+      pill.textContent = '● Aktywny';
+      pill.style.color = 'var(--green)';
+      pill.style.borderColor = 'rgba(80,200,144,.5)';
+      pill.style.background = 'rgba(80,200,144,.1)';
+    }
+    btn.textContent = 'Wyłącz dostęp';
+    btn.style.background = 'rgba(232,88,88,.1)';
+    btn.style.borderColor = 'rgba(232,88,88,.5)';
+    btn.style.color = 'var(--red)';
+    linkRow.style.display = 'block';
+    if (linkIn) linkIn.value = _buildStartUrl();
+    rotate.style.display = 'block';
+    if (expireRow) expireRow.style.display = 'block';
+    if (expireIn) {
+      const ts = state.cfg.startKeyExpiresAt;
+      if (ts) {
+        const d = new Date(ts);
+        const pad = n => (n < 10 ? '0' : '') + n;
+        expireIn.value = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      } else expireIn.value = '';
+    }
+    if (expireSt) {
+      const ts = state.cfg.startKeyExpiresAt;
+      if (!ts) { expireSt.textContent = 'Bezterminowo'; expireSt.style.color = 'var(--text3)'; }
+      else if (expired) { expireSt.textContent = '⌛ Wygasł ' + _fmtFriendlyDateStart(ts); expireSt.style.color = 'var(--orange)'; }
+      else { expireSt.textContent = 'Wygasa: ' + _fmtFriendlyDateStart(ts); expireSt.style.color = 'var(--text2)'; }
+    }
+  } else {
+    pill.textContent = '○ Wyłączony';
+    pill.style.color = 'var(--text3)';
+    pill.style.borderColor = 'var(--border)';
+    pill.style.background = 'var(--bg3)';
+    btn.textContent = 'Aktywuj link';
+    btn.style.background = 'rgba(80,200,144,.1)';
+    btn.style.borderColor = 'rgba(80,200,144,.5)';
+    btn.style.color = 'var(--green)';
+    linkRow.style.display = 'none';
+    rotate.style.display = 'none';
+    if (expireRow) expireRow.style.display = 'none';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
