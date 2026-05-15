@@ -145,8 +145,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .pair-card.pair-locked { border-color: var(--orange); background: rgba(76,175,130,.04); }
 .pair-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .pair-num { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--text1); min-width: 28px; text-align: center; }
-.pair-athletes { display: flex; gap: 10px; }
+.pair-athletes { display: flex; gap: 10px; align-items: stretch; }
 .pair-athlete { flex: 1; background: var(--bg3); border-radius: var(--radius); padding: 8px 10px; border: 1px solid var(--border); }
+.pair-vs { display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 14px; font-weight: 800; letter-spacing: 2px; color: var(--text3); padding: 0 8px; flex-shrink: 0; }
+.qe-time { transition: border-color .12s; }
+.qe-time:focus { outline: none; border-color: var(--orange) !important; background: var(--bg4) !important; }
+.qe-time.marker { color: var(--blue) !important; font-weight: 800; letter-spacing: 1px; }
 .pair-athlete-name { font-size: 13px; font-weight: 600; color: var(--text1); }
 .pair-athlete-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .lane-badge { display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 2px 6px; border-radius: 2px; }
@@ -266,8 +270,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   <nav class="nav">
     <button class="nav-tab active" onclick="showTab('setup')" id="tab-setup">⚙ Konfiguracja</button>
     <button class="nav-tab" onclick="showTab('athletes')" id="tab-athletes">👥 Zawodnicy</button>
-    <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🎲 Pary</button>
-    <button class="nav-tab" onclick="showTab('times')" id="tab-times">⏱ Wpisywanie wyników</button>
+    <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🎲 Pary / wpisywanie</button>
     <button class="nav-tab" onclick="showTab('results')" id="tab-results">🏆 Wyniki</button>
   </nav>
 
@@ -484,36 +487,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         </div>
         <div id="ptr-pairs-M"></div>
         <div id="ptr-pairs-K" style="display:none;"></div>
-      </div>
-    </div>
-
-    <!-- WPISYWANIE WYNIKÓW -->
-    <div class="page" id="page-times">
-      <div class="card mb-12">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">⏱ Wpisywanie wyników</div>
-          <div style="font-size:11px;color:var(--text3);line-height:1.5;">
-            Pola: <strong style="color:var(--text2);">Czas całkowity</strong> · <strong style="color:var(--text2);">Czas OSF</strong> · <strong style="color:var(--text2);">Trafienia (0-5)</strong> · DSQ.
-            Akceptowane markery: <strong>DNF, DNS</strong>.
-          </div>
-        </div>
-        <div id="ptr-times-no-pairs" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);">
-          Brak par. Najpierw wylosuj pary w zakładce <strong>🎲 Pary</strong>.
-        </div>
-        <div id="ptr-times-tabs" style="display:none;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);">
-          <button id="ptr-times-tab-M" onclick="switchTimesTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
-          <button id="ptr-times-tab-K" onclick="switchTimesTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="times-table" id="ptr-times-M-table">
-            <thead><tr><th>Bib</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas całkowity</th><th>Czas OSF</th><th>Trafienia</th><th>DSQ</th></tr></thead>
-            <tbody id="ptr-times-M-tbody"></tbody>
-          </table>
-          <table class="times-table" id="ptr-times-K-table" style="display:none;">
-            <thead><tr><th>Bib</th><th>Zawodnik</th><th>Drużyna</th><th>Tor</th><th>Para</th><th>Czas całkowity</th><th>Czas OSF</th><th>Trafienia</th><th>DSQ</th></tr></thead>
-            <tbody id="ptr-times-K-tbody"></tbody>
-          </table>
-        </div>
       </div>
     </div>
 
@@ -947,7 +920,6 @@ function showTab(id) {
     if (id === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
     else if (id === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); if (typeof updateAthleteStats === 'function') updateAthleteStats(); }
     else if (id === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
-    else if (id === 'times' && typeof renderTimesView === 'function') renderTimesView();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
 }
@@ -1925,32 +1897,153 @@ function renderPairsList(containerId, pairs, gender) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!pairs.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Brak par tej płci.</div>'; return; }
-  el.innerHTML = pairs.map(p => {
-    const a = state.athletes.find(x => x.id === p.aId);
-    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+  const total = pairs.length;
+  el.innerHTML = pairs.map((p, idx) => {
+    const isFirstP = p.pairNum === 1;
+    const isLastP = p.pairNum === total;
+    const isSolo = !p.aId || !p.bId;
     const locked = isPairLocked(gender, p.pairNum);
-    return '<div class="pair-card' + (locked ? ' pair-locked' : '') + '" data-pair="' + p.pairNum + '" data-gender="' + gender + '">' +
-      '<div class="pair-header">' +
-        '<span class="pair-num">' + p.pairNum + '</span>' +
-        '<button class="lock-btn' + (locked ? ' active' : '') + '" onclick="togglePairLock(\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '">' + (locked ? '🔒' : '🔓') + '</button>' +
-      '</div>' +
-      '<div class="pair-athletes">' +
-        athleteCardHTML(a, 'L') +
-        (b ? athleteCardHTML(b, 'P') : '<div class="pair-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text3);"><span class="lane-badge lane-P">P</span> <span style="margin-left:6px;">— pusty (SOLO) —</span></div>') +
-      '</div>' +
-    '</div>';
+    // Czy jakikolwiek czas/DSQ wpisany w parze?
+    const hasEntry =
+      (p.aId && (state.times?.[p.aId]?.total || state.times?.[p.aId]?.osf || state.times?.[p.aId]?.hits !== undefined || isDsq(p.aId))) ||
+      (p.bId && (state.times?.[p.bId]?.total || state.times?.[p.bId]?.osf || state.times?.[p.bId]?.hits !== undefined || isDsq(p.bId)));
+
+    // Tor L po lewej, P po prawej (niezależnie od kolejności w pair)
+    const aIsL = (p.aLane || 'L') === 'L';
+    const leftId  = aIsL ? p.aId : p.bId;
+    const rightId = aIsL ? p.bId : p.aId;
+    const leftAth  = leftId  ? state.athletes.find(x => x.id === leftId) : null;
+    const rightAth = rightId ? state.athletes.find(x => x.id === rightId) : null;
+
+    let html = '<div class="pair-card' + (locked ? ' pair-locked' : '') + (isSolo ? ' solo-runner' : '') + '" data-pair="' + p.pairNum + '" data-gender="' + gender + '">';
+    html += '<div class="pair-header">';
+    html += '<span class="pair-num">' + p.pairNum + '</span>';
+    // Strzałki ↑↓ + input numeru pozycji
+    html += '<div style="display:flex;align-items:center;gap:2px;margin-right:4px;">';
+    html += '<button onclick="movePtrPair(\'' + gender + '\',' + p.pairNum + ',-1)" title="Przesuń wyżej"' +
+      ' style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--border2);border-radius:var(--radius) 0 0 var(--radius);color:var(--text2);cursor:pointer;opacity:' + (isFirstP ? '.2' : '1') + ';"' +
+      (isFirstP ? ' disabled' : '') + '>↑</button>';
+    html += '<input type="number" min="1" max="' + total + '" value="' + p.pairNum + '" title="Wpisz nowy numer i Enter"' +
+      ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();jumpPtrPairTo(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value));this.blur();}"' +
+      ' onblur="if(parseInt(this.value)!==' + p.pairNum + ')jumpPtrPairTo(\'' + gender + '\',' + p.pairNum + ',parseInt(this.value));"' +
+      ' onclick="event.stopPropagation();this.select();"' +
+      ' style="width:38px;text-align:center;font-size:11px;font-family:var(--font-m);padding:0 2px;line-height:1.7;' +
+      'background:var(--bg3);border:1px solid var(--border2);border-left:none;border-right:none;color:var(--text2);" />';
+    html += '<button onclick="movePtrPair(\'' + gender + '\',' + p.pairNum + ',+1)" title="Przesuń niżej"' +
+      ' style="font-size:12px;padding:0 5px;line-height:1.7;background:transparent;border:1px solid var(--border2);border-radius:0 var(--radius) var(--radius) 0;color:var(--text2);cursor:pointer;opacity:' + (isLastP ? '.2' : '1') + ';"' +
+      (isLastP ? ' disabled' : '') + '>↓</button>';
+    html += '</div>';
+    if (hasEntry) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
+    if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+    html += '<button class="lock-btn' + (locked ? ' active' : '') + '" onclick="togglePairLock(\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '" style="margin-left:auto;">' + (locked ? '🔒' : '🔓') + '</button>';
+    html += '</div>';
+    html += '<div class="pair-athletes">';
+    html += athleteCardHTML(leftAth, 'L');
+    html += '<div class="pair-vs">VS</div>';
+    html += rightAth ? athleteCardHTML(rightAth, 'P')
+                     : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += '</div>';
+    html += '</div>';
+    return html;
   }).join('');
 }
 
 function athleteCardHTML(a, lane) {
   if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name" style="color:var(--text3);">—</div></div>';
-  return '<div class="pair-athlete">' +
+  const dsq = isDsq(a.id);
+  const total = getPatrolTime(a.id, 'total');
+  const osf = getPatrolTime(a.id, 'osf');
+  const hits = state.times?.[a.id]?.hits;
+  const totalIsMarker = isTimeMarker(total);
+  const osfIsMarker = isTimeMarker(osf);
+  return '<div class="pair-athlete" style="' + (dsq ? 'opacity:.6;' : '') + '">' +
+    // Nagłówek: nazwisko + bib + lane
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">' +
-      '<span class="pair-athlete-name">' + esc(displayName(a)) + '<span class="bib-inline">#' + esc(a.bib) + '</span></span>' +
-      '<span class="lane-badge lane-' + lane + '">' + lane + '</span>' +
+      '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) +
+        (a.pk ? ' <span class="pk-badge" style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '') +
+        ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:3px;">#' + esc(a.bib) + '</span>' +
+      '</span>' +
+      '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
-    '<div class="pair-athlete-meta">' + esc(a.team) + '</div>' +
+    '<div class="pair-athlete-meta" style="margin-bottom:6px;">' + esc(a.team || '') + '</div>' +
+    // Wiersz 1: czas całkowity + DSQ
+    '<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">' +
+      '<input class="qe-time' + (totalIsMarker ? ' marker' : '') + '" type="text" value="' + esc(total) + '" placeholder="Czas (0:00.00 / DNF / DNS)"' +
+        ' data-id="' + a.id + '" data-field="total"' +
+        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+        ' style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;font-weight:600;' + (dsq ? 'text-decoration:line-through;color:var(--text3);' : (totalIsMarker ? 'color:var(--blue);font-weight:800;letter-spacing:1px;' : '')) + '"' +
+        (dsq ? ' disabled' : '') + ' />' +
+      '<button onclick="toggleDsq(' + a.id + ')" ' +
+        'style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 7px;' +
+        'border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';' +
+        'border-radius:var(--radius);' +
+        'background:' + (dsq ? 'rgba(224,85,85,.12)' : 'var(--bg3)') + ';' +
+        'color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';' +
+        'cursor:pointer;white-space:nowrap;" title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '">' +
+        (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
+    '</div>' +
+    // Wiersz 2: czas OSF + trafienia (mniejsze)
+    '<div style="display:flex;gap:4px;align-items:center;">' +
+      '<input class="qe-time' + (osfIsMarker ? ' marker' : '') + '" type="text" value="' + esc(osf) + '" placeholder="Czas OSF"' +
+        ' data-id="' + a.id + '" data-field="osf"' +
+        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+        ' style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);padding:3px 6px;font-family:var(--font-m);font-size:11px;font-weight:500;' + (dsq ? 'text-decoration:line-through;color:var(--text3);' : '') + '"' +
+        (dsq ? ' disabled' : '') + ' />' +
+      '<input type="number" min="0" max="5" value="' + (hits !== undefined ? hits : '') + '" placeholder="trafienia"' +
+        ' data-id="' + a.id + '" data-field="hits"' +
+        ' onchange="commitTimeField(this)" onblur="commitTimeField(this)"' +
+        ' style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);padding:3px 6px;font-family:var(--font-m);font-size:11px;font-weight:600;text-align:center;"' +
+        ' title="Liczba trafień (0-5)"' +
+        (dsq ? ' disabled' : '') + ' />' +
+    '</div>' +
   '</div>';
+}
+
+// Przenieś parę o ±1
+function movePtrPair(gender, pairNum, dir) {
+  const gPairs = state.pairs.filter(p => p.gender === gender).sort((a,b) => a.pairNum - b.pairNum);
+  const idx = gPairs.findIndex(p => p.pairNum === pairNum);
+  if (idx === -1) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= gPairs.length) return;
+  // Zamień pairNum w obu parach
+  const otherPair = gPairs[newIdx];
+  const tmp = otherPair.pairNum;
+  // Znajdź w state.pairs i zmień
+  const sp1 = state.pairs.find(p => p === otherPair);
+  const sp2 = state.pairs.find(p => p === gPairs[idx]);
+  sp1.pairNum = sp2.pairNum;
+  sp2.pairNum = tmp;
+  save();
+  renderPairsView();
+}
+
+// Wpisz numer pary i skok do tej pozycji
+function jumpPtrPairTo(gender, fromPairNum, toPos) {
+  if (!Number.isFinite(toPos)) { renderPairsView(); return; }
+  const gPairs = state.pairs.filter(p => p.gender === gender).sort((a,b) => a.pairNum - b.pairNum);
+  const max = gPairs.length;
+  toPos = Math.max(1, Math.min(max, toPos));
+  if (toPos === fromPairNum) return;
+  const target = gPairs.find(p => p.pairNum === fromPairNum);
+  if (!target) return;
+  // Shift wszystkich między fromPairNum a toPos
+  if (toPos < fromPairNum) {
+    // Przesuwamy do góry — wszystko między toPos a fromPairNum-1 idzie w dół o 1
+    gPairs.forEach(p => {
+      if (p === target) return;
+      if (p.pairNum >= toPos && p.pairNum < fromPairNum) p.pairNum++;
+    });
+  } else {
+    // Przesuwamy w dół — wszystko między fromPairNum+1 a toPos idzie w górę o 1
+    gPairs.forEach(p => {
+      if (p === target) return;
+      if (p.pairNum > fromPairNum && p.pairNum <= toPos) p.pairNum--;
+    });
+  }
+  target.pairNum = toPos;
+  save();
+  renderPairsView();
 }
 
 // (showTab() już wywołuje rendery — definicja w sekcji UI wyżej)
@@ -2309,7 +2402,6 @@ async function boot() {
     if (tabId === 'setup') renderSetupPage();
     else if (tabId === 'athletes') { renderAthletes(); updateAthleteStats(); }
     else if (tabId === 'pairs') renderPairsView();
-    else if (tabId === 'times') renderTimesView();
     else if (tabId === 'results') renderResultsView();
   }
   startRealtimeSync();
