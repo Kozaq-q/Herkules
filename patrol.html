@@ -213,7 +213,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .timer-athlete { padding: 14px 16px; background: var(--bg2); }
 .timer-athlete + .timer-athlete { border-left: 1px solid var(--border); }
 .timer-athlete.finished { background: rgba(76,175,130,.04); }
-.timer-athlete.dsq { opacity: .55; }
+.timer-athlete.dsq { opacity: .7; }
+.timer-athlete.dsq .timer-athlete-time { text-decoration: line-through; text-decoration-thickness: 2px; color: var(--red) !important; }
+.timer-athlete.dsq .timer-osf-input { text-decoration: line-through; opacity: .6; }
 .timer-athlete-name { font-size: 15px; font-weight: 700; color: var(--text1); margin-bottom: 2px; }
 .timer-athlete-meta { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
 .timer-athlete-time { font-family: var(--font-m); font-size: 24px; font-weight: 800; color: var(--text1); line-height: 1; font-variant-numeric: tabular-nums; margin-bottom: 10px; }
@@ -243,7 +245,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-time-tile.ptr-time-osf:focus-within { border-color: var(--male); background: rgba(91,155,213,.1); }
 .ptr-time-tile.ptr-time-total { border-color: rgba(76,175,130,.4); background: rgba(76,175,130,.05); }
 .ptr-time-tile.ptr-time-total:focus-within { border-color: var(--green); background: rgba(76,175,130,.1); }
-.ptr-time-tile.dsq { opacity: .4; }
+.ptr-time-tile.dsq { opacity: .55; }
+.ptr-time-tile.dsq input { text-decoration: line-through; color: var(--red) !important; }
 .ptr-time-tile.marker .ptr-time-input { color: var(--blue) !important; font-weight: 800; letter-spacing: 1px; }
 .ptr-time-lbl { font-family: var(--font-h); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 2px; }
 .ptr-time-osf .ptr-time-lbl { color: var(--male); }
@@ -275,7 +278,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .times-table th { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 8px 10px; border-bottom: 2px solid var(--border); text-align: left; white-space: nowrap; }
 .times-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .times-table tr:hover td { background: rgba(255,255,255,.02); }
-.times-table tr.dsq td { opacity: .55; }
+.times-table tr.dsq td { opacity: .7; }
+.times-table tr.dsq .t-time { text-decoration: line-through; color: var(--red) !important; opacity: .8; }
 .times-table .bib-cell { font-family: var(--font-m); font-weight: 700; color: var(--orange); white-space: nowrap; }
 .times-table input.t-time { width: 110px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 4px 7px; font-family: var(--font-m); font-size: 13px; font-weight: 600; }
 .times-table input.t-time:focus { outline: none; border-color: var(--orange); background: var(--bg4); }
@@ -424,6 +428,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           <button onclick="setPtrRole('ADMIN');toggleRoleDropdown()" class="role-chip-opt" data-role="ADMIN" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">👑 Admin</button>
         </div>
       </div>
+      <button class="hdr-btn" onclick="exportPatrolBackup()" title="Pobierz kopię zapasową zawodów (JSON)" style="font-size:10px;color:var(--text3);border-color:var(--border);">⬇ Backup</button>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
     </div>
   </header>
@@ -1534,6 +1539,38 @@ function showToast(msg, type, duration) {
 function esc(s) {
   if (s === null || s === undefined) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g, '&#39;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BACKUP — pobranie kopii zapasowej zawodów (JSON)
+// ═══════════════════════════════════════════════════════════════
+function exportPatrolBackup() {
+  try {
+    const payload = {
+      _kind: 'patrol_backup',
+      _version: 1,
+      _exportedAt: new Date().toISOString(),
+      slotId: SLOT_ID,
+      state: state
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const name = (state.setup && (state.setup.name || state.setup.city)) || 'patrol';
+    const date = (state.setup && state.setup.date) || new Date().toISOString().slice(0, 10);
+    const safe = String(name).replace(/[^a-zA-Z0-9_\-]+/g, '_').slice(0, 40) || 'patrol';
+    a.download = 'patrol_' + safe + '_' + date + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('⬇ Backup pobrany', 'success', 1800);
+  } catch (e) {
+    console.error('exportPatrolBackup', e);
+    showToast('Błąd przy zapisie backupu', 'error', 3000);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3382,6 +3419,9 @@ function renderTimerPairHTML(p, role) {
     head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '" data-finished="1">' + formatRunTime(displayMs) + '</div>';
   } else if (started) {
     head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '">0.00</div>';
+  } else if (run && run.scheduledStartAt) {
+    // Czeka na auto-start — countdown
+    head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
   } else {
     head += '<div class="timer-display" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
   }
@@ -3532,14 +3572,27 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
 }
 
 // Ticker: aktualizuje tylko teksty lecących liczników (nie cały DOM)
+// Pomocnik: efektywny czas zakończenia (auto-stop LUB ręczny total). Używany w tickTimers.
+function _patrolEffectiveFinishMs(athleteId, run) {
+  if (!athleteId || !run) return null;
+  if (run.finishedAt && run.finishedAt[athleteId]) return run.finishedAt[athleteId];
+  const t = state.times?.[athleteId]?.total;
+  if (run.startedAt && t && !isTimeMarker(t)) {
+    const sec = parseTime(t);
+    if (Number.isFinite(sec) && sec > 0 && sec !== Infinity) return run.startedAt + sec * 1000;
+  }
+  return null;
+}
+
 function tickTimers() {
   // Sprawdź auto-starty
   if (typeof checkScheduledStarts === 'function') checkScheduledStarts();
   // Update timer-display dla par
   document.querySelectorAll('.timer-display[data-timer-pair]').forEach(el => {
     if (el.dataset.finished === '1') return;
-    const [gender, pairNum] = el.dataset.timerPair.split('_');
-    const run = getRun(gender, parseInt(pairNum));
+    const [gender, pairNumStr] = el.dataset.timerPair.split('_');
+    const pairNum = parseInt(pairNumStr);
+    const run = getRun(gender, pairNum);
     if (!run) return;
     // Odliczanie do auto-startu (gdy scheduledStartAt jest ustawiony a startedAt brakuje)
     if (run.scheduledStartAt && !run.startedAt) {
@@ -3548,7 +3601,7 @@ function tickTimers() {
         const sec = Math.ceil(left / 1000);
         // Ostatnie 10s — duże i pulsujące cyfry
         if (sec <= 10) {
-          el.textContent = sec; // tylko liczba całkowita "10", "9", ...
+          el.textContent = sec;
           if (sec <= 5) {
             el.classList.remove('countdown-soon');
             el.classList.add('countdown-urgent');
@@ -3569,17 +3622,62 @@ function tickTimers() {
     }
     if (!run.startedAt) return;
     el.classList.remove('countdown-soon', 'countdown-urgent');
+
+    // Sprawdź czy oboje skończyli (auto LUB ręczny total) — wtedy zamrażaj zegar
+    const pair = (state.pairs || []).find(p => p.gender === gender && p.pairNum === pairNum);
+    if (pair) {
+      const aFin = _patrolEffectiveFinishMs(pair.aId, run);
+      const bFin = pair.bId ? _patrolEffectiveFinishMs(pair.bId, run) : true;
+      if (aFin && bFin) {
+        const last = Math.max(aFin || 0, (bFin === true ? 0 : bFin) || 0);
+        el.textContent = formatRunTime(last - run.startedAt);
+        el.style.color = '';
+        el.dataset.finished = '1';
+        // Aktualizuj wizualny stan kafelka pary (klasy)
+        const card = el.closest('.timer-pair-card');
+        if (card && !card.classList.contains('finished')) {
+          card.classList.remove('running');
+          card.classList.add('finished');
+        }
+        const statusEl = card && card.querySelector('.timer-pair-status');
+        if (statusEl && statusEl.textContent.indexOf('Skończona') === -1) {
+          statusEl.classList.remove('idle', 'running');
+          statusEl.classList.add('finished');
+          statusEl.textContent = '✓ Skończona';
+        }
+        return;
+      }
+    }
     const elapsed = nowMs() - run.startedAt;
     el.textContent = formatRunTime(elapsed);
     el.style.color = '';
   });
-  // Update timer-athlete-time
+  // Update timer-athlete-time — auto-zatrzymanie gdy ręczny total wpisany
   document.querySelectorAll('.timer-athlete-time[data-running="1"]').forEach(el => {
     const athleteId = parseInt(el.dataset.timerAthlete);
-    const [gender, pairNum] = el.dataset.pair.split('_');
-    const run = getRun(gender, parseInt(pairNum));
+    const [gender, pairNumStr] = el.dataset.pair.split('_');
+    const run = getRun(gender, parseInt(pairNumStr));
     if (!run || !run.startedAt) return;
-    if (run.finishedAt && run.finishedAt[athleteId]) return;
+    // Auto-stop (run.finishedAt) — trzymaj na ostatnim odczycie
+    if (run.finishedAt && run.finishedAt[athleteId]) {
+      el.textContent = formatRunTime(run.finishedAt[athleteId] - run.startedAt);
+      el.dataset.running = '0';
+      el.classList.add('finished');
+      return;
+    }
+    // Ręczny total — przejmij i zatrzymaj
+    const tManual = state.times?.[athleteId]?.total;
+    if (tManual && !isTimeMarker(tManual)) {
+      el.textContent = tManual;
+      el.dataset.running = '0';
+      el.classList.add('finished');
+      return;
+    }
+    if (tManual && isTimeMarker(tManual)) {
+      el.textContent = tManual;
+      el.dataset.running = '0';
+      return;
+    }
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
 }
