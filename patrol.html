@@ -912,7 +912,6 @@ function _applyRemoteStateNow(stateJson) {
       if (tabId === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
       else if (tabId === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); updateAthleteStats(); }
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
-      else if (tabId === 'times' && typeof renderTimesView === 'function') renderTimesView();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     showSyncStatus('ok');
@@ -2317,7 +2316,8 @@ function toggleDsq(id) {
   state.disq[id] = !state.disq[id];
   if (!state.disq[id]) delete state.disq[id];
   save();
-  renderTimesView();
+  // Natychmiastowe przerenderowanie zakładki Pary (gdzie są inputy + przycisk DSQ)
+  renderPairsView();
 }
 
 // ═══════════════════════════════════════════════════════════════
