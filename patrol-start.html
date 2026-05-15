@@ -90,7 +90,11 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .pair-card.running .pair-num { color: var(--orange); }
 .pair-card.finished .pair-num { color: var(--green); }
 
-.timer-display { font-family: var(--font-m); font-size: 48px; font-weight: 800; color: var(--text1); letter-spacing: 1.5px; line-height: 1; font-variant-numeric: tabular-nums; padding: 0 8px; }
+.timer-display { font-family: var(--font-m); font-size: 48px; font-weight: 800; color: var(--text1); letter-spacing: 1.5px; line-height: 1; font-variant-numeric: tabular-nums; padding: 0 8px; transition: color .15s, transform .15s; }
+.timer-display.countdown-soon { color: var(--orange) !important; font-size: 72px !important; font-weight: 900; animation: countdown-pulse 1s infinite; }
+.timer-display.countdown-urgent { color: var(--red) !important; font-size: 96px !important; font-weight: 900; animation: countdown-urgent 0.5s infinite; }
+@keyframes countdown-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes countdown-urgent { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: .8; } }
 .pair-card.running .timer-display { color: var(--orange); }
 .pair-card.finished .timer-display { color: var(--green); }
 
@@ -473,7 +477,12 @@ function emergencyResetRunning() {
     return r && r.startedAt;
   });
   if (!running.length) { showToast('Brak biegnących par', 'info'); return; }
-  if (!confirm('⚠ AWARYJNY RESET\n\nZatrzymać i zresetować ' + running.length + ' biegnącą/ych parę/par?\n\nWszystkie czasy łączne tych par zostaną usunięte.')) return;
+  const input = prompt('⚠ AWARYJNY RESET ' + running.length + ' biegnącą/ych parę/par.\n\nWszystkie czasy łączne zostaną usunięte.\n\nWpisz RESET aby potwierdzić:');
+  if (input === null) return;
+  if (input.trim().toUpperCase() !== 'RESET') {
+    showToast('Nie wpisano "RESET" — anulowano', 'warning', 2500);
+    return;
+  }
   running.forEach(p => {
     const k = p.gender + '_' + p.pairNum;
     if (state.runs && state.runs[k]) delete state.runs[k];
@@ -565,6 +574,9 @@ function renderPairCard(p) {
     timerHtml = '<div class="timer-display" data-finished="1">' + formatRunTime(last - run.startedAt) + '</div>';
   } else if (started) {
     timerHtml = '<div class="timer-display" data-running="1" data-pair="' + gender + '_' + pairNum + '">0.00</div>';
+  } else if (run && run.scheduledStartAt) {
+    // Zaplanowany start — pokazuj odliczanie
+    timerHtml = '<div class="timer-display" data-countdown="1" data-pair="' + gender + '_' + pairNum + '" style="color:var(--text3);font-weight:400;">—</div>';
   } else {
     timerHtml = '<div class="timer-display" style="color:var(--text3);font-weight:400;">—</div>';
   }
@@ -694,8 +706,40 @@ setInterval(() => {
     if (!run || !run.startedAt) return;
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
-  // Update odliczania do auto-startu w info-bar pod każdą parą (rerender info gdy potrzeba)
-  // (tutaj nie rerenderujemy całych kart — tylko texty .start-time-info)
+  // Update timer-display dla par z zaplanowanym startem (countdown)
+  document.querySelectorAll('.timer-display[data-countdown="1"]').forEach(el => {
+    const [gender, pairNum] = el.dataset.pair.split('_');
+    const run = getRun(gender, parseInt(pairNum));
+    if (!run || !run.scheduledStartAt || run.startedAt) {
+      el.classList.remove('countdown-soon', 'countdown-urgent');
+      el.textContent = '—';
+      el.style.cssText = 'color:var(--text3);font-weight:400;';
+      return;
+    }
+    const left = run.scheduledStartAt - nowMs();
+    if (left > 0) {
+      const sec = Math.ceil(left / 1000);
+      if (sec <= 10) {
+        el.style.cssText = ''; // resetuj inline style by klasy zadziałały
+        el.textContent = sec;
+        if (sec <= 5) {
+          el.classList.remove('countdown-soon');
+          el.classList.add('countdown-urgent');
+        } else {
+          el.classList.remove('countdown-urgent');
+          el.classList.add('countdown-soon');
+        }
+      } else {
+        el.classList.remove('countdown-soon', 'countdown-urgent');
+        el.style.cssText = 'color:var(--orange);font-weight:800;';
+        // Format -m:ss (bez setnych dla czytelności)
+        const totalSec = Math.ceil(left / 1000);
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec - m * 60;
+        el.textContent = m > 0 ? '-' + m + ':' + (s < 10 ? '0' : '') + s : '-' + s + 's';
+      }
+    }
+  });
 }, 100);
 
 // Co 500ms: aktualizuj odliczanie do auto-startu (tylko tekst, bez rerendera całych kart)

@@ -187,7 +187,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .timer-pair-status.finished { background: var(--green); color: #fff; border: 1px solid var(--green); box-shadow: 0 2px 8px rgba(76,175,130,.3); }
 @keyframes timer-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
-.timer-display { font-family: var(--font-m); font-size: 38px; font-weight: 800; color: var(--text1); letter-spacing: 1px; line-height: 1; font-variant-numeric: tabular-nums; }
+.timer-display { font-family: var(--font-m); font-size: 38px; font-weight: 800; color: var(--text1); letter-spacing: 1px; line-height: 1; font-variant-numeric: tabular-nums; transition: color .15s, transform .15s; }
+.timer-display.countdown-soon { color: var(--orange) !important; font-size: 56px !important; font-weight: 900; animation: countdown-pulse 1s infinite; }
+.timer-display.countdown-urgent { color: var(--red) !important; font-size: 72px !important; font-weight: 900; animation: countdown-urgent 0.5s infinite; }
+@keyframes countdown-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes countdown-urgent { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.15); opacity: .8; } }
 .timer-pair-card.running .timer-display { color: var(--orange); }
 .timer-pair-card.finished .timer-display { color: var(--green); }
 
@@ -703,27 +707,32 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       </div>
 
       <!-- 🎬 KAFELEK AUTO-START — tylko STARTER i ADMIN -->
-      <div class="card mb-12" id="auto-start-card" style="display:none;background:linear-gradient(to right, rgba(232,148,77,.04), var(--bg2) 30%);border-left:4px solid var(--orange);">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-          <span style="font-size:18px;">⏰</span>
-          <div class="card-title" style="margin:0;padding:0;border:none;color:var(--orange);">Auto-start harmonogram</div>
-          <span style="font-size:11px;color:var(--text3);">— generuj czasy startu wszystkich par naraz</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
-          <div>
-            <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:4px;">Pierwsza para startuje o</label>
-            <input type="time" step="1" id="auto-start-first" value="10:00:00" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:14px;" />
+      <div class="card mb-12" id="auto-start-card" style="display:none;background:linear-gradient(to right, rgba(232,148,77,.04), var(--bg2) 30%);border-left:4px solid var(--orange);padding:10px 16px;">
+        <!-- Pasek zwiniętej karty (zawsze widoczny) -->
+        <button id="auto-start-toggle" onclick="toggleAutoStartCard()" style="width:100%;background:none;border:none;display:flex;align-items:center;gap:10px;cursor:pointer;padding:0;text-align:left;color:var(--text2);">
+          <span style="font-size:16px;">⏰</span>
+          <span style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);">Auto-start harmonogram</span>
+          <span style="font-size:11px;color:var(--text3);flex:1;">— ustaw godzinę i interwał startów</span>
+          <span id="auto-start-arrow" style="font-size:12px;color:var(--text3);">▶</span>
+        </button>
+        <!-- Rozwinięta zawartość -->
+        <div id="auto-start-body" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+            <div>
+              <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:4px;">Pierwsza para startuje o</label>
+              <input type="time" step="1" id="auto-start-first" value="10:00:00" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:14px;" />
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:4px;">Interwał (sekundy)</label>
+              <input type="number" min="10" max="3600" step="5" id="auto-start-interval" value="60" style="width:100px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:14px;text-align:center;" />
+            </div>
+            <button onclick="generateAutoStartSchedule()" class="btn btn-primary" style="padding:10px 18px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;background:var(--orange);color:#111;border-radius:var(--radius);">⚙ Wygeneruj harmonogram</button>
+            <button onclick="clearAutoStartSchedule()" class="btn" style="padding:8px 14px;font-size:11px;">✕ Wyczyść wszystkie</button>
           </div>
-          <div>
-            <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:4px;">Interwał (sekundy)</label>
-            <input type="number" min="10" max="3600" step="5" id="auto-start-interval" value="60" style="width:100px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:14px;text-align:center;" />
+          <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">
+            Pierwsza para o <strong id="auto-start-preview-first">10:00:00</strong>, każda kolejna co <strong id="auto-start-preview-interval">60</strong> s.
+            Można potem zmienić godzinę konkretnej pary klikając ✏ przy niej.
           </div>
-          <button onclick="generateAutoStartSchedule()" class="btn btn-primary" style="padding:10px 18px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;background:var(--orange);color:#111;border-radius:var(--radius);">⚙ Wygeneruj harmonogram</button>
-          <button onclick="clearAutoStartSchedule()" class="btn" style="padding:8px 14px;font-size:11px;">✕ Wyczyść wszystkie</button>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">
-          Pierwsza para o <strong id="auto-start-preview-first">10:00:00</strong>, każda kolejna co <strong id="auto-start-preview-interval">60</strong> s.
-          Można potem zmienić godzinę konkretnej pary klikając ✏ przy niej.
         </div>
       </div>
 
@@ -2800,6 +2809,16 @@ function _fmtLocalDateTimeForInput(ts) {
 }
 
 // Auto-start pary o godzinie. value = string z input datetime-local (np. "2026-05-15T15:43:00") lub '' = wyczyść
+// Toggle zwijania/rozwijania kafelka Auto-start
+function toggleAutoStartCard() {
+  const body = document.getElementById('auto-start-body');
+  const arrow = document.getElementById('auto-start-arrow');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
 // Generuj harmonogram auto-startu dla wszystkich par (dziś)
 function generateAutoStartSchedule() {
   const firstStr = document.getElementById('auto-start-first')?.value || '10:00:00';
@@ -3118,7 +3137,7 @@ function _applyTimerTabStyle() {
   tK.style.cssText = _timerTab === 'K' ? activeStyle('var(--female)') : inactiveStyle;
 }
 
-// Awaryjny reset wszystkich biegnących par
+// Awaryjny reset wszystkich biegnących par — wymaga wpisania "RESET"
 function emergencyResetRunning() {
   const pairs = (state.pairs || []);
   const running = pairs.filter(p => {
@@ -3126,7 +3145,12 @@ function emergencyResetRunning() {
     return r && r.startedAt;
   });
   if (!running.length) { showToast('Brak biegnących par', 'info'); return; }
-  if (!confirm('⚠ AWARYJNY RESET\n\nZatrzymać i zresetować ' + running.length + ' biegnącą/ych parę/par?\n\nWszystkie czasy łączne tych par zostaną usunięte. Można potem znów wystartować.')) return;
+  const input = prompt('⚠ AWARYJNY RESET ' + running.length + ' biegnącą/ych parę/par.\n\nWszystkie czasy łączne zostaną usunięte. Można potem znów wystartować.\n\nWpisz RESET aby potwierdzić:');
+  if (input === null) return; // anulowano
+  if (input.trim().toUpperCase() !== 'RESET') {
+    showToast('Nie wpisano "RESET" — anulowano', 'warning', 2500);
+    return;
+  }
   running.forEach(p => {
     const k = p.gender + '_' + p.pairNum;
     if (state.runs && state.runs[k]) delete state.runs[k];
@@ -3353,14 +3377,29 @@ function tickTimers() {
       const left = run.scheduledStartAt - nowMs();
       if (left > 0) {
         const sec = Math.ceil(left / 1000);
-        el.textContent = '-' + formatRunTime(left);
-        el.style.color = sec <= 5 ? 'var(--red)' : 'var(--orange)';
+        // Ostatnie 10s — duże i pulsujące cyfry
+        if (sec <= 10) {
+          el.textContent = sec; // tylko liczba całkowita "10", "9", ...
+          if (sec <= 5) {
+            el.classList.remove('countdown-soon');
+            el.classList.add('countdown-urgent');
+          } else {
+            el.classList.remove('countdown-urgent');
+            el.classList.add('countdown-soon');
+          }
+        } else {
+          el.classList.remove('countdown-soon', 'countdown-urgent');
+          el.textContent = '-' + formatRunTime(left);
+          el.style.color = 'var(--orange)';
+        }
       } else {
         el.textContent = '0.00';
+        el.classList.remove('countdown-soon', 'countdown-urgent');
       }
       return;
     }
     if (!run.startedAt) return;
+    el.classList.remove('countdown-soon', 'countdown-urgent');
     const elapsed = nowMs() - run.startedAt;
     el.textContent = formatRunTime(elapsed);
     el.style.color = '';
