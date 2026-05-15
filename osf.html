@@ -1746,15 +1746,9 @@ tr:last-child > td { border-bottom: none; }
         Kliknięcie <strong>⚙ Generuj</strong> w każdej chwili przywraca regulaminowe pary.
       </div>
     </div>
-    <div style="margin-bottom:14px;">
-      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px;">Wpisz <strong style="color:var(--red);">EDYTUJ</strong> aby potwierdzić</label>
-      <input type="text" id="s2-edit-confirm-input" placeholder="EDYTUJ"
-        oninput="document.getElementById('s2-edit-confirm-btn').disabled = this.value.trim().toUpperCase() !== 'EDYTUJ';"
-        style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 12px;font-family:var(--font-m);font-size:14px;letter-spacing:2px;text-align:center;" />
-    </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-s2-edit');document.getElementById('s2-edit-confirm-input').value='';document.getElementById('s2-edit-confirm-btn').disabled=true;">Anuluj</button>
-      <button class="btn btn-danger" id="s2-edit-confirm-btn" disabled onclick="enableS2EditMode()">Włącz edycję awaryjną</button>
+      <button class="btn" onclick="closeModal('modal-s2-edit')">Anuluj</button>
+      <button class="btn btn-danger" onclick="enableS2EditMode()">Rozumiem — włącz edycję</button>
     </div>
   </div>
 </div>
@@ -1976,15 +1970,9 @@ tr:last-child > td { border-bottom: none; }
         Kliknięcie <strong>⚙ Generuj</strong> w każdej chwili przywraca regulaminową kolejność.
       </div>
     </div>
-    <div style="margin-bottom:14px;">
-      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px;">Wpisz <strong style="color:var(--red);">EDYTUJ</strong> aby potwierdzić</label>
-      <input type="text" id="team-edit-confirm-input" placeholder="EDYTUJ"
-        oninput="document.getElementById('team-edit-confirm-btn').disabled = this.value.trim().toUpperCase() !== 'EDYTUJ';"
-        style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 12px;font-family:var(--font-m);font-size:14px;letter-spacing:2px;text-align:center;" />
-    </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-team-edit');document.getElementById('team-edit-confirm-input').value='';document.getElementById('team-edit-confirm-btn').disabled=true;">Anuluj</button>
-      <button class="btn btn-danger" id="team-edit-confirm-btn" disabled onclick="enableTeamEditMode()">Włącz edycję awaryjną</button>
+      <button class="btn" onclick="closeModal('modal-team-edit')">Anuluj</button>
+      <button class="btn btn-danger" onclick="enableTeamEditMode()">Rozumiem — włącz edycję</button>
     </div>
   </div>
 </div>
@@ -4743,15 +4731,8 @@ function toggleS2EditMode() {
   }
 }
 
-let _s2EditAutoDisableTimer = null;
-
 function enableS2EditMode() {
   closeModal('modal-s2-edit');
-  // Wyczyść pole potwierdzenia
-  const inp = document.getElementById('s2-edit-confirm-input');
-  if (inp) inp.value = '';
-  const cBtn = document.getElementById('s2-edit-confirm-btn');
-  if (cBtn) cBtn.disabled = true;
 
   _s2EditMode = true;
   const btn  = document.getElementById('s2-edit-toggle-btn');
@@ -4764,20 +4745,10 @@ function enableS2EditMode() {
   const soloBtn = document.getElementById('s2-add-solo-btn');
   if (soloBtn) soloBtn.style.display = '';
   renderSeries2View();
-
-  // Auto-disable po 5 minutach — żeby tryb nie został aktywny "po cichu"
-  if (_s2EditAutoDisableTimer) clearTimeout(_s2EditAutoDisableTimer);
-  _s2EditAutoDisableTimer = setTimeout(() => {
-    if (_s2EditMode) {
-      disableS2EditMode();
-      showToast('⏱ Edycja awaryjna S2 wyłączona automatycznie po 5 min', 'warning', 4500);
-    }
-  }, 5 * 60 * 1000);
 }
 
 function disableS2EditMode() {
   _s2EditMode = false;
-  if (_s2EditAutoDisableTimer) { clearTimeout(_s2EditAutoDisableTimer); _s2EditAutoDisableTimer = null; }
   cancelSwapMode();
   const btn  = document.getElementById('s2-edit-toggle-btn');
   const warn = document.getElementById('s2-edit-warning');
@@ -4807,38 +4778,18 @@ function toggleTeamEditMode(series) {
   }
 }
 
-const _teamEditAutoDisableTimers = { s1: null, s2: null };
-
 function enableTeamEditMode() {
   const series = _teamEditPendingSeries;
   closeModal('modal-team-edit');
-  // Wyczyść pole potwierdzenia
-  const inp = document.getElementById('team-edit-confirm-input');
-  if (inp) inp.value = '';
-  const cBtn = document.getElementById('team-edit-confirm-btn');
-  if (cBtn) cBtn.disabled = true;
 
   _teamEditMode[series] = true;
   const warn = document.getElementById('dr-' + series + '-edit-warning');
   if (warn) warn.style.display = 'block';
   renderTeamView(); // switchDrTab wewnątrz zaktualizuje przyciski
-
-  // Auto-disable po 5 min
-  if (_teamEditAutoDisableTimers[series]) clearTimeout(_teamEditAutoDisableTimers[series]);
-  _teamEditAutoDisableTimers[series] = setTimeout(() => {
-    if (_teamEditMode[series]) {
-      disableTeamEditMode(series);
-      showToast('⏱ Edycja awaryjna ' + series.toUpperCase() + ' wyłączona automatycznie po 5 min', 'warning', 4500);
-    }
-  }, 5 * 60 * 1000);
 }
 
 function disableTeamEditMode(series) {
   _teamEditMode[series] = false;
-  if (_teamEditAutoDisableTimers[series]) {
-    clearTimeout(_teamEditAutoDisableTimers[series]);
-    _teamEditAutoDisableTimers[series] = null;
-  }
   const warn = document.getElementById('dr-' + series + '-edit-warning');
   if (warn) warn.style.display = 'none';
   cancelTeamSwap();
