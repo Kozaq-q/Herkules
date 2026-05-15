@@ -191,6 +191,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(232,148,77,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram</button>
       <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
+      <div class="hdr-status" id="pulse-status" style="cursor:help;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text3);border:1px solid var(--border);background:var(--bg3);">📡 ...</div>
       <div class="hdr-status" id="clock-status" style="display:none;cursor:help;"></div>
     </div>
   </header>
@@ -287,11 +288,75 @@ function getDB() {
 
 // ═══════════════════════════════════════════════════════════════
 // SERVER CLOCK SYNC (kopia z patrol.html)
+// Starter jest autorytetem czasu — używa swojego serwer-synced zegara
+// i wysyła go jako puls do pozostałych urządzeń.
 // ═══════════════════════════════════════════════════════════════
 let _serverClockOffset = 0;
 let _clockSyncOk = false;
 
 function nowMs() { return Date.now() + _serverClockOffset; }
+
+// ═══════════════════════════════════════════════════════════════
+// STARTER PULSE — autorytatywny zegar startera dla pozostałych
+// urządzeń. Broadcast (ephemeralnie, bez zapisu w bazie żeby nie
+// kolidować z merge'ami innych sędziów).
+// ═══════════════════════════════════════════════════════════════
+let _pulseChannel = null;
+let _pulseTimer = null;
+let _pulseSentAt = 0; // moment ostatniej wysyłki (Date.now())
+const PULSE_INTERVAL_MS = 10000;
+
+function startStarterPulse() {
+  if (_pulseChannel) return;
+  _pulseChannel = getDB().channel('patrol_pulse_' + STORAGE_KEY);
+  _pulseChannel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      sendStarterPulse();
+      if (_pulseTimer) clearInterval(_pulseTimer);
+      _pulseTimer = setInterval(sendStarterPulse, PULSE_INTERVAL_MS);
+      _updatePulseStatus();
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      // Padło połączenie — zatrzymaj puls i spróbuj ponownie za 3s
+      if (_pulseTimer) { clearInterval(_pulseTimer); _pulseTimer = null; }
+      try { getDB().removeChannel(_pulseChannel); } catch(_){}
+      _pulseChannel = null;
+      _updatePulseStatus();
+      setTimeout(startStarterPulse, 3000);
+    }
+  });
+}
+
+function sendStarterPulse() {
+  if (!_pulseChannel) return;
+  try {
+    _pulseChannel.send({
+      type: 'broadcast',
+      event: 'starter_pulse',
+      payload: { v: 1, starterMs: nowMs() }
+    });
+    _pulseSentAt = Date.now();
+    _updatePulseStatus();
+  } catch (e) { /* ignoruj — następny puls za chwilę */ }
+}
+
+function _updatePulseStatus() {
+  const el = document.getElementById('pulse-status');
+  if (!el) return;
+  const ageMs = _pulseSentAt ? (Date.now() - _pulseSentAt) : Infinity;
+  if (ageMs < PULSE_INTERVAL_MS + 2000) {
+    el.style.color = 'var(--green)';
+    el.style.borderColor = 'rgba(76,175,130,.5)';
+    el.style.background = 'rgba(76,175,130,.08)';
+    el.innerHTML = '📡 puls';
+    el.title = 'Wysyłam autorytatywny sygnał czasu do pozostałych sędziów co ' + (PULSE_INTERVAL_MS/1000) + 's. Twój zegar jest absolutną prawdą — wszyscy mierzą wg niego.';
+  } else {
+    el.style.color = 'var(--text3)';
+    el.style.borderColor = 'var(--border)';
+    el.style.background = 'var(--bg3)';
+    el.innerHTML = '📡 ?';
+    el.title = 'Puls niewysłany. Sprawdź połączenie.';
+  }
+}
 
 async function syncServerClock() {
   try {
@@ -1159,6 +1224,9 @@ async function boot() {
   enterApp();
   startRealtime();
   startPolling();
+  startStarterPulse();
+  // Aktualizuj wskaźnik pulsu co 2s (żeby wykrył gdy puls przestał lecieć)
+  setInterval(_updatePulseStatus, 2000);
 }
 
 boot();

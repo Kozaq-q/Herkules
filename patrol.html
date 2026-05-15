@@ -417,6 +417,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <span id="sync-label">—</span>
       </div>
       <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
+      <div class="hdr-status" id="ptr-starter-clock-pill" style="display:none;cursor:help;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;"></div>
       <!-- Chip globalnego wyboru roli -->
       <div style="position:relative;">
         <button id="role-chip-btn" onclick="toggleRoleDropdown()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
@@ -1011,13 +1012,119 @@ function getSupabase() {
 // (zawsze obecny zgodnie ze standardem HTTP). Dokładność: ±1s (rozdzielczość
 // Date headera). Korekta o połowę round-trip dla lepszej dokładności.
 
-let _serverClockOffset = 0;   // ms — Date.now() + offset = serverNow
+let _serverClockOffset = 0;   // ms — Date.now() + offset = serverNow (fallback)
 let _clockSyncedAt = 0;        // kiedy ostatnio synchronizowaliśmy
 let _clockSyncOk = false;      // czy kiedykolwiek udało się zsynchronizować
 
+// ─── STARTER PULSE — kalibracja wzgledem zegara startera ─────────
+// Starter wysyla broadcast co 10s ze swoim nowMs(). Pozostale urzadzenia
+// licza offset i uzywaja go w nowMs() zamiast _serverClockOffset.
+// To gwarantuje ze wszyscy mierza czas tak samo jak starter.
+let _starterOffset = 0;
+let _starterPulseAt = 0;           // moment ostatniego waznego pulsu (Date.now())
+let _starterPulseHistory = [];      // ostatnie probki dla wygladzania
+const STARTER_FRESH_MS = 30 * 1000;        // < 30s = LIVE (zielony)
+const STARTER_CACHED_MS = 5 * 60 * 1000;   // < 5min = uzywamy cache (zolty)
+const STARTER_HISTORY_MAX = 8;
+
+// Wczytaj cache offsetu (gdy uzytkownik odswiezyl strone)
+(function _loadStarterCache(){
+  try {
+    const raw = localStorage.getItem('patrol_starter_offset_' + SLOT_ID);
+    if (!raw) return;
+    const c = JSON.parse(raw);
+    if (c && Number.isFinite(c.offset) && Number.isFinite(c.at)) {
+      _starterOffset = c.offset;
+      _starterPulseAt = c.at;
+    }
+  } catch(_){}
+})();
+
 function nowMs() {
-  return Date.now() + _serverClockOffset;
+  const now = Date.now();
+  // Jezeli mamy swiezy (lub niedawno wazny) puls od startera — uzyj jego zegara
+  if (_starterPulseAt && (now - _starterPulseAt) < STARTER_CACHED_MS) {
+    return now + _starterOffset;
+  }
+  // Inaczej fallback do zegara serwera
+  return now + _serverClockOffset;
 }
+
+function getStarterClockStatus() {
+  const ageMs = _starterPulseAt ? (Date.now() - _starterPulseAt) : Infinity;
+  if (ageMs < STARTER_FRESH_MS)  return { state: 'live',     ageMs };
+  if (ageMs < STARTER_CACHED_MS) return { state: 'cached',   ageMs };
+  return { state: 'fallback', ageMs };
+}
+
+function _handleStarterPulse(payload) {
+  if (!payload || !Number.isFinite(payload.starterMs)) return;
+  const now = Date.now();
+  const sample = payload.starterMs - now;
+  _starterPulseHistory.push({ offset: sample, at: now });
+  if (_starterPulseHistory.length > STARTER_HISTORY_MAX) _starterPulseHistory.shift();
+  // Bierzemy MAX z ostatnich — najnizszy zalany sieci (najmniejsze opoznienie wiadomosci)
+  let maxOffset = -Infinity;
+  _starterPulseHistory.forEach(x => { if (x.offset > maxOffset) maxOffset = x.offset; });
+  _starterOffset = maxOffset;
+  _starterPulseAt = now;
+  // Cache do localStorage (gdy odswiezy strone)
+  try {
+    localStorage.setItem('patrol_starter_offset_' + SLOT_ID,
+      JSON.stringify({ offset: _starterOffset, at: _starterPulseAt }));
+  } catch(_){}
+  _updateStarterClockPill();
+}
+
+let _starterPulseChannel = null;
+function startStarterPulseListener() {
+  if (_starterPulseChannel) return;
+  const db = getSupabase();
+  _starterPulseChannel = db.channel('patrol_pulse_' + STORAGE_KEY)
+    .on('broadcast', { event: 'starter_pulse' }, (msg) => {
+      _handleStarterPulse(msg.payload);
+    })
+    .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        try { getSupabase().removeChannel(_starterPulseChannel); } catch(_){}
+        _starterPulseChannel = null;
+        setTimeout(startStarterPulseListener, 3000);
+      }
+    });
+}
+
+function _updateStarterClockPill() {
+  const pill = document.getElementById('ptr-starter-clock-pill');
+  if (!pill) return;
+  const { state, ageMs } = getStarterClockStatus();
+  if (state === 'live') {
+    pill.style.display = 'inline-flex';
+    pill.style.color = 'var(--green)';
+    pill.style.borderColor = 'rgba(76,175,130,.5)';
+    pill.style.background = 'rgba(76,175,130,.08)';
+    pill.innerHTML = '🟢 starter LIVE';
+    pill.title = 'Sedzia startu online, wysyla autorytatywny sygnal czasu. Wszyscy mierza czas tak samo.';
+  } else if (state === 'cached') {
+    pill.style.display = 'inline-flex';
+    pill.style.color = 'var(--orange)';
+    pill.style.borderColor = 'rgba(232,148,77,.5)';
+    pill.style.background = 'rgba(232,148,77,.08)';
+    const sec = Math.round(ageMs / 1000);
+    const label = sec < 90 ? (sec + 's') : (Math.round(sec/60) + ' min');
+    pill.innerHTML = '🟡 starter ' + label + ' temu';
+    pill.title = 'Sedzia startu offline od ' + sec + 's — uzywam zapamietanej kalibracji. Wciaz dokladne dla aktualnych biegow.';
+  } else {
+    pill.style.display = 'inline-flex';
+    pill.style.color = 'var(--text3)';
+    pill.style.borderColor = 'var(--border)';
+    pill.style.background = 'var(--bg3)';
+    pill.innerHTML = '🔴 brak kalibracji';
+    pill.title = 'Brak sygnalu od sedziego startu — fallback do zegara serwera. Drift miedzy urzadzeniami mozliwy (do ~kilkuset ms).';
+  }
+}
+
+// Aktualizuj pill co 5s (zeby przeszedl z LIVE w CACHED gdy puls przestaje przychodzic)
+setInterval(_updateStarterClockPill, 5000);
 
 async function syncServerClock() {
   try {
@@ -4286,6 +4393,8 @@ async function boot() {
   startRealtimeSync();
   startPolling();
   startClockSyncLoop();
+  startStarterPulseListener();
+  _updateStarterClockPill();
   showSyncStatus('ok');
 }
 
