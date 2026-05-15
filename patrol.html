@@ -108,6 +108,25 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .stat-val { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--text1); }
 .stat-lbl { font-size: 10px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
 
+/* STAT BOXES (jak w OSF) */
+.ptr-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; }
+.stat-num { font-family: var(--font-h); font-size: 38px; font-weight: 800; line-height: 1; color: var(--text1); }
+.stat-label { font-family: var(--font-h); font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
+@media (max-width: 700px) {
+  .ptr-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-num { font-size: 28px; }
+}
+
+/* PK / M36+ / WARN BADGES */
+.pk-badge { display: inline-block; font-family: var(--font-h); font-size: 9px; font-weight: 800; padding: 1px 5px; background: rgba(200,50,50,.15); color: #c83232; border: 1px solid rgba(200,50,50,.4); border-radius: 2px; letter-spacing: 1px; }
+.gender-M { color: var(--male); font-weight: 700; }
+.gender-K { color: var(--female); font-weight: 700; }
+.team-sep-row td { background: var(--bg3) !important; padding: 4px 10px !important; }
+.team-sep-row td:hover { background: var(--bg3) !important; }
+.gender-sep-row td { background: var(--bg2) !important; padding: 8px 10px !important; }
+.warn-badge { display: inline-block; font-size: 14px; cursor: help; }
+
 /* ATHLETE TABLE */
 .ath-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .ath-table th { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 8px 10px; border-bottom: 2px solid var(--border); text-align: left; }
@@ -311,21 +330,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
               </div>
               <div class="form-group">
                 <label>Nazwa zawodów</label>
-                <input type="text" id="ptr-name" placeholder="np. Bieg patrolowy 18. DZ" oninput="saveSetup();_updateInfoCollapsedLine();" />
+                <input type="text" id="ptr-name" placeholder="np. Bieg patrolowy 18. DZ" oninput="saveSetup()" />
               </div>
               <div class="grid-2">
                 <div class="form-group">
                   <label>Miasto</label>
-                  <input type="text" id="ptr-city" placeholder="np. Warszawa" oninput="saveSetup();_updateInfoCollapsedLine();" />
+                  <input type="text" id="ptr-city" placeholder="np. Warszawa" oninput="saveSetup()" />
                 </div>
                 <div class="form-group">
                   <label>Data</label>
-                  <input type="date" id="ptr-date" oninput="saveSetup();_updateInfoCollapsedLine();" />
+                  <input type="date" id="ptr-date" oninput="saveSetup()" />
                 </div>
               </div>
-              <div class="form-group" style="margin-bottom:0;">
+              <div class="form-group">
                 <label>Organizator</label>
-                <input type="text" id="ptr-org" placeholder="np. 18. DZ" oninput="saveSetup();_updateInfoCollapsedLine();" />
+                <input type="text" id="ptr-org" placeholder="np. 18. DZ" oninput="saveSetup()" />
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+                <button class="btn btn-primary" onclick="confirmInfoCard()" style="font-size:11px;padding:6px 14px;">✓ Zatwierdź i zwiń</button>
               </div>
             </div>
           </div>
@@ -395,28 +417,50 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
     <!-- ZAWODNICY -->
     <div class="page" id="page-athletes">
-      <div class="card mb-12">
+      <!-- 4 STAT-BOXY -->
+      <div class="ptr-stat-grid mb-12">
+        <div class="stat-box"><div class="stat-num" id="ptr-stat-total">0</div><div class="stat-label">Zawodnicy</div></div>
+        <div class="stat-box"><div class="stat-num" id="ptr-stat-m" style="color:var(--male);">0</div><div class="stat-label">Mężczyźni</div></div>
+        <div class="stat-box"><div class="stat-num" id="ptr-stat-k" style="color:var(--female);">0</div><div class="stat-label">Kobiety</div></div>
+        <div class="stat-box" id="ptr-stat-warn-box" style="transition:border-color .3s;"><div class="stat-num" id="ptr-stat-warnings" style="color:var(--orange);">0</div><div class="stat-label">Alarmy</div></div>
+      </div>
+
+      <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div style="display:flex;gap:18px;align-items:baseline;">
-            <div><span class="stat-val" id="ptr-stat-total">0</span> <span class="stat-lbl">razem</span></div>
-            <div><span class="stat-val" id="ptr-stat-m" style="color:var(--male);">0</span> <span class="stat-lbl">M</span></div>
-            <div><span class="stat-val" id="ptr-stat-k" style="color:var(--female);">0</span> <span class="stat-lbl">K</span></div>
-            <div><span class="stat-val" id="ptr-stat-teams">0</span> <span class="stat-lbl">drużyn</span></div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <input type="text" id="ptr-search" placeholder="🔍 szukaj..." oninput="renderAthletes()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 10px;font-size:13px;width:180px;" />
-            <button class="btn" onclick="openModal('modal-add')">+ Dodaj zawodnika</button>
+          <div class="card-title" style="margin:0;padding:0;border:none;">Lista zawodników</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" id="ptr-search" placeholder="🔍 Szukaj..." oninput="renderAthletes()"
+              style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 10px;font-family:var(--font-b);font-size:12px;width:160px;" />
+            <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;">
+              <button id="ptr-fg-all" onclick="setPtrGenderFilter('all')" style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;border-right:1px solid var(--border2);background:var(--orange);color:#111;cursor:pointer;">Wszyscy</button>
+              <button id="ptr-fg-M"   onclick="setPtrGenderFilter('M')"   style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;border-right:1px solid var(--border2);background:var(--bg3);color:var(--male);cursor:pointer;">♂ M</button>
+              <button id="ptr-fg-K"   onclick="setPtrGenderFilter('K')"   style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1px;padding:4px 10px;border:none;background:var(--bg3);color:var(--female);cursor:pointer;">♀ K</button>
+            </div>
+            <input type="hidden" id="ptr-filter-gender" value="all" />
+            <button class="btn" onclick="document.getElementById('ptr-import-file').click()" style="font-size:11px;padding:5px 10px;">↑ Import CSV</button>
+            <button class="btn" onclick="removePatrolDuplicates()" style="color:var(--text3);border-color:var(--border2);font-size:11px;padding:5px 10px;" title="Usuń duplikaty z listy">⊘ Duplikaty</button>
+            <button class="btn btn-primary" onclick="openModal('modal-add')" style="font-size:11px;padding:5px 10px;">+ Dodaj</button>
           </div>
         </div>
         <div style="overflow-x:auto;">
           <table class="ath-table" id="ptr-athletes-table">
             <thead>
               <tr>
-                <th>Bib</th><th>Stopień</th><th>Imię i nazwisko</th><th>Płeć</th><th>Drużyna</th><th></th>
+                <th>#</th>
+                <th>⚠</th>
+                <th>Płeć</th>
+                <th>Stopień</th>
+                <th>Imię i nazwisko</th>
+                <th>Drużyna</th>
+                <th>Nr startowy</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="ptr-athletes-tbody"></tbody>
           </table>
+        </div>
+        <div id="ptr-athletes-empty" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);margin-top:14px;">
+          Brak zawodników. Dodaj ręcznie lub zaimportuj z CSV.
         </div>
       </div>
     </div>
@@ -995,7 +1039,7 @@ function renderSetupPage() {
   });
   const dot = document.getElementById('ptr-accent-current');
   if (dot) dot.style.background = color;
-  _updateInfoCollapsedLine();
+  _renderInfoCardView();
   updatePairingSummary();
 }
 
@@ -1025,24 +1069,36 @@ document.addEventListener('click', function(e) {
   if (!pop.contains(e.target) && !btn.contains(e.target)) pop.style.display = 'none';
 });
 
-// Info card collapse
+// Info card — toggle ręczny (user klika Zatwierdź żeby zwinąć, ✏ edytuj żeby rozwinąć)
+// Stan utrzymywany w state.cfg._infoCollapsed (sync między urządzeniami)
 function expandInfoCard() {
+  if (!state.cfg) state.cfg = {};
+  state.cfg._infoCollapsed = false;
   document.getElementById('ptr-info-expanded').style.display = '';
   document.getElementById('ptr-info-collapsed').style.display = 'none';
+  save();
 }
-function collapseInfoCard() {
-  _updateInfoCollapsedLine(true);
-}
-function _updateInfoCollapsedLine(forceCollapse) {
+function confirmInfoCard() {
+  // Sprawdź czy są podstawowe dane
   const cityV = (document.getElementById('ptr-city')?.value || '').trim();
-  const dateV = (document.getElementById('ptr-date')?.value || '').trim();
-  const nameV = (document.getElementById('ptr-name')?.value || '').trim();
-  const orgV  = (document.getElementById('ptr-org')?.value  || '').trim();
+  if (!cityV) { alert('Wpisz przynajmniej miasto.'); return; }
+  if (!state.cfg) state.cfg = {};
+  state.cfg._infoCollapsed = true;
+  _renderInfoCardView();
+  save();
+  showToast('✓ Zatwierdzono', 'success', 1500);
+}
+function collapseInfoCard() { confirmInfoCard(); } // alias
+function _renderInfoCardView() {
   const collEl = document.getElementById('ptr-info-collapsed');
   const expEl  = document.getElementById('ptr-info-expanded');
   if (!collEl || !expEl) return;
-  const complete = cityV && dateV;
-  if (complete || forceCollapse) {
+  const collapsed = !!(state.cfg && state.cfg._infoCollapsed);
+  if (collapsed) {
+    const cityV = (document.getElementById('ptr-city')?.value || '').trim();
+    const dateV = (document.getElementById('ptr-date')?.value || '').trim();
+    const nameV = (document.getElementById('ptr-name')?.value || '').trim();
+    const orgV  = (document.getElementById('ptr-org')?.value  || '').trim();
     const main = nameV || cityV || '—';
     const parts = [];
     if (nameV && cityV) parts.push(cityV);
@@ -1226,45 +1282,169 @@ function removeAthlete(id) {
 function updateAthleteStats() {
   const m = state.athletes.filter(a => a.gender === 'M').length;
   const k = state.athletes.filter(a => a.gender === 'K').length;
-  const teams = new Set(state.athletes.map(a => a.team).filter(Boolean)).size;
+  const warnCount = state.athletes.filter(a => getPtrAthleteWarnings(a).length > 0).length;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   set('ptr-stat-total', state.athletes.length);
   set('ptr-stat-m', m);
   set('ptr-stat-k', k);
-  set('ptr-stat-teams', teams);
+  set('ptr-stat-warnings', warnCount);
+  // Alarm box: czerwona ramka gdy > 0
+  const box = document.getElementById('ptr-stat-warn-box');
+  if (box) {
+    if (warnCount > 0) {
+      box.style.borderColor = 'var(--red)';
+      box.style.background = 'rgba(224,85,85,.08)';
+      document.getElementById('ptr-stat-warnings').style.color = 'var(--red)';
+    } else {
+      box.style.borderColor = 'var(--border)';
+      box.style.background = '';
+      document.getElementById('ptr-stat-warnings').style.color = 'var(--orange)';
+    }
+  }
+}
+
+// Walidacja zawodnika — zwraca tablicę ostrzeżeń
+function getPtrAthleteWarnings(a) {
+  const w = [];
+  if (!a.name || a.name.trim().length < 3) w.push({ code: 'name', msg: 'Brak imienia/nazwiska' });
+  if (!a.team) w.push({ code: 'team', msg: 'Brak drużyny' });
+  if (!a.bib) w.push({ code: 'bib', msg: 'Brak numeru startowego' });
+  // Duplikat nazwiska w obrębie tej samej drużyny+płci
+  const dupes = state.athletes.filter(x =>
+    x.id !== a.id &&
+    (x.name||'').toLowerCase().trim() === (a.name||'').toLowerCase().trim() &&
+    (x.team||'') === (a.team||'') &&
+    x.gender === a.gender
+  );
+  if (dupes.length) w.push({ code: 'dup', msg: 'Duplikat nazwiska w drużynie' });
+  return w;
+}
+
+function ptrWarningBadge(warnings) {
+  if (!warnings.length) return '<td></td>';
+  const tooltip = warnings.map(w => '• ' + w.msg).join('\n');
+  return '<td><span class="warn-badge" title="' + esc(tooltip) + '">⚠️</span></td>';
+}
+
+function parsePtrBibForSort(bib) {
+  // X/Y → X*1000 + Y dla stabilnego sortowania
+  const s = String(bib || '');
+  if (s.includes('/')) {
+    const [x, y] = s.split('/').map(p => parseInt(p) || 0);
+    return x * 1000 + y;
+  }
+  return parseInt(s) || 9999;
+}
+
+function setPtrGenderFilter(v) {
+  document.getElementById('ptr-filter-gender').value = v;
+  ['all','M','K'].forEach(g => {
+    const btn = document.getElementById('ptr-fg-' + g);
+    if (!btn) return;
+    const isActive = g === v;
+    btn.style.background = isActive ? 'var(--orange)' : 'var(--bg3)';
+    btn.style.color = isActive ? '#111' : (g === 'M' ? 'var(--male)' : g === 'K' ? 'var(--female)' : 'var(--text2)');
+  });
+  renderAthletes();
+}
+
+function togglePtrPK(id) {
+  const a = state.athletes.find(x => x.id === id);
+  if (!a) return;
+  a.pk = !a.pk;
+  save();
+  renderAthletes();
+  updateAthleteStats();
+}
+
+function removePatrolDuplicates() {
+  const seen = new Map(); // key → first id
+  const dupIds = new Set();
+  state.athletes.forEach(a => {
+    const key = (a.name + '|' + a.team + '|' + a.gender).toLowerCase();
+    if (seen.has(key)) dupIds.add(a.id);
+    else seen.set(key, a.id);
+  });
+  if (!dupIds.size) { showToast('Brak duplikatów — lista jest czysta', 'success'); return; }
+  if (!confirm('Znaleziono ' + dupIds.size + ' duplikat(ów). Usunąć (pierwsza kopia zostaje)?')) return;
+  state.athletes = state.athletes.filter(a => !dupIds.has(a.id));
+  // Wyczyść też ich czasy/disq
+  dupIds.forEach(id => { delete state.times[id]; delete state.disq[id]; });
+  save();
+  renderAthletes();
+  updateAthleteStats();
+  showToast('✓ Usunięto ' + dupIds.size + ' duplikat(ów)', 'success');
 }
 
 function renderAthletes() {
-  const q = (document.getElementById('ptr-search')?.value || '').toLowerCase().trim();
   const tbody = document.getElementById('ptr-athletes-tbody');
+  const empty = document.getElementById('ptr-athletes-empty');
   if (!tbody) return;
-  let list = [...state.athletes];
-  if (q) list = list.filter(a =>
+  const q = (document.getElementById('ptr-search')?.value || '').toLowerCase().trim();
+  const filterGender = document.getElementById('ptr-filter-gender')?.value || 'all';
+
+  // Sortuj: najpierw M (po bib), potem K (po bib)
+  const males   = state.athletes.filter(a => a.gender === 'M').sort((a,b) => parsePtrBibForSort(a.bib) - parsePtrBibForSort(b.bib));
+  const females = state.athletes.filter(a => a.gender === 'K').sort((a,b) => parsePtrBibForSort(a.bib) - parsePtrBibForSort(b.bib));
+  let all = [...males, ...females];
+  if (filterGender === 'M') all = males;
+  else if (filterGender === 'K') all = females;
+
+  // Filtr wyszukiwania
+  if (q) all = all.filter(a =>
     (a.name||'').toLowerCase().includes(q) ||
     (a.team||'').toLowerCase().includes(q) ||
     (a.rank||'').toLowerCase().includes(q) ||
-    String(a.bib||'').includes(q)
+    String(a.bib||'').toLowerCase().includes(q)
   );
-  list.sort((a, b) => (a.team||'').localeCompare(b.team||'', 'pl') || (a.name||'').localeCompare(b.name||'', 'pl'));
 
-  if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:30px;">' +
-      (state.athletes.length ? 'Brak wyników wyszukiwania' : 'Brak zawodników. Dodaj ręcznie lub zaimportuj listę.') + '</td></tr>';
+  if (!all.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    empty.textContent = state.athletes.length ? 'Brak wyników wyszukiwania.' : 'Brak zawodników. Dodaj ręcznie lub zaimportuj z CSV.';
     return;
   }
-  tbody.innerHTML = list.map(a =>
-    '<tr>' +
-      '<td class="bib-cell" onclick="openEditModal(' + a.id + ')">' + esc(a.bib||'—') + '</td>' +
-      '<td style="color:var(--text3);font-size:11px;">' + esc(a.rank||'') + '</td>' +
-      '<td>' + esc(a.name) + (a._manualBib ? ' <span style="font-size:9px;background:rgba(232,148,77,.15);color:var(--orange);padding:1px 5px;border-radius:2px;letter-spacing:1px;">RĘCZNY BIB</span>' : '') + '</td>' +
-      '<td class="gender-' + a.gender + '">' + a.gender + '</td>' +
-      '<td>' + esc(a.team) + '</td>' +
-      '<td class="ath-actions">' +
-        '<button class="btn btn-xs" onclick="openEditModal(' + a.id + ')">✏</button>' +
-        '<button class="btn btn-xs btn-danger" onclick="removeAthlete(' + a.id + ')">✕</button>' +
-      '</td>' +
-    '</tr>'
-  ).join('');
+  empty.style.display = 'none';
+
+  let html = '';
+  let lastGender = null;
+  let lastTeam = null;
+  all.forEach((a, i) => {
+    // Separator płci (gdy 'all')
+    if (filterGender === 'all' && a.gender !== lastGender) {
+      lastGender = a.gender;
+      lastTeam = null;
+      const label = a.gender === 'M' ? 'Mężczyźni' : 'Kobiety';
+      const col = a.gender === 'M' ? 'var(--male)' : 'var(--female)';
+      html += '<tr class="gender-sep-row"><td colspan="8" style="font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:' + col + ';font-weight:700;">' + label + '</td></tr>';
+    }
+    // Separator drużyny
+    const teamNum = a.bib ? String(a.bib).split('/')[0] : '';
+    if (a.team !== lastTeam) {
+      lastTeam = a.team;
+      html += '<tr class="team-sep-row"><td colspan="8" style="border-top:1px solid var(--border);">' +
+        '<span style="font-family:var(--font-b);font-size:11px;color:var(--text2);">' + esc(a.team || '—') + '</span>' +
+        (teamNum ? ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">(' + teamNum + ')</span>' : '') +
+        '</td></tr>';
+    }
+    const warnings = getPtrAthleteWarnings(a);
+    const hasWarn = warnings.length > 0;
+    html += '<tr style="' + (hasWarn ? 'background:rgba(232,148,77,.04);' : '') + (a.pk ? 'opacity:.7;' : '') + '">';
+    html += '<td class="mono" style="font-size:12px;color:var(--text3);">' + (i+1) + '</td>';
+    html += ptrWarningBadge(warnings);
+    html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
+    html += '<td style="font-size:11px;color:var(--text3);">' + esc(a.rank || '') + '</td>';
+    html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a._manualBib ? ' <span style="font-size:9px;background:rgba(232,148,77,.15);color:var(--orange);padding:1px 5px;border-radius:2px;letter-spacing:1px;">RĘCZNY</span>' : '') + '</td>';
+    html += '<td style="color:var(--text2);font-size:12px;">' + esc(a.team) + '</td>';
+    html += '<td class="bib-cell" onclick="openEditModal(' + a.id + ')" title="Kliknij aby edytować">' + esc(a.bib||'—') + '</td>';
+    html += '<td><div style="display:flex;gap:4px;justify-content:flex-end;">';
+    html += '<button class="btn btn-xs" onclick="togglePtrPK(' + a.id + ')" title="' + (a.pk ? 'Usuń PK' : 'Oznacz jako Poza Konkurencją') + '" style="' + (a.pk ? 'color:#c83232;border-color:rgba(200,50,50,.4);opacity:1;' : 'opacity:.5;') + '">' + (a.pk ? 'PK ✓' : 'PK') + '</button>';
+    html += '<button class="btn btn-xs" onclick="openEditModal(' + a.id + ')" title="Edytuj">✎</button>';
+    html += '<button class="btn btn-xs btn-danger" onclick="removeAthlete(' + a.id + ')" title="Usuń">✕</button>';
+    html += '</div></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════════
