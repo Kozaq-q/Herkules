@@ -139,6 +139,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <span class="header-sub" id="contest-sub">—</span>
     </div>
     <div class="header-right">
+      <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(232,148,77,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram</button>
       <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
       <div class="hdr-status" id="clock-status" style="display:none;cursor:help;"></div>
@@ -147,6 +148,31 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 
   <div class="main">
     <div id="pairs-list"></div>
+  </div>
+</div>
+
+<!-- MODAL: HARMONOGRAM -->
+<div id="schedule-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:2px solid var(--orange);border-radius:10px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <div style="font-family:var(--font-h);font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);">⏰ Harmonogram startów</div>
+      <button onclick="closeScheduleModal()" style="background:none;border:none;color:var(--text3);font-size:24px;cursor:pointer;line-height:1;padding:0 6px;">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+      Ustaw czas startu pierwszej pary i interwał między parami. Każda para otrzyma swój czas, można potem zmienić godzinę pojedynczej pary klikając na nią w głównym widoku.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="display:block;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Pierwsza para startuje o (HH:MM:SS)</label>
+        <input type="time" step="1" id="sched-first" value="10:00:00" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:12px 14px;font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
+      </div>
+      <div>
+        <label style="display:block;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Interwał między parami (sekundy)</label>
+        <input type="number" min="10" max="3600" step="5" id="sched-interval" value="60" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:12px 14px;font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
+      </div>
+      <button onclick="confirmGenerateSchedule()" style="width:100%;padding:16px;background:var(--orange);color:#111;border:none;border-radius:var(--radius);font-family:var(--font-h);font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">⚙ Wygeneruj harmonogram</button>
+      <button onclick="confirmClearSchedule()" style="width:100%;padding:12px;background:transparent;color:var(--red);border:1px solid rgba(224,85,85,.5);border-radius:var(--radius);font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;">✕ Wyczyść cały harmonogram</button>
+    </div>
   </div>
 </div>
 
@@ -471,7 +497,20 @@ function renderPairCard(p) {
   } else {
     actionHtml = '<button class="btn-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
   }
-  const startTimeInfo = started ? '<div class="start-time-info">Start: ' + formatClockTime(run.startedAt) + '</div>' : '';
+  // Info o czasie startu / harmonogramie
+  let startTimeInfo = '';
+  if (started) {
+    startTimeInfo = '<div class="start-time-info">Start: ' + formatClockTime(run.startedAt) + '</div>';
+  } else if (run && run.scheduledStartAt) {
+    startTimeInfo = '<div class="start-time-info" data-scheduled="' + gender + '_' + pairNum + '" style="color:var(--orange);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">' +
+      '<span>⏰ Auto-start: <strong>' + formatClockTime(run.scheduledStartAt) + '</strong> <span class="countdown-text" style="margin-left:6px;font-family:var(--font-m);"></span></span>' +
+      '<button onclick="editPairStartTime(\'' + gender + '\',' + pairNum + ')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-size:11px;padding:4px 10px;cursor:pointer;">✏ zmień</button>' +
+    '</div>';
+  } else {
+    startTimeInfo = '<div class="start-time-info" style="text-align:center;">' +
+      '<button onclick="editPairStartTime(\'' + gender + '\',' + pairNum + ')" style="background:transparent;border:1px dashed var(--border2);border-radius:var(--radius);color:var(--text3);font-size:11px;padding:6px 12px;cursor:pointer;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;">⏰ Ustaw godzinę startu</button>' +
+    '</div>';
+  }
 
   // Header
   const head = '<div class="pair-head">' +
@@ -544,14 +583,54 @@ function resetPair(gender, pairNum) {
 }
 
 // Ticker — co 100ms aktualizuje lecące liczniki
+// Auto-start: sprawdzaj czy nadszedł czas startu zaplanowanych par
+function checkScheduledStartsStart() {
+  if (!state || !state.runs) return;
+  let changed = false;
+  for (const k in state.runs) {
+    const run = state.runs[k];
+    if (run.scheduledStartAt && !run.startedAt && nowMs() >= run.scheduledStartAt) {
+      run.startedAt = run.scheduledStartAt;
+      run.finishedAt = {};
+      delete run.scheduledStartAt;
+      changed = true;
+    }
+  }
+  if (changed) {
+    saveState();
+    renderPairs();
+    showToast('▶ Auto-start: para wystartowała', 'success', 2000);
+  }
+}
+
 setInterval(() => {
+  checkScheduledStartsStart();
+  // Update lecącego licznika
   document.querySelectorAll('.timer-display[data-running="1"]').forEach(el => {
     const [gender, pairNum] = el.dataset.pair.split('_');
     const run = getRun(gender, parseInt(pairNum));
     if (!run || !run.startedAt) return;
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
+  // Update odliczania do auto-startu w info-bar pod każdą parą (rerender info gdy potrzeba)
+  // (tutaj nie rerenderujemy całych kart — tylko texty .start-time-info)
 }, 100);
+
+// Co 500ms: aktualizuj odliczanie do auto-startu (tylko tekst, bez rerendera całych kart)
+setInterval(() => {
+  if (!state || !state.runs) return;
+  document.querySelectorAll('[data-scheduled]').forEach(el => {
+    const [gender, pairNum] = el.dataset.scheduled.split('_');
+    const run = getRun(gender, parseInt(pairNum));
+    if (!run || !run.scheduledStartAt || run.startedAt) return;
+    const sec = Math.round((run.scheduledStartAt - nowMs()) / 1000);
+    const cdEl = el.querySelector('.countdown-text');
+    if (!cdEl) return;
+    if (sec > 60) cdEl.textContent = '(za ' + Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0') + ')';
+    else if (sec > 0) { cdEl.textContent = '(za ' + sec + 's)'; cdEl.style.color = sec <= 5 ? 'var(--red)' : 'var(--orange)'; }
+    else cdEl.textContent = '(już!)';
+  });
+}, 500);
 
 // ═══════════════════════════════════════════════════════════════
 // TOAST
@@ -571,6 +650,105 @@ function showToast(msg, type, duration) {
 // ═══════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// HARMONOGRAM AUTO-START
+// ═══════════════════════════════════════════════════════════════
+function openScheduleModal() {
+  document.getElementById('schedule-modal').style.display = 'flex';
+}
+function closeScheduleModal() {
+  document.getElementById('schedule-modal').style.display = 'none';
+}
+
+// Generuj harmonogram dla wszystkich par (z confirm — zabezpieczenie przed przypadkiem)
+function confirmGenerateSchedule() {
+  const firstStr = document.getElementById('sched-first').value || '10:00:00';
+  const intervalSec = parseInt(document.getElementById('sched-interval').value || '60');
+  if (!firstStr || !Number.isFinite(intervalSec) || intervalSec < 5) {
+    showToast('Nieprawidłowe parametry', 'error'); return;
+  }
+  const pairCount = (state.pairs || []).length;
+  if (!pairCount) { showToast('Brak par do harmonogramu', 'warning'); return; }
+  if (!confirm('Wygenerować harmonogram dla ' + pairCount + ' par?\nPierwsza o ' + firstStr + ', każda kolejna co ' + intervalSec + 's.\n\nPary już biegnące nie zostaną zmienione.')) return;
+  // Parsuj HH:MM:SS dla dzisiaj
+  const parts = firstStr.split(':');
+  const h = parseInt(parts[0]) || 0;
+  const m = parseInt(parts[1]) || 0;
+  const s = parseInt(parts[2]) || 0;
+  const now = new Date(nowMs());
+  const firstDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s, 0);
+  const firstTs = firstDate.getTime();
+  const pairs = (state.pairs || []).slice().sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
+    return a.pairNum - b.pairNum;
+  });
+  if (!state.runs) state.runs = {};
+  pairs.forEach((p, idx) => {
+    const k = p.gender + '_' + p.pairNum;
+    if (!state.runs[k]) state.runs[k] = {};
+    if (state.runs[k].startedAt) return;
+    state.runs[k].scheduledStartAt = firstTs + idx * intervalSec * 1000;
+  });
+  saveState();
+  closeScheduleModal();
+  renderPairs();
+  showToast('⏰ Wygenerowano harmonogram dla ' + pairs.length + ' par', 'success', 3000);
+}
+
+function confirmClearSchedule() {
+  if (!confirm('Wyczyścić zaplanowane godziny startu wszystkich par?\n(Pary już biegnące nie zostaną dotknięte.)')) return;
+  let cleared = 0;
+  if (state.runs) {
+    for (const k in state.runs) {
+      if (state.runs[k].scheduledStartAt && !state.runs[k].startedAt) {
+        delete state.runs[k].scheduledStartAt;
+        if (!Object.keys(state.runs[k]).length) delete state.runs[k];
+        cleared++;
+      }
+    }
+  }
+  saveState();
+  closeScheduleModal();
+  renderPairs();
+  showToast('✕ Wyczyszczono harmonogram (' + cleared + ' par)', 'info', 2000);
+}
+
+// Edycja czasu pojedynczej pary (z confirm — bo to ważne)
+function editPairStartTime(gender, pairNum) {
+  const k = gender + '_' + pairNum;
+  const run = (state.runs && state.runs[k]) || null;
+  const currentTs = run && run.scheduledStartAt;
+  const currentStr = currentTs ? (() => {
+    const d = new Date(currentTs);
+    const pad = n => (n < 10 ? '0' : '') + n;
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  })() : '10:00:00';
+  const newStr = prompt('Godzina startu pary ' + pairNum + ' (HH:MM:SS):\n(pusty = wyczyść)', currentStr);
+  if (newStr === null) return;
+  if (!newStr.trim()) {
+    if (state.runs && state.runs[k]) {
+      delete state.runs[k].scheduledStartAt;
+      if (!Object.keys(state.runs[k]).length) delete state.runs[k];
+    }
+    saveState();
+    renderPairs();
+    showToast('✕ Anulowano auto-start pary ' + pairNum, 'info', 1500);
+    return;
+  }
+  const m = newStr.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) { showToast('Nieprawidłowy format (HH:MM:SS)', 'error'); return; }
+  const h = parseInt(m[1]), mi = parseInt(m[2]), s = parseInt(m[3] || '0');
+  if (h > 23 || mi > 59 || s > 59) { showToast('Nieprawidłowa godzina', 'error'); return; }
+  const now = new Date(nowMs());
+  const newDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s, 0);
+  if (!state.runs) state.runs = {};
+  if (!state.runs[k]) state.runs[k] = {};
+  state.runs[k].scheduledStartAt = newDate.getTime();
+  saveState();
+  renderPairs();
+  showToast('⏰ Para ' + pairNum + ' o ' + newStr, 'success', 1500);
+}
+
 async function boot() {
   if (!SLOT_ID) {
     showSplashError('Brak ID zawodów', 'Otwórz link z panelu MSS (powinien zawierać ?slot=...)');
