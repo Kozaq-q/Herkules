@@ -1148,155 +1148,201 @@ tr:last-child > td { border-bottom: none; }
 
 <!-- ═══ TAB: KONFIGURACJA ═══ -->
 <div class="page" id="page-setup">
+
+  <!-- 📌 NOTATKI SĘDZIOWSKIE — na samej górze, wyróżnione pomarańczowym akcentem -->
+  <div class="card mb-12" style="border-left:4px solid var(--orange);background:linear-gradient(to right, rgba(232,148,77,.04), var(--bg2) 30%);">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:18px;">📌</span>
+      <div class="card-title" style="margin:0;color:var(--orange);">Notatki sędziowskie</div>
+      <span style="font-size:11px;color:var(--text3);">— widoczne dla całego zespołu</span>
+    </div>
+    <textarea id="osf-setup-notes" rows="3" placeholder="np. Tor mokry · czas od komendy START · 1 zawodnik bez nr startowego · stoper Anna..."
+      oninput="saveSetup();_updateNotesPreview();"
+      style="resize:vertical;font-size:14px;line-height:1.5;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px 12px;font-family:var(--font-b);min-height:64px;"></textarea>
+  </div>
+
   <div class="grid-2" style="gap:16px;">
 
     <!-- LEWA KOLUMNA -->
     <div>
 
-      <!-- Informacje ogólne + kolor akcentu -->
-      <div class="card mb-12">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <div class="card-title" style="margin:0;">📋 Informacje o zawodach</div>
-          <!-- Kolory akcentu inline -->
-          <div style="display:flex;gap:6px;align-items:center;" id="osf-accent-picker">
-            <button class="osf-swatch" data-color="#e8944d" style="background:#e8944d;" title="Pomarańczowy"></button>
-            <button class="osf-swatch" data-color="#e8d44d" style="background:#e8d44d;" title="Złoty"></button>
-            <button class="osf-swatch" data-color="#4caf82" style="background:#4caf82;" title="Zielony"></button>
-            <button class="osf-swatch" data-color="#5b9bd5" style="background:#5b9bd5;" title="Niebieski"></button>
-            <button class="osf-swatch" data-color="#e05555" style="background:#e05555;" title="Czerwony"></button>
-            <button class="osf-swatch" data-color="#c084fc" style="background:#c084fc;" title="Fioletowy"></button>
+      <!-- 📋 Informacje o zawodach — auto-collapse po wypełnieniu -->
+      <div class="card mb-12" id="osf-info-card">
+        <!-- WIDOK ZWINIĘTY (pokazywany gdy miasto+data są wypełnione) -->
+        <div id="osf-info-collapsed" style="display:none;cursor:pointer;" onclick="expandInfoCard()">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+              <span style="font-size:16px;">📋</span>
+              <div style="min-width:0;flex:1;">
+                <div id="osf-info-collapsed-line" style="font-size:14px;font-weight:700;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+                <div id="osf-info-collapsed-sub" style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+              </div>
+            </div>
+            <span style="color:var(--text3);font-size:11px;letter-spacing:1px;text-transform:uppercase;flex-shrink:0;">✏ edytuj</span>
           </div>
         </div>
-        <div class="form-group">
-          <label>Nazwa zawodów</label>
-          <input type="text" id="osf-setup-name" placeholder="np. OSF 18. Dywizji Zmechanizowanej" oninput="saveSetup()" />
-        </div>
-        <div class="grid-2">
+
+        <!-- WIDOK ROZWINIĘTY (formularz) -->
+        <div id="osf-info-expanded">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:relative;">
+            <div class="card-title" style="margin:0;">📋 Informacje o zawodach</div>
+            <div style="display:flex;gap:6px;align-items:center;position:relative;">
+              <!-- Popover kolor akcentu -->
+              <button onclick="toggleAccentPalette()" id="osf-accent-toggle" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);width:30px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;" title="Kolor akcentu">
+                <span id="osf-accent-current" style="width:14px;height:14px;border-radius:50%;background:var(--orange);display:inline-block;"></span>
+              </button>
+              <div id="osf-accent-popover" style="display:none;position:absolute;top:32px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4);">
+                <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Kolor</div>
+                <div style="display:flex;gap:6px;" id="osf-accent-picker">
+                  <button class="osf-swatch" data-color="#e8944d" style="background:#e8944d;" title="Pomarańczowy"></button>
+                  <button class="osf-swatch" data-color="#e8d44d" style="background:#e8d44d;" title="Złoty"></button>
+                  <button class="osf-swatch" data-color="#4caf82" style="background:#4caf82;" title="Zielony"></button>
+                  <button class="osf-swatch" data-color="#5b9bd5" style="background:#5b9bd5;" title="Niebieski"></button>
+                  <button class="osf-swatch" data-color="#e05555" style="background:#e05555;" title="Czerwony"></button>
+                  <button class="osf-swatch" data-color="#c084fc" style="background:#c084fc;" title="Fioletowy"></button>
+                </div>
+              </div>
+              <button class="btn btn-sm" onclick="collapseInfoCard()" id="osf-info-collapse-btn" style="font-size:10px;padding:4px 8px;color:var(--text3);">▲ zwiń</button>
+            </div>
+          </div>
           <div class="form-group">
-            <label>Miasto</label>
-            <input type="text" id="osf-setup-city" placeholder="np. Warszawa" oninput="saveSetup()" />
+            <label>Nazwa zawodów</label>
+            <input type="text" id="osf-setup-name" placeholder="np. OSF 18. Dywizji Zmechanizowanej" oninput="saveSetup();_updateInfoCollapsedLine();" />
           </div>
-          <div class="form-group">
-            <label>Data</label>
-            <input type="date" id="osf-setup-date" oninput="saveSetup()" />
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Miasto</label>
+              <input type="text" id="osf-setup-city" placeholder="np. Warszawa" oninput="saveSetup();_updateInfoCollapsedLine();" />
+            </div>
+            <div class="form-group">
+              <label>Data</label>
+              <input type="date" id="osf-setup-date" oninput="saveSetup();_updateInfoCollapsedLine();" />
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Organizator</label>
-          <input type="text" id="osf-setup-org" placeholder="np. 18. DZ" oninput="saveSetup()" />
-        </div>
-        <div class="form-group">
-          <label>Notatki dla sędziów</label>
-          <textarea id="osf-setup-notes" rows="2" placeholder="np. Tor mokry, czas od komendy START..." oninput="saveSetup()" style="resize:vertical;font-size:13px;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 10px;font-family:var(--font-b);"></textarea>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>Organizator</label>
+            <input type="text" id="osf-setup-org" placeholder="np. 18. DZ" oninput="saveSetup();_updateInfoCollapsedLine();" />
+          </div>
         </div>
       </div>
 
-      <!-- Bieg drużynowy -->
+      <!-- 🏃 Bieg drużynowy — kompaktowy układ -->
       <div class="card mb-12">
-        <div class="card-title">🏃 Bieg drużynowy</div>
-        <!-- Dwie duże liczby + ikony ? -->
-        <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:16px;">
-          <div style="flex:1;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;text-align:center;position:relative;">
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
-              <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">N zawodników</div>
-              <button onclick="toggleSetupTip('tip-n')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="card-title" style="margin:0;">🏃 Bieg drużynowy</div>
+          <button class="btn btn-sm" onclick="openPairingRulesModal()" style="color:var(--text3);border-color:var(--border2);font-size:10px;padding:4px 9px;">🎲 Reguły parowania S1</button>
+        </div>
+
+        <!-- 3 inputy w jednej linii: N · Min · Maks -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+          <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:10px;text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);">N zawodników</div>
+              <button onclick="toggleSetupTip('tip-n')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:14px;height:14px;font-size:8px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
             </div>
             <input type="number" id="osf-team-count" min="1" max="20" value="8" oninput="saveSetup()"
-              style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--orange);text-align:center;width:80px;background:none;border:none;outline:none;" />
-            <div id="tip-n" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
-              N-ty zawodnik na mecie wyznacza wynik drużyny.<br>
-              Suma N najlepszych z biegu ind. decyduje o kolejności w S1.<br>
-              Drużyna z mniej niż N zawodnikami M → DSQ.
-            </div>
+              style="font-family:var(--font-m);font-size:24px;font-weight:800;color:var(--orange);text-align:center;width:100%;background:none;border:none;outline:none;padding:0;" />
           </div>
-          <div style="flex:1;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;text-align:center;position:relative;">
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
-              <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Min. skład</div>
-              <button onclick="toggleSetupTip('tip-min')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
+          <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:10px;text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);">Min. skład</div>
+              <button onclick="toggleSetupTip('tip-min')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:14px;height:14px;font-size:8px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
             </div>
             <input type="number" id="osf-team-min-start" min="1" max="20" value="8" oninput="saveSetup()"
-              style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--red);text-align:center;width:80px;background:none;border:none;outline:none;" />
-            <div id="tip-min" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
-              Minimalna liczba zawodników M w drużynie, żeby mogła startować w biegu drużynowym.<br>
-              Poniżej tego progu → DSQ, brak pary, brak punktów.
+              style="font-family:var(--font-m);font-size:24px;font-weight:800;color:var(--red);text-align:center;width:100%;background:none;border:none;outline:none;padding:0;" />
+          </div>
+          <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:10px;text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);">Maks. punktujących M</div>
+              <button onclick="toggleSetupTip('tip-max-scoring')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:14px;height:14px;font-size:8px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
             </div>
+            <input type="number" id="osf-max-scoring-m" min="0" max="20" value="0" onchange="saveSetup()" onblur="saveSetup()"
+              style="font-family:var(--font-m);font-size:24px;font-weight:800;color:var(--male);text-align:center;width:100%;background:none;border:none;outline:none;padding:0;" />
           </div>
         </div>
-        <!-- Maks. punktujących M -->
-        <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;text-align:center;position:relative;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;">
-            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Maks. punktujących M</div>
-            <button onclick="toggleSetupTip('tip-max-scoring')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;flex-shrink:0;">?</button>
-          </div>
-          <input type="number" id="osf-max-scoring-m" min="0" max="20" value="0" onchange="saveSetup()" onblur="saveSetup()"
-            style="font-family:var(--font-m);font-size:42px;font-weight:900;color:var(--male);text-align:center;width:80px;background:none;border:none;outline:none;" />
-          <div id="tip-max-scoring" style="display:none;font-size:11px;color:var(--text3);margin-top:8px;line-height:1.6;text-align:left;border-top:1px solid var(--border);padding-top:8px;">
-            Ile najlepszych zawodników M z każdej drużyny liczy się do sumy ind. dla klasyfikacji drużynowej.<br>
-            0 = wszyscy punktują (brak limitu).<br>
-            Zawodnicy powyżej limitu nadal liczą się do klasyfikacji indywidualnej i zabierają miejsca, ale nie dodają punktów swojej drużynie.
-          </div>
+
+        <!-- Tipy do trzech liczb (rozwijane pod) -->
+        <div id="tip-n" style="display:none;font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6;background:var(--bg3);padding:8px 10px;border-radius:var(--radius);border-left:2px solid var(--orange);">
+          <strong style="color:var(--orange);">N zawodników:</strong> N-ty zawodnik na mecie wyznacza wynik drużyny. Suma N najlepszych z biegu ind. decyduje o kolejności w S1. Drużyna z mniej niż N zawodnikami M → DSQ.
         </div>
-        <!-- N drużynowy + K punktują -->
-        <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;margin-bottom:16px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">N w biegu drużynowym</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button id="team-n-teams-btn" onclick="setTeamNMode('teams')"
-              class="btn btn-sm" style="flex:1;font-size:11px;min-width:90px;">Liczba drużyn</button>
-            <button id="team-n-ind-btn" onclick="setTeamNMode('ind')"
-              class="btn btn-sm" style="flex:1;font-size:11px;min-width:90px;">N z ind. M</button>
-            <button id="team-n-manual-btn" onclick="setTeamNMode('manual')"
-              class="btn btn-sm" style="flex:1;font-size:11px;min-width:90px;">Ręcznie</button>
+        <div id="tip-min" style="display:none;font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6;background:var(--bg3);padding:8px 10px;border-radius:var(--radius);border-left:2px solid var(--red);">
+          <strong style="color:var(--red);">Min. skład:</strong> Minimalna liczba zawodników M w drużynie, żeby mogła startować w biegu drużynowym. Poniżej progu → DSQ, brak pary, brak punktów.
+        </div>
+        <div id="tip-max-scoring" style="display:none;font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6;background:var(--bg3);padding:8px 10px;border-radius:var(--radius);border-left:2px solid var(--male);">
+          <strong style="color:var(--male);">Maks. punktujących M:</strong> Ile najlepszych zawodników M z drużyny liczy się do sumy ind. dla klasyfikacji drużynowej. <strong>0</strong> = wszyscy punktują. Pozostali liczą się do klasyfikacji indywidualnej, ale nie dodają punktów drużynie.
+        </div>
+
+        <!-- N w biegu drużynowym — segmented control -->
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">N w biegu drużynowym</div>
+            <span id="team-n-mode-desc" style="font-size:10px;color:var(--text3);"></span>
           </div>
-          <div id="team-n-manual-row" style="display:none;margin-top:10px;align-items:center;gap:8px;">
+          <div style="display:flex;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:2px;">
+            <button id="team-n-teams-btn" onclick="setTeamNMode('teams')" class="seg-btn" style="flex:1;background:none;border:none;color:var(--text3);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px;cursor:pointer;border-radius:3px;text-transform:uppercase;">Drużyny</button>
+            <button id="team-n-ind-btn" onclick="setTeamNMode('ind')" class="seg-btn" style="flex:1;background:none;border:none;color:var(--text3);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px;cursor:pointer;border-radius:3px;text-transform:uppercase;">Z ind. M</button>
+            <button id="team-n-manual-btn" onclick="setTeamNMode('manual')" class="seg-btn" style="flex:1;background:none;border:none;color:var(--text3);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;padding:6px;cursor:pointer;border-radius:3px;text-transform:uppercase;">Ręcznie</button>
+          </div>
+          <div id="team-n-manual-row" style="display:none;margin-top:8px;align-items:center;gap:8px;">
             <span style="font-size:10px;color:var(--text3);">Wartość N:</span>
             <input type="number" id="osf-team-n-manual" min="1" max="200" placeholder="np. 8"
               oninput="saveSetup();updateTeamNModeButtons(state.setup.teamNMode || 'teams')"
-              style="flex:1;max-width:100px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--accent);padding:5px 8px;font-family:var(--font-m);font-size:14px;font-weight:700;text-align:center;" />
+              style="flex:1;max-width:100px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--accent);padding:5px 8px;font-family:var(--font-m);font-size:13px;font-weight:700;text-align:center;" />
           </div>
-          <div style="font-size:10px;color:var(--text3);margin-top:8px;" id="team-n-mode-desc"></div>
-        </div>
-        <div style="background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:14px 12px;margin-bottom:16px;">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="osf-k-scores" onchange="saveSetup();renderResults();renderKlasyfikacja()" style="width:16px;height:16px;accent-color:var(--female);" />
-            <div>
-              <div style="font-size:12px;font-weight:700;color:var(--female);">♀ Kobiety punktują</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px;">Najlepsza K dostaje tyle samo punktów co najlepszy M (N = liczba zawodników M)</div>
-            </div>
-          </label>
         </div>
 
-        <!-- Mnożnik -->
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Mnożnik</div>
-          <button onclick="toggleSetupTip('tip-mult')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:16px;height:16px;font-size:9px;color:var(--text3);cursor:pointer;line-height:1;padding:0;">?</button>
-          <button class="btn btn-sm" onclick="setMultiplier(2)" id="mult-btn-2">× 2</button>
-          <button class="btn btn-sm" onclick="setMultiplier(3)" id="mult-btn-3">× 3</button>
-          <button class="btn btn-sm" onclick="setMultiplier(4)" id="mult-btn-4">× 4</button>
-          <button class="btn btn-sm" onclick="setMultiplier(5)" id="mult-btn-5">× 5</button>
+        <!-- Mnożnik — kompakt, jedna linia -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);">Mnożnik</div>
+            <button onclick="toggleSetupTip('tip-mult')" style="background:none;border:1px solid var(--border2);border-radius:50%;width:14px;height:14px;font-size:8px;color:var(--text3);cursor:pointer;line-height:1;padding:0;">?</button>
+          </div>
+          <select id="osf-team-multiplier-select" onchange="onMultiplierSelectChange(this.value)"
+            style="flex:1;max-width:120px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-b);font-size:13px;">
+            <option value="2">× 2</option>
+            <option value="3" selected>× 3</option>
+            <option value="4">× 4</option>
+            <option value="5">× 5</option>
+            <option value="custom">Inna...</option>
+          </select>
           <input type="number" id="osf-team-multiplier" min="1" max="20" value="3"
             oninput="saveSetup();updateMultiplierButtons()"
-            style="font-family:var(--font-m);font-size:18px;font-weight:800;color:var(--accent);text-align:center;width:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:3px;" />
+            style="display:none;font-family:var(--font-m);font-size:14px;font-weight:800;color:var(--accent);text-align:center;width:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:3px;" />
+          <span id="mult-info" style="font-size:11px;color:var(--text3);"></span>
+          <!-- Ukryte przyciski mnożnika dla zgodności wstecznej JS -->
+          <button id="mult-btn-2" onclick="setMultiplier(2)" style="display:none;"></button>
+          <button id="mult-btn-3" onclick="setMultiplier(3)" style="display:none;"></button>
+          <button id="mult-btn-4" onclick="setMultiplier(4)" style="display:none;"></button>
+          <button id="mult-btn-5" onclick="setMultiplier(5)" style="display:none;"></button>
         </div>
-        <div id="tip-mult" style="display:none;font-size:11px;color:var(--text3);margin-top:10px;line-height:1.6;border-top:1px solid var(--border);padding-top:10px;">
-          Pula punktów za bieg drużynowy = liczba drużyn × mnożnik.<br>
-          Przykład: 8 drużyn × 3 = 24 pkt dla zwycięzcy.
+        <div id="tip-mult" style="display:none;font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6;background:var(--bg3);padding:8px 10px;border-radius:var(--radius);border-left:2px solid var(--accent);">
+          <strong style="color:var(--accent);">Mnożnik:</strong> Pula punktów za bieg drużynowy = liczba drużyn × mnożnik. Przykład: 8 drużyn × 3 = 24 pkt dla zwycięzcy.
+        </div>
+
+        <!-- Kobiety punktują — kompakt, na końcu karty -->
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;">
+          <input type="checkbox" id="osf-k-scores" onchange="saveSetup();renderResults();renderKlasyfikacja()" style="width:14px;height:14px;accent-color:var(--female);" />
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:700;color:var(--female);">♀ Kobiety punktują</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:1px;">Najlepsza K dostaje tyle samo pkt co najlepszy M</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Reguły parowania — informacyjny summary, modal otwierany z karty Drużynowej -->
+      <div class="card" style="padding:12px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-size:12px;color:var(--text3);line-height:1.5;flex:1;" id="pairing-rules-summary">—</div>
+          <button class="btn btn-sm" onclick="openPairingRulesModal()" style="font-size:10px;padding:4px 9px;flex-shrink:0;">⚙ Zmień</button>
         </div>
       </div>
 
-      <!-- Reguły parowania — jeden przycisk -->
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="card-title" style="margin:0;">🎲 Parowanie S1</div>
-          <button class="btn btn-sm" onclick="openPairingRulesModal()" style="color:var(--text3);border-color:var(--border2);font-size:11px;">⚙ Ustawienia zaawansowane</button>
-        </div>
-        <div style="font-size:12px;color:var(--text3);margin-top:10px;line-height:1.6;" id="pairing-rules-summary"></div>
-      </div>
     </div>
 
     <!-- PRAWA KOLUMNA -->
     <div>
 
-      <!-- Import listy startowej -->
+      <!-- 📥 Import listy startowej -->
       <div class="card mb-12">
         <div class="card-title">📥 Import listy startowej</div>
         <div id="import-status-box" style="display:none;padding:10px 14px;border-radius:var(--radius);margin-bottom:12px;font-size:12px;"></div>
@@ -1356,49 +1402,47 @@ tr:last-child > td { border-bottom: none; }
         </button>
       </div>
 
-      <!-- Zarządzanie zawodami — kafelki -->
+      <!-- ⚙ Operacje na zawodach — wszystko pod jednym akordeonem -->
       <div class="card mb-12">
-        <div class="card-title">🔧 Zarządzanie</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <!-- Backup -->
-          <button onclick="exportData()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
-            onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div style="font-size:22px;margin-bottom:5px;">⬇</div>
-            <div style="font-size:12px;font-weight:700;color:var(--text2);">Backup</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px;">pobierz JSON</div>
-          </button>
-          <!-- Przywróć -->
-          <button onclick="document.getElementById('import-json-input').click()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
-            onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
-            <div style="font-size:22px;margin-bottom:5px;">↑</div>
-            <div style="font-size:12px;font-weight:700;color:var(--text2);">Przywróć</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px;">wgraj backup</div>
-          </button>
-          <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(event)" />
+        <button onclick="toggleOps()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
+          <div class="card-title" style="margin:0;">⚙ Operacje na zawodach</div>
+          <span id="ops-arrow" style="color:var(--text3);font-size:12px;">▶</span>
+        </button>
+        <div id="ops-panel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+          <!-- Backup / Przywróć -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <button onclick="exportData()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
+              onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div style="font-size:18px;margin-bottom:3px;">⬇</div>
+              <div style="font-size:11px;font-weight:700;color:var(--text2);">Backup</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:1px;">pobierz JSON</div>
+            </button>
+            <button onclick="document.getElementById('import-json-input').click()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
+              onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div style="font-size:18px;margin-bottom:3px;">↑</div>
+              <div style="font-size:11px;font-weight:700;color:var(--text2);">Przywróć</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:1px;">wgraj backup</div>
+            </button>
+            <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(event)" />
+          </div>
+
           <!-- Zakończ zawody -->
-          <button onclick="finishContest()" style="background:rgba(76,175,130,.08);border:1px solid rgba(76,175,130,.35);border-radius:var(--radius);padding:14px 10px;cursor:pointer;text-align:center;transition:border-color .15s;grid-column:span 2;"
+          <button onclick="finishContest()" style="background:rgba(76,175,130,.08);border:1px solid rgba(76,175,130,.35);border-radius:var(--radius);padding:12px 14px;cursor:pointer;text-align:center;width:100%;transition:border-color .15s;margin-bottom:14px;"
             onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='rgba(76,175,130,.35)'">
-            <div style="font-size:22px;margin-bottom:5px;">✓</div>
-            <div style="font-size:12px;font-weight:700;color:var(--green);">Zakończ zawody</div>
+            <div style="font-size:13px;font-weight:700;color:var(--green);">✓ Zakończ zawody</div>
             <div style="font-size:10px;color:var(--text3);margin-top:2px;">wróć do panelu</div>
           </button>
-        </div>
-      </div>
 
-      <!-- Zaawansowane — akordeon -->
-      <div class="card">
-        <button onclick="toggleAdvanced()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
-          <div class="card-title" style="margin:0;color:var(--text3);">⚠ Zaawansowane</div>
-          <span id="advanced-arrow" style="color:var(--text3);font-size:12px;">▶</span>
-        </button>
-        <div id="advanced-panel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
-          <div style="font-size:11px;color:var(--orange);margin-bottom:12px;line-height:1.6;">
-            ⚠ Opcje poniżej wpływają na działanie całej aplikacji. Używaj ostrożnie.
-          </div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="resetResults()">↺ Usuń wszystkie wyniki</button>
-            <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);justify-content:flex-start;" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
-            <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;" onclick="clearAthletes()">🗑 Wyczyść listę zawodników</button>
+          <!-- Destrukcyjne -->
+          <div style="border-top:1px solid var(--border);padding-top:12px;">
+            <div style="font-size:11px;color:var(--orange);margin-bottom:10px;line-height:1.5;">
+              ⚠ Operacje destrukcyjne — używaj ostrożnie:
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;text-align:left;" onclick="resetResults()">↺ Usuń wszystkie wyniki</button>
+              <button class="btn btn-sm" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;text-align:left;" onclick="clearAthletes()">🗑 Wyczyść listę zawodników</button>
+              <button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,.35);justify-content:flex-start;text-align:left;" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2140,11 +2184,12 @@ function updateTeamNModeButtons(mode) {
   const b3 = document.getElementById('team-n-manual-btn');
   const manualRow = document.getElementById('team-n-manual-row');
   const desc = document.getElementById('team-n-mode-desc');
+  // Segmented control style — tło dla aktywnego
   function styleBtn(btn, active) {
     if (!btn) return;
-    btn.style.background  = active ? 'rgba(232,212,77,.15)' : 'var(--bg3)';
-    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border2)';
-    btn.style.color       = active ? 'var(--accent)' : 'var(--text3)';
+    btn.style.background = active ? 'var(--accent)' : 'transparent';
+    btn.style.color      = active ? '#111' : 'var(--text3)';
+    btn.style.boxShadow  = active ? '0 1px 3px rgba(0,0,0,.2)' : 'none';
   }
   styleBtn(b1, mode === 'teams');
   styleBtn(b2, mode === 'ind');
@@ -2262,7 +2307,8 @@ function _buildSlotMeta() {
   else if (s2count === 0) status = 'S1 w toku';
   else if (!hasS2Times) status = 'S2: wylosowano';
   else status = 'S2 w toku';
-  return { athletes, teams, status, updatedAt: new Date().toISOString() };
+  const accentColor = (state.setup && state.setup.accentColor) || '';
+  return { athletes, teams, status, accentColor, updatedAt: new Date().toISOString() };
 }
 
 async function _syncSlotMetaNow() {
@@ -2273,7 +2319,7 @@ async function _syncSlotMetaNow() {
     const newMeta = _buildSlotMeta();
     // Pomiń jeśli meta się nie zmieniła (nie zalewaj chmury)
     const oldMeta = slot.meta || {};
-    if (oldMeta.athletes === newMeta.athletes && oldMeta.teams === newMeta.teams && oldMeta.status === newMeta.status) return;
+    if (oldMeta.athletes === newMeta.athletes && oldMeta.teams === newMeta.teams && oldMeta.status === newMeta.status && oldMeta.accentColor === newMeta.accentColor) return;
     slot.meta = newMeta;
     slot._updated = new Date().toISOString();
     localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
@@ -6492,7 +6538,12 @@ function renderSetupPage() {
   document.querySelectorAll('.osf-swatch').forEach(sw => {
     sw.classList.toggle('active', sw.dataset.color === color);
   });
+  // Aktualizuj wskaźnik kropki przy przycisku popovera
+  const currentDot = document.getElementById('osf-accent-current');
+  if (currentDot) currentDot.style.background = color;
   updatePairingRulesSummary();
+  // Auto-collapse karty info gdy miasto + data są wypełnione
+  _updateInfoCollapsedLine();
 }
 
 // Subtelny toast gdy data zawodów < dzisiaj (informacja, nie blokada)
@@ -6552,7 +6603,15 @@ function setAccentColor(color) {
   document.querySelectorAll('.osf-swatch').forEach(sw => {
     sw.classList.toggle('active', sw.dataset.color === color);
   });
+  // Aktualizuj kropkę przy popoverze
+  const dot = document.getElementById('osf-accent-current');
+  if (dot) dot.style.background = color;
+  // Zamknij popover
+  const pop = document.getElementById('osf-accent-popover');
+  if (pop) pop.style.display = 'none';
   save();
+  // Wyzwól sync meta (kolor leci do panelu szybciej niż przez throttle 5s)
+  if (typeof _syncSlotMetaThrottled === 'function') _syncSlotMetaThrottled();
 }
 
 function syncSetupToPanel() {
@@ -7940,6 +7999,7 @@ function setMultiplier(val) {
 
 function updateMultiplierButtons() {
   const cur = getMultiplier();
+  // Stare ukryte przyciski (zgodność wsteczna)
   [2,3,4,5].forEach(v => {
     const btn = document.getElementById('mult-btn-' + v);
     if (!btn) return;
@@ -7947,6 +8007,25 @@ function updateMultiplierButtons() {
     btn.style.color      = (v === cur) ? '#111' : 'var(--text2)';
     btn.style.borderColor= (v === cur) ? 'var(--accent)' : 'var(--border2)';
   });
+  // Nowy dropdown
+  const sel = document.getElementById('osf-team-multiplier-select');
+  const customInput = document.getElementById('osf-team-multiplier');
+  if (sel) {
+    if ([2,3,4,5].includes(cur)) {
+      sel.value = String(cur);
+      if (customInput) customInput.style.display = 'none';
+    } else {
+      sel.value = 'custom';
+      if (customInput) { customInput.style.display = ''; customInput.value = String(cur); }
+    }
+  }
+  // Info tekstowa obok mnożnika
+  const info = document.getElementById('mult-info');
+  if (info) {
+    const teams = (typeof getTeams === 'function') ? getTeams().length : 0;
+    if (teams > 0) info.textContent = '= ' + (teams * cur) + ' pkt dla zwycięzcy (' + teams + '×' + cur + ')';
+    else info.textContent = '× liczba drużyn';
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -9258,12 +9337,116 @@ function toggleSetupTip(id) {
 }
 
 function toggleAdvanced() {
+  // Wsteczna kompatybilność — stary akordeon "Zaawansowane"
   const panel = document.getElementById('advanced-panel');
   const arrow = document.getElementById('advanced-arrow');
   if (!panel) return;
   const open = panel.style.display !== 'none';
   panel.style.display = open ? 'none' : 'block';
   if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+// Nowy akordeon "Operacje na zawodach"
+function toggleOps() {
+  const panel = document.getElementById('ops-panel');
+  const arrow = document.getElementById('ops-arrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+// ═══ Karta info: auto-collapse po wypełnieniu ═══
+let _infoCollapsedManually = false;
+function expandInfoCard() {
+  document.getElementById('osf-info-expanded').style.display = '';
+  document.getElementById('osf-info-collapsed').style.display = 'none';
+  _infoCollapsedManually = false;
+}
+function collapseInfoCard() {
+  // Wymuś zwinięcie nawet jeśli pola nie są kompletne — user explicit
+  _infoCollapsedManually = true;
+  _updateInfoCollapsedLine(true);
+}
+function _updateInfoCollapsedLine(forceCollapse) {
+  const nameEl = document.getElementById('osf-setup-name');
+  const cityEl = document.getElementById('osf-setup-city');
+  const dateEl = document.getElementById('osf-setup-date');
+  const orgEl  = document.getElementById('osf-setup-org');
+  const collEl = document.getElementById('osf-info-collapsed');
+  const expEl  = document.getElementById('osf-info-expanded');
+  const lineEl = document.getElementById('osf-info-collapsed-line');
+  const subEl  = document.getElementById('osf-info-collapsed-sub');
+  if (!collEl || !expEl || !lineEl || !subEl) return;
+  const city = (cityEl?.value || '').trim();
+  const date = (dateEl?.value || '').trim();
+  const name = (nameEl?.value || '').trim();
+  const org  = (orgEl?.value  || '').trim();
+  const complete = city && date;
+  if (complete || forceCollapse) {
+    // Linia główna: nazwa lub miasto
+    const main = name || city || '—';
+    const subParts = [];
+    if (name && city) subParts.push(city);
+    if (date) {
+      try {
+        const d = new Date(date + 'T00:00:00');
+        if (!isNaN(d.getTime())) subParts.push(d.toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric' }));
+      } catch(e) { subParts.push(date); }
+    }
+    if (org) subParts.push(org);
+    lineEl.textContent = main;
+    subEl.textContent = subParts.join(' · ');
+    collEl.style.display = '';
+    expEl.style.display = 'none';
+  } else {
+    collEl.style.display = 'none';
+    expEl.style.display = '';
+  }
+}
+
+// ═══ Popover kolor akcentu ═══
+function toggleAccentPalette() {
+  const pop = document.getElementById('osf-accent-popover');
+  if (!pop) return;
+  pop.style.display = pop.style.display === 'none' ? 'block' : 'none';
+}
+// Zamknij popover gdy klik poza
+document.addEventListener('click', function(e) {
+  const pop = document.getElementById('osf-accent-popover');
+  const btn = document.getElementById('osf-accent-toggle');
+  if (!pop || pop.style.display === 'none') return;
+  if (!pop.contains(e.target) && !btn.contains(e.target)) pop.style.display = 'none';
+});
+
+// ═══ Notes preview (placeholder na sticky widget — implementacja w przyszłości) ═══
+function _updateNotesPreview() { /* hook for future sticky widget */ }
+
+// ═══ Mnożnik — dropdown ═══
+function onMultiplierSelectChange(value) {
+  const customInput = document.getElementById('osf-team-multiplier');
+  if (value === 'custom') {
+    customInput.style.display = '';
+    customInput.focus();
+    customInput.select();
+  } else {
+    customInput.style.display = 'none';
+    customInput.value = value;
+    saveSetup();
+    updateMultiplierButtons();
+  }
+}
+
+// ═══ Segmented control: aktywny styl dla trybu N ═══
+function _styleSegBtn(btn, active) {
+  if (!btn) return;
+  if (active) {
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#111';
+  } else {
+    btn.style.background = 'none';
+    btn.style.color = 'var(--text3)';
+  }
 }
 
 function openPairingRulesModal() {

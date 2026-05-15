@@ -2086,7 +2086,8 @@ function _buildSlotMeta() {
     });
     status = hasResults ? 'W toku' : 'Gotowe do startu';
   }
-  return { athletes, teams, status, updatedAt: new Date().toISOString() };
+  const accentColor = (STATE.setup && STATE.setup.accent) || '';
+  return { athletes, teams, status, accentColor, updatedAt: new Date().toISOString() };
 }
 
 async function _syncSlotMetaNow() {
@@ -2098,7 +2099,7 @@ async function _syncSlotMetaNow() {
     const slot = JSON.parse(slotRaw);
     const newMeta = _buildSlotMeta();
     const oldMeta = slot.meta || {};
-    if (oldMeta.athletes === newMeta.athletes && oldMeta.teams === newMeta.teams && oldMeta.status === newMeta.status) return;
+    if (oldMeta.athletes === newMeta.athletes && oldMeta.teams === newMeta.teams && oldMeta.status === newMeta.status && oldMeta.accentColor === newMeta.accentColor) return;
     slot.meta = newMeta;
     slot._updated = new Date().toISOString();
     localStorage.setItem('herkules_slot_' + panelId, JSON.stringify(slot));
@@ -2397,6 +2398,8 @@ function renderPersonalization() {
       STATE.setup.accent = s.dataset.color;
       applyAccentColor(s.dataset.color);
       save();
+      // Wyzwól sync meta żeby kolor szybko trafił do panelu
+      if (typeof _syncSlotMetaThrottled === 'function') _syncSlotMetaThrottled();
     };
   });
 }

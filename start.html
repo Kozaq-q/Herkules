@@ -95,6 +95,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .tile-bar { height: 4px; background: var(--type-color, var(--accent)); }
 .tile-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; }
 .tile-chip { font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 3px; background: var(--type-bg, rgba(232,212,77,.1)); color: var(--type-color, var(--accent)); border: 1px solid var(--type-border, rgba(232,212,77,.3)); }
+.tile-accent-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); flex-shrink: 0; box-shadow: 0 0 0 2px var(--bg2); }
 .tile-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; color: var(--text3); }
 .tile-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
 .tile-status.active .dot { background: var(--green); animation: pulse 2s infinite; }
@@ -317,7 +318,15 @@ const COMPETITION_TYPES = {
       const czworId = localStorage.getItem('herkules_czwor_map_' + slot.id) || ('panel_' + slot.id);
       const raw = localStorage.getItem('zawody_slot_' + czworId);
       if (!raw) return null;
-      try { const d = JSON.parse(raw); return { athletes: (d.athletes||[]).length, teams: (d.teams||[]).length, status: '' }; } catch(e) { return null; }
+      try {
+        const d = JSON.parse(raw);
+        return {
+          athletes: (d.athletes||[]).length,
+          teams: (d.teams||[]).length,
+          status: '',
+          accentColor: (d.setup && d.setup.accent) || ''
+        };
+      } catch(e) { return null; }
     }
   },
   'osf': {
@@ -339,7 +348,12 @@ const COMPETITION_TYPES = {
       try {
         const d = JSON.parse(raw);
         const ath = (d.athletes||[]);
-        return { athletes: ath.length, teams: new Set(ath.map(a=>a.team).filter(Boolean)).size, status: '' };
+        return {
+          athletes: ath.length,
+          teams: new Set(ath.map(a=>a.team).filter(Boolean)).size,
+          status: '',
+          accentColor: (d.setup && d.setup.accentColor) || ''
+        };
       } catch(e) { return null; }
     }
   },
@@ -567,15 +581,16 @@ function getSlotStats(slot) {
       athletes: slot.meta.athletes || 0,
       teams: slot.meta.teams || 0,
       status: slot.meta.status || '',
+      accentColor: slot.meta.accentColor || '',
       fromMeta: true
     };
   }
   // Fallback z localStorage (tylko gdy ten komputer otwierał slot wcześniej)
   if (cfg && cfg.fallbackLocalStats) {
     const local = cfg.fallbackLocalStats(slot);
-    if (local) return { ...local, fromMeta: false };
+    if (local) return { ...local, accentColor: local.accentColor || '', fromMeta: false };
   }
-  return { athletes: 0, teams: 0, status: '', fromMeta: false };
+  return { athletes: 0, teams: 0, status: '', accentColor: '', fromMeta: false };
 }
 
 function showSyncStatus(status) {
@@ -780,10 +795,19 @@ function tileHTML(slot) {
 
   const dateDisplay = slot.date ? new Date(slot.date + 'T00:00:00').toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '—';
 
+  // Kolor akcentu zawodów (ustawiony przez sędziego w konfiguracji)
+  // Nie pomyl z color typu — to dodatkowa identyfikacja konkretnych zawodów
+  const accentDot = (stats.accentColor || (slot.meta && slot.meta.accentColor))
+    ? '<span class="tile-accent-dot" style="background:' + esc(stats.accentColor || slot.meta.accentColor) + ';" title="Kolor akcentu zawodów"></span>'
+    : '';
+
   return '<div class="tile' + (done ? ' done' : '') + (cfg && !cfg.enabled ? ' disabled' : '') + '" style="' + styleVars + '">' +
     '<div class="tile-bar"></div>' +
     '<div class="tile-head">' +
-      '<span class="tile-chip">' + esc(cfg ? cfg.label : slot.type) + '</span>' +
+      '<span class="tile-chip-wrap" style="display:inline-flex;align-items:center;gap:6px;">' +
+        '<span class="tile-chip">' + esc(cfg ? cfg.label : slot.type) + '</span>' +
+        accentDot +
+      '</span>' +
       '<span class="tile-status ' + statusCls + '"><span class="dot"></span>' + esc(statusTxt) + '</span>' +
     '</div>' +
     '<div class="tile-body">' +
@@ -947,6 +971,12 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
   if (!_deleteTargetId) return;
+  // Podwójne sprawdzenie wartości inputa (na wypadek manipulacji DOM)
+  const inputVal = (document.getElementById('delete-confirm-input').value || '').trim().toUpperCase();
+  if (inputVal !== 'RESET') {
+    document.getElementById('delete-error').textContent = 'Wpisz RESET aby potwierdzić.';
+    return;
+  }
   const btn = document.getElementById('delete-confirm-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Usuwanie...';
