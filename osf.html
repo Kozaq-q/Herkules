@@ -3524,8 +3524,9 @@ function renderTeamResults() {
     const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
     const noBest  = r.bestSec === Infinity;
     const dsq     = !r.ok;
-    const s1disp  = r.s1dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s1 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s1||'—');
-    const s2disp  = r.s2dsq ? '<span style="color:var(--red);text-decoration:line-through;">' + r.s2 + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>' : (r.s2||'—');
+    // DSQ ukrywa czas — tylko etykieta DSQ
+    const s1disp  = r.s1dsq ? '<span style="color:var(--red);font-size:10px;font-weight:700;">DSQ</span>' : (r.s1||'—');
+    const s2disp  = r.s2dsq ? '<span style="color:var(--red);font-size:10px;font-weight:700;">DSQ</span>' : (r.s2||'—');
     html += '<tr>';
     const medalEmoji = !dsq && !noBest ? (rank===1?'🥇 ':rank===2?'🥈 ':rank===3?'🥉 ':'') : '';
     html += '<td style="font-family:var(--font-h);font-size:16px;font-weight:800;">' + medalEmoji + (dsq ? 'DSQ' : (noBest ? '—' : rank)) + '</td>';
@@ -3764,8 +3765,9 @@ function printTeamResults() {
     const medal  = isTop ? medals[rank-1] + ' ' : '';
     const rankTxt = dsq ? 'DSQ' : (noBest ? '—' : rank);
 
-    const s1disp = r.s1dsq ? '<span class="dsq-s">' + (r.s1||'') + '</span> DSQ' : (r.s1||'—');
-    const s2disp = r.s2dsq ? '<span class="dsq-s">' + (r.s2||'') + '</span> DSQ' : (r.s2||'—');
+    // DSQ ukrywa czas — tylko etykieta DSQ
+    const s1disp = r.s1dsq ? '<span class="dsq-s">DSQ</span>' : (r.s1||'—');
+    const s2disp = r.s2dsq ? '<span class="dsq-s">DSQ</span>' : (r.s2||'—');
 
     html += '<div class="team-row' + (isTop ? ' team-top' : '') + '">';
     html += '<div class="team-header" style="background:' + bg + ';color:' + fg + ';border-left:4px solid ' + (isTop?bg:'#999') + ';">';
@@ -3873,16 +3875,52 @@ function assignBibs() {
     // 1,2,3... osobno dla M i K (zachowane dla istniejących slotów, ale UI do wyboru schematu został usunięty)
     let mIdx = 1, kIdx = 1;
     state.athletes.forEach(a => {
+      if (a._manualBib) return; // ręczny numer — nie nadpisuj
       a.bib = a.gender === 'M' ? mIdx++ : kIdx++;
     });
   } else {
-    // X/Y — X=numer drużyny, Y=kolejny zawodnik w drużynie
-    const counters = {};
+    // X/Y — X=numer drużyny, Y=numer zawodnika w drużynie
+    // Reguła: M numerowane od 1 osobno per drużyna; K zaczynają wspólnie od max(11, najwięcej M w jakiejś drużynie + 1)
+    // Dzięki temu numer K jest spójny wizualnie między drużynami (X/12, Y/12, Z/12 itd. = kobieta)
+    // ZAWODNICY Z _manualBib SĄ POMIJANI — ich numery zostają. Auto-numery omijają już zajęte Y w drużynie.
+    const mCountsByTeam = {};
     state.athletes.forEach(a => {
+      if (a.gender === 'M') mCountsByTeam[a.team] = (mCountsByTeam[a.team] || 0) + 1;
+    });
+    const maxM = Math.max(0, ...Object.values(mCountsByTeam));
+    const kStart = Math.max(11, maxM + 1);
+
+    // Zbierz zajęte numery Y per drużyna (z ręcznych)
+    const usedYByTeam = {}; // team -> Set<int>
+    state.athletes.forEach(a => {
+      if (!a._manualBib || !a.bib) return;
+      const s = String(a.bib);
+      if (s.includes('/')) {
+        const y = parseInt(s.split('/')[1]);
+        if (!isNaN(y)) {
+          if (!usedYByTeam[a.team]) usedYByTeam[a.team] = new Set();
+          usedYByTeam[a.team].add(y);
+        }
+      }
+    });
+
+    const mCounters = {};
+    const kCounters = {};
+    state.athletes.forEach(a => {
+      if (a._manualBib) return; // ręczny — nie ruszamy
       const teamIdx = teamOrder.indexOf(a.team) + 1;
-      if (!counters[a.team]) counters[a.team] = 0;
-      counters[a.team]++;
-      a.bib = teamIdx + '/' + counters[a.team];
+      const used = usedYByTeam[a.team] || new Set();
+      if (a.gender === 'M') {
+        let y = (mCounters[a.team] || 0) + 1;
+        while (used.has(y)) y++;
+        mCounters[a.team] = y;
+        a.bib = teamIdx + '/' + y;
+      } else {
+        let y = kStart + (kCounters[a.team] || 0);
+        while (used.has(y)) y++;
+        kCounters[a.team] = y - kStart + 1;
+        a.bib = teamIdx + '/' + y;
+      }
     });
   }
 }
@@ -4254,8 +4292,13 @@ function saveEditAthlete() {
 
     if (newBib && String(newBib) !== String(a.bib)) {
       const conflict = state.athletes.find(x => x.id !== id && String(x.bib) === String(newBib));
-      if (conflict) { const tmp = a.bib; a.bib = newBib; conflict.bib = tmp; }
-      else a.bib = newBib;
+      if (conflict) {
+        const tmp = a.bib;
+        a.bib = newBib; a._manualBib = true;
+        conflict.bib = tmp; conflict._manualBib = true;
+      } else {
+        a.bib = newBib; a._manualBib = true;
+      }
     }
 
     save();
@@ -5414,7 +5457,8 @@ function markerBadge(mark, opts) {
 // dsq=true → czerwony przekreślony czas + 'DSQ'. Marker → badge. Brak wpisu → '—'.
 function timeOrMarkerHTML(value, dsq) {
   if (dsq) {
-    return '<span style="color:var(--red);text-decoration:line-through;">' + (value || '') + '</span> <span style="color:var(--red);font-size:10px;">DSQ</span>';
+    // DSQ ukrywa czas — pokazujemy tylko etykietę DSQ (czas widoczny tylko w panelu wpisywania)
+    return '<span style="color:var(--red);font-weight:700;font-size:11px;">DSQ</span>';
   }
   if (isTimeMarker(value)) return markerBadge(value);
   return value || '—';
@@ -6081,8 +6125,8 @@ function printResultsM36() {
       + '<td style="font-weight:800;font-size:14px;">' + medal + ' ' + (myRank||'—') + '</td>'
       + '<td style="font-weight:700;">' + esc(displayName(r.athlete)) + '</td>'
       + '<td>' + esc(r.athlete.team) + '</td>'
-      + '<td style="font-family:monospace;">' + (r.s1dsq ? r.s1+' DSQ' : r.s1||'—') + '</td>'
-      + '<td style="font-family:monospace;">' + (r.s2dsq ? r.s2+' DSQ' : r.s2||'—') + '</td>'
+      + '<td style="font-family:monospace;">' + (r.s1dsq ? 'DSQ' : r.s1||'—') + '</td>'
+      + '<td style="font-family:monospace;">' + (r.s2dsq ? 'DSQ' : r.s2||'—') + '</td>'
       + '<td style="font-family:monospace;font-weight:700;">' + (r.best||'—') + '</td>'
       + '</tr>';
   }).join('');
@@ -6428,8 +6472,9 @@ function printResultsGender(gender) {
   ranked.forEach(r => {
     const noBest = r.bestSec === Infinity;
     const topCls = !noBest ? (rank===1?' top1':rank===2?' top2':rank===3?' top3':'') : '';
-    const s1d = r.s1dsq ? '<span class="dsq">' + (r.s1||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s1||'—');
-    const s2d = r.s2dsq ? '<span class="dsq">' + (r.s2||'') + '</span><span class="dsq-label">DSQ</span>' : (r.s2||'—');
+    // DSQ ukrywa czas — tylko etykieta DSQ
+    const s1d = r.s1dsq ? '<span class="dsq-label">DSQ</span>' : (r.s1||'—');
+    const s2d = r.s2dsq ? '<span class="dsq-label">DSQ</span>' : (r.s2||'—');
     const isPKr  = !!r.athlete.pk;
     const isM36r = !!r.athlete.m36;
     const badgesR = (isPKr  ? ' <span style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '')
@@ -8040,18 +8085,18 @@ function doBibSwap() {
     if (conflict) {
       // Zamień z kolidującym
       const tmp = a.bib;
-      a.bib = manual;
-      conflict.bib = tmp;
+      a.bib = manual; a._manualBib = true;
+      conflict.bib = tmp; conflict._manualBib = true;
     } else {
-      a.bib = manual;
+      a.bib = manual; a._manualBib = true;
     }
   } else if (targetId) {
     // Zamień z wybranym zawodnikiem
     const b = state.athletes.find(x => x.id === targetId);
     if (!b) return;
     const tmp = a.bib;
-    a.bib = b.bib;
-    b.bib = tmp;
+    a.bib = b.bib; a._manualBib = true;
+    b.bib = tmp; b._manualBib = true;
   } else {
     return;
   }
