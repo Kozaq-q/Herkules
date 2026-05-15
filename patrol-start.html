@@ -200,6 +200,37 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   </div>
 </div>
 
+<!-- MODAL: GODZINA POJEDYNCZEJ PARY -->
+<div id="pair-time-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:2px solid var(--orange);border-radius:10px;padding:22px;width:440px;max-width:95vw;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+      <div style="font-family:var(--font-h);font-size:16px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">⏰</span>
+        <span>Godzina startu pary <span id="pst-pt-pair">—</span></span>
+      </div>
+      <button onclick="closePairTimeModal()" style="background:none;border:none;color:var(--text3);font-size:24px;cursor:pointer;line-height:1;padding:0 6px;">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+      Para wystartuje automatycznie o tej godzinie (zegar serwera).<span id="pst-pt-current-info" style="display:none;color:var(--text2);"></span>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Godzina (HH:MM:SS)</label>
+      <input type="time" step="1" id="pst-pt-input" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:14px;font-family:var(--font-m);font-size:24px;font-weight:700;text-align:center;letter-spacing:2px;" />
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.4;">
+        Aktualny czas (zegar serwera): <strong id="pst-pt-now">--:--:--</strong>
+      </div>
+      <div id="pst-pt-warning" style="display:none;font-size:11px;color:var(--orange);margin-top:6px;line-height:1.4;background:rgba(232,148,77,.1);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:7px 10px;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <button id="pst-pt-clear" onclick="confirmPstClear()" style="background:transparent;color:var(--red);border:1px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;">✕ Wyczyść</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="closePairTimeModal()" style="background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;">Anuluj</button>
+        <button onclick="confirmPstSave()" style="background:var(--orange);color:#111;border:none;border-radius:var(--radius);padding:10px 18px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;">Zapisz</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script>
@@ -844,45 +875,123 @@ function confirmClearSchedule() {
   showToast('✕ Wyczyszczono harmonogram (' + cleared + ' par)', 'info', 2000);
 }
 
-// Edycja czasu pojedynczej pary (z confirm — bo to ważne)
+// Edycja czasu pojedynczej pary — modal z natywnym time pickerem
+let _pstPairTimeCtx = null;
+let _pstPairTimeNowTimer = null;
+
 function editPairStartTime(gender, pairNum) {
   const k = gender + '_' + pairNum;
   const run = (state.runs && state.runs[k]) || null;
   const currentTs = run && run.scheduledStartAt;
-  const currentStr = currentTs ? (() => {
-    const d = new Date(currentTs);
-    const pad = n => (n < 10 ? '0' : '') + n;
-    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-  })() : '10:00:00';
-  const newStr = prompt('Godzina startu pary ' + pairNum + ' (HH:MM:SS):\n(pusty = wyczyść)', currentStr);
-  if (newStr === null) return;
-  if (!newStr.trim()) {
-    if (state.runs && state.runs[k]) {
-      delete state.runs[k].scheduledStartAt;
-      if (!Object.keys(state.runs[k]).length) delete state.runs[k];
-    }
-    saveState();
-    renderPairs();
-    showToast('✕ Anulowano auto-start pary ' + pairNum, 'info', 1500);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const fmt = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+
+  _pstPairTimeCtx = { gender, pairNum, k, hadValue: !!currentTs };
+
+  const titleEl = document.getElementById('pst-pt-pair');
+  if (titleEl) titleEl.textContent = pairNum + ' (' + (gender === 'M' ? '♂' : '♀') + ')';
+
+  const input = document.getElementById('pst-pt-input');
+  if (input) input.value = currentTs ? fmt(currentTs) : fmt(nowMs() + 60000);
+
+  const infoEl = document.getElementById('pst-pt-current-info');
+  if (infoEl) {
+    if (currentTs) { infoEl.style.display = ''; infoEl.textContent = ' Obecnie: ' + fmt(currentTs) + '.'; }
+    else infoEl.style.display = 'none';
+  }
+
+  const clearBtn = document.getElementById('pst-pt-clear');
+  if (clearBtn) clearBtn.style.display = currentTs ? '' : 'none';
+
+  document.getElementById('pst-pt-warning').style.display = 'none';
+
+  const updateNow = () => {
+    const nowEl = document.getElementById('pst-pt-now');
+    if (nowEl) nowEl.textContent = fmt(nowMs());
+    _pstPairTimeUpdateWarning();
+  };
+  updateNow();
+  if (_pstPairTimeNowTimer) clearInterval(_pstPairTimeNowTimer);
+  _pstPairTimeNowTimer = setInterval(updateNow, 1000);
+
+  if (input) {
+    input.oninput = _pstPairTimeUpdateWarning;
+    input.onchange = _pstPairTimeUpdateWarning;
+  }
+
+  document.getElementById('pair-time-modal').style.display = 'flex';
+  setTimeout(() => { try { input && input.focus(); } catch(_){} }, 60);
+}
+
+function _pstPairTimeParseInput() {
+  const input = document.getElementById('pst-pt-input');
+  if (!input || !input.value) return null;
+  const m = input.value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const h = parseInt(m[1]), mi = parseInt(m[2]), s = parseInt(m[3] || '0');
+  if (h > 23 || mi > 59 || s > 59) return null;
+  const now = new Date(nowMs());
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s, 0).getTime();
+}
+
+function _pstPairTimeUpdateWarning() {
+  const warn = document.getElementById('pst-pt-warning');
+  if (!warn) return;
+  const ts = _pstPairTimeParseInput();
+  if (ts === null) {
+    warn.style.display = '';
+    warn.innerHTML = '⚠ Nieprawidłowy format. Wpisz godzinę w formacie <strong>HH:MM:SS</strong>.';
     return;
   }
-  const m = newStr.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-  if (!m) { showToast('Nieprawidłowy format (HH:MM:SS)', 'error'); return; }
-  const h = parseInt(m[1]), mi = parseInt(m[2]), s = parseInt(m[3] || '0');
-  if (h > 23 || mi > 59 || s > 59) { showToast('Nieprawidłowa godzina', 'error'); return; }
-  const now = new Date(nowMs());
-  const newDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s, 0);
-  const newTs = newDate.getTime();
-  if (newTs < nowMs()) {
-    const secAgo = Math.round((nowMs() - newTs) / 1000);
-    if (!confirm('⚠ Godzina jest ' + secAgo + ' s w przeszłości — para wystartuje natychmiast. Kontynuować?')) return;
+  const diff = ts - nowMs();
+  if (diff < -2000) {
+    const secAgo = Math.round(-diff / 1000);
+    warn.style.display = '';
+    warn.innerHTML = '⚠ Godzina jest <strong>' + secAgo + ' s w przeszłości</strong> — para wystartuje natychmiast po zapisaniu.';
+  } else if (diff < 5000) {
+    warn.style.display = '';
+    warn.innerHTML = '⚠ Mniej niż 5 sekund do startu — bądź gotowy.';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function closePairTimeModal() {
+  if (_pstPairTimeNowTimer) { clearInterval(_pstPairTimeNowTimer); _pstPairTimeNowTimer = null; }
+  document.getElementById('pair-time-modal').style.display = 'none';
+}
+
+function confirmPstClear() {
+  if (!_pstPairTimeCtx) return;
+  const { k, pairNum } = _pstPairTimeCtx;
+  if (state.runs && state.runs[k]) {
+    delete state.runs[k].scheduledStartAt;
+    if (!Object.keys(state.runs[k]).length) delete state.runs[k];
+  }
+  closePairTimeModal();
+  saveState();
+  renderPairs();
+  showToast('✕ Wyczyszczono auto-start pary ' + pairNum, 'info', 1500);
+}
+
+function confirmPstSave() {
+  if (!_pstPairTimeCtx) return;
+  const { k, pairNum } = _pstPairTimeCtx;
+  const ts = _pstPairTimeParseInput();
+  if (ts === null) {
+    showToast('Nieprawidłowa godzina — sprawdź format HH:MM:SS', 'error');
+    return;
   }
   if (!state.runs) state.runs = {};
   if (!state.runs[k]) state.runs[k] = {};
-  state.runs[k].scheduledStartAt = newTs;
+  state.runs[k].scheduledStartAt = ts;
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const d = new Date(ts);
+  const label = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  closePairTimeModal();
   saveState();
   renderPairs();
-  showToast('⏰ Para ' + pairNum + ' o ' + newStr, 'success', 1500);
+  showToast('⏰ Para ' + pairNum + ' o ' + label, 'success', 1500);
 }
 
 async function boot() {
