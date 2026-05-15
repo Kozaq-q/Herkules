@@ -158,6 +158,68 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .swap-trigger-btn { font-size: 11px; padding: 2px 8px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg3); color: var(--text3); cursor: pointer; line-height: 1.4; flex-shrink: 0; }
 .swap-trigger-btn:hover { color: var(--orange); border-color: var(--orange); }
 
+/* TIMER (zakładka Stoper) */
+.role-btn { font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 6px 12px; border: none; background: transparent; color: var(--text3); border-radius: 3px; cursor: pointer; transition: all .12s; }
+.role-btn:hover { color: var(--text1); background: var(--bg2); }
+.role-btn.active { background: var(--orange); color: #111; }
+
+.timer-pair-card { background: var(--bg2); border: 2px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; transition: border-color .15s; }
+.timer-pair-card.running { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(76,175,130,.1); }
+.timer-pair-card.finished { border-color: rgba(76,175,130,.4); opacity: .85; }
+
+.timer-pair-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+.timer-pair-label { display: flex; align-items: center; gap: 12px; }
+.timer-pair-num { font-family: var(--font-h); font-size: 28px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 36px; text-align: center; }
+.timer-pair-gender { font-size: 18px; }
+.timer-pair-status { font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 3px; }
+.timer-pair-status.idle { background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
+.timer-pair-status.running { background: rgba(232,148,77,.15); color: var(--orange); border: 1px solid rgba(232,148,77,.4); animation: timer-pulse 1.5s infinite; }
+.timer-pair-status.finished { background: rgba(76,175,130,.15); color: var(--green); border: 1px solid rgba(76,175,130,.4); }
+@keyframes timer-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+.timer-display { font-family: var(--font-m); font-size: 38px; font-weight: 800; color: var(--text1); letter-spacing: 1px; line-height: 1; font-variant-numeric: tabular-nums; }
+.timer-pair-card.running .timer-display { color: var(--orange); }
+.timer-pair-card.finished .timer-display { color: var(--green); }
+
+.timer-actions-bar { padding: 10px 16px; background: rgba(0,0,0,.15); border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn-timer { font-family: var(--font-h); font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 10px 22px; border: none; border-radius: var(--radius); cursor: pointer; transition: all .12s; }
+.btn-timer-start { background: var(--green); color: #fff; }
+.btn-timer-start:hover { background: var(--green); filter: brightness(1.15); }
+.btn-timer-reset { background: var(--red); color: #fff; }
+.btn-timer-reset:hover { background: var(--red); filter: brightness(1.15); }
+.btn-timer-stop { background: var(--red); color: #fff; }
+.btn-timer-stop:hover { background: var(--red); filter: brightness(1.15); }
+.btn-timer-undo { background: transparent; color: var(--text2); border: 1px solid var(--border2); }
+.btn-timer-undo:hover { color: var(--text1); border-color: var(--text3); }
+.btn-timer:disabled { opacity: .4; cursor: not-allowed; }
+
+.timer-athletes { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.timer-athlete { padding: 14px 16px; background: var(--bg2); }
+.timer-athlete + .timer-athlete { border-left: 1px solid var(--border); }
+.timer-athlete.finished { background: rgba(76,175,130,.04); }
+.timer-athlete.dsq { opacity: .55; }
+.timer-athlete-name { font-size: 15px; font-weight: 700; color: var(--text1); margin-bottom: 2px; }
+.timer-athlete-meta { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+.timer-athlete-time { font-family: var(--font-m); font-size: 24px; font-weight: 800; color: var(--text1); line-height: 1; font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+.timer-athlete-time.finished { color: var(--green); }
+.timer-athlete-time.idle { color: var(--text3); font-weight: 400; font-size: 18px; }
+.timer-osf-input-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.timer-osf-label { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--male); min-width: 50px; }
+.timer-osf-input { flex: 1; background: rgba(91,155,213,.06); border: 1px solid rgba(91,155,213,.35); border-radius: var(--radius); color: var(--text1); padding: 5px 8px; font-family: var(--font-m); font-size: 14px; font-weight: 600; }
+.timer-osf-input:focus { outline: none; border-color: var(--male); background: rgba(91,155,213,.12); }
+.timer-osf-input:disabled { opacity: .5; }
+.timer-hits-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 8px; }
+.timer-hit-btn { background: var(--bg4); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text2); font-family: var(--font-h); font-size: 14px; font-weight: 800; padding: 5px 0; cursor: pointer; transition: all .12s; }
+.timer-hit-btn:hover:not(.active):not(:disabled) { background: var(--bg3); color: var(--text1); }
+.timer-hit-btn.active { background: var(--orange); border-color: var(--orange); color: #111; }
+.timer-hit-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+@media (max-width: 700px) {
+  .timer-athletes { grid-template-columns: 1fr; }
+  .timer-athlete + .timer-athlete { border-left: none; border-top: 1px solid var(--border); }
+  .timer-display { font-size: 28px; }
+}
+
 /* DWA KAFELKI CZASÓW (OSF + ŁĄCZNY) */
 .ptr-times-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
 .ptr-time-tile { background: var(--bg4); border: 2px solid var(--border); border-radius: 6px; padding: 6px 8px; transition: border-color .12s, background .12s; }
@@ -310,6 +372,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
     <button class="nav-tab active" onclick="showTab('setup')" id="tab-setup">⚙ Konfiguracja</button>
     <button class="nav-tab" onclick="showTab('athletes')" id="tab-athletes">👥 Zawodnicy</button>
     <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🎲 Pary / wpisywanie</button>
+    <button class="nav-tab" onclick="showTab('timer')" id="tab-timer">⏱ Stoper</button>
     <button class="nav-tab" onclick="showTab('results')" id="tab-results">🏆 Wyniki</button>
   </nav>
 
@@ -527,6 +590,35 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <div id="ptr-pairs-M"></div>
         <div id="ptr-pairs-K" style="display:none;"></div>
       </div>
+    </div>
+
+    <!-- STOPER -->
+    <div class="page" id="page-timer">
+      <!-- Pasek roli -->
+      <div class="card mb-12" style="padding:14px 18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);">Twoja rola:</div>
+            <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:3px;">
+              <button id="role-btn-META" onclick="setPtrRole('META')" class="role-btn">🎯 Meta</button>
+              <button id="role-btn-OSF" onclick="setPtrRole('OSF')" class="role-btn">🏃 OSF</button>
+              <button id="role-btn-ADMIN" onclick="setPtrRole('ADMIN')" class="role-btn">👑 Admin</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.4;" id="role-desc">—</div>
+          </div>
+          <div id="timer-start-link-hint" style="font-size:11px;color:var(--text3);line-height:1.4;">
+            Sędzia startu: użyj osobnej aplikacji (link w Ustawieniach zaawansowanych)
+          </div>
+        </div>
+      </div>
+
+      <div id="timer-empty" style="display:none;text-align:center;padding:50px 20px;color:var(--text3);border:1px dashed var(--border);border-radius:var(--radius);">
+        <div style="font-size:40px;opacity:.4;margin-bottom:10px;">🎲</div>
+        <div style="font-family:var(--font-h);font-size:16px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:6px;">Brak par</div>
+        <div style="font-size:12px;">Najpierw wylosuj pary w zakładce <strong>🎲 Pary / wpisywanie</strong>.</div>
+      </div>
+
+      <div id="timer-list"></div>
     </div>
 
     <!-- WYNIKI -->
@@ -807,6 +899,8 @@ function ensureStateDefaults() {
   if (!state.disq) state.disq = {};
   if (!state.lockedPairs) state.lockedPairs = { all: [] };
   if (!state.lockedPairs.all) state.lockedPairs.all = [];
+  // Stoper: state.runs[gender + '_' + pairNum] = { startedAt: ms, finishedAt: {id: ms} }
+  if (!state.runs) state.runs = {};
   if (!state.cfg) state.cfg = {};
   const SETUP_DEFAULTS = {
     accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: '',
@@ -1035,6 +1129,7 @@ function _applyRemoteStateNow(stateJson) {
       if (tabId === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
       else if (tabId === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); updateAthleteStats(); }
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
+      else if (tabId === 'timer' && typeof renderTimerView === 'function') renderTimerView();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     showSyncStatus('ok');
@@ -1057,6 +1152,7 @@ function showTab(id) {
     if (id === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
     else if (id === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); if (typeof updateAthleteStats === 'function') updateAthleteStats(); }
     else if (id === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
+    else if (id === 'timer' && typeof renderTimerView === 'function') renderTimerView();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
 }
@@ -2165,6 +2261,318 @@ function setHits(id, n) {
   }
   save();
   renderPairsView();
+  // Jeśli zakładka stopera jest aktywna, też ją odśwież
+  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TIMER — synchronizowany stoper między sędziami
+// ═══════════════════════════════════════════════════════════════
+const PTR_ROLES = {
+  META:  { id: 'META',  label: 'Meta',  desc: 'Stop zawodnika · trafienia · czas OSF', color: 'var(--green)' },
+  OSF:   { id: 'OSF',   label: 'OSF',   desc: 'Wpisuje czas OSF z fotokomórki', color: 'var(--male)' },
+  ADMIN: { id: 'ADMIN', label: 'Admin', desc: 'Pełen dostęp — Start, Stop, edycja', color: 'var(--accent)' }
+};
+
+function getPtrRole() {
+  const stored = localStorage.getItem('ptr_role_' + SLOT_ID);
+  return stored && PTR_ROLES[stored] ? stored : 'META';
+}
+
+function setPtrRole(r) {
+  if (!PTR_ROLES[r]) return;
+  localStorage.setItem('ptr_role_' + SLOT_ID, r);
+  renderTimerView();
+}
+
+// === STATE.RUNS helpers ===
+function getRun(gender, pairNum) {
+  const k = gender + '_' + pairNum;
+  return (state.runs && state.runs[k]) || null;
+}
+function setRun(gender, pairNum, data) {
+  if (!state.runs) state.runs = {};
+  const k = gender + '_' + pairNum;
+  if (data === null) delete state.runs[k];
+  else state.runs[k] = data;
+}
+
+// === Sterowanie stoperem ===
+function startPair(gender, pairNum) {
+  const drift = getClockDriftStatus();
+  if (drift.status === 'block') {
+    showToast('Zegar systemowy ma drift > 10s — skoryguj zanim wystartujesz', 'error', 4000);
+    return;
+  }
+  const existing = getRun(gender, pairNum);
+  if (existing && existing.startedAt) {
+    if (!confirm('Para ' + pairNum + ' już biegnie. Resetować i zacząć od nowa? (Falstart)')) return;
+  }
+  setRun(gender, pairNum, { startedAt: nowMs(), finishedAt: {} });
+  // Wyczyść poprzednie czasy total dla zawodników tej pary
+  const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
+  if (p) {
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      if (state.times?.[id]?.total) delete state.times[id].total;
+    });
+  }
+  save();
+  renderTimerView();
+  showToast('▶ Para ' + pairNum + ' (' + gender + ') wystartowała', 'success', 1800);
+}
+
+function resetPair(gender, pairNum) {
+  if (!confirm('Resetować start pary ' + pairNum + '? Wszystkie czasy łączne tej pary zostaną usunięte (falstart).')) return;
+  setRun(gender, pairNum, null);
+  const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
+  if (p) {
+    [p.aId, p.bId].filter(Boolean).forEach(id => {
+      if (state.times?.[id]?.total) delete state.times[id].total;
+    });
+  }
+  save();
+  renderTimerView();
+  showToast('↺ Reset pary ' + pairNum, 'warning', 2000);
+}
+
+function stopAthlete(athleteId, gender, pairNum) {
+  const drift = getClockDriftStatus();
+  if (drift.status === 'block') {
+    showToast('Zegar systemowy ma drift > 10s — skoryguj zanim zatrzymasz', 'error', 4000);
+    return;
+  }
+  const run = getRun(gender, pairNum);
+  if (!run || !run.startedAt) {
+    showToast('Para jeszcze nie wystartowała', 'warning'); return;
+  }
+  if (!run.finishedAt) run.finishedAt = {};
+  if (run.finishedAt[athleteId]) {
+    // Już zatrzymany — drugi klik to undo
+    delete run.finishedAt[athleteId];
+    if (state.times?.[athleteId]?.total) delete state.times[athleteId].total;
+    save();
+    renderTimerView();
+    showToast('↺ Cofnięto stop', 'info', 1500);
+    return;
+  }
+  run.finishedAt[athleteId] = nowMs();
+  const totalMs = run.finishedAt[athleteId] - run.startedAt;
+  if (!state.times) state.times = {};
+  if (!state.times[athleteId]) state.times[athleteId] = {};
+  state.times[athleteId].total = formatRunTime(totalMs);
+  save();
+  renderTimerView();
+  showToast('■ Stop: ' + formatRunTime(totalMs), 'success', 1500);
+}
+
+// Format czasu z ms do "m:ss.cc" lub "ss.cc"
+function formatRunTime(ms) {
+  if (!Number.isFinite(ms) || ms < 0) ms = 0;
+  const sec = Math.floor(ms / 1000);
+  const cs = Math.floor((ms % 1000) / 10);
+  const m = Math.floor(sec / 60);
+  const s = sec - m * 60;
+  const csStr = (cs < 10 ? '0' : '') + cs;
+  if (m > 0) return m + ':' + (s < 10 ? '0' : '') + s + '.' + csStr;
+  return s + '.' + csStr;
+}
+
+// Format godziny: "15:43:12"
+function formatClockTime(ms) {
+  const d = new Date(ms);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+// === RENDER ===
+let _timerTickInterval = null;
+
+function renderTimerView() {
+  const role = getPtrRole();
+  // Podświetl aktywny przycisk roli
+  ['META', 'OSF', 'ADMIN'].forEach(r => {
+    const btn = document.getElementById('role-btn-' + r);
+    if (btn) btn.classList.toggle('active', r === role);
+  });
+  const desc = document.getElementById('role-desc');
+  if (desc) desc.textContent = PTR_ROLES[role].desc;
+
+  const pairs = (state.pairs || []).slice().sort((a, b) => {
+    if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
+    return a.pairNum - b.pairNum;
+  });
+
+  const emptyEl = document.getElementById('timer-empty');
+  const listEl = document.getElementById('timer-list');
+  if (!pairs.length) {
+    if (emptyEl) emptyEl.style.display = 'block';
+    if (listEl) listEl.innerHTML = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (!listEl) return;
+
+  listEl.innerHTML = pairs.map(p => renderTimerPairHTML(p, role)).join('');
+
+  // Restart ticker
+  if (_timerTickInterval) clearInterval(_timerTickInterval);
+  _timerTickInterval = setInterval(tickTimers, 100);
+  tickTimers();
+}
+
+function renderTimerPairHTML(p, role) {
+  const gender = p.gender;
+  const pairNum = p.pairNum;
+  const run = getRun(gender, pairNum);
+  const started = !!(run && run.startedAt);
+  const aFinished = !!(started && run.finishedAt && run.finishedAt[p.aId]);
+  const bFinished = p.bId ? !!(started && run.finishedAt && run.finishedAt[p.bId]) : true;
+  const allFinished = started && aFinished && bFinished;
+
+  let statusCls, statusTxt;
+  if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
+  else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
+  else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
+
+  const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
+  const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+
+  // Header z numerem, statusem, czasem
+  let head = '<div class="timer-pair-head">';
+  head += '<div class="timer-pair-label">';
+  head += '<span class="timer-pair-num">' + pairNum + '</span>';
+  head += '<span class="timer-pair-gender">' + (gender === 'M' ? '♂' : '♀') + '</span>';
+  head += '<span class="timer-pair-status ' + statusCls + '">' + statusTxt + '</span>';
+  if (started) head += '<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">start ' + formatClockTime(run.startedAt) + '</span>';
+  head += '</div>';
+  // Lecący czas (lub końcowy)
+  let displayMs;
+  if (allFinished) {
+    // Pokaż czas ostatniego zawodnika
+    const last = Math.max(...Object.values(run.finishedAt));
+    displayMs = last - run.startedAt;
+    head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '" data-finished="1">' + formatRunTime(displayMs) + '</div>';
+  } else if (started) {
+    head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '">0.00</div>';
+  } else {
+    head += '<div class="timer-display" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
+  }
+  head += '</div>';
+
+  // Pasek akcji: Start/Reset
+  let actionsBar = '';
+  const canStartReset = (role === 'ADMIN');
+  if (canStartReset) {
+    actionsBar = '<div class="timer-actions-bar">';
+    if (!started) {
+      actionsBar += '<button class="btn-timer btn-timer-start" onclick="startPair(\'' + gender + '\',' + pairNum + ')">▶ START</button>';
+      actionsBar += '<span style="font-size:11px;color:var(--text3);">Tylko admin — sędzia startu używa osobnej apki</span>';
+    } else {
+      actionsBar += '<button class="btn-timer btn-timer-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
+    }
+    actionsBar += '</div>';
+  }
+
+  // Karty zawodników
+  let athletes = '<div class="timer-athletes">';
+  athletes += renderTimerAthleteHTML(a, p.aId, gender, pairNum, run, role, 'L');
+  athletes += renderTimerAthleteHTML(b, p.bId, gender, pairNum, run, role, 'P');
+  athletes += '</div>';
+
+  const cardCls = 'timer-pair-card' + (allFinished ? ' finished' : (started ? ' running' : ''));
+  return '<div class="' + cardCls + '">' + head + actionsBar + athletes + '</div>';
+}
+
+function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) {
+  if (!a) {
+    return '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak zawodnika ' + lane + '</div>';
+  }
+  const dsq = isDsq(a.id);
+  const started = !!(run && run.startedAt);
+  const finished = !!(started && run.finishedAt && run.finishedAt[a.id]);
+  const total = getPatrolTime(a.id, 'total');
+  const osf = getPatrolTime(a.id, 'osf');
+  const hits = state.times?.[a.id]?.hits;
+
+  let timeDisplay;
+  if (finished) {
+    const ms = run.finishedAt[a.id] - run.startedAt;
+    timeDisplay = '<div class="timer-athlete-time finished" data-timer-athlete="' + a.id + '" data-pair="' + gender + '_' + pairNum + '">' + formatRunTime(ms) + '</div>';
+  } else if (started) {
+    timeDisplay = '<div class="timer-athlete-time" data-timer-athlete="' + a.id + '" data-pair="' + gender + '_' + pairNum + '" data-running="1">0.00</div>';
+  } else {
+    timeDisplay = '<div class="timer-athlete-time idle">—</div>';
+  }
+
+  // Przycisk Stop / Cofnij stop — META + ADMIN
+  let stopBtn = '';
+  if ((role === 'META' || role === 'ADMIN') && started) {
+    if (finished) {
+      stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" style="font-size:11px;padding:6px 12px;">↺ Cofnij stop</button>';
+    } else if (!dsq) {
+      stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')">■ STOP</button>';
+    }
+  }
+
+  // Pole OSF — wszyscy (META, OSF, ADMIN)
+  const osfInput = '<div class="timer-osf-input-row">' +
+    '<span class="timer-osf-label">⏱ OSF</span>' +
+    '<input type="text" class="timer-osf-input" value="' + esc(osf) + '" placeholder="0:00.00"' +
+      ' data-id="' + a.id + '" data-field="osf"' +
+      ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+      (dsq ? ' disabled' : '') + ' />' +
+    '</div>';
+
+  // Trafienia — META + ADMIN
+  let hitsRow = '';
+  if (role === 'META' || role === 'ADMIN') {
+    hitsRow = '<div class="timer-hits-row">';
+    for (let n = 0; n <= 5; n++) {
+      const active = hits === n ? ' active' : '';
+      hitsRow += '<button class="timer-hit-btn' + active + '" onclick="setHits(' + a.id + ',' + n + ')"' + (dsq ? ' disabled' : '') + '>' + n + '</button>';
+    }
+    hitsRow += '</div>';
+  } else if (hits !== undefined) {
+    // OSF — tylko pokaż wartość
+    hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Trafienia: <strong style="color:var(--text1);">' + hits + '/5</strong></div>';
+  }
+
+  const cls = 'timer-athlete' + (finished ? ' finished' : '') + (dsq ? ' dsq' : '');
+  return '<div class="' + cls + '">' +
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div class="timer-athlete-name">' + esc(displayName(a)) + ' <span style="font-family:var(--font-m);font-size:11px;color:var(--text3);font-weight:400;">#' + esc(a.bib) + '</span> <span class="lane-badge lane-' + lane + '" style="margin-left:4px;">' + lane + '</span></div>' +
+        '<div class="timer-athlete-meta">' + esc(a.team || '') + '</div>' +
+      '</div>' +
+    '</div>' +
+    timeDisplay +
+    (stopBtn ? '<div style="margin-bottom:8px;">' + stopBtn + '</div>' : '') +
+    osfInput +
+    hitsRow +
+  '</div>';
+}
+
+// Ticker: aktualizuje tylko teksty lecących liczników (nie cały DOM)
+function tickTimers() {
+  const driftBlocked = getClockDriftStatus().status === 'block';
+  // Update timer-display dla par
+  document.querySelectorAll('.timer-display[data-timer-pair]').forEach(el => {
+    if (el.dataset.finished === '1') return;
+    const [gender, pairNum] = el.dataset.timerPair.split('_');
+    const run = getRun(gender, parseInt(pairNum));
+    if (!run || !run.startedAt) return;
+    const elapsed = nowMs() - run.startedAt;
+    el.textContent = formatRunTime(elapsed);
+  });
+  // Update timer-athlete-time
+  document.querySelectorAll('.timer-athlete-time[data-running="1"]').forEach(el => {
+    const athleteId = parseInt(el.dataset.timerAthlete);
+    const [gender, pairNum] = el.dataset.pair.split('_');
+    const run = getRun(gender, parseInt(pairNum));
+    if (!run || !run.startedAt) return;
+    if (run.finishedAt && run.finishedAt[athleteId]) return; // już zatrzymany
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
 }
 
 // Przenieś parę o ±1
