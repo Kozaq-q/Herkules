@@ -74,8 +74,21 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 /* RUNNING — pomaranczowa gruba ramka + glow + tło */
 .pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.12), var(--bg2) 40%); box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); animation: card-glow 2s ease-in-out infinite; }
 @keyframes card-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); } 50% { box-shadow: 0 0 0 5px rgba(232,148,77,.30), 0 6px 28px rgba(232,148,77,.32); } }
-/* FINISHED — zielona ramka + tło */
-.pair-card.finished { border-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.12), var(--bg2) 40%); opacity: .94; }
+/* FINISHED — wyszarzone, mniejsze, bez kolorów */
+.pair-card.finished { border-color: var(--border); background: var(--bg2); opacity: .55; filter: grayscale(.6); }
+.pair-card.finished:hover { opacity: .85; }
+.pair-card.finished .pair-head { padding: 8px 14px; background: var(--bg2); }
+.pair-card.finished .pair-num { font-size: 22px; color: var(--text3) !important; min-width: 32px; }
+.pair-card.finished .pair-gender { font-size: 14px; color: var(--text3); }
+.pair-card.finished .pair-status { font-size: 10px; padding: 3px 8px; background: var(--bg3); color: var(--text3) !important; border-color: var(--border) !important; box-shadow: none !important; animation: none !important; }
+.pair-card.finished .timer-display { font-size: 22px !important; color: var(--text3) !important; }
+.pair-card.finished .pair-athletes { padding: 6px 14px; gap: 6px; background: var(--bg2); }
+.pair-card.finished .pair-ath { padding: 6px 10px; background: var(--bg2); border: 1px solid var(--border); }
+.pair-card.finished .pair-ath-name { font-size: 12px; color: var(--text2); }
+.pair-card.finished .pair-ath-meta { font-size: 10px; }
+.pair-card.finished .pair-action { padding: 6px 14px 10px; }
+.pair-card.finished .lane-badge { font-size: 9px; padding: 1px 5px; opacity: .6; }
+.pair-card.finished .ath-stats { font-size: 11px; opacity: .85; }
 
 .pair-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
 .pair-num { font-family: var(--font-h); font-size: 36px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 50px; text-align: center; }
@@ -102,6 +115,22 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .pair-ath { background: var(--bg3); border-radius: var(--radius); padding: 10px 14px; }
 .pair-ath-name { font-size: 14px; font-weight: 700; color: var(--text1); }
 .pair-ath-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.pair-ath.dsq { opacity: .55; }
+.pair-ath.dsq .pair-ath-name { text-decoration: line-through; color: var(--red); }
+
+/* Wyniki przy zawodniku — drobny druk obok nazwiska */
+.ath-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-family: var(--font-m); font-size: 12px; }
+.ath-stat { display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 7px; background: var(--bg2); border: 1px solid var(--border); border-radius: 3px; line-height: 1.3; }
+.ath-stat-lbl { font-family: var(--font-h); font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); }
+.ath-stat-val { font-weight: 800; color: var(--text1); font-variant-numeric: tabular-nums; }
+.ath-stat.total .ath-stat-val { color: var(--green); }
+.ath-stat.osf .ath-stat-val { color: var(--male); }
+.ath-stat.hits .ath-stat-val { color: var(--orange); }
+.ath-stat.empty .ath-stat-val { color: var(--text3); font-weight: 400; }
+.ath-stat.dsq { background: rgba(224,85,85,.1); border-color: rgba(224,85,85,.4); }
+.ath-stat.dsq .ath-stat-val { color: var(--red); }
+.ath-stat.marker { background: rgba(232,148,77,.1); border-color: rgba(232,148,77,.4); }
+.ath-stat.marker .ath-stat-val { color: var(--orange); }
 .lane-badge { display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 2px 7px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
 .lane-L { background: rgba(91,155,213,.15); color: var(--male); border: 1px solid rgba(91,155,213,.4); }
 .lane-P { background: rgba(213,123,155,.15); color: var(--female); border: 1px solid rgba(213,123,155,.4); }
@@ -119,23 +148,6 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .btn-start:disabled, .btn-reset:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.5); }
 
 .start-time-info { font-size: 12px; color: var(--text3); font-family: var(--font-m); margin-top: 2px; }
-
-/* WYNIKI NA ŻYWO — drobny druk */
-.ps-results-card { margin-top: 30px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
-.ps-results-title { font-family: var(--font-h); font-size: 12px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.ps-results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.ps-results-col-title { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
-.ps-result-row { display: grid; grid-template-columns: 22px 1fr 60px 50px 32px; gap: 4px; align-items: center; padding: 3px 0; font-size: 11px; line-height: 1.3; border-bottom: 1px dashed transparent; }
-.ps-result-row:nth-child(odd) { background: rgba(255,255,255,.015); }
-.ps-result-row.dsq { opacity: .5; text-decoration: line-through; }
-.ps-result-rank { font-family: var(--font-h); font-weight: 800; color: var(--text2); text-align: center; font-size: 10px; }
-.ps-result-name { color: var(--text1); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ps-result-name .team { color: var(--text3); font-weight: 400; font-size: 10px; }
-.ps-result-time { font-family: var(--font-m); font-weight: 700; color: var(--text1); text-align: right; font-size: 11px; font-variant-numeric: tabular-nums; }
-.ps-result-osf  { font-family: var(--font-m); color: var(--text3); text-align: right; font-size: 10px; font-variant-numeric: tabular-nums; }
-.ps-result-hits { font-family: var(--font-m); color: var(--text2); text-align: center; font-size: 10px; font-variant-numeric: tabular-nums; }
-.ps-result-empty { font-size: 10px; color: var(--text3); padding: 8px 0; text-align: center; font-style: italic; }
-@media (max-width: 700px) { .ps-results-grid { grid-template-columns: 1fr; gap: 14px; } }
 
 .ps-tab-count { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; background: rgba(255,255,255,.08); border-radius: 8px; color: var(--text3); font-weight: 600; }
 
@@ -175,6 +187,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <span class="header-sub" id="contest-sub">—</span>
     </div>
     <div class="header-right">
+      <button id="hide-finished-btn" onclick="togglePsHideFinished()" title="Pokaż/ukryj pary które ukończyły bieg" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">👁 <span id="hide-finished-label">Ukryj zakończone</span></button>
       <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(232,148,77,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram</button>
       <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
@@ -191,24 +204,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <button id="ps-emergency-reset" onclick="emergencyResetRunning()" style="display:none;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;font-family:var(--font-h);letter-spacing:1px;text-transform:lowercase;padding:4px 10px;cursor:pointer;" title="Awaryjny reset biegnących par">↺ reset biegnących</button>
     </div>
     <div id="pairs-list"></div>
-
-    <!-- WYNIKI NA ŻYWO — drobny druk -->
-    <div id="ps-results-card" class="ps-results-card" style="display:none;">
-      <div class="ps-results-title">
-        <span>🏆 Wyniki na żywo</span>
-        <span style="font-size:9px;color:var(--text3);font-weight:400;letter-spacing:1px;">drobnym drukiem</span>
-      </div>
-      <div class="ps-results-grid">
-        <div>
-          <div class="ps-results-col-title" style="color:var(--male);">♂ Mężczyźni <span id="ps-res-count-M" style="color:var(--text3);font-weight:400;font-size:9px;margin-left:4px;"></span></div>
-          <div id="ps-results-M"></div>
-        </div>
-        <div>
-          <div class="ps-results-col-title" style="color:var(--female);">♀ Kobiety <span id="ps-res-count-K" style="color:var(--text3);font-weight:400;font-size:9px;margin-left:4px;"></span></div>
-          <div id="ps-results-K"></div>
-        </div>
-      </div>
-    </div>
+    <div id="ps-finished-info" style="display:none;text-align:center;font-size:11px;color:var(--text3);margin-top:14px;font-style:italic;"></div>
   </div>
 </div>
 
@@ -389,6 +385,7 @@ function enterApp() {
   document.getElementById('splash').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   renderHeader();
+  if (typeof _updateHideFinishedBtn === 'function') _updateHideFinishedBtn();
   renderPairs();
   showSyncStatus('ok');
 }
@@ -564,6 +561,7 @@ function emergencyResetRunning() {
 }
 
 function renderPairs() {
+  if (typeof _updateHideFinishedBtn === 'function') _updateHideFinishedBtn();
   const listEl = document.getElementById('pairs-list');
   const tabsRow = document.getElementById('ps-tabs-row');
   // Tryb offline — START nieaktywny
@@ -609,85 +607,75 @@ function renderPairs() {
   }).length;
   const emergencyBtn = document.getElementById('ps-emergency-reset');
   if (emergencyBtn) emergencyBtn.style.display = runningCount > 0 ? '' : 'none';
-  // Filtruj
-  const visible = pairs.filter(p => p.gender === _psTab);
+  // Filtruj wg płci + (opcjonalnie) ukryj zakończone
+  let visible = pairs.filter(p => p.gender === _psTab);
+  let hiddenFinished = 0;
+  if (_psHideFinished) {
+    const before = visible.length;
+    visible = visible.filter(p => {
+      const r = getRun(p.gender, p.pairNum);
+      const aFin = !!(r && r.startedAt && r.finishedAt && r.finishedAt[p.aId]);
+      const bFin = p.bId ? !!(r && r.startedAt && r.finishedAt && r.finishedAt[p.bId]) : true;
+      const allFin = r && r.startedAt && aFin && bFin;
+      return !allFin;
+    });
+    hiddenFinished = before - visible.length;
+  }
   listEl.innerHTML = visible.map(p => renderPairCard(p)).join('');
 
-  // Wyniki na żywo (drobnym drukiem)
-  renderPsResults();
-}
-
-// ─── WYNIKI NA ŻYWO (drobny druk) ────────────────────────────
-function _psBuildRow(a) {
-  const total = state.times?.[a.id]?.total || '';
-  const osf   = state.times?.[a.id]?.osf || '';
-  const hits  = state.times?.[a.id]?.hits;
-  const dsq   = !!(state.disq && state.disq[a.id]);
-  const isMarker = v => v === 'DNF' || v === 'DNS' || v === 'DSQ';
-  const totalIsMarker = isMarker(total);
-  const totalSec = (dsq || totalIsMarker || !total) ? Infinity : _psParseTime(total);
-  let tier = 3, marker = '';
-  if (dsq) tier = 3;
-  else if (totalSec < Infinity) tier = 0;
-  else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
-  else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
-  const hasAny = !!(total || osf || hits !== undefined || dsq);
-  return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
-}
-
-function _psParseTime(s) {
-  if (!s) return Infinity;
-  const m = String(s).trim().match(/^(?:(\d+):)?(\d+)(?:[.,](\d+))?$/);
-  if (!m) return Infinity;
-  const min = parseInt(m[1] || '0');
-  const sec = parseInt(m[2] || '0');
-  const frac = m[3] ? parseFloat('0.' + m[3]) : 0;
-  return min * 60 + sec + frac;
-}
-
-function renderPsResults() {
-  const card = document.getElementById('ps-results-card');
-  if (!card) return;
-  const all = (state.athletes || []);
-  const rowsM = all.filter(a => a.gender === 'M').map(_psBuildRow).filter(r => r.hasAny);
-  const rowsK = all.filter(a => a.gender === 'K').map(_psBuildRow).filter(r => r.hasAny);
-  if (!rowsM.length && !rowsK.length) {
-    card.style.display = 'none';
-    return;
+  // Info ukrytych
+  const infoEl = document.getElementById('ps-finished-info');
+  if (infoEl) {
+    if (_psHideFinished && hiddenFinished > 0) {
+      infoEl.style.display = '';
+      infoEl.textContent = '👁 Ukryto ' + hiddenFinished + ' zakończonych par. Kliknij "Pokaż zakończone" w nagłówku aby je przywrócić.';
+    } else {
+      infoEl.style.display = 'none';
+    }
   }
-  card.style.display = '';
 
-  function renderCol(rows, containerId, countId) {
-    const el = document.getElementById(containerId);
-    const cEl = document.getElementById(countId);
-    if (cEl) cEl.textContent = rows.length ? '(' + rows.length + ')' : '';
-    if (!el) return;
-    if (!rows.length) { el.innerHTML = '<div class="ps-result-empty">— brak —</div>'; return; }
-    rows.sort((a, b) => a.tier !== b.tier ? a.tier - b.tier : a.totalSec - b.totalSec);
-    let rank = 1;
-    el.innerHTML = rows.map(r => {
-      const noTime = r.totalSec === Infinity;
-      const dsqCls = r.dsq ? ' dsq' : '';
-      const myRank = (!noTime && !r.dsq) ? rank++ : null;
-      const rankDisp = r.dsq ? 'DSQ' : (r.marker ? r.marker : (myRank !== null ? myRank : '–'));
-      const totalDisp = r.dsq ? '—' : (r.total || '—');
-      const osfDisp   = r.dsq ? '—' : (r.osf || '—');
-      const hitsDisp  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
-      const name = (a => {
-        const rk = a.rank ? a.rank + ' ' : '';
-        return rk + (a.name || '');
-      })(r.ath);
-      return '<div class="ps-result-row' + dsqCls + '">' +
-        '<div class="ps-result-rank">' + rankDisp + '</div>' +
-        '<div class="ps-result-name">' + esc(name) + (r.ath.team ? ' <span class="team">· ' + esc(r.ath.team) + '</span>' : '') + '</div>' +
-        '<div class="ps-result-time">' + totalDisp + '</div>' +
-        '<div class="ps-result-osf">' + osfDisp + '</div>' +
-        '<div class="ps-result-hits">' + hitsDisp + '</div>' +
-      '</div>';
-    }).join('');
+  _updateHideFinishedBtn();
+}
+
+// ─── TOGGLE: ukryj zakończone pary ────────────────────────────
+let _psHideFinished = (function(){
+  try { return localStorage.getItem('ps_hide_finished_' + STORAGE_KEY) === '1'; }
+  catch(_){ return false; }
+})();
+
+function togglePsHideFinished() {
+  _psHideFinished = !_psHideFinished;
+  try { localStorage.setItem('ps_hide_finished_' + STORAGE_KEY, _psHideFinished ? '1' : '0'); } catch(_){}
+  renderPairs();
+}
+
+function _updateHideFinishedBtn() {
+  const btn = document.getElementById('hide-finished-btn');
+  const lbl = document.getElementById('hide-finished-label');
+  if (!btn || !lbl) return;
+  if (_psHideFinished) {
+    lbl.textContent = 'Pokaż zakończone';
+    btn.style.background = 'rgba(232,148,77,.15)';
+    btn.style.borderColor = 'var(--orange)';
+    btn.style.color = 'var(--orange)';
+    btn.firstChild.textContent = '🙈 ';
+  } else {
+    lbl.textContent = 'Ukryj zakończone';
+    btn.style.background = 'transparent';
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.color = 'var(--text3)';
+    btn.firstChild.textContent = '👁 ';
   }
-  renderCol(rowsM, 'ps-results-M', 'ps-res-count-M');
-  renderCol(rowsK, 'ps-results-K', 'ps-res-count-K');
+}
+
+// ─── DANE ZAWODNIKA dla wyświetlania inline obok nazwiska ────
+function _psAthStats(athleteId) {
+  if (!athleteId) return null;
+  const total = state.times?.[athleteId]?.total || '';
+  const osf   = state.times?.[athleteId]?.osf || '';
+  const hits  = state.times?.[athleteId]?.hits;
+  const dsq   = !!(state.disq && state.disq[athleteId]);
+  return { total, osf, hits, dsq, hasAny: !!(total || osf || hits !== undefined || dsq) };
 }
 
 function _applyPsTabStyle() {
@@ -765,12 +753,46 @@ function renderPairCard(p) {
     timerHtml +
   '</div>';
 
-  // Athletes
+  // Athletes z wynikami inline
   const renderAth = (ath, lane) => {
     if (!ath) return '<div class="pair-ath" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak ' + lane + '</div>';
-    return '<div class="pair-ath">' +
+    const s = _psAthStats(ath.id) || { total:'', osf:'', hits:undefined, dsq:false, hasAny:false };
+    const isMarker = v => v === 'DNF' || v === 'DNS';
+    // Stat: TOTAL
+    let totalChip;
+    if (s.dsq) {
+      totalChip = '<span class="ath-stat dsq"><span class="ath-stat-lbl">Total</span><span class="ath-stat-val">DSQ</span></span>';
+    } else if (isMarker(s.total)) {
+      totalChip = '<span class="ath-stat marker"><span class="ath-stat-lbl">Total</span><span class="ath-stat-val">' + s.total + '</span></span>';
+    } else if (s.total) {
+      totalChip = '<span class="ath-stat total"><span class="ath-stat-lbl">Total</span><span class="ath-stat-val">' + esc(s.total) + '</span></span>';
+    } else {
+      totalChip = '<span class="ath-stat empty"><span class="ath-stat-lbl">Total</span><span class="ath-stat-val">—</span></span>';
+    }
+    // Stat: OSF
+    let osfChip;
+    if (s.dsq) {
+      osfChip = '';
+    } else if (isMarker(s.osf)) {
+      osfChip = '<span class="ath-stat marker"><span class="ath-stat-lbl">OSF</span><span class="ath-stat-val">' + s.osf + '</span></span>';
+    } else if (s.osf) {
+      osfChip = '<span class="ath-stat osf"><span class="ath-stat-lbl">OSF</span><span class="ath-stat-val">' + esc(s.osf) + '</span></span>';
+    } else {
+      osfChip = '<span class="ath-stat empty"><span class="ath-stat-lbl">OSF</span><span class="ath-stat-val">—</span></span>';
+    }
+    // Stat: HITS
+    let hitsChip;
+    if (s.dsq) {
+      hitsChip = '';
+    } else if (s.hits !== undefined && s.hits !== null) {
+      hitsChip = '<span class="ath-stat hits"><span class="ath-stat-lbl">Traf</span><span class="ath-stat-val">' + s.hits + '/5</span></span>';
+    } else {
+      hitsChip = '<span class="ath-stat empty"><span class="ath-stat-lbl">Traf</span><span class="ath-stat-val">—</span></span>';
+    }
+    return '<div class="pair-ath' + (s.dsq ? ' dsq' : '') + '">' +
       '<div class="pair-ath-name">' + esc(displayName(ath)) + '<span class="lane-badge lane-' + lane + '">' + lane + '</span></div>' +
       '<div class="pair-ath-meta">' + esc(ath.team || '') + ' · #' + esc(ath.bib) + '</div>' +
+      '<div class="ath-stats">' + totalChip + osfChip + hitsChip + '</div>' +
     '</div>';
   };
   const aIsL = (p.aLane || 'L') === 'L';
