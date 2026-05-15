@@ -357,6 +357,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <span id="sync-label">—</span>
       </div>
       <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
+      <!-- Chip globalnego wyboru roli -->
+      <div style="position:relative;">
+        <button id="role-chip-btn" onclick="toggleRoleDropdown()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          <span id="role-chip-label">META</span>
+          <span style="font-size:9px;">▾</span>
+        </button>
+        <div id="role-chip-dropdown" style="display:none;position:absolute;top:30px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:4px;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:140px;">
+          <button onclick="setPtrRole('META');toggleRoleDropdown()" class="role-chip-opt" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🎯 Meta</button>
+          <button onclick="setPtrRole('OSF');toggleRoleDropdown()" class="role-chip-opt" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🏃 OSF</button>
+          <button onclick="setPtrRole('ADMIN');toggleRoleDropdown()" class="role-chip-opt" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">👑 Admin</button>
+        </div>
+      </div>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
     </div>
   </header>
@@ -1214,11 +1226,79 @@ function _applyRemoteState(stateJson) {
   _applyRemoteStateNow(stateJson);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// MERGE PER-POLE — bezpieczna synchronizacja gdy dwóch sędziów
+// pracuje równocześnie nad tym samym zawodnikiem ale na różnych polach
+// ═══════════════════════════════════════════════════════════════
+const TIMES_FIELDS = ['osf', 'total', 'hits'];
+
+function mergeTimesPerField(local, incoming) {
+  // Mutuje `incoming` — dla każdego zawodnika i każdego pola wybiera świeższe
+  const allIds = new Set([...Object.keys(local), ...Object.keys(incoming)]);
+  for (const id of allIds) {
+    const L = local[id] || {};
+    const R = incoming[id] || {};
+    if (!incoming[id]) incoming[id] = {};
+    const out = incoming[id];
+    for (const field of TIMES_FIELDS) {
+      const atField = field + 'At';
+      const lAt = L[atField] || 0;
+      const rAt = R[atField] || 0;
+      if (lAt > rAt) {
+        // Lokalne pole jest świeższe — zachowaj lokalne (lub tombstone gdy usunięte)
+        if (L[field] !== undefined) {
+          out[field] = L[field];
+        } else {
+          delete out[field]; // tombstone: lokalnie usunięte świeższym timestampem
+        }
+        out[atField] = lAt;
+      }
+      // else: pole z chmury jest świeższe lub równe — zostaw jak jest
+    }
+  }
+}
+
+function mergeDisqPerId(localDisq, localDisqAt, remoteDisq, remoteDisqAt) {
+  // Mutuje `localDisq` i `localDisqAt` żeby zawierały merged values
+  const allIds = new Set([...Object.keys(localDisq), ...Object.keys(remoteDisq)]);
+  const outDisq = {};
+  const outAt = {};
+  for (const id of allIds) {
+    const lAt = localDisqAt[id] || 0;
+    const rAt = remoteDisqAt[id] || 0;
+    if (lAt > rAt) {
+      // Lokalna decyzja świeższa
+      if (localDisq[id]) outDisq[id] = true;
+      outAt[id] = lAt;
+    } else if (rAt > 0) {
+      if (remoteDisq[id]) outDisq[id] = true;
+      outAt[id] = rAt;
+    }
+  }
+  // Zastąp zawartość localDisq i localDisqAt
+  Object.keys(localDisq).forEach(k => delete localDisq[k]);
+  Object.keys(localDisqAt).forEach(k => delete localDisqAt[k]);
+  Object.assign(localDisq, outDisq);
+  Object.assign(localDisqAt, outAt);
+}
+
 function _applyRemoteStateNow(stateJson) {
   try {
     const incoming = JSON.parse(stateJson);
     if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
     if (_isSaving) return;
+    // MERGE per-pole dla state.times i state.disq — gwarantuje że jeśli sędzia A i B
+    // wpisali różne pola dla tego samego zawodnika, oba zostaną zachowane.
+    // Decyzja per pole: świeższy timestamp wygrywa.
+    if (state && state.times && incoming.times) {
+      mergeTimesPerField(state.times, incoming.times);
+    }
+    if (state && state.disq && incoming.disq !== undefined) {
+      mergeDisqPerId(state.disq, state.disqAt || {}, incoming.disq, incoming.disqAt || {});
+      // Wynik scalania zapisz z powrotem do incoming
+      incoming.disq = state.disq;
+      incoming.disqAt = state.disqAt;
+    }
     state = incoming;
     ensureStateDefaults();
     localStorage.setItem(LS_KEY, JSON.stringify(state));
@@ -2492,10 +2572,20 @@ function athleteCardHTML(a, lane, pairNum, gender) {
   const hits = state.times?.[a.id]?.hits;
   const totalIsMarker = isTimeMarker(total);
   const osfIsMarker = isTimeMarker(osf);
+  // Uprawnienia per rola
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const canEditOsf   = role === 'ADMIN' || role === 'OSF';
+  const canEditTotal = role === 'ADMIN' || role === 'META';
+  const canEditHits  = role === 'ADMIN' || role === 'META';
+  const canEditDsq   = role === 'ADMIN' || role === 'META';
+  const osfDisabled   = dsq || !canEditOsf;
+  const totalDisabled = dsq || !canEditTotal;
+  const hitsDisabled  = dsq || !canEditHits;
+  const dsqDisabled   = !canEditDsq;
   const pickAttr = pairNum
     ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + gender + '" onclick="handlePtrAthleteClick(this)"'
     : '';
-  const swapBtn = pairNum
+  const swapBtn = (pairNum && role === 'ADMIN')
     ? '<button class="swap-trigger-btn" onclick="event.stopPropagation();activatePtrSwap(' + a.id + ',' + pairNum + ',\'' + gender + '\')" title="Zamień zawodnika">↔</button>'
     : '';
   return '<div class="pair-athlete"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
@@ -2511,27 +2601,27 @@ function athleteCardHTML(a, lane, pairNum, gender) {
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">' + esc(a.team || '') + '</div>' +
     // Dwa kafelki czasów — OSF (lewo, niebieski) i Łączny (prawo, zielony)
     '<div class="ptr-times-row">' +
-      '<div class="ptr-time-tile ptr-time-osf' + (osfIsMarker ? ' marker' : '') + (dsq ? ' dsq' : '') + '">' +
-        '<div class="ptr-time-lbl">⏱ OSF</div>' +
+      '<div class="ptr-time-tile ptr-time-osf' + (osfIsMarker ? ' marker' : '') + (osfDisabled ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">⏱ OSF' + (!canEditOsf ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
         '<input class="ptr-time-input" type="text" value="' + esc(osf) + '" placeholder="0:00.00"' +
           ' data-id="' + a.id + '" data-field="osf"' +
           ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-          (dsq ? ' disabled' : '') + ' />' +
+          (osfDisabled ? ' disabled' : '') + ' />' +
       '</div>' +
-      '<div class="ptr-time-tile ptr-time-total' + (totalIsMarker ? ' marker' : '') + (dsq ? ' dsq' : '') + '">' +
-        '<div class="ptr-time-lbl">🏃 Łączny</div>' +
+      '<div class="ptr-time-tile ptr-time-total' + (totalIsMarker ? ' marker' : '') + (totalDisabled ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">🏃 Łączny' + (!canEditTotal ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
         '<input class="ptr-time-input" type="text" value="' + esc(total) + '" placeholder="0:00.00 / DNF"' +
           ' data-id="' + a.id + '" data-field="total"' +
           ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-          (dsq ? ' disabled' : '') + ' />' +
+          (totalDisabled ? ' disabled' : '') + ' />' +
       '</div>' +
     '</div>' +
     // Rząd 6 przycisków trafień (0-5)
     '<div class="ptr-hits-row">' +
       [0,1,2,3,4,5].map(n =>
-        '<button class="ptr-hit-btn' + (hits === n ? ' active' : '') + (dsq ? ' dsq' : '') + '"' +
+        '<button class="ptr-hit-btn' + (hits === n ? ' active' : '') + (hitsDisabled ? ' dsq' : '') + '"' +
           ' onclick="setHits(' + a.id + ',' + n + ')"' +
-          (dsq ? ' disabled' : '') +
+          (hitsDisabled ? ' disabled' : '') +
           ' title="' + n + ' trafień">' + n + '</button>'
       ).join('') +
     '</div>' +
@@ -2543,7 +2633,9 @@ function athleteCardHTML(a, lane, pairNum, gender) {
         'border-radius:var(--radius);' +
         'background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';' +
         'color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';' +
-        'cursor:pointer;white-space:nowrap;" title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '">' +
+        'cursor:' + (dsqDisabled ? 'not-allowed' : 'pointer') + ';white-space:nowrap;' + (dsqDisabled ? 'opacity:.4;' : '') + '"' +
+        (dsqDisabled ? ' disabled' : '') +
+        ' title="' + (dsqDisabled ? 'Tylko META i Admin mogą zmieniać DSQ' : (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj')) + '">' +
         (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
     '</div>' +
   '</div>';
@@ -2553,10 +2645,10 @@ function athleteCardHTML(a, lane, pairNum, gender) {
 function setHits(id, n) {
   if (!state.times) state.times = {};
   if (!state.times[id]) state.times[id] = {};
+  state.times[id].hitsAt = nowMs(); // per-field timestamp do merge
   // Klik na aktualnie aktywny numer wyczyść (toggle off)
   if (state.times[id].hits === n) {
     delete state.times[id].hits;
-    if (!Object.keys(state.times[id]).length) delete state.times[id];
   } else {
     state.times[id].hits = n;
   }
@@ -2583,8 +2675,41 @@ function getPtrRole() {
 function setPtrRole(r) {
   if (!PTR_ROLES[r]) return;
   localStorage.setItem('ptr_role_' + SLOT_ID, r);
-  renderTimerView();
+  _updateRoleChip();
+  if (typeof renderTimerView === 'function') renderTimerView();
+  if (typeof renderPairsView === 'function') renderPairsView();
+  showToast('Tryb: ' + PTR_ROLES[r].label, 'info', 1500);
 }
+
+function _updateRoleChip() {
+  const role = getPtrRole();
+  const cfg = PTR_ROLES[role];
+  const lbl = document.getElementById('role-chip-label');
+  if (lbl) lbl.textContent = cfg.label.toUpperCase();
+  const btn = document.getElementById('role-chip-btn');
+  if (btn) {
+    btn.style.color = role === 'ADMIN' ? 'var(--accent)' : (role === 'OSF' ? 'var(--male)' : 'var(--green)');
+    btn.style.borderColor = role === 'ADMIN' ? 'rgba(232,212,77,.5)' : (role === 'OSF' ? 'rgba(91,155,213,.5)' : 'rgba(76,175,130,.5)');
+  }
+  // Aktywny w dropdownie
+  document.querySelectorAll('.role-chip-opt').forEach(b => {
+    b.style.background = b.textContent.toUpperCase().includes(role.toUpperCase()) ? 'var(--bg3)' : 'none';
+  });
+}
+
+function toggleRoleDropdown() {
+  const dd = document.getElementById('role-chip-dropdown');
+  if (!dd) return;
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+// Zamknij dropdown przy kliknięciu poza
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('role-chip-dropdown');
+  const btn = document.getElementById('role-chip-btn');
+  if (!dd || dd.style.display === 'none') return;
+  if (!dd.contains(e.target) && !btn.contains(e.target)) dd.style.display = 'none';
+});
 
 // === STATE.RUNS helpers ===
 function getRun(gender, pairNum) {
@@ -2651,6 +2776,7 @@ function stopAthlete(athleteId, gender, pairNum) {
     // Już zatrzymany — drugi klik to undo
     delete run.finishedAt[athleteId];
     if (state.times?.[athleteId]?.total) delete state.times[athleteId].total;
+    if (state.times?.[athleteId]) state.times[athleteId].totalAt = nowMs(); // tombstone
     save();
     renderTimerView();
     showToast('↺ Cofnięto stop', 'info', 1500);
@@ -2661,6 +2787,7 @@ function stopAthlete(athleteId, gender, pairNum) {
   if (!state.times) state.times = {};
   if (!state.times[athleteId]) state.times[athleteId] = {};
   state.times[athleteId].total = formatRunTime(totalMs);
+  state.times[athleteId].totalAt = nowMs();
   save();
   renderTimerView();
   showToast('■ Stop: ' + formatRunTime(totalMs), 'success', 1500);
@@ -2815,14 +2942,23 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
     }
   }
 
-  // Pole OSF — wszyscy (META, OSF, ADMIN)
-  const osfInput = '<div class="timer-osf-input-row">' +
-    '<span class="timer-osf-label">⏱ OSF</span>' +
-    '<input type="text" class="timer-osf-input" value="' + esc(osf) + '" placeholder="0:00.00"' +
-      ' data-id="' + a.id + '" data-field="osf"' +
-      ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-      (dsq ? ' disabled' : '') + ' />' +
-    '</div>';
+  // Pole OSF — TYLKO OSF + ADMIN. META widzi wartość read-only (etykieta zamiast inputa).
+  let osfInput;
+  if (role === 'OSF' || role === 'ADMIN') {
+    osfInput = '<div class="timer-osf-input-row">' +
+      '<span class="timer-osf-label">⏱ OSF</span>' +
+      '<input type="text" class="timer-osf-input" value="' + esc(osf) + '" placeholder="0:00.00"' +
+        ' data-id="' + a.id + '" data-field="osf"' +
+        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+        (dsq ? ' disabled' : '') + ' />' +
+      '</div>';
+  } else {
+    // META widzi tylko wartość (read-only, nie może edytować)
+    osfInput = '<div class="timer-osf-input-row">' +
+      '<span class="timer-osf-label">⏱ OSF</span>' +
+      '<span style="flex:1;font-family:var(--font-m);font-size:13px;color:' + (osf ? 'var(--male)' : 'var(--text3)') + ';padding:5px 8px;background:rgba(91,155,213,.04);border:1px dashed rgba(91,155,213,.25);border-radius:var(--radius);" title="Tylko OSF/Admin może wpisać">' + (osf ? esc(osf) : '— (wpisze OSF)') + '</span>' +
+      '</div>';
+  }
 
   // Trafienia — META + ADMIN
   let hitsRow = '';
@@ -3112,9 +3248,11 @@ function getPatrolTime(id, field) {
 function setPatrolTime(id, field, val) {
   if (!state.times) state.times = {};
   if (!state.times[id]) state.times[id] = {};
+  // Per-field timestamp do merge (tombstone gdy wartość usunięta)
+  state.times[id][field + 'At'] = nowMs();
   if (val === '' || val === undefined || val === null) {
     delete state.times[id][field];
-    if (!Object.keys(state.times[id]).length) delete state.times[id];
+    // Zostaw 'fieldAt' jako tombstone żeby merge wiedział że to USUNIĘCIE jest świeższe
   } else {
     state.times[id][field] = val;
   }
@@ -3167,11 +3305,14 @@ function isDsq(id) { return !!(state.disq && state.disq[id]); }
 
 function toggleDsq(id) {
   if (!state.disq) state.disq = {};
+  if (!state.disqAt) state.disqAt = {}; // per-id timestamp do merge
   state.disq[id] = !state.disq[id];
+  state.disqAt[id] = nowMs();
   if (!state.disq[id]) delete state.disq[id];
   save();
   // Natychmiastowe przerenderowanie zakładki Pary (gdzie są inputy + przycisk DSQ)
   renderPairsView();
+  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3385,6 +3526,7 @@ async function boot() {
   }
   // Zastosuj tryb offline (ukryje zakładkę Stoper, pokaże banner)
   _applyOfflineMode();
+  if (typeof _updateRoleChip === 'function') _updateRoleChip();
   // 6. Po sync — odśwież widok aktywnej zakładki
   const active = document.querySelector('.nav-tab.active');
   if (active) {
