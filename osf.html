@@ -2217,9 +2217,72 @@ async function saveToSupabase() {
       _myWriteTag = ''; // zapis nieudany — kolejny update z chmury może przejść
     } else {
       if (el) { el.textContent = '● zsync'; el.style.color = 'var(--green)'; }
+      // Aktualizuj meta slotu w panelu (statystyki + status) — throttle 5s
+      _syncSlotMetaThrottled();
     }
   } catch(e) { console.error('Supabase save exception:', e); _myWriteTag = ''; }
   finally    { _isSaving = false; }
+}
+
+// ═══ Sync meta slotu do panelu (start.html) ═══
+// Aktualizuje slot.meta z liczbami zawodników/drużyn + status (czytane przez panel na każdym urządzeniu)
+let _metaSyncTimer = null;
+let _metaSyncLast = 0;
+function _syncSlotMetaThrottled() {
+  if (_metaSyncTimer) return;
+  const sinceLast = Date.now() - _metaSyncLast;
+  const delay = Math.max(0, 5000 - sinceLast);
+  _metaSyncTimer = setTimeout(() => {
+    _metaSyncTimer = null;
+    _metaSyncLast = Date.now();
+    _syncSlotMetaNow();
+  }, delay);
+}
+
+function _buildSlotMeta() {
+  const athletes = (state.athletes || []).length;
+  const teams = new Set((state.athletes || []).map(a => a.team).filter(Boolean)).size;
+  // Status: setup → losowanie S1 → S1 w toku → S2 → wyniki
+  let status = 'Setup';
+  const s1count = (state.s1pairs || []).length;
+  const s2count = (state.s2pairs || []).length;
+  const hasS1Times = s1count > 0 && (state.s1pairs || []).some(p => {
+    const aT = state.times?.[p.aId]?.s1;
+    const bT = p.bId ? state.times?.[p.bId]?.s1 : null;
+    return aT || bT;
+  });
+  const hasS2Times = s2count > 0 && (state.s2pairs || []).some(p => {
+    const aT = state.times?.[p.aId]?.s2;
+    const bT = p.bId ? state.times?.[p.bId]?.s2 : null;
+    return aT || bT;
+  });
+  if (athletes === 0) status = 'Setup';
+  else if (s1count === 0) status = 'Lista zawodników';
+  else if (!hasS1Times) status = 'S1: wylosowano';
+  else if (s2count === 0) status = 'S1 w toku';
+  else if (!hasS2Times) status = 'S2: wylosowano';
+  else status = 'S2 w toku';
+  return { athletes, teams, status, updatedAt: new Date().toISOString() };
+}
+
+async function _syncSlotMetaNow() {
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+    if (!slotRaw) return; // brak slotu — nic do aktualizacji
+    const slot = JSON.parse(slotRaw);
+    const newMeta = _buildSlotMeta();
+    // Pomiń jeśli meta się nie zmieniła (nie zalewaj chmury)
+    const oldMeta = slot.meta || {};
+    if (oldMeta.athletes === newMeta.athletes && oldMeta.teams === newMeta.teams && oldMeta.status === newMeta.status) return;
+    slot.meta = newMeta;
+    slot._updated = new Date().toISOString();
+    localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+    await getSupabase().from('herkules_slots').upsert({
+      slot_id:    String(SLOT_ID),
+      slot_json:  JSON.stringify(slot),
+      updated_at: slot._updated
+    }, { onConflict: 'slot_id' });
+  } catch(e) { /* cichy fail — meta nie jest krytyczna */ }
 }
 
 async function loadFromSupabase() {
