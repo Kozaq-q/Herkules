@@ -352,6 +352,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
     </div>
     <div class="header-contest" id="header-contest">—</div>
     <div class="header-right">
+      <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);border-color:var(--border2);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator">
         <span class="dot"></span>
         <span id="sync-label">—</span>
@@ -363,10 +364,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           <span id="role-chip-label">META</span>
           <span style="font-size:9px;">▾</span>
         </button>
-        <div id="role-chip-dropdown" style="display:none;position:absolute;top:30px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:4px;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:140px;">
-          <button onclick="setPtrRole('META');toggleRoleDropdown()" class="role-chip-opt" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🎯 Meta</button>
-          <button onclick="setPtrRole('OSF');toggleRoleDropdown()" class="role-chip-opt" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🏃 OSF</button>
-          <button onclick="setPtrRole('ADMIN');toggleRoleDropdown()" class="role-chip-opt" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">👑 Admin</button>
+        <div id="role-chip-dropdown" style="display:none;position:absolute;top:30px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:4px;z-index:20;box-shadow:0 4px 12px rgba(0,0,0,.4);min-width:160px;">
+          <button onclick="setPtrRole('STARTER');toggleRoleDropdown()" class="role-chip-opt" data-role="STARTER" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🎬 Starter</button>
+          <button onclick="setPtrRole('OSF');toggleRoleDropdown()" class="role-chip-opt" data-role="OSF" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🏃 OSF</button>
+          <button onclick="setPtrRole('META');toggleRoleDropdown()" class="role-chip-opt" data-role="META" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">🎯 Meta</button>
+          <button onclick="setPtrRole('ADMIN');toggleRoleDropdown()" class="role-chip-opt" data-role="ADMIN" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">👑 Admin</button>
         </div>
       </div>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
@@ -675,8 +677,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <div style="font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);">Twoja rola:</div>
             <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:3px;">
-              <button id="role-btn-META" onclick="setPtrRole('META')" class="role-btn">🎯 Meta</button>
+              <button id="role-btn-STARTER" onclick="setPtrRole('STARTER')" class="role-btn">🎬 Starter</button>
               <button id="role-btn-OSF" onclick="setPtrRole('OSF')" class="role-btn">🏃 OSF</button>
+              <button id="role-btn-META" onclick="setPtrRole('META')" class="role-btn">🎯 Meta</button>
               <button id="role-btn-ADMIN" onclick="setPtrRole('ADMIN')" class="role-btn">👑 Admin</button>
             </div>
             <div style="font-size:11px;color:var(--text3);line-height:1.4;" id="role-desc">—</div>
@@ -2662,10 +2665,13 @@ function setHits(id, n) {
 // TIMER — synchronizowany stoper między sędziami
 // ═══════════════════════════════════════════════════════════════
 const PTR_ROLES = {
-  META:  { id: 'META',  label: 'Meta',  desc: 'Stop zawodnika · trafienia · czas OSF', color: 'var(--green)' },
-  OSF:   { id: 'OSF',   label: 'OSF',   desc: 'Wpisuje czas OSF z fotokomórki', color: 'var(--male)' },
-  ADMIN: { id: 'ADMIN', label: 'Admin', desc: 'Pełen dostęp — Start, Stop, edycja', color: 'var(--accent)' }
+  STARTER: { id: 'STARTER', label: 'Starter', desc: 'Start pary · reset (falstart) · auto-start o godzinie', color: 'var(--orange)' },
+  OSF:     { id: 'OSF',     label: 'OSF',     desc: 'Wpisuje czas OSF z fotokomórki', color: 'var(--male)' },
+  META:    { id: 'META',    label: 'Meta',    desc: 'Ręcznie wpisuje czas mety · trafienia · DSQ', color: 'var(--green)' },
+  ADMIN:   { id: 'ADMIN',   label: 'Admin',   desc: 'Pełen dostęp — Start, edycja wszystkiego', color: 'var(--accent)' }
 };
+// Kolejność wyświetlania (Starter → OSF → Meta → Admin)
+const PTR_ROLE_ORDER = ['STARTER', 'OSF', 'META', 'ADMIN'];
 
 function getPtrRole() {
   const stored = localStorage.getItem('ptr_role_' + SLOT_ID);
@@ -2688,12 +2694,19 @@ function _updateRoleChip() {
   if (lbl) lbl.textContent = cfg.label.toUpperCase();
   const btn = document.getElementById('role-chip-btn');
   if (btn) {
-    btn.style.color = role === 'ADMIN' ? 'var(--accent)' : (role === 'OSF' ? 'var(--male)' : 'var(--green)');
-    btn.style.borderColor = role === 'ADMIN' ? 'rgba(232,212,77,.5)' : (role === 'OSF' ? 'rgba(91,155,213,.5)' : 'rgba(76,175,130,.5)');
+    const colors = {
+      STARTER: { c: 'var(--orange)', bd: 'rgba(232,148,77,.5)' },
+      OSF:     { c: 'var(--male)',   bd: 'rgba(91,155,213,.5)' },
+      META:    { c: 'var(--green)',  bd: 'rgba(76,175,130,.5)' },
+      ADMIN:   { c: 'var(--accent)', bd: 'rgba(232,212,77,.5)' }
+    };
+    const col = colors[role] || colors.META;
+    btn.style.color = col.c;
+    btn.style.borderColor = col.bd;
   }
-  // Aktywny w dropdownie
+  // Aktywny w dropdownie (po data-role)
   document.querySelectorAll('.role-chip-opt').forEach(b => {
-    b.style.background = b.textContent.toUpperCase().includes(role.toUpperCase()) ? 'var(--bg3)' : 'none';
+    b.style.background = b.dataset.role === role ? 'var(--bg3)' : 'none';
   });
 }
 
@@ -2724,6 +2737,67 @@ function setRun(gender, pairNum, data) {
 }
 
 // === Sterowanie stoperem ===
+// Live clock w headerze — aktualizuje się co sekundę
+function updateLiveClock() {
+  const el = document.getElementById('live-clock');
+  if (el) el.textContent = formatClockTime(nowMs());
+}
+setInterval(updateLiveClock, 1000);
+// Pierwsze wywołanie zaraz po inicjalizacji (po server clock sync)
+setTimeout(updateLiveClock, 500);
+
+// Pomocnik: format dla input datetime-local (z sekundami)
+function _fmtLocalDateTimeForInput(ts) {
+  const d = new Date(ts);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+
+// Auto-start pary o godzinie. value = string z input datetime-local (np. "2026-05-15T15:43:00") lub '' = wyczyść
+function setScheduledStart(gender, pairNum, value) {
+  const k = gender + '_' + pairNum;
+  if (!state.runs) state.runs = {};
+  if (!state.runs[k]) state.runs[k] = {};
+  if (!value) {
+    delete state.runs[k].scheduledStartAt;
+    if (!Object.keys(state.runs[k]).length) delete state.runs[k];
+    showToast('✕ Anulowano auto-start pary ' + pairNum, 'info', 1800);
+  } else {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return;
+    const ts = d.getTime();
+    // Sprawdź zgodność z zegarem serwera (offset)
+    const serverTs = ts - _serverClockOffset; // konwersja z local na server-equivalent? Hmm.
+    // Po prostu zapisz wartość — auto-start sprawdza nowMs() (zegar serwera)
+    state.runs[k].scheduledStartAt = ts;
+    const secLeft = Math.round((ts - nowMs()) / 1000);
+    if (secLeft < 0) showToast('⚠ Godzina jest już w przeszłości', 'warning', 2500);
+    else showToast('⏰ Auto-start za ' + secLeft + 's', 'success', 1800);
+  }
+  saveImmediate();
+  renderTimerView();
+}
+
+// Sprawdza scheduledStartAt par i automatycznie startuje gdy nadejdzie czas
+function checkScheduledStarts() {
+  if (!state.runs) return;
+  let changed = false;
+  for (const k in state.runs) {
+    const run = state.runs[k];
+    if (run.scheduledStartAt && !run.startedAt && nowMs() >= run.scheduledStartAt) {
+      run.startedAt = run.scheduledStartAt;
+      run.finishedAt = {};
+      delete run.scheduledStartAt;
+      changed = true;
+    }
+  }
+  if (changed) {
+    save();
+    renderTimerView();
+    showToast('▶ Auto-start: para wystartowała', 'success', 2000);
+  }
+}
+
 function startPair(gender, pairNum) {
   const drift = getClockDriftStatus();
   if (drift.status === 'block') {
@@ -2818,7 +2892,7 @@ let _timerTickInterval = null;
 function renderTimerView() {
   const role = getPtrRole();
   // Podświetl aktywny przycisk roli
-  ['META', 'OSF', 'ADMIN'].forEach(r => {
+  PTR_ROLE_ORDER.forEach(r => {
     const btn = document.getElementById('role-btn-' + r);
     if (btn) btn.classList.toggle('active', r === role);
   });
@@ -2887,14 +2961,23 @@ function renderTimerPairHTML(p, role) {
   }
   head += '</div>';
 
-  // Pasek akcji: Start/Reset
+  // Pasek akcji: Start/Reset + auto-start
   let actionsBar = '';
-  const canStartReset = (role === 'ADMIN');
+  const canStartReset = (role === 'STARTER' || role === 'ADMIN');
   if (canStartReset) {
-    actionsBar = '<div class="timer-actions-bar">';
+    actionsBar = '<div class="timer-actions-bar" style="flex-wrap:wrap;">';
     if (!started) {
       actionsBar += '<button class="btn-timer btn-timer-start" onclick="startPair(\'' + gender + '\',' + pairNum + ')">▶ START</button>';
-      actionsBar += '<span style="font-size:11px;color:var(--text3);">Tylko admin — sędzia startu używa osobnej apki</span>';
+      // Auto-start o godzinie
+      const scheduledAt = run && run.scheduledStartAt;
+      const scheduledStr = scheduledAt ? _fmtLocalDateTimeForInput(scheduledAt) : '';
+      actionsBar += '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);">' +
+        '<span style="font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;">Auto-start:</span>' +
+        '<input type="datetime-local" step="1" value="' + esc(scheduledStr) + '" ' +
+          'onchange="setScheduledStart(\'' + gender + '\',' + pairNum + ',this.value)" ' +
+          'style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:4px 6px;font-family:var(--font-m);font-size:11px;" />' +
+        (scheduledAt ? '<button onclick="setScheduledStart(\'' + gender + '\',' + pairNum + ',\'\')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;padding:3px 7px;cursor:pointer;">✕</button>' : '') +
+      '</div>';
     } else {
       actionsBar += '<button class="btn-timer btn-timer-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
     }
@@ -2923,26 +3006,41 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
   const hits = state.times?.[a.id]?.hits;
 
   let timeDisplay;
-  if (finished) {
-    const ms = run.finishedAt[a.id] - run.startedAt;
-    timeDisplay = '<div class="timer-athlete-time finished" data-timer-athlete="' + a.id + '" data-pair="' + gender + '_' + pairNum + '">' + formatRunTime(ms) + '</div>';
+  if (total) {
+    // Czas mety wpisany ręcznie lub auto-zapisany — pokaż go jako finalny
+    timeDisplay = '<div class="timer-athlete-time finished">' + esc(total) + '</div>';
   } else if (started) {
     timeDisplay = '<div class="timer-athlete-time" data-timer-athlete="' + a.id + '" data-pair="' + gender + '_' + pairNum + '" data-running="1">0.00</div>';
   } else {
     timeDisplay = '<div class="timer-athlete-time idle">—</div>';
   }
 
-  // Przycisk Stop / Cofnij stop — META + ADMIN
+  // META + ADMIN — przycisk STOP (szybkie auto-zatrzymanie) + pole ręcznego wpisywania czasu mety
   let stopBtn = '';
-  if ((role === 'META' || role === 'ADMIN') && started) {
-    if (finished) {
-      stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" style="font-size:11px;padding:6px 12px;">↺ Cofnij stop</button>';
+  let totalInput = '';
+  const canEditTotal = role === 'META' || role === 'ADMIN';
+  if (canEditTotal && started) {
+    if (total) {
+      // Już jest czas — pokaż "Cofnij stop" (toggle off zerując czas)
+      stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" style="font-size:11px;padding:6px 12px;margin-top:8px;">↺ Cofnij stop</button>';
     } else if (!dsq) {
-      stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')">■ STOP</button>';
+      stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" style="margin-top:8px;">■ STOP META</button>';
     }
   }
+  if (canEditTotal) {
+    // Pole ręcznego wpisywania (zawsze widoczne — backup gdy Stop był niedokładny)
+    totalInput = '<div class="timer-osf-input-row" style="margin-top:8px;">' +
+      '<span class="timer-osf-label" style="color:var(--green);">🏁 Czas mety</span>' +
+      '<input type="text" class="timer-osf-input" value="' + esc(total) + '" placeholder="0:00.00 / DNF (ręcznie)"' +
+        ' data-id="' + a.id + '" data-field="total"' +
+        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+        ' style="background:rgba(76,175,130,.06);border-color:rgba(76,175,130,.35);"' +
+        ' title="Wpisz ręcznie jeśli auto-stop był nieprecyzyjny"' +
+        (dsq ? ' disabled' : '') + ' />' +
+      '</div>';
+  }
 
-  // Pole OSF — TYLKO OSF + ADMIN. META widzi wartość read-only (etykieta zamiast inputa).
+  // Pole OSF — TYLKO OSF + ADMIN. Reszta widzi wartość read-only.
   let osfInput;
   if (role === 'OSF' || role === 'ADMIN') {
     osfInput = '<div class="timer-osf-input-row">' +
@@ -2953,7 +3051,6 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
         (dsq ? ' disabled' : '') + ' />' +
       '</div>';
   } else {
-    // META widzi tylko wartość (read-only, nie może edytować)
     osfInput = '<div class="timer-osf-input-row">' +
       '<span class="timer-osf-label">⏱ OSF</span>' +
       '<span style="flex:1;font-family:var(--font-m);font-size:13px;color:' + (osf ? 'var(--male)' : 'var(--text3)') + ';padding:5px 8px;background:rgba(91,155,213,.04);border:1px dashed rgba(91,155,213,.25);border-radius:var(--radius);" title="Tylko OSF/Admin może wpisać">' + (osf ? esc(osf) : '— (wpisze OSF)') + '</span>' +
@@ -2970,11 +3067,17 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
     }
     hitsRow += '</div>';
   } else if (hits !== undefined) {
-    // OSF — tylko pokaż wartość
     hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Trafienia: <strong style="color:var(--text1);">' + hits + '/5</strong></div>';
   }
 
-  const cls = 'timer-athlete' + (finished ? ' finished' : '') + (dsq ? ' dsq' : '');
+  // DSQ — META + ADMIN
+  let dsqBtn = '';
+  if (role === 'META' || role === 'ADMIN') {
+    dsqBtn = '<button onclick="toggleDsq(' + a.id + ')" style="margin-top:8px;font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 10px;border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';cursor:pointer;">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>';
+  }
+
+  const finishedState = !!total;
+  const cls = 'timer-athlete' + (finishedState ? ' finished' : '') + (dsq ? ' dsq' : '');
   return '<div class="' + cls + '">' +
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
       '<div style="flex:1;min-width:0;">' +
@@ -2983,23 +3086,40 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
       '</div>' +
     '</div>' +
     timeDisplay +
-    (stopBtn ? '<div style="margin-bottom:8px;">' + stopBtn + '</div>' : '') +
+    stopBtn +
+    totalInput +
     osfInput +
     hitsRow +
+    dsqBtn +
   '</div>';
 }
 
 // Ticker: aktualizuje tylko teksty lecących liczników (nie cały DOM)
 function tickTimers() {
-  const driftBlocked = getClockDriftStatus().status === 'block';
+  // Sprawdź auto-starty
+  if (typeof checkScheduledStarts === 'function') checkScheduledStarts();
   // Update timer-display dla par
   document.querySelectorAll('.timer-display[data-timer-pair]').forEach(el => {
     if (el.dataset.finished === '1') return;
     const [gender, pairNum] = el.dataset.timerPair.split('_');
     const run = getRun(gender, parseInt(pairNum));
-    if (!run || !run.startedAt) return;
+    if (!run) return;
+    // Odliczanie do auto-startu (gdy scheduledStartAt jest ustawiony a startedAt brakuje)
+    if (run.scheduledStartAt && !run.startedAt) {
+      const left = run.scheduledStartAt - nowMs();
+      if (left > 0) {
+        const sec = Math.ceil(left / 1000);
+        el.textContent = '-' + formatRunTime(left);
+        el.style.color = sec <= 5 ? 'var(--red)' : 'var(--orange)';
+      } else {
+        el.textContent = '0.00';
+      }
+      return;
+    }
+    if (!run.startedAt) return;
     const elapsed = nowMs() - run.startedAt;
     el.textContent = formatRunTime(elapsed);
+    el.style.color = '';
   });
   // Update timer-athlete-time
   document.querySelectorAll('.timer-athlete-time[data-running="1"]').forEach(el => {
@@ -3007,7 +3127,7 @@ function tickTimers() {
     const [gender, pairNum] = el.dataset.pair.split('_');
     const run = getRun(gender, parseInt(pairNum));
     if (!run || !run.startedAt) return;
-    if (run.finishedAt && run.finishedAt[athleteId]) return; // już zatrzymany
+    if (run.finishedAt && run.finishedAt[athleteId]) return;
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
 }
@@ -3275,7 +3395,7 @@ function commitTimeField(input) {
   const id = parseInt(input.dataset.id);
   const field = input.dataset.field;
   const val = input.value.trim();
-  if (!val) { setPatrolTime(id, field, ''); save(); return; }
+  if (!val) { setPatrolTime(id, field, ''); save(); _rerenderTimerAndPairs(); return; }
   if (field === 'total' || field === 'osf') {
     const norm = normalizeTime(val);
     input.value = norm;
@@ -3289,6 +3409,21 @@ function commitTimeField(input) {
     setPatrolTime(id, field, h);
   }
   save();
+  _rerenderTimerAndPairs();
+}
+
+// Synchronizuje widoki — Pary + Stoper. Wywoływane po każdej zmianie czasu/trafień/DSQ.
+// Robi rerender TYLKO nieaktywnej zakładki (active zakładka się sama rerenderuje
+// gdy potrzeba, a tutaj zwykle wywoływane przez onblur który już zostawia focus).
+function _rerenderTimerAndPairs() {
+  const active = document.querySelector('.nav-tab.active')?.id || '';
+  if (active === 'tab-pairs') {
+    // Stoper się odświeży gdy user tam wejdzie
+  } else if (active === 'tab-timer') {
+    // Pary się odświeżą gdy user tam wejdzie
+  }
+  // Tutaj nie rerenderujemy aktywnej zakładki żeby nie zniknął focus z inputa.
+  // Sync między widokami nastąpi gdy user przełączy zakładkę (showTab woła render).
 }
 
 function handleTimeKey(e, input) {

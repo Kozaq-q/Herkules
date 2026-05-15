@@ -139,6 +139,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <span class="header-sub" id="contest-sub">—</span>
     </div>
     <div class="header-right">
+      <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
       <div class="hdr-status" id="clock-status" style="display:none;cursor:help;"></div>
     </div>
@@ -576,6 +577,8 @@ async function boot() {
   // Sync zegar zaraz
   syncServerClock();
   setInterval(syncServerClock, 60000);
+  // Live clock co sekundę
+  setInterval(() => { const el = document.getElementById('live-clock'); if (el) el.textContent = formatClockTime(nowMs()); }, 1000);
   // Load state
   const ok = await loadState();
   if (!ok || !state) {
