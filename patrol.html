@@ -163,18 +163,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .role-btn:hover { color: var(--text1); background: var(--bg2); }
 .role-btn.active { background: var(--orange); color: #111; }
 
-.timer-pair-card { background: var(--bg2); border: 2px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; transition: border-color .15s; }
-.timer-pair-card.running { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(76,175,130,.1); }
-.timer-pair-card.finished { border-color: rgba(76,175,130,.4); opacity: .85; }
+.timer-pair-card { background: var(--bg2); border: 3px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; transition: border-color .2s, background .2s, box-shadow .2s; position: relative; }
+/* IDLE — czeka (subtelny, dashed na lewej krawędzi) */
+.timer-pair-card:not(.running):not(.finished) { border-color: var(--border); opacity: .85; }
+.timer-pair-card:not(.running):not(.finished)::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--border2); }
+/* RUNNING — pomaranczowa gruba ramka + glow + tło */
+.timer-pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.10), var(--bg2) 40%); box-shadow: 0 0 0 3px rgba(232,148,77,.15), 0 4px 16px rgba(232,148,77,.18); animation: card-running-glow 2s ease-in-out infinite; }
+@keyframes card-running-glow { 0%,100% { box-shadow: 0 0 0 3px rgba(232,148,77,.15), 0 4px 16px rgba(232,148,77,.18); } 50% { box-shadow: 0 0 0 4px rgba(232,148,77,.25), 0 6px 24px rgba(232,148,77,.28); } }
+/* FINISHED — zielona ramka + tło + stempel */
+.timer-pair-card.finished { border-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.10), var(--bg2) 40%); opacity: .92; }
+.timer-pair-card.finished::after { content: '✓ KONIEC'; position: absolute; top: 14px; right: 16px; font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 2px; color: var(--green); background: rgba(76,175,130,.15); border: 1px solid rgba(76,175,130,.5); padding: 3px 8px; border-radius: 3px; transform: rotate(2deg); pointer-events: none; z-index: 2; }
 
-.timer-pair-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+.timer-pair-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; transition: background .2s; }
+.timer-pair-card.running .timer-pair-head { background: rgba(232,148,77,.08); border-bottom-color: rgba(232,148,77,.3); }
+.timer-pair-card.finished .timer-pair-head { background: rgba(76,175,130,.08); border-bottom-color: rgba(76,175,130,.3); }
 .timer-pair-label { display: flex; align-items: center; gap: 12px; }
-.timer-pair-num { font-family: var(--font-h); font-size: 28px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 36px; text-align: center; }
-.timer-pair-gender { font-size: 18px; }
-.timer-pair-status { font-family: var(--font-h); font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 3px; }
+.timer-pair-num { font-family: var(--font-h); font-size: 32px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 40px; text-align: center; transition: color .2s; }
+.timer-pair-card.running .timer-pair-num { color: var(--orange); }
+.timer-pair-card.finished .timer-pair-num { color: var(--green); }
+.timer-pair-gender { font-size: 20px; }
+.timer-pair-status { font-family: var(--font-h); font-size: 12px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 5px 12px; border-radius: 4px; }
 .timer-pair-status.idle { background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
-.timer-pair-status.running { background: rgba(232,148,77,.15); color: var(--orange); border: 1px solid rgba(232,148,77,.4); animation: timer-pulse 1.5s infinite; }
-.timer-pair-status.finished { background: rgba(76,175,130,.15); color: var(--green); border: 1px solid rgba(76,175,130,.4); }
+.timer-pair-status.running { background: var(--orange); color: #111; border: 1px solid var(--orange); animation: timer-pulse 1.5s infinite; box-shadow: 0 2px 8px rgba(232,148,77,.4); }
+.timer-pair-status.finished { background: var(--green); color: #fff; border: 1px solid var(--green); box-shadow: 0 2px 8px rgba(76,175,130,.3); }
 @keyframes timer-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
 
 .timer-display { font-family: var(--font-m); font-size: 38px; font-weight: 800; color: var(--text1); letter-spacing: 1px; line-height: 1; font-variant-numeric: tabular-nums; }

@@ -67,17 +67,29 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .empty-title { font-family: var(--font-h); font-size: 18px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
 
 /* PARA CARDS */
-.pair-card { background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
-.pair-card.running { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(232,148,77,.12); }
-.pair-card.finished { border-color: rgba(76,175,130,.4); opacity: .8; }
+.pair-card { background: var(--bg2); border: 3px solid var(--border); border-radius: 12px; margin-bottom: 14px; overflow: hidden; transition: border-color .2s, background .2s, box-shadow .2s; position: relative; }
+/* IDLE — czeka */
+.pair-card:not(.running):not(.finished) { opacity: .9; }
+.pair-card:not(.running):not(.finished)::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--border2); }
+/* RUNNING — pomaranczowa gruba ramka + glow + tło */
+.pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.12), var(--bg2) 40%); box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); animation: card-glow 2s ease-in-out infinite; }
+@keyframes card-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); } 50% { box-shadow: 0 0 0 5px rgba(232,148,77,.30), 0 6px 28px rgba(232,148,77,.32); } }
+/* FINISHED — zielona ramka + tło + stempel */
+.pair-card.finished { border-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.12), var(--bg2) 40%); opacity: .94; }
+.pair-card.finished::after { content: '✓ KONIEC'; position: absolute; top: 16px; right: 18px; font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--green); background: rgba(76,175,130,.18); border: 1px solid rgba(76,175,130,.55); padding: 4px 10px; border-radius: 4px; transform: rotate(2deg); pointer-events: none; z-index: 2; }
 
 .pair-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--bg3); border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
 .pair-num { font-family: var(--font-h); font-size: 36px; font-weight: 800; color: var(--text1); line-height: 1; min-width: 50px; text-align: center; }
 .pair-gender { font-size: 22px; }
-.pair-status { font-family: var(--font-h); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 5px 12px; border-radius: 4px; }
+.pair-status { font-family: var(--font-h); font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 6px 14px; border-radius: 4px; }
 .pair-status.idle { background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
-.pair-status.running { background: rgba(232,148,77,.18); color: var(--orange); border: 1px solid rgba(232,148,77,.5); animation: pulse 1.5s infinite; }
-.pair-status.finished { background: rgba(76,175,130,.18); color: var(--green); border: 1px solid rgba(76,175,130,.5); }
+.pair-status.running { background: var(--orange); color: #111; border: 1px solid var(--orange); animation: pulse 1.5s infinite; box-shadow: 0 2px 10px rgba(232,148,77,.45); }
+.pair-status.finished { background: var(--green); color: #fff; border: 1px solid var(--green); box-shadow: 0 2px 10px rgba(76,175,130,.4); }
+
+.pair-card.running .pair-head { background: rgba(232,148,77,.10); }
+.pair-card.finished .pair-head { background: rgba(76,175,130,.10); }
+.pair-card.running .pair-num { color: var(--orange); }
+.pair-card.finished .pair-num { color: var(--green); }
 
 .timer-display { font-family: var(--font-m); font-size: 48px; font-weight: 800; color: var(--text1); letter-spacing: 1.5px; line-height: 1; font-variant-numeric: tabular-nums; padding: 0 8px; }
 .pair-card.running .timer-display { color: var(--orange); }
