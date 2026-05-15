@@ -507,6 +507,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
                 ✓ Zakończ zawody · wróć do panelu
               </button>
 
+              <!-- 🔌 Tryb offline -->
+              <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
+                  <input type="checkbox" id="cfg-offline-mode" onchange="toggleOfflineMode()" style="margin-top:2px;flex-shrink:0;width:16px;height:16px;" />
+                  <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:700;color:var(--orange);">🔌 Tryb offline (fizyczne stopery)</div>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5;">
+                      Włącz gdy sieć jest niestabilna. Synchronizowany stoper zostanie wyłączony.
+                      Sędziowie mierzą czasy <strong>fizycznymi stoperami</strong> i wpisują ręcznie w zakładce <em>Pary / wpisywanie</em>.
+                      Zmiany zapisują się lokalnie i lecą do chmury automatycznie gdy sieć wraca.
+                    </div>
+                  </div>
+                </label>
+              </div>
+
               <!-- 🎬 Sędzia startu — link mobilny -->
               <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -613,6 +628,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
     <!-- PARY -->
     <div class="page" id="page-pairs">
+      <!-- Banner offline mode -->
+      <div id="offline-banner" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.45);border-left:4px solid var(--orange);border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;line-height:1.5;">
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">🔌 Tryb offline aktywny</div>
+        <div style="font-size:12px;color:var(--text2);">
+          Synchronizowany stoper wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie poniżej do kafelków OSF i Łącznie. Zapisy lokalne synchronizują się z chmurą gdy sieć wróci.
+        </div>
+      </div>
       <div class="card mb-12">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
           <div class="card-title" style="margin:0;padding:0;border:none;">🎲 Pary biegu patrolowego</div>
@@ -947,6 +969,8 @@ function ensureStateDefaults() {
   if (state.cfg.startEnabled === undefined) state.cfg.startEnabled = false;
   if (!state.cfg.startKey) state.cfg.startKey = '';
   if (state.cfg.startKeyExpiresAt === undefined) state.cfg.startKeyExpiresAt = null;
+  // Tryb offline — wyłącza stoper, sędziowie wpisują ręcznie
+  if (state.cfg.offlineMode === undefined) state.cfg.offlineMode = false;
   const SETUP_DEFAULTS = {
     accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: '',
     allowSoloPair: false, pkAtEnd: false, ignoreLaneRule: false
@@ -1007,6 +1031,27 @@ function saveImmediate() {
   saveToSupabase();
 }
 
+// Auto-retry zapisów które padły (offline / brak sieci)
+// Flaga _pendingSaveSince ustawia się gdy zapis się nie udał. Co 5s retry.
+let _pendingSaveSince = 0;
+let _retryTimer = null;
+let _retryCount = 0;
+
+function _scheduleRetry() {
+  if (_retryTimer) return;
+  _retryTimer = setInterval(() => {
+    if (_pendingSaveSince > 0 && !_isSaving) {
+      _retryCount++;
+      saveToSupabase();
+    } else if (_pendingSaveSince === 0) {
+      // Wszystko OK — zatrzymaj retry loop
+      clearInterval(_retryTimer);
+      _retryTimer = null;
+      _retryCount = 0;
+    }
+  }, 5000);
+}
+
 async function saveToSupabase() {
   if (_isSaving) { scheduleSave(); return; }
   _isSaving = true;
@@ -1021,14 +1066,29 @@ async function saveToSupabase() {
     const { error }   = await getSupabase().from('patrol_state').upsert(payload, { onConflict: 'slot_id' });
     if (error) {
       console.error('Supabase save error:', error);
-      showSyncStatus('err');
       _myWriteTag = '';
+      if (_pendingSaveSince === 0) _pendingSaveSince = Date.now();
+      _scheduleRetry();
+      showSyncStatus('pending');
     } else {
+      // Sukces — wyczyść flagę pending
+      if (_pendingSaveSince > 0) {
+        const offlineDurSec = Math.round((Date.now() - _pendingSaveSince) / 1000);
+        showToast('✓ Zsynchronizowano z chmurą po ' + offlineDurSec + 's (' + _retryCount + ' prób)', 'success', 3000);
+      }
+      _pendingSaveSince = 0;
+      _retryCount = 0;
       showSyncStatus('ok');
       _syncSlotMetaThrottled();
     }
-  } catch(e) { console.error('Supabase save exception:', e); _myWriteTag = ''; showSyncStatus('err'); }
-  finally    { _isSaving = false; }
+  } catch(e) {
+    console.error('Supabase save exception:', e);
+    _myWriteTag = '';
+    if (_pendingSaveSince === 0) _pendingSaveSince = Date.now();
+    _scheduleRetry();
+    showSyncStatus('pending');
+  }
+  finally { _isSaving = false; }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1168,6 +1228,7 @@ function _applyRemoteStateNow(stateJson) {
     }
     // Header + odśwież aktywną zakładkę
     renderHeader();
+    if (typeof _applyOfflineMode === 'function') _applyOfflineMode();
     const active = document.querySelector('.nav-tab.active');
     if (active) {
       const tabId = active.id.replace('tab-', '');
@@ -1214,14 +1275,25 @@ function renderHeader() {
   }
 }
 
-function showSyncStatus(state) {
+function showSyncStatus(s) {
   const ind = document.getElementById('sync-indicator');
   const lbl = document.getElementById('sync-label');
   if (!ind) return;
-  ind.classList.remove('ok', 'err');
-  if (state === 'saving') { lbl.textContent = 'zapis...'; }
-  else if (state === 'ok') { ind.classList.add('ok'); lbl.textContent = 'live'; }
-  else if (state === 'err') { ind.classList.add('err'); lbl.textContent = 'błąd'; }
+  ind.classList.remove('ok', 'err', 'pending');
+  ind.style.cssText = ''; // reset
+  if (s === 'saving') { lbl.textContent = 'zapis...'; }
+  else if (s === 'ok') { ind.classList.add('ok'); lbl.textContent = 'live'; }
+  else if (s === 'err') { ind.classList.add('err'); lbl.textContent = 'błąd'; }
+  else if (s === 'pending') {
+    // Offline / retry — pomarańczowy z licznikiem prób
+    ind.classList.add('pending');
+    ind.style.cssText = 'color:var(--orange);border-color:rgba(232,148,77,.5);background:rgba(232,148,77,.1);cursor:help;';
+    const dotEl = ind.querySelector('.dot');
+    if (dotEl) dotEl.style.background = 'var(--orange)';
+    const offlineSec = _pendingSaveSince ? Math.round((Date.now() - _pendingSaveSince) / 1000) : 0;
+    lbl.textContent = 'offline ' + offlineSec + 's';
+    ind.title = 'Brak połączenia — zmiany zapisane lokalnie. Próba ' + _retryCount + '. Synchronizacja gdy sieć wróci.';
+  }
   else { lbl.textContent = '—'; }
 }
 
@@ -1299,6 +1371,9 @@ function renderSetupPage() {
   if (dot) dot.style.background = color;
   _renderInfoCardView();
   updatePairingSummary();
+  // Update toggle offline mode
+  const offCb = document.getElementById('cfg-offline-mode');
+  if (offCb) offCb.checked = !!(state.cfg && state.cfg.offlineMode);
 }
 
 function setAccentColor(color) {
@@ -1401,6 +1476,35 @@ function toggleOps() {
   panel.style.display = open ? 'none' : 'block';
   if (arrow) arrow.textContent = open ? '▶' : '▼';
   if (!open) _renderStartSection(); // jak otwieramy, odśwież sekcję sędziego startu
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OFFLINE MODE — toggle wyłączający synchronizowany stoper
+// ═══════════════════════════════════════════════════════════════
+function toggleOfflineMode() {
+  if (!state.cfg) state.cfg = {};
+  const cb = document.getElementById('cfg-offline-mode');
+  state.cfg.offlineMode = !!(cb && cb.checked);
+  saveImmediate();
+  _applyOfflineMode();
+  showToast(state.cfg.offlineMode ? '🔌 Tryb offline włączony — używaj fizycznych stoperów' : '🌐 Tryb online — stoper synchronizowany dostępny', 'warning', 3500);
+}
+
+function _applyOfflineMode() {
+  const offline = !!(state.cfg && state.cfg.offlineMode);
+  // Pokaż/ukryj zakładkę Stoper
+  const tabTimer = document.getElementById('tab-timer');
+  if (tabTimer) tabTimer.style.display = offline ? 'none' : '';
+  // Jeśli aktualnie jesteśmy w stoperze a właśnie włączono offline → przerzuć do Pary
+  if (offline && document.getElementById('page-timer')?.classList.contains('active')) {
+    showTab('pairs');
+  }
+  // Pokaż/ukryj banner w zakładce Pary
+  const banner = document.getElementById('offline-banner');
+  if (banner) banner.style.display = offline ? 'block' : 'none';
+  // Update checkbox
+  const cb = document.getElementById('cfg-offline-mode');
+  if (cb) cb.checked = offline;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3279,6 +3383,8 @@ async function boot() {
   if (state.setup && state.setup.accentColor) {
     document.documentElement.style.setProperty('--orange', state.setup.accentColor);
   }
+  // Zastosuj tryb offline (ukryje zakładkę Stoper, pokaże banner)
+  _applyOfflineMode();
   // 6. Po sync — odśwież widok aktywnej zakładki
   const active = document.querySelector('.nav-tab.active');
   if (active) {
@@ -3286,6 +3392,7 @@ async function boot() {
     if (tabId === 'setup') renderSetupPage();
     else if (tabId === 'athletes') { renderAthletes(); updateAthleteStats(); }
     else if (tabId === 'pairs') renderPairsView();
+    else if (tabId === 'timer') renderTimerView();
     else if (tabId === 'results') renderResultsView();
   }
   startRealtimeSync();

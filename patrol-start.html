@@ -409,6 +409,16 @@ function getRun(gender, pairNum) {
 
 function renderPairs() {
   const listEl = document.getElementById('pairs-list');
+  // Tryb offline — START nieaktywny
+  if (state.cfg && state.cfg.offlineMode) {
+    listEl.innerHTML = '<div class="empty" style="border-color:rgba(232,148,77,.5);background:rgba(232,148,77,.04);">' +
+      '<div class="empty-icon">🔌</div>' +
+      '<div class="empty-title" style="color:var(--orange);">Tryb offline aktywny</div>' +
+      '<div style="line-height:1.6;">Sędzia główny włączył tryb offline (sieć niestabilna).<br>' +
+      '<strong>Użyj fizycznego stopera</strong> i przekaż czas startu pozostałym sędziom.<br>' +
+      'Wpisanie czasów odbywa się ręcznie w aplikacji głównej.</div></div>';
+    return;
+  }
   const pairs = (state.pairs || []).slice().sort((a, b) => {
     if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
     return a.pairNum - b.pairNum;
