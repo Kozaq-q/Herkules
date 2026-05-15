@@ -157,6 +157,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .swap-mode .solo-empty-slot:hover { border-color: var(--orange); background: rgba(232,148,77,.08); opacity: 1; }
 .swap-trigger-btn { font-size: 11px; padding: 2px 8px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg3); color: var(--text3); cursor: pointer; line-height: 1.4; flex-shrink: 0; }
 .swap-trigger-btn:hover { color: var(--orange); border-color: var(--orange); }
+
+/* DWA KAFELKI CZASÓW (OSF + ŁĄCZNY) */
+.ptr-times-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+.ptr-time-tile { background: var(--bg4); border: 2px solid var(--border); border-radius: 6px; padding: 6px 8px; transition: border-color .12s, background .12s; }
+.ptr-time-tile.ptr-time-osf { border-color: rgba(91,155,213,.4); background: rgba(91,155,213,.05); }
+.ptr-time-tile.ptr-time-osf:focus-within { border-color: var(--male); background: rgba(91,155,213,.1); }
+.ptr-time-tile.ptr-time-total { border-color: rgba(76,175,130,.4); background: rgba(76,175,130,.05); }
+.ptr-time-tile.ptr-time-total:focus-within { border-color: var(--green); background: rgba(76,175,130,.1); }
+.ptr-time-tile.dsq { opacity: .4; }
+.ptr-time-tile.marker .ptr-time-input { color: var(--blue) !important; font-weight: 800; letter-spacing: 1px; }
+.ptr-time-lbl { font-family: var(--font-h); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 2px; }
+.ptr-time-osf .ptr-time-lbl { color: var(--male); }
+.ptr-time-total .ptr-time-lbl { color: var(--green); }
+.ptr-time-input { width: 100%; background: transparent; border: none; outline: none; color: var(--text1); font-family: var(--font-m); font-size: 16px; font-weight: 700; padding: 0; }
+.ptr-time-input::placeholder { color: var(--text3); font-weight: 400; font-size: 14px; }
+.ptr-time-input:disabled { opacity: .5; cursor: not-allowed; }
+
+/* RZĄD PRZYCISKÓW TRAFIEŃ 0-5 */
+.ptr-hits-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 4px; }
+.ptr-hit-btn { background: var(--bg4); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text2); font-family: var(--font-h); font-size: 16px; font-weight: 800; padding: 6px 0; cursor: pointer; transition: all .12s; line-height: 1.3; }
+.ptr-hit-btn:hover:not(.dsq):not(.active) { background: var(--bg3); border-color: var(--text3); color: var(--text1); }
+.ptr-hit-btn.active { background: var(--orange); border-color: var(--orange); color: #111; box-shadow: 0 0 0 1px var(--orange); }
+.ptr-hit-btn.dsq { opacity: .3; cursor: not-allowed; }
 .qe-time { transition: border-color .12s; }
 .qe-time:focus { outline: none; border-color: var(--orange) !important; background: var(--bg4) !important; }
 .qe-time.marker { color: var(--blue) !important; font-weight: 800; letter-spacing: 1px; }
@@ -1988,38 +2011,60 @@ function athleteCardHTML(a, lane, pairNum, gender) {
       swapBtn +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
-    '<div class="pair-athlete-meta" style="margin-bottom:6px;">' + esc(a.team || '') + '</div>' +
-    // Wiersz 1: czas całkowity + DSQ
-    '<div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;">' +
-      '<input class="qe-time' + (totalIsMarker ? ' marker' : '') + '" type="text" value="' + esc(total) + '" placeholder="Czas (0:00.00 / DNF / DNS)"' +
-        ' data-id="' + a.id + '" data-field="total"' +
-        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-        ' style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;font-weight:600;' + (dsq ? 'text-decoration:line-through;color:var(--text3);' : (totalIsMarker ? 'color:var(--blue);font-weight:800;letter-spacing:1px;' : '')) + '"' +
-        (dsq ? ' disabled' : '') + ' />' +
-      '<button onclick="toggleDsq(' + a.id + ')" ' +
-        'style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 7px;' +
+    '<div class="pair-athlete-meta" style="margin-bottom:8px;">' + esc(a.team || '') + '</div>' +
+    // Dwa kafelki czasów — OSF (lewo, niebieski) i Łączny (prawo, zielony)
+    '<div class="ptr-times-row">' +
+      '<div class="ptr-time-tile ptr-time-osf' + (osfIsMarker ? ' marker' : '') + (dsq ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">⏱ OSF</div>' +
+        '<input class="ptr-time-input" type="text" value="' + esc(osf) + '" placeholder="0:00.00"' +
+          ' data-id="' + a.id + '" data-field="osf"' +
+          ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+          (dsq ? ' disabled' : '') + ' />' +
+      '</div>' +
+      '<div class="ptr-time-tile ptr-time-total' + (totalIsMarker ? ' marker' : '') + (dsq ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">🏃 Łączny</div>' +
+        '<input class="ptr-time-input" type="text" value="' + esc(total) + '" placeholder="0:00.00 / DNF"' +
+          ' data-id="' + a.id + '" data-field="total"' +
+          ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
+          (dsq ? ' disabled' : '') + ' />' +
+      '</div>' +
+    '</div>' +
+    // Rząd 6 przycisków trafień (0-5)
+    '<div class="ptr-hits-row">' +
+      [0,1,2,3,4,5].map(n =>
+        '<button class="ptr-hit-btn' + (hits === n ? ' active' : '') + (dsq ? ' dsq' : '') + '"' +
+          ' onclick="setHits(' + a.id + ',' + n + ')"' +
+          (dsq ? ' disabled' : '') +
+          ' title="' + n + ' trafień">' + n + '</button>'
+      ).join('') +
+    '</div>' +
+    // Dolna belka: DSQ po prawej
+    '<div style="display:flex;justify-content:flex-end;margin-top:6px;">' +
+      '<button onclick="toggleDsq(' + a.id + ')"' +
+        ' style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 8px;' +
         'border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';' +
         'border-radius:var(--radius);' +
-        'background:' + (dsq ? 'rgba(224,85,85,.12)' : 'var(--bg3)') + ';' +
+        'background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';' +
         'color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';' +
         'cursor:pointer;white-space:nowrap;" title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '">' +
         (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
     '</div>' +
-    // Wiersz 2: czas OSF + trafienia (mniejsze)
-    '<div style="display:flex;gap:4px;align-items:center;">' +
-      '<input class="qe-time' + (osfIsMarker ? ' marker' : '') + '" type="text" value="' + esc(osf) + '" placeholder="Czas OSF"' +
-        ' data-id="' + a.id + '" data-field="osf"' +
-        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-        ' style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);padding:3px 6px;font-family:var(--font-m);font-size:11px;font-weight:500;' + (dsq ? 'text-decoration:line-through;color:var(--text3);' : '') + '"' +
-        (dsq ? ' disabled' : '') + ' />' +
-      '<input type="number" min="0" max="5" value="' + (hits !== undefined ? hits : '') + '" placeholder="trafienia"' +
-        ' data-id="' + a.id + '" data-field="hits"' +
-        ' onchange="commitTimeField(this)" onblur="commitTimeField(this)"' +
-        ' style="width:70px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);padding:3px 6px;font-family:var(--font-m);font-size:11px;font-weight:600;text-align:center;"' +
-        ' title="Liczba trafień (0-5)"' +
-        (dsq ? ' disabled' : '') + ' />' +
-    '</div>' +
   '</div>';
+}
+
+// Szybkie ustawianie trafień (klik przycisku 0-5). Klik na aktywny = wyczyść.
+function setHits(id, n) {
+  if (!state.times) state.times = {};
+  if (!state.times[id]) state.times[id] = {};
+  // Klik na aktualnie aktywny numer wyczyść (toggle off)
+  if (state.times[id].hits === n) {
+    delete state.times[id].hits;
+    if (!Object.keys(state.times[id]).length) delete state.times[id];
+  } else {
+    state.times[id].hits = n;
+  }
+  save();
+  renderPairsView();
 }
 
 // Przenieś parę o ±1
