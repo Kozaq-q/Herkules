@@ -96,6 +96,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .tile-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 8px; }
 .tile-chip { font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 3px; background: var(--type-bg, rgba(232,212,77,.1)); color: var(--type-color, var(--accent)); border: 1px solid var(--type-border, rgba(232,212,77,.3)); }
 .tile-accent-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); flex-shrink: 0; box-shadow: 0 0 0 2px var(--bg2); }
+.tile-wip-badge { display: inline-block; font-family: var(--font-h); font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 7px; background: rgba(232,148,77,.12); color: var(--orange); border: 1px solid rgba(232,148,77,.45); border-radius: 3px; cursor: help; }
 .tile-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; color: var(--text3); }
 .tile-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
 .tile-status.active .dot { background: var(--green); animation: pulse 2s infinite; }
@@ -367,6 +368,7 @@ const COMPETITION_TYPES = {
     desc: 'Bieg + OSF + strzelanie · M/K · indywidualny',
     storageKey: 'patrol_slot_',
     enabled: true,
+    wip: true,                // W TRAKCIE PRAC — działa, ale nie wszystkie funkcje gotowe
     open: function(panelId) {
       window.location.href = 'patrol.html?slot=' + panelId;
     },
@@ -816,12 +818,17 @@ function tileHTML(slot) {
     ? '<span class="tile-accent-dot" style="background:' + esc(stats.accentColor || slot.meta.accentColor) + ';" title="Kolor akcentu zawodów"></span>'
     : '';
 
+  const wipBadge = (cfg && cfg.wip && !done)
+    ? '<span class="tile-wip-badge" title="Konkurencja w trakcie prac — niektóre funkcje mogą jeszcze nie działać">⚠ w trakcie prac</span>'
+    : '';
+
   return '<div class="tile' + (done ? ' done' : '') + (cfg && !cfg.enabled ? ' disabled' : '') + '" style="' + styleVars + '">' +
     '<div class="tile-bar"></div>' +
     '<div class="tile-head">' +
       '<span class="tile-chip-wrap" style="display:inline-flex;align-items:center;gap:6px;">' +
         '<span class="tile-chip">' + esc(cfg ? cfg.label : slot.type) + '</span>' +
         accentDot +
+        wipBadge +
       '</span>' +
       '<span class="tile-status ' + statusCls + '"><span class="dot"></span>' + esc(statusTxt) + '</span>' +
     '</div>' +
@@ -850,8 +857,11 @@ function renderTypePicker() {
     const styleVars = '--type-color:' + cfg.color + ';--type-bg:' + cfg.colorBg + ';--type-border:' + cfg.colorBorder + ';';
     const disabledCls = cfg.enabled ? '' : ' disabled';
     const onClick = cfg.enabled ? ('onclick="selectNewType(\'' + esc(t) + '\')"') : '';
+    let badge = '';
+    if (!cfg.enabled) badge = '<div class="type-opt-badge">wkrótce</div>';
+    else if (cfg.wip) badge = '<div class="type-opt-badge" style="background:rgba(232,148,77,.15);border-color:rgba(232,148,77,.45);color:var(--orange);">w trakcie prac</div>';
     return '<div class="type-opt' + disabledCls + '" data-type="' + esc(t) + '" style="' + styleVars + '" ' + onClick + '>' +
-      (cfg.enabled ? '' : '<div class="type-opt-badge">wkrótce</div>') +
+      badge +
       '<div class="type-opt-icon">' + esc(cfg.icon) + '</div>' +
       '<div class="type-opt-name">' + esc(cfg.label) + '</div>' +
       '<div class="type-opt-desc">' + esc(cfg.desc) + '</div>' +
