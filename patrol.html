@@ -2252,14 +2252,14 @@ function _ptrBuildTeamPrintHTML(asFragment) {
 function printPtrInd(gender)   { _ptrOpenPrintWindow(_ptrBuildIndPrintHTML(gender)); }
 function printPtrTeam()        { _ptrOpenPrintWindow(_ptrBuildTeamPrintHTML()); }
 function printPtrAll() {
-  // Jeden wspólny doc-header + footer; sekcje (M, K, drużynowa) jako fragmenty
-  // owinięte w .ranking-section. Przeglądarka stara się zmieścić każdą sekcję
-  // w całości na bieżącej stronie; gdy się nie mieści, przeskakuje na następną.
+  // Kolejność: DRUŻYNOWA na górze (najważniejsza w patrolu), potem M, K.
+  // Jeden wspólny doc-header + footer; sekcje jako fragmenty owinięte w
+  // .ranking-section — smart page-break (nie pęka w środku kategorii).
   const html =
-    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (M, K, Drużynowa)') +
+    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (Drużynowa, M, K)') +
+    _ptrBuildTeamPrintHTML(true) +
     _ptrBuildIndPrintHTML('M', true) +
     _ptrBuildIndPrintHTML('K', true) +
-    _ptrBuildTeamPrintHTML(true) +
     _ptrPdfFooter();
   _ptrOpenPrintWindow(html);
 }
