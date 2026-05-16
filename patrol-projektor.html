@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrol — Projektor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:     #0a0c0e;
+  --bg2:    #10141a;
+  --bg3:    #171c24;
+  --bg4:    #1e242e;
+  --border: #232b38;
+  --border2:#2e3a4a;
+  --text1:  #f4f6f8;
+  --text2:  #c9d0db;
+  --text3:  #6b7a90;
+  --accent: #f0d060;
+  --orange: #f09050;
+  --green:  #50c890;
+  --blue:   #60a8e8;
+  --red:    #e85858;
+  --male:   #60a8e8;
+  --female: #e060b0;
+  --font-h: 'Oswald', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --font-m: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); height: 100vh; overflow: hidden; }
+
+#splash { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:16px; }
+
+#proj-header { background: var(--bg2); border-bottom: 3px solid var(--orange); padding: 0 28px; height: 60px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.proj-logo  { font-family: var(--font-h); font-size: 28px; font-weight: 700; letter-spacing: 4px; color: var(--orange); text-transform: uppercase; }
+.proj-title { font-family: var(--font-b); font-size: 15px; font-weight: 500; color: var(--text2); flex: 1; text-align: center; letter-spacing: .3px; }
+.proj-clock { font-family: var(--font-m); font-size: 19px; color: var(--text2); min-width: 100px; text-align: right; font-weight: 500; }
+.sync-dot   { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 6px; animation: pulse 2s infinite; }
+.sync-dot.off { background: var(--red); animation: none; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+#proj-progress { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 7px 28px; display: flex; gap: 24px; align-items: center; flex-shrink: 0; }
+.prog-item { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.prog-label { font-family: var(--font-b); font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); display: flex; justify-content: space-between; }
+.prog-count { font-family: var(--font-m); font-size: 10px; color: var(--accent); }
+.prog-bar { background: var(--bg4); border-radius: 3px; height: 5px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+#proj-main { display: grid; overflow: hidden; }
+
+.proj-section { display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow: hidden; min-width: 0; background: var(--bg); }
+.proj-section:last-child { border-right: none; }
+
+.section-header { font-family: var(--font-b); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 10px 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid; }
+.section-header.ind-m { color: var(--male); border-color: var(--male); background: rgba(96,168,232,.07); }
+.section-header.ind-k { color: var(--female); border-color: var(--female); background: rgba(224,96,176,.07); }
+.section-header.team  { color: var(--orange); border-color: var(--orange); background: rgba(240,144,80,.07); }
+.section-count { font-family: var(--font-m); font-size: 10px; color: var(--text3); font-weight: 400; }
+
+.scroll-viewport { flex: 1; overflow: hidden; position: relative; min-height: 0; }
+.scroll-track    { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
+
+.rank-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.rank-table td { border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; }
+.rank-row.even td { background: var(--bg2); }
+.rank-row.odd  td { background: var(--bg3); }
+.rank-row.top1 td { background: rgba(255,210,0,.09) !important; }
+.rank-row.top2 td { background: rgba(200,210,220,.06) !important; }
+.rank-row.top3 td { background: rgba(200,140,60,.06) !important; }
+.rank-row.dsq  td { background: transparent !important; opacity: .4; }
+
+.rank-pos { font-family: var(--font-h); font-weight: 700; text-align: center; width: 50px; padding: 10px 4px; white-space: nowrap; }
+.rank-pos.p1 { color: #ffd700; }
+.rank-pos.p2 { color: #c8d0d8; }
+.rank-pos.p3 { color: #d4a060; }
+.rank-pos.other { color: var(--text3); font-size: .85em; }
+
+.rank-name-cell { padding: 10px 10px 10px 8px; overflow: hidden; }
+.rank-name { font-family: var(--font-b); font-weight: 700; display: block; white-space: normal; word-break: break-word; line-height: 1.3; padding-right: 4px; }
+.rank-team-sub { font-family: var(--font-b); font-size: 11px; font-weight: 400; color: var(--text3); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; padding-right: 4px; }
+
+.rank-time-cell { font-family: var(--font-m); font-weight: 500; color: var(--green); text-align: right; white-space: nowrap; padding: 10px 12px 10px 6px; width: 90px; min-width: 90px; }
+.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; }
+.rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
+.rank-marker { font-family: var(--font-h); font-size: 11px; font-weight: 800; color: var(--orange); }
+
+.team-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+.team-row.even { background: var(--bg2); }
+.team-row.odd  { background: var(--bg3); }
+.team-row.top1 { background: rgba(255,210,0,.09) !important; }
+.team-row.top2 { background: rgba(200,210,220,.06) !important; }
+.team-row.top3 { background: rgba(200,140,60,.06) !important; }
+.team-pos  { font-family: var(--font-h); font-weight: 700; width: 50px; min-width: 50px; text-align: center; padding: 10px 4px; }
+.team-name { font-family: var(--font-b); font-weight: 700; flex: 1; padding: 10px 10px; white-space: normal; word-break: break-word; line-height: 1.3; overflow: hidden; }
+.team-meta-sub { font-family: var(--font-m); font-size: 10px; color: var(--text3); display: block; margin-top: 2px; font-weight: 400; }
+.team-score { font-family: var(--font-h); font-weight: 700; color: var(--orange); padding: 10px 14px; text-align: right; white-space: nowrap; min-width: 80px; }
+
+.no-data { text-align: center; padding: 48px 16px; color: var(--text3); font-family: var(--font-b); font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* LISTA STARTOWA */
+#startlist-main { display: flex; flex-direction: column; overflow: hidden; height: calc(100vh - 60px); background: var(--bg); }
+.sl-gender-block { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.sl-gender-block + .sl-gender-block { border-top: 2px solid var(--border2); }
+.sl-section-header { padding: 10px 24px; flex-shrink: 0; font-family: var(--font-b); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; border-bottom: 2px solid; display: flex; align-items: center; justify-content: space-between; }
+.sl-section-header.ind-m { color: var(--male); border-color: var(--male); background: rgba(96,168,232,.07); }
+.sl-section-header.ind-k { color: var(--female); border-color: var(--female); background: rgba(224,96,176,.07); }
+.sl-scroll-viewport { flex: 1; overflow: hidden; position: relative; min-height: 0; }
+.sl-scroll-track    { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
+
+.sl-pair-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); min-height: 0; }
+.sl-pair-row.even { background: var(--bg2); }
+.sl-pair-row.odd  { background: var(--bg3); }
+.sl-pair-row.finished { opacity: .55; }
+.sl-pair-num { font-family: var(--font-h); font-weight: 700; color: var(--text3); text-align: center; padding: 12px 8px; width: 56px; min-width: 56px; flex-shrink: 0; border-right: 1px solid var(--border2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.sl-pair-num .sl-time { font-family: var(--font-m); font-size: 10px; color: var(--orange); font-weight: 500; letter-spacing: 0; }
+.sl-pair-num .sl-time.finished { color: var(--green); }
+.sl-athlete { flex: 1; padding: 10px 14px; display: flex; flex-direction: column; justify-content: center; min-width: 0; overflow: hidden; }
+.sl-athlete.lane-L { border-right: 1px solid var(--border2); }
+.sl-athlete-name { font-family: var(--font-b); font-weight: 700; line-height: 1.25; white-space: normal; word-break: break-word; }
+.sl-athlete-sub { font-family: var(--font-b); font-size: 11px; font-weight: 400; color: var(--text3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-lane-badge { font-family: var(--font-h); font-weight: 700; font-size: 11px; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; margin-bottom: 4px; display: inline-block; width: fit-content; }
+.sl-lane-badge.L { color: var(--male); border: 1px solid var(--male); background: rgba(96,168,232,.12); }
+.sl-lane-badge.P { color: var(--female); border: 1px solid var(--female); background: rgba(224,96,176,.12); }
+.sl-vs { width: 48px; min-width: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 12px; font-weight: 700; color: var(--text3); letter-spacing: 1px; border-left: 1px solid var(--border2); border-right: 1px solid var(--border2); }
+.sl-solo-badge { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--orange); border: 1px solid rgba(240,144,80,.4); padding: 2px 7px; border-radius: 3px; margin-left: 8px; }
+
+#sl-progress { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 6px 24px; display: flex; gap: 20px; align-items: center; flex-shrink: 0; }
+.sl-prog-item { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.sl-prog-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); display: flex; justify-content: space-between; }
+.sl-prog-count { font-family: var(--font-m); font-size: 10px; color: var(--accent); }
+.sl-prog-bar { background: var(--bg4); border-radius: 3px; height: 4px; overflow: hidden; }
+.sl-prog-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div style="font-family:var(--font-h);font-size:72px;font-weight:900;letter-spacing:6px;color:var(--orange);">PATROL</div>
+  <div style="font-family:var(--font-m);font-size:13px;color:var(--text3);letter-spacing:2px;">ŁĄCZENIE...</div>
+</div>
+
+<div id="proj-app" style="display:none;flex-direction:column;height:100vh;">
+  <header id="proj-header">
+    <div class="proj-logo">PATROL</div>
+    <div class="proj-title" id="proj-title">—</div>
+    <div style="display:flex;align-items:center;gap:12px;min-width:140px;justify-content:flex-end;">
+      <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);letter-spacing:1px;">
+        <span class="sync-dot" id="sync-dot"></span><span id="sync-label">LIVE</span>
+      </span>
+      <span class="proj-clock" id="proj-clock"></span>
+    </div>
+  </header>
+
+  <div id="proj-progress" style="display:none;"></div>
+  <div id="proj-main"></div>
+  <div id="startlist-main" style="display:none;flex-direction:column;">
+    <div id="sl-progress" style="display:none;"></div>
+    <div id="sl-blocks" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
+let db = null;
+function getDB() {
+  if (!db) db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    realtime: { params: { eventsPerSecond: 10 } }
+  });
+  return db;
+}
+
+let slotId = null;
+let state  = null;
+let cfg    = null;
+let rtChannel = null;
+const _scrollRAFs = {};
+
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const PROJ_MODE  = URL_PARAMS.get('mode') || 'results';
+
+function esc(s) { if (s == null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function loadSettings() {
+  const defaults = {
+    customTitle: '',
+    showIndM: true,
+    showIndK: true,
+    showTeam: true,
+    topN: 0,
+    scrollSpeed: 0,
+    showProgress: false,
+    showSLProgress: true,
+    showStartTimes: true,
+    slGender: 'both'
+  };
+  try {
+    const raw = localStorage.getItem('patrol_proj_settings');
+    if (raw) return { ...defaults, ...JSON.parse(raw) };
+  } catch(e) {}
+  return defaults;
+}
+
+// ════════════ STATE / LOAD ════════════
+function ensureStateDefaults() {
+  if (!state) return;
+  if (!state.athletes) state.athletes = [];
+  if (!state.pairs) state.pairs = [];
+  if (!state.times) state.times = {};
+  if (!state.disq) state.disq = {};
+  if (!state.runs) state.runs = {};
+  if (!state.cfg) state.cfg = {};
+  if (!state.setup) state.setup = {};
+}
+
+async function loadState() {
+  try {
+    const { data, error } = await getDB().from('patrol_state').select('state_json').eq('slot_id', slotId).single();
+    if (error || !data) return false;
+    state = JSON.parse(data.state_json);
+    ensureStateDefaults();
+    return true;
+  } catch(e) { return false; }
+}
+
+function startRealtime() {
+  if (rtChannel) return;
+  rtChannel = getDB().channel('patrol_proj_' + slotId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'patrol_state', filter: 'slot_id=eq.' + slotId },
+      (payload) => { try { state = JSON.parse(payload.new.state_json); ensureStateDefaults(); softRender(); flashSync(); } catch(e){} })
+    .subscribe((status) => {
+      const dot = document.getElementById('sync-dot');
+      const lbl = document.getElementById('sync-label');
+      if (status === 'SUBSCRIBED') {
+        if (dot) dot.classList.remove('off');
+        if (lbl) lbl.textContent = 'LIVE';
+        if (window._setRtHealthy) window._setRtHealthy(true);
+      } else {
+        if (dot) dot.classList.add('off');
+        if (lbl) lbl.textContent = 'OFFLINE';
+        if (window._setRtHealthy) window._setRtHealthy(false);
+        setTimeout(() => { try { getDB().removeChannel(rtChannel); } catch(e){} rtChannel = null; startRealtime(); }, 3000);
+      }
+    });
+}
+
+function flashSync() {
+  const dot = document.getElementById('sync-dot');
+  if (dot) { dot.style.background = 'var(--accent)'; setTimeout(() => { dot.style.background = ''; }, 220); }
+}
+
+// ════════════ HELPERS ════════════
+function isTimeMarker(v) { return v === 'DNF' || v === 'DNS'; }
+function parseTime(t) {
+  if (!t) return Infinity;
+  const m = String(t).trim().match(/^(?:(\d+):)?(\d+)(?:[.,](\d+))?$/);
+  if (!m) return Infinity;
+  const min = parseInt(m[1] || '0');
+  const sec = parseInt(m[2] || '0');
+  const frac = m[3] ? parseFloat('0.' + m[3]) : 0;
+  return min * 60 + sec + frac;
+}
+function isDsq(id) { return !!(state.disq && state.disq[id]); }
+function displayName(a) { return [a.rank, a.name].filter(Boolean).join(' '); }
+function formatClockTime(ms) {
+  const d = new Date(ms);
+  const pad = n => (n < 10 ? '0' : '') + n;
+  return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+}
+// Placeholder punktacji (lustro patrol.html)
+function calcPatrolPoints(athlete, row) { return 1000; }
+
+function buildRow(a) {
+  const total = state.times?.[a.id]?.total || '';
+  const osf   = state.times?.[a.id]?.osf || '';
+  const hits  = state.times?.[a.id]?.hits;
+  const dsq   = isDsq(a.id);
+  const totalIsMarker = isTimeMarker(total);
+  const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
+  let tier = 3, marker = '';
+  if (dsq) tier = 3;
+  else if (totalSec < Infinity) tier = 0;
+  else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
+  else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
+  const hasAny = !!(total || osf || hits !== undefined || dsq);
+  return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
+}
+
+// ════════════ BUILD: RANKING M/K ════════════
+function buildIndRows(gender) {
+  const list = (state.athletes || []).filter(a => a.gender === gender).map(buildRow).filter(r => r.hasAny);
+  list.sort((a, b) => a.tier !== b.tier ? a.tier - b.tier : a.totalSec - b.totalSec);
+  return list;
+}
+
+function rankRowHTML(r, idx) {
+  const noTime = r.totalSec === Infinity;
+  const rank = idx + 1;
+  let topCls = '';
+  if (!noTime && !r.dsq) {
+    if (rank === 1) topCls = ' top1';
+    else if (rank === 2) topCls = ' top2';
+    else if (rank === 3) topCls = ' top3';
+  }
+  if (r.dsq) topCls = ' dsq';
+  const evenOdd = (idx % 2 === 0) ? ' even' : ' odd';
+  const cls = 'rank-row' + topCls + evenOdd;
+  let posCls = '';
+  let posTxt = '';
+  if (r.dsq) { posTxt = 'DSQ'; posCls = ' other'; }
+  else if (noTime) { posTxt = r.marker || '—'; posCls = ' other'; }
+  else if (rank === 1) { posTxt = '🥇'; posCls = ' p1'; }
+  else if (rank === 2) { posTxt = '🥈'; posCls = ' p2'; }
+  else if (rank === 3) { posTxt = '🥉'; posCls = ' p3'; }
+  else { posTxt = rank; posCls = ' other'; }
+
+  const name = esc(displayName(r.ath));
+  const team = esc(r.ath.team || '');
+  const bib  = r.ath.bib ? '<span style="color:var(--text3);font-family:var(--font-m);font-weight:400;margin-left:6px;">#' + esc(r.ath.bib) + '</span>' : '';
+
+  let timeCell;
+  if (r.dsq) {
+    timeCell = '<span class="rank-dsq-label">DSQ</span>';
+  } else if (r.marker) {
+    timeCell = '<span class="rank-marker">' + r.marker + '</span>';
+  } else if (r.total) {
+    timeCell = esc(r.total);
+  } else {
+    timeCell = '<span style="color:var(--text3);font-weight:400;">—</span>';
+  }
+  let sub = '';
+  if (!r.dsq) {
+    const parts = [];
+    if (r.osf && !isTimeMarker(r.osf)) parts.push('OSF: ' + esc(r.osf));
+    else if (isTimeMarker(r.osf)) parts.push('OSF: ' + r.osf);
+    if (r.hits !== undefined) parts.push('Traf: ' + r.hits + '/5');
+    if (parts.length) sub = '<span class="rank-sub-time">' + parts.join(' · ') + '</span>';
+  }
+
+  return '<tr class="' + cls + '">' +
+    '<td class="rank-pos' + posCls + '">' + posTxt + '</td>' +
+    '<td class="rank-name-cell">' +
+      '<span class="rank-name">' + name + bib + '</span>' +
+      (team ? '<span class="rank-team-sub">' + team + '</span>' : '') +
+    '</td>' +
+    '<td class="rank-time-cell">' + timeCell + sub + '</td>' +
+  '</tr>';
+}
+
+// ════════════ BUILD: TEAM ════════════
+function buildTeamRows() {
+  const byTeam = {};
+  (state.athletes || []).forEach(a => {
+    const t = (a.team || '').trim();
+    if (!t) return;
+    if (!byTeam[t]) byTeam[t] = [];
+    byTeam[t].push(buildRow(a));
+  });
+  const rows = Object.keys(byTeam).map(name => {
+    const all = byTeam[name];
+    let total = 0, classified = 0, dnf = 0, dns = 0, dsq = 0;
+    all.forEach(r => {
+      if (r.dsq) { dsq++; return; }
+      if (r.totalSec < Infinity) { total += calcPatrolPoints(r.ath, r); classified++; }
+      else if (r.marker === 'DNF') dnf++;
+      else if (r.marker === 'DNS') dns++;
+    });
+    const counts = { M: 0, K: 0 };
+    all.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
+    return { name, total, classified, dnf, dns, dsq, count: all.length, counts };
+  }).filter(t => t.classified >= 1);
+  rows.sort((a, b) => b.total - a.total);
+  return rows;
+}
+
+function teamRowHTML(t, idx) {
+  const rank = idx + 1;
+  let topCls = '';
+  if (rank === 1) topCls = ' top1'; else if (rank === 2) topCls = ' top2'; else if (rank === 3) topCls = ' top3';
+  const evenOdd = (idx % 2 === 0) ? ' even' : ' odd';
+  const posCls = rank === 1 ? 'p1' : rank === 2 ? 'p2' : rank === 3 ? 'p3' : 'other';
+  const posTxt = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+  const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
+  const extras = [];
+  if (t.dnf) extras.push(t.dnf + '×DNF');
+  if (t.dns) extras.push(t.dns + '×DNS');
+  if (t.dsq) extras.push(t.dsq + '×DSQ');
+  const meta = composition + (extras.length ? ' · ' + extras.join(' · ') : '');
+  return '<div class="team-row' + topCls + evenOdd + '">' +
+    '<div class="team-pos rank-pos ' + posCls + '">' + posTxt + '</div>' +
+    '<div class="team-name">' + esc(t.name) + '<span class="team-meta-sub">' + esc(meta) + '</span></div>' +
+    '<div class="team-score">' + t.total + '</div>' +
+  '</div>';
+}
+
+// ════════════ BUILD LAYOUT (RESULTS MODE) ════════════
+function applyTitle() {
+  const t = document.getElementById('proj-title');
+  if (!t) return;
+  const c = state.setup || {};
+  const title = cfg.customTitle || [(c.name||''), (c.city||''), (c.date||'')].filter(Boolean).join(' · ') || 'Bieg patrolowy';
+  t.textContent = title;
+}
+
+function buildLayout() {
+  const sections = [];
+  if (cfg.showIndM) sections.push({ id: 'ind-m', cls: 'ind-m', label: '♂ Mężczyźni',    render: renderIndM });
+  if (cfg.showIndK) sections.push({ id: 'ind-k', cls: 'ind-k', label: '♀ Kobiety',       render: renderIndK });
+  if (cfg.showTeam) sections.push({ id: 'team',  cls: 'team',  label: '🛡 Drużynowa',    render: renderTeam });
+  if (!sections.length) sections.push({ id: 'empty', cls: 'ind-m', label: 'Nic do wyświetlenia', render: () => {} });
+
+  const main = document.getElementById('proj-main');
+  main.style.gridTemplateColumns = 'repeat(' + sections.length + ', 1fr)';
+  const hdrH = 60 + (cfg.showProgress ? 36 : 0);
+  main.style.height = 'calc(100vh - ' + hdrH + 'px)';
+  const prog = document.getElementById('proj-progress');
+  prog.style.display = cfg.showProgress ? 'flex' : 'none';
+
+  main.innerHTML = sections.map(s =>
+    '<div class="proj-section">' +
+      '<div class="section-header ' + s.cls + '"><span>' + s.label + '</span><span class="section-count" id="count-' + s.id + '"></span></div>' +
+      '<div class="scroll-viewport" id="viewport-' + s.id + '"><div class="scroll-track" id="track-' + s.id + '"></div></div>' +
+    '</div>'
+  ).join('');
+
+  if (cfg.showIndM) renderIndM();
+  if (cfg.showIndK) renderIndK();
+  if (cfg.showTeam) renderTeam();
+  if (cfg.showProgress) renderProgress();
+}
+
+function softRender() {
+  if (PROJ_MODE === 'startlist') {
+    renderStartlist();
+    return;
+  }
+  applyTitle();
+  // Refill bez full rerender (zachowuje scroll offset gdzie się da)
+  if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)));
+  if (cfg.showIndK) refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)));
+  if (cfg.showTeam) refillTrack('team',  buildTeamRows().map((r,i) => teamRowHTML(r,i)));
+  if (cfg.showProgress) renderProgress();
+}
+
+function renderAll() {
+  if (PROJ_MODE === 'startlist') { renderStartlist(); return; }
+  softRender();
+}
+
+function renderIndM() { refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
+function renderIndK() { refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
+function renderTeam() { refillTrack('team',  buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
+
+function refillTrack(id, rowsHTML, wrapperCls) {
+  const track = document.getElementById('track-' + id);
+  const count = document.getElementById('count-' + id);
+  if (!track) return;
+  const n = rowsHTML.length;
+  if (count) count.textContent = n + (n === 1 ? ' wynik' : ' wyników');
+  if (!n) {
+    track.innerHTML = '<div class="no-data">brak wyników</div>';
+    return;
+  }
+  if (wrapperCls === 'rank-table') {
+    track.innerHTML = '<table class="rank-table"><tbody>' + rowsHTML.join('') + '</tbody></table>';
+  } else {
+    track.innerHTML = rowsHTML.join('');
+  }
+  applyScroll(id);
+}
+
+function applyScroll(id) {
+  if (_scrollRAFs[id]) { cancelAnimationFrame(_scrollRAFs[id]); _scrollRAFs[id] = null; }
+  const speed = cfg.scrollSpeed | 0;
+  if (!speed) {
+    const track = document.getElementById('track-' + id);
+    if (track) track.style.transform = '';
+    return;
+  }
+  const viewport = document.getElementById('viewport-' + id);
+  const track = document.getElementById('track-' + id);
+  if (!viewport || !track) return;
+  const vh = viewport.clientHeight;
+  const th = track.scrollHeight;
+  if (th <= vh) { track.style.transform = ''; return; }
+  let offset = 0;
+  let last = performance.now();
+  function step(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+    offset += speed * dt;
+    if (offset >= th) offset = -vh;
+    track.style.transform = 'translateY(' + (-offset) + 'px)';
+    _scrollRAFs[id] = requestAnimationFrame(step);
+  }
+  _scrollRAFs[id] = requestAnimationFrame(step);
+}
+
+// ════════════ PROGRESS BAR (results mode) ════════════
+function renderProgress() {
+  const prog = document.getElementById('proj-progress');
+  if (!prog || !cfg.showProgress) return;
+  const total = (state.athletes || []).length;
+  const withResult = (state.athletes || []).filter(a => {
+    const t = state.times?.[a.id]?.total;
+    return !!t || isDsq(a.id);
+  }).length;
+  const pct = total > 0 ? Math.round(withResult / total * 100) : 0;
+  prog.innerHTML =
+    '<div class="prog-item">' +
+      '<div class="prog-label"><span>Postęp biegu</span><span class="prog-count">' + withResult + ' / ' + total + ' (' + pct + '%)</span></div>' +
+      '<div class="prog-bar"><div class="prog-fill" style="width:' + pct + '%;background:var(--orange);"></div></div>' +
+    '</div>';
+}
+
+// ════════════ STARTLIST MODE ════════════
+function renderStartlist() {
+  const blocks = document.getElementById('sl-blocks');
+  if (!blocks) return;
+  const titleEl = document.getElementById('proj-title');
+  const gender = cfg.slGender || 'both';
+  const genderLabel = gender === 'M' ? ' — MĘŻCZYŹNI' : gender === 'K' ? ' — KOBIETY' : '';
+  if (titleEl) titleEl.textContent = 'LISTA STARTOWA' + genderLabel;
+
+  // Progress bar listy startowej (par)
+  const slProg = document.getElementById('sl-progress');
+  if (slProg) {
+    if (cfg.showSLProgress !== false) {
+      const allPairs = state.pairs || [];
+      const filteredPairs = gender === 'both' ? allPairs : allPairs.filter(p => p.gender === gender);
+      const total = filteredPairs.length;
+      const finished = filteredPairs.filter(p => isPairFinished(p)).length;
+      const running  = filteredPairs.filter(p => isPairRunning(p)).length;
+      const pct = total > 0 ? Math.round(finished / total * 100) : 0;
+      slProg.style.display = 'flex';
+      slProg.innerHTML =
+        '<div class="sl-prog-item">' +
+          '<div class="sl-prog-label"><span>Postęp listy</span><span class="sl-prog-count">' + finished + ' / ' + total + ' par (' + pct + '%)' + (running ? ' · ' + running + ' biegnie' : '') + '</span></div>' +
+          '<div class="sl-prog-bar"><div class="sl-prog-fill" style="width:' + pct + '%;background:var(--green);"></div></div>' +
+        '</div>';
+    } else {
+      slProg.style.display = 'none';
+    }
+  }
+
+  // Build per gender block
+  const genders = gender === 'both' ? ['M', 'K'] : [gender];
+  const html = genders.map(g => {
+    const pairs = (state.pairs || []).filter(p => p.gender === g).sort((a, b) => a.pairNum - b.pairNum);
+    const cls = g === 'M' ? 'ind-m' : 'ind-k';
+    const lbl = g === 'M' ? '♂ MĘŻCZYŹNI' : '♀ KOBIETY';
+    return '<div class="sl-gender-block">' +
+      '<div class="sl-section-header ' + cls + '"><span>' + lbl + '</span><span class="section-count">' + pairs.length + (pairs.length === 1 ? ' para' : ' par') + '</span></div>' +
+      '<div class="sl-scroll-viewport" id="sl-viewport-' + g + '"><div class="sl-scroll-track" id="sl-track-' + g + '">' +
+        (pairs.length ? pairs.map((p, i) => slPairHTML(p, i)).join('') : '<div class="no-data">brak par</div>') +
+      '</div></div>' +
+    '</div>';
+  }).join('');
+  blocks.innerHTML = html;
+
+  // Apply scroll
+  genders.forEach(g => applySLScroll(g));
+}
+
+function isPairFinished(p) {
+  const r = state.runs?.[p.gender + '_' + p.pairNum];
+  if (!r || !r.startedAt) return false;
+  const aFin = effectiveFinishMs(p.aId, r);
+  const bFin = p.bId ? effectiveFinishMs(p.bId, r) : true;
+  return !!(aFin && bFin);
+}
+function isPairRunning(p) {
+  const r = state.runs?.[p.gender + '_' + p.pairNum];
+  return !!(r && r.startedAt && !isPairFinished(p));
+}
+function effectiveFinishMs(id, run) {
+  if (!id || !run) return null;
+  if (run.finishedAt && run.finishedAt[id]) return run.finishedAt[id];
+  const t = state.times?.[id]?.total;
+  if (run.startedAt && t && !isTimeMarker(t)) {
+    const sec = parseTime(t);
+    if (Number.isFinite(sec) && sec > 0 && sec !== Infinity) return run.startedAt + sec * 1000;
+  }
+  return null;
+}
+
+function slPairHTML(p, i) {
+  const evenOdd = (i % 2 === 0) ? ' even' : ' odd';
+  const finished = isPairFinished(p);
+  const finishedCls = finished ? ' finished' : '';
+  const aIsL = (p.aLane || 'L') === 'L';
+  const aId = p.aId, bId = p.bId;
+  const a = aId ? (state.athletes || []).find(x => x.id === aId) : null;
+  const b = bId ? (state.athletes || []).find(x => x.id === bId) : null;
+  const leftAth = aIsL ? a : b;
+  const rightAth = aIsL ? b : a;
+
+  // Czasy startu / końca
+  const run = state.runs?.[p.gender + '_' + p.pairNum];
+  let timeInfo = '';
+  if (cfg.showStartTimes !== false) {
+    if (run && run.startedAt) {
+      timeInfo = '<span class="sl-time' + (finished ? ' finished' : '') + '">' + formatClockTime(run.startedAt) + '</span>';
+      if (finished) {
+        const aFin = effectiveFinishMs(aId, run);
+        const bFin = bId ? effectiveFinishMs(bId, run) : 0;
+        const last = Math.max(aFin || 0, bFin || 0);
+        if (last > 0) timeInfo += '<span class="sl-time finished" style="font-size:9px;">→ ' + formatClockTime(last) + '</span>';
+      }
+    } else if (run && run.scheduledStartAt) {
+      timeInfo = '<span class="sl-time">⏰ ' + formatClockTime(run.scheduledStartAt) + '</span>';
+    }
+  }
+
+  const athCell = (ath, lane) => {
+    if (!ath) return '<div class="sl-athlete lane-' + lane + '" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11px;">SOLO</div>';
+    const bib = ath.bib ? '<span style="color:var(--text3);font-family:var(--font-m);font-weight:400;margin-left:6px;">#' + esc(ath.bib) + '</span>' : '';
+    return '<div class="sl-athlete lane-' + lane + '">' +
+      '<span class="sl-lane-badge ' + lane + '">' + lane + '</span>' +
+      '<div class="sl-athlete-name">' + esc(displayName(ath)) + bib + '</div>' +
+      (ath.team ? '<div class="sl-athlete-sub">' + esc(ath.team) + '</div>' : '') +
+    '</div>';
+  };
+
+  return '<div class="sl-pair-row' + evenOdd + finishedCls + '">' +
+    '<div class="sl-pair-num"><span>' + p.pairNum + '</span>' + timeInfo + '</div>' +
+    athCell(leftAth, 'L') +
+    '<div class="sl-vs">vs</div>' +
+    athCell(rightAth, 'P') +
+  '</div>';
+}
+
+function applySLScroll(g) {
+  const key = 'sl-' + g;
+  if (_scrollRAFs[key]) { cancelAnimationFrame(_scrollRAFs[key]); _scrollRAFs[key] = null; }
+  const speed = cfg.scrollSpeed | 0;
+  if (!speed) return;
+  const viewport = document.getElementById('sl-viewport-' + g);
+  const track = document.getElementById('sl-track-' + g);
+  if (!viewport || !track) return;
+  const vh = viewport.clientHeight;
+  const th = track.scrollHeight;
+  if (th <= vh) return;
+  let offset = 0;
+  let last = performance.now();
+  function step(now) {
+    const dt = (now - last) / 1000;
+    last = now;
+    offset += speed * dt;
+    if (offset >= th) offset = -vh;
+    track.style.transform = 'translateY(' + (-offset) + 'px)';
+    _scrollRAFs[key] = requestAnimationFrame(step);
+  }
+  _scrollRAFs[key] = requestAnimationFrame(step);
+}
+
+// ════════════ CLOCK ════════════
+function startClock() {
+  const el = document.getElementById('proj-clock');
+  if (!el) return;
+  const update = () => {
+    el.textContent = formatClockTime(Date.now());
+  };
+  update();
+  setInterval(update, 1000);
+}
+
+// ════════════ BOOT ════════════
+(async function init() {
+  const slotFromURL     = URL_PARAMS.get('slot');
+  const slotFromStorage = localStorage.getItem('patrol_proj_slot');
+  const s = slotFromURL || slotFromStorage;
+  if (!s) {
+    document.getElementById('splash').innerHTML =
+      '<div style="font-family:var(--font-h);font-size:72px;font-weight:900;letter-spacing:6px;color:var(--orange);">PATROL</div>' +
+      '<div style="font-family:var(--font-m);font-size:13px;color:var(--text3);letter-spacing:2px;margin-bottom:20px;">PROJEKTOR</div>' +
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Wpisz ID slotu:</div>' +
+      '<input id="manual-slot" style="background:var(--bg2);border:1px solid var(--border2);border-radius:4px;color:var(--text1);font-family:var(--font-m);font-size:16px;padding:10px 18px;text-align:center;width:260px;" placeholder="patrol_slot_1" />' +
+      '<button onclick="manualConnect()" style="margin-top:12px;background:var(--orange);color:#111;font-family:var(--font-h);font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;border:none;border-radius:4px;padding:10px 28px;cursor:pointer;">Połącz →</button>';
+    return;
+  }
+  await boot(s);
+})();
+
+async function manualConnect() {
+  const val = (document.getElementById('manual-slot').value || '').trim();
+  if (!val) return;
+  localStorage.setItem('patrol_proj_slot', val);
+  await boot(val);
+}
+
+async function boot(s) {
+  slotId = s;
+  cfg = loadSettings();
+  // Override z URL params (gender)
+  const urlGender = URL_PARAMS.get('gender');
+  if (urlGender) cfg.slGender = urlGender;
+
+  const ok = await loadState();
+  if (!ok) {
+    document.getElementById('splash').innerHTML =
+      '<div style="font-family:var(--font-h);font-size:72px;font-weight:900;color:var(--orange);">PATROL</div>' +
+      '<div style="font-family:var(--font-m);font-size:13px;color:var(--red);letter-spacing:2px;margin-top:8px;">BŁĄD — brak danych dla: ' + esc(s) + '</div>' +
+      '<button onclick="location.reload()" style="margin-top:20px;background:var(--bg2);color:var(--text2);border:1px solid var(--border2);border-radius:4px;padding:8px 20px;cursor:pointer;">Spróbuj ponownie</button>';
+    return;
+  }
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('proj-app').style.display = 'flex';
+  applyTitle();
+
+  if (PROJ_MODE === 'startlist') {
+    document.getElementById('proj-main').style.display = 'none';
+    document.getElementById('proj-progress').style.display = 'none';
+    document.getElementById('startlist-main').style.display = 'flex';
+    document.getElementById('proj-header').style.borderBottomColor = 'var(--green)';
+    renderStartlist();
+  } else {
+    buildLayout();
+  }
+  startClock();
+  startRealtime();
+
+  // Polling fallback
+  let _lastUpdatedAt = '';
+  let _pollTimer = null;
+  let _rtHealthy = false;
+  function _startPolling() {
+    if (_pollTimer) clearInterval(_pollTimer);
+    const interval = _rtHealthy ? 2000 : 1000;
+    _pollTimer = setInterval(async () => {
+      try {
+        const { data } = await getDB().from('patrol_state').select('state_json, updated_at').eq('slot_id', slotId).single();
+        if (!data) return;
+        if (data.updated_at && data.updated_at !== _lastUpdatedAt) {
+          _lastUpdatedAt = data.updated_at;
+          if (data.state_json) {
+            state = JSON.parse(data.state_json);
+            ensureStateDefaults();
+            softRender();
+            flashSync();
+          }
+        }
+      } catch(e) { /* ignore */ }
+    }, interval);
+  }
+  window._setRtHealthy = function(h) { if (_rtHealthy === h) return; _rtHealthy = h; _startPolling(); };
+  _startPolling();
+
+  // Reconnect realtime co 5s gdy padło
+  setInterval(() => {
+    const dot = document.getElementById('sync-dot');
+    if (dot && dot.classList.contains('off')) {
+      if (rtChannel) { try { getDB().removeChannel(rtChannel); } catch(e){} rtChannel = null; }
+      startRealtime();
+    }
+  }, 5000);
+
+  // Auto-refresh listy startowej co 30s (czasy startów się aktualizują wraz z biegiem)
+  if (PROJ_MODE === 'startlist') {
+    setInterval(() => { renderStartlist(); }, 30000);
+  }
+}
+</script>
+</body>
+</html>

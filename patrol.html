@@ -431,6 +431,77 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           <button onclick="setPtrRole('ADMIN');toggleRoleDropdown()" class="role-chip-opt" data-role="ADMIN" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">👑 Admin</button>
         </div>
       </div>
+      <div style="position:relative;">
+        <button class="hdr-btn" onclick="togglePtrProjSettings()" title="Projektor i ustawienia" style="color:var(--accent);border-color:rgba(232,212,77,.3);display:flex;align-items:center;gap:6px;">📺 Projektor <span style="opacity:.5;font-size:11px;">⚙</span></button>
+        <div id="ptr-proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:16px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.9);font-family:var(--font-b);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;">⚙ Projektor</div>
+            <button onclick="togglePtrProjSettings()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:0;">×</button>
+          </div>
+
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Wyniki</div>
+          <button onclick="openPatrolProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:22px;">📊</span>
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--accent);">Otwórz projektor wyników</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">M · K · Drużynowa</div>
+            </div>
+          </button>
+
+          <!-- Sekcje wyników — kafelki toggle -->
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+            <button id="ptr-ps-tile-ind-m" onclick="togglePtrProjTile('ind-m')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--male);">♂ M</button>
+            <button id="ptr-ps-tile-ind-k" onclick="togglePtrProjTile('ind-k')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--female);">♀ K</button>
+            <button id="ptr-ps-tile-team" onclick="togglePtrProjTile('team')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--orange);">🛡 Drużynowa</button>
+          </div>
+
+          <!-- Scroll + progress -->
+          <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <div style="flex:1;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Scroll</div>
+              <select id="ptr-ps-scroll-speed" onchange="savePtrProjSettings()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-size:12px;cursor:pointer;">
+                <option value="0">Wyłączony</option>
+                <option value="15">Wolny</option>
+                <option value="30">Normalny</option>
+                <option value="60">Szybki</option>
+                <option value="100">Bardzo szybki</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
+              <button id="ptr-ps-tile-progress" onclick="togglePtrProjTile('progress')" style="width:100%;padding:6px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">Włącz</button>
+            </div>
+          </div>
+
+          <!-- LISTA STARTOWA -->
+          <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:10px;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Lista startowa</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+              <button id="ptr-ps-tile-g-both" onclick="setPtrProjSLGender('both')" style="padding:8px;background:var(--bg3);border:2px solid var(--accent);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);">M + K</button>
+              <button id="ptr-ps-tile-g-m" onclick="setPtrProjSLGender('M')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♂ M</button>
+              <button id="ptr-ps-tile-g-k" onclick="setPtrProjSLGender('K')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♀ K</button>
+            </div>
+
+            <div style="margin-bottom:10px;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
+              <button id="ptr-ps-tile-sl-progress" onclick="togglePtrProjTile('sl-progress')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);">Włączony</button>
+            </div>
+            <div style="margin-bottom:10px;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Czasy startów / zakończeń</div>
+              <button id="ptr-ps-tile-start-times" onclick="togglePtrProjTile('start-times')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);">Włączone</button>
+            </div>
+
+            <button onclick="openPatrolStartlistProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">📋</span>
+              <div>
+                <div style="font-weight:700;font-size:13px;color:var(--green);">Otwórz listę startową</div>
+                <div id="ptr-ps-sl-preview" style="font-size:10px;color:var(--text3);margin-top:2px;">M + K</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
       <button class="hdr-btn" onclick="exportPatrolBackup()" title="Pobierz kopię zapasową zawodów (JSON)" style="font-size:10px;color:var(--text3);border-color:var(--border);">⬇ Backup</button>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
     </div>
@@ -1659,6 +1730,138 @@ function showToast(msg, type, duration) {
 function esc(s) {
   if (s === null || s === undefined) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g, '&#39;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROJEKTOR — ustawienia + otwieranie projektora wyników i listy startowej
+// (analogicznie do osf.html — wspólne localStorage 'patrol_proj_settings')
+// ═══════════════════════════════════════════════════════════════
+function defaultPtrProjSettings() {
+  return {
+    customTitle: '',
+    showIndM: true,
+    showIndK: true,
+    showTeam: true,
+    topN: 0,
+    scrollSpeed: 0,
+    showProgress: false,
+    showSLProgress: true,
+    showStartTimes: true,
+    slGender: 'both'
+  };
+}
+function getPtrProjSettings() {
+  try {
+    const raw = localStorage.getItem('patrol_proj_settings');
+    if (raw) return { ...defaultPtrProjSettings(), ...JSON.parse(raw) };
+  } catch(e) {}
+  return defaultPtrProjSettings();
+}
+function savePtrProjSettings() {
+  const s = getPtrProjSettings();
+  const spd = document.getElementById('ptr-ps-scroll-speed');
+  if (spd) s.scrollSpeed = parseInt(spd.value) || 0;
+  localStorage.setItem('patrol_proj_settings', JSON.stringify(s));
+  _updatePtrProjTiles();
+}
+function _updatePtrProjTiles() {
+  const s = getPtrProjSettings();
+  function setTile(id, active, colorVar) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor = active ? colorVar : 'var(--border2)';
+    el.style.color       = active ? colorVar : 'var(--text3)';
+    el.style.background  = active ? colorVar + '18' : 'var(--bg3)';
+  }
+  setTile('ptr-ps-tile-ind-m', s.showIndM, 'var(--male)');
+  setTile('ptr-ps-tile-ind-k', s.showIndK, 'var(--female)');
+  setTile('ptr-ps-tile-team',  s.showTeam, 'var(--orange)');
+  setTile('ptr-ps-tile-progress', s.showProgress, 'var(--green)');
+  // SL progress
+  const slProgTile = document.getElementById('ptr-ps-tile-sl-progress');
+  if (slProgTile) {
+    const slProg = s.showSLProgress !== false;
+    slProgTile.style.borderColor = slProg ? 'var(--green)' : 'var(--border2)';
+    slProgTile.style.color       = slProg ? 'var(--green)' : 'var(--text3)';
+    slProgTile.style.background  = slProg ? 'rgba(80,200,144,.1)' : 'var(--bg3)';
+    slProgTile.textContent       = slProg ? 'Włączony' : 'Wyłączony';
+  }
+  // Start times
+  const stTile = document.getElementById('ptr-ps-tile-start-times');
+  if (stTile) {
+    const showST = s.showStartTimes !== false;
+    stTile.style.borderColor = showST ? 'var(--green)' : 'var(--border2)';
+    stTile.style.color       = showST ? 'var(--green)' : 'var(--text3)';
+    stTile.style.background  = showST ? 'rgba(80,200,144,.1)' : 'var(--bg3)';
+    stTile.textContent       = showST ? 'Włączone' : 'Wyłączone';
+  }
+  // Gender tiles
+  ['both','M','K'].forEach(g => {
+    const id = 'ptr-ps-tile-g-' + (g === 'both' ? 'both' : g.toLowerCase());
+    const el = document.getElementById(id);
+    if (!el) return;
+    const active = s.slGender === g;
+    el.style.borderColor = active ? 'var(--accent)' : 'var(--border2)';
+    el.style.color       = active ? 'var(--accent)' : 'var(--text3)';
+    el.style.background  = active ? 'rgba(232,212,77,.1)' : 'var(--bg3)';
+  });
+  // Preview
+  const prev = document.getElementById('ptr-ps-sl-preview');
+  if (prev) {
+    const gen = s.slGender === 'M' ? '♂ M' : s.slGender === 'K' ? '♀ K' : 'M + K';
+    prev.textContent = gen;
+  }
+  // Scroll
+  const spd = document.getElementById('ptr-ps-scroll-speed');
+  if (spd) spd.value = s.scrollSpeed;
+}
+function togglePtrProjTile(key) {
+  const s = getPtrProjSettings();
+  const map = { 'ind-m':'showIndM','ind-k':'showIndK','team':'showTeam','progress':'showProgress','sl-progress':'showSLProgress','start-times':'showStartTimes' };
+  const field = map[key];
+  if (field) s[field] = !s[field];
+  localStorage.setItem('patrol_proj_settings', JSON.stringify(s));
+  _updatePtrProjTiles();
+}
+function setPtrProjSLGender(g) {
+  const s = getPtrProjSettings();
+  s.slGender = g;
+  localStorage.setItem('patrol_proj_settings', JSON.stringify(s));
+  _updatePtrProjTiles();
+}
+function togglePtrProjSettings() {
+  const pop = document.getElementById('ptr-proj-settings-pop');
+  if (!pop) return;
+  if (pop.style.display === 'none' || pop.style.display === '') {
+    pop.style.display = 'block';
+    _updatePtrProjTiles();
+    setTimeout(() => {
+      const handler = e => {
+        if (!pop.contains(e.target) && !e.target.closest('[onclick*="togglePtrProjSettings"]')) {
+          pop.style.display = 'none';
+        }
+        document.removeEventListener('click', handler);
+      };
+      document.addEventListener('click', handler);
+    }, 10);
+  } else {
+    pop.style.display = 'none';
+  }
+}
+function openPatrolProjektor() {
+  savePtrProjSettings();
+  const url = 'patrol-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY);
+  localStorage.setItem('patrol_proj_slot', STORAGE_KEY);
+  window.open(url, 'patrol_projektor', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+  const pop = document.getElementById('ptr-proj-settings-pop'); if (pop) pop.style.display = 'none';
+}
+function openPatrolStartlistProjektor() {
+  savePtrProjSettings();
+  const cfg = JSON.parse(localStorage.getItem('patrol_proj_settings') || '{}');
+  const gender = cfg.slGender || 'both';
+  const url = 'patrol-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY) + '&mode=startlist&gender=' + gender;
+  window.open(url, 'patrol_startlist_proj', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
+  const pop = document.getElementById('ptr-proj-settings-pop'); if (pop) pop.style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════════════
