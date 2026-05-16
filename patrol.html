@@ -110,6 +110,32 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
 /* STAT BOXES (jak w OSF) */
 .ptr-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* Konfiguracja — kwadratowe kafelki: Tryb działania + Sędzia startu */
+.ptr-tiles-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .ptr-tiles-row { grid-template-columns: 1fr; } }
+.ptr-mode-tile { aspect-ratio: 1 / 1; min-height: 130px; background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; padding: 14px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; transition: all .15s; font-family: var(--font-b); }
+.ptr-mode-tile:hover { border-color: var(--text3); background: var(--bg3); }
+.ptr-mode-tile.active-offline { border-color: var(--orange); background: linear-gradient(135deg, rgba(232,148,77,.15), rgba(232,148,77,.04)); box-shadow: 0 2px 14px rgba(232,148,77,.18); }
+.ptr-mode-tile.active-offline .ptr-mode-label { color: var(--orange); }
+.ptr-mode-icon { font-size: 38px; line-height: 1; }
+.ptr-mode-label { font-family: var(--font-h); font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--green); }
+.ptr-mode-sub { font-size: 11px; color: var(--text3); line-height: 1.3; padding: 0 6px; }
+.ptr-mode-tile:not(.active-offline) .ptr-mode-label { color: var(--green); }
+
+/* Sędzia startu — rozwijany kafelek (head=kwadrat, body rozwijane) */
+.ptr-starter-tile { background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .15s; }
+.ptr-starter-tile:hover { border-color: var(--text3); }
+.ptr-starter-tile.active { border-color: var(--green); background: linear-gradient(135deg, rgba(80,200,144,.10), var(--bg2) 40%); }
+.ptr-starter-tile.expired { border-color: var(--orange); background: linear-gradient(135deg, rgba(232,148,77,.10), var(--bg2) 40%); }
+.ptr-starter-head { width: 100%; background: none; border: none; aspect-ratio: 1 / 1; min-height: 130px; padding: 14px 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; font-family: var(--font-b); position: relative; }
+.ptr-starter-head:hover { background: rgba(255,255,255,.02); }
+.ptr-starter-arrow { position: absolute; top: 10px; right: 12px; color: var(--text3); font-size: 11px; }
+.ptr-starter-tile.active .ptr-mode-icon, .ptr-starter-tile.active .ptr-mode-label { /* ikona zostaje, label już domyślnie text1 */ }
+.ptr-starter-tile:not(.active):not(.expired) .ptr-starter-head .ptr-mode-icon { opacity: .65; }
+/* Body po rozwinięciu rozszerza kafelek wyżej, usuwa aspect-ratio z head */
+.ptr-starter-tile .ptr-starter-head { aspect-ratio: 1 / 1; }
+.ptr-starter-tile.expanded .ptr-starter-head { aspect-ratio: auto; min-height: 0; padding: 12px 14px; flex-direction: row; gap: 12px; justify-content: flex-start; }
 .stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; }
 .stat-num { font-family: var(--font-h); font-size: 38px; font-weight: 800; line-height: 1; color: var(--text1); }
 .stat-label { font-family: var(--font-h); font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
@@ -631,51 +657,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
             <input type="file" id="ptr-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importPatrolFile(event)" />
           </div>
 
-          <!-- Ustawienia zaawansowane -->
-          <div class="card mb-12">
-            <button onclick="toggleOps()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
-              <div class="card-title" style="margin:0;padding:0;border:none;">⚙ Ustawienia zaawansowane</div>
-              <span id="ptr-ops-arrow" style="color:var(--text3);font-size:12px;">▶</span>
+          <!-- 🔌 TRYB DZIAŁANIA (kwadratowy kafelek) + 🎬 SĘDZIA STARTU (rozwijany) — w siatce 2 kolumny -->
+          <div class="ptr-tiles-row mb-12">
+            <!-- TRYB OFFLINE TILE -->
+            <button id="ptr-tile-offline" onclick="toggleOfflineMode()" class="ptr-mode-tile" title="Tryb offline — synchronizowany stoper wyłączony, sędziowie używają fizycznych stoperów">
+              <span class="ptr-mode-icon">🌐</span>
+              <span class="ptr-mode-label">ONLINE</span>
+              <span class="ptr-mode-sub">stoper synchronizowany</span>
             </button>
-            <div id="ptr-ops-panel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                <button onclick="exportPatrolJSON()" class="btn" style="padding:12px 10px;text-align:center;flex-direction:column;height:auto;">
-                  <div style="font-size:18px;margin-bottom:3px;">⬇</div>
-                  <div style="font-size:11px;font-weight:700;">Backup</div>
-                </button>
-                <button onclick="document.getElementById('ptr-import-json').click()" class="btn" style="padding:12px 10px;text-align:center;flex-direction:column;height:auto;">
-                  <div style="font-size:18px;margin-bottom:3px;">↑</div>
-                  <div style="font-size:11px;font-weight:700;">Przywróć</div>
-                </button>
-                <input type="file" id="ptr-import-json" accept=".json" style="display:none" onchange="importPatrolJSON(event)" />
-              </div>
-              <button onclick="finishContest()" class="btn" style="width:100%;padding:12px;text-align:center;background:rgba(76,175,130,.08);border-color:rgba(76,175,130,.35);color:var(--green);margin-bottom:14px;">
-                ✓ Zakończ zawody · wróć do panelu
+            <!-- SĘDZIA STARTU TILE — rozwijany na kliknięcie -->
+            <div id="ptr-tile-starter" class="ptr-starter-tile">
+              <button class="ptr-starter-head" onclick="toggleStarterTile()">
+                <span class="ptr-mode-icon">🎬</span>
+                <span class="ptr-mode-label" style="color:var(--text1);">SĘDZIA STARTU</span>
+                <span class="ptr-mode-sub" id="ptr-starter-tile-status">link nieaktywny</span>
+                <span class="ptr-starter-arrow" id="ptr-starter-arrow">▶</span>
               </button>
-
-              <!-- 🔌 Tryb offline -->
-              <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
-                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
-                  <input type="checkbox" id="cfg-offline-mode" onchange="toggleOfflineMode()" style="margin-top:2px;flex-shrink:0;width:16px;height:16px;" />
-                  <div style="flex:1;">
-                    <div style="font-size:13px;font-weight:700;color:var(--orange);">🔌 Tryb offline (fizyczne stopery)</div>
-                    <div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.5;">
-                      Włącz gdy sieć jest niestabilna. Synchronizowany stoper zostanie wyłączony.
-                      Sędziowie mierzą czasy <strong>fizycznymi stoperami</strong> i wpisują ręcznie w zakładce <em>Pary / wpisywanie</em>.
-                      Zmiany zapisują się lokalnie i lecą do chmury automatycznie gdy sieć wraca.
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              <!-- 🎬 Sędzia startu — link mobilny -->
-              <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;">
+              <div id="ptr-starter-body" style="display:none;border-top:1px solid var(--border);padding:14px 16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                  <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;">🎬 Sędzia startu</div>
+                  <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Status dostępu</div>
                   <span id="start-status-pill" style="font-family:var(--font-m);font-size:10px;padding:3px 9px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
                 </div>
                 <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px;">
-                  Link dla sędziego na starcie — otworzy na telefonie/laptopie osobną apkę z dużymi przyciskami START/RESET dla każdej pary.
+                  Link dla sędziego startu — otworzy osobną apkę na telefonie z dużymi przyciskami START/RESET dla każdej pary.
                 </div>
                 <button id="start-toggle-btn" onclick="toggleStartEnabled()" style="width:100%;padding:10px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:10px;">
                   Aktywuj link
@@ -707,6 +711,30 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
                   🔄 Wygeneruj nowy klucz (stary link przestanie działać)
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Ustawienia zaawansowane -->
+          <div class="card mb-12">
+            <button onclick="toggleOps()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
+              <div class="card-title" style="margin:0;padding:0;border:none;">⚙ Ustawienia zaawansowane</div>
+              <span id="ptr-ops-arrow" style="color:var(--text3);font-size:12px;">▶</span>
+            </button>
+            <div id="ptr-ops-panel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <button onclick="exportPatrolJSON()" class="btn" style="padding:12px 10px;text-align:center;flex-direction:column;height:auto;">
+                  <div style="font-size:18px;margin-bottom:3px;">⬇</div>
+                  <div style="font-size:11px;font-weight:700;">Backup</div>
+                </button>
+                <button onclick="document.getElementById('ptr-import-json').click()" class="btn" style="padding:12px 10px;text-align:center;flex-direction:column;height:auto;">
+                  <div style="font-size:18px;margin-bottom:3px;">↑</div>
+                  <div style="font-size:11px;font-weight:700;">Przywróć</div>
+                </button>
+                <input type="file" id="ptr-import-json" accept=".json" style="display:none" onchange="importPatrolJSON(event)" />
+              </div>
+              <button onclick="finishContest()" class="btn" style="width:100%;padding:12px;text-align:center;background:rgba(76,175,130,.08);border-color:rgba(76,175,130,.35);color:var(--green);margin-bottom:14px;">
+                ✓ Zakończ zawody · wróć do panelu
+              </button>
 
               <div style="border-top:1px solid var(--border);padding-top:12px;">
                 <div style="font-size:11px;color:var(--orange);margin-bottom:10px;">⚠ Operacje destrukcyjne:</div>
@@ -1950,9 +1978,8 @@ function renderSetupPage() {
   if (dot) dot.style.background = color;
   _renderInfoCardView();
   updatePairingSummary();
-  // Update toggle offline mode
-  const offCb = document.getElementById('cfg-offline-mode');
-  if (offCb) offCb.checked = !!(state.cfg && state.cfg.offlineMode);
+  // Synchronizuj wizualny stan kafelka trybu (online/offline) z state.cfg
+  if (typeof _applyOfflineMode === 'function') _applyOfflineMode();
 }
 
 function setAccentColor(color) {
@@ -2062,8 +2089,8 @@ function toggleOps() {
 // ═══════════════════════════════════════════════════════════════
 function toggleOfflineMode() {
   if (!state.cfg) state.cfg = {};
-  const cb = document.getElementById('cfg-offline-mode');
-  state.cfg.offlineMode = !!(cb && cb.checked);
+  // Toggle wprost (poprzednio bazowało na checkboxie, teraz mamy kwadratowy kafelek bez inputa)
+  state.cfg.offlineMode = !state.cfg.offlineMode;
   saveImmediate();
   _applyOfflineMode();
   showToast(state.cfg.offlineMode ? '🔌 Tryb offline włączony — używaj fizycznych stoperów' : '🌐 Tryb online — stoper synchronizowany dostępny', 'warning', 3500);
@@ -2081,9 +2108,37 @@ function _applyOfflineMode() {
   // Pokaż/ukryj banner w zakładce Pary
   const banner = document.getElementById('offline-banner');
   if (banner) banner.style.display = offline ? 'block' : 'none';
-  // Update checkbox
-  const cb = document.getElementById('cfg-offline-mode');
-  if (cb) cb.checked = offline;
+  // Update kafelka trybu w konfiguracji
+  const tile = document.getElementById('ptr-tile-offline');
+  if (tile) {
+    const icon = tile.querySelector('.ptr-mode-icon');
+    const label = tile.querySelector('.ptr-mode-label');
+    const sub = tile.querySelector('.ptr-mode-sub');
+    if (offline) {
+      tile.classList.add('active-offline');
+      if (icon)  icon.textContent  = '🔌';
+      if (label) label.textContent = 'OFFLINE';
+      if (sub)   sub.textContent   = 'fizyczne stopery, czasy ręcznie';
+    } else {
+      tile.classList.remove('active-offline');
+      if (icon)  icon.textContent  = '🌐';
+      if (label) label.textContent = 'ONLINE';
+      if (sub)   sub.textContent   = 'stoper synchronizowany';
+    }
+  }
+}
+
+// Rozwijanie/zwijanie kafelka Sędziego startu
+function toggleStarterTile() {
+  const body = document.getElementById('ptr-starter-body');
+  const arrow = document.getElementById('ptr-starter-arrow');
+  const tile = document.getElementById('ptr-tile-starter');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (tile) tile.classList.toggle('expanded', !open);
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+  if (!open) _renderStartSection(); // odśwież sekcję gdy otwieramy
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2234,6 +2289,22 @@ function _renderStartSection() {
     linkRow.style.display = 'none';
     rotate.style.display = 'none';
     if (expireRow) expireRow.style.display = 'none';
+  }
+  // Aktualizuj sub-status w kafelku
+  const tileStatus = document.getElementById('ptr-starter-tile-status');
+  const tile = document.getElementById('ptr-tile-starter');
+  if (tileStatus) {
+    if (enabled && hasKey) {
+      const expired = _isStartExpired();
+      tileStatus.textContent = expired ? 'link wygasł — przedłuż' : 'link aktywny — kliknij aby skopiować';
+      if (tile) {
+        tile.classList.toggle('active', !expired);
+        tile.classList.toggle('expired', expired);
+      }
+    } else {
+      tileStatus.textContent = 'link nieaktywny — kliknij aby aktywować';
+      if (tile) { tile.classList.remove('active', 'expired'); }
+    }
   }
 }
 
