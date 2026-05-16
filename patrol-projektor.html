@@ -443,8 +443,10 @@ function softRender() {
   }
   applyTitle();
   // Refill bez full rerender (zachowuje scroll offset gdzie się da)
-  if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)));
-  if (cfg.showIndK) refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)));
+  // WAŻNE: M i K muszą dostać wrapperCls='rank-table' bo to są <tr> wymagające <table> rodzica.
+  // Bez tego browser robi voodoo z surowymi <tr> i layout się rozjeżdża poza kadr.
+  if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table');
+  if (cfg.showIndK) refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table');
   if (cfg.showTeam) refillTrack('team',  buildTeamRows().map((r,i) => teamRowHTML(r,i)));
   if (cfg.showProgress) renderProgress();
 }
