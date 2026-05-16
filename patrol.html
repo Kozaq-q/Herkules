@@ -111,6 +111,34 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 /* STAT BOXES (jak w OSF) */
 .ptr-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
+/* STICKY BANNER "BIEGNIE TERAZ" — alarmowy pasek z biegnącymi parami */
+#ptr-running-banner {
+  position: sticky; top: 98px; z-index: 80;
+  background: linear-gradient(to right, rgba(232,148,77,.18), rgba(232,148,77,.08));
+  border-bottom: 2px solid var(--orange);
+  padding: 8px 24px;
+  box-shadow: 0 4px 14px rgba(232,148,77,.25);
+  animation: ptr-banner-pulse 2s ease-in-out infinite;
+}
+@keyframes ptr-banner-pulse {
+  0%,100% { box-shadow: 0 4px 14px rgba(232,148,77,.22); }
+  50%     { box-shadow: 0 4px 22px rgba(232,148,77,.4); }
+}
+.ptr-running-banner-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ptr-running-banner-label { font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); flex-shrink: 0; }
+.ptr-running-banner-list { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.ptr-running-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg2); border: 1px solid rgba(232,148,77,.55); border-radius: 18px;
+  padding: 4px 10px 4px 4px; cursor: pointer; transition: all .12s;
+  font-family: var(--font-b); font-size: 12px;
+}
+.ptr-running-pill:hover { background: var(--bg3); border-color: var(--orange); transform: translateY(-1px); }
+.ptr-running-pill-num { width: 24px; height: 24px; background: var(--orange); color: #111; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 13px; font-weight: 800; flex-shrink: 0; }
+.ptr-running-pill-gender { color: var(--text3); font-size: 11px; }
+.ptr-running-pill-names { color: var(--text1); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.ptr-running-pill-timer { font-family: var(--font-m); font-weight: 800; color: var(--orange); font-variant-numeric: tabular-nums; }
+
 /* Konfiguracja — rząd 4 kwadratowych kafelków (mniejsze, na pełną szerokość konfiguracji) */
 .ptr-tiles-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 @media (max-width: 1100px) { .ptr-tiles-row { grid-template-columns: repeat(2, 1fr); } }
@@ -560,6 +588,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
     <button class="nav-tab" onclick="showTab('timer')" id="tab-timer">⏱ Stoper</button>
     <button class="nav-tab" onclick="showTab('results')" id="tab-results">🏆 Wyniki</button>
   </nav>
+
+  <!-- STICKY BANNER "BIEGNIE TERAZ" — pokazywany na zakładkach Pary/Stoper gdy są biegnące pary -->
+  <div id="ptr-running-banner" style="display:none;"></div>
 
   <!-- MAIN CONTENT -->
   <div class="main">
@@ -1788,6 +1819,10 @@ function _applyRemoteStateNow(stateJson) {
       else if (tabId === 'timer' && typeof renderTimerView === 'function') renderTimerView();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
+    // B) Wykryj nowy start pary od innego sędziego — toast + pip
+    if (typeof _checkPairStartTransitions === 'function') _checkPairStartTransitions();
+    // A) Odśwież sticky banner "BIEGNIE TERAZ"
+    if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
     showSyncStatus('ok');
   } catch(e) { console.error('Remote state parse error:', e); }
 }
@@ -1817,6 +1852,8 @@ function showTab(id) {
     else if (id === 'timer' && typeof renderTimerView === 'function') renderTimerView();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
+  // Odśwież sticky banner "BIEGNIE TERAZ" — widoczny tylko na zakładkach Pary/Stoper
+  if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
 }
 
 function renderHeader() {
@@ -2655,6 +2692,12 @@ function _updatePtrStatusTile() {
 
 // Aktualizuj kafelek statusu co 5s
 setInterval(_updatePtrStatusTile, 5000);
+
+// Safety net — odświeżaj banner "BIEGNIE TERAZ" co 1s
+// (gdyby coś przeoczyło lokalną zmianę state.runs)
+setInterval(() => {
+  if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
+}, 1000);
 
 // Rozwijanie/zwijanie kafelka Sędziego startu
 function toggleStarterTile() {
@@ -4686,6 +4729,138 @@ function _patrolEffectiveFinishMs(athleteId, run) {
   return null;
 }
 
+// ─── BANNER "BIEGNIE TERAZ" — widoczność + tikanie zegarów ──────
+function _renderPtrRunningBanner() {
+  const banner = document.getElementById('ptr-running-banner');
+  if (!banner) return;
+  // Tylko na zakładkach Pary i Stoper — gdzie sędziowie pracują
+  const active = document.querySelector('.nav-tab.active');
+  const tabId = active ? active.id.replace('tab-', '') : '';
+  const showOnTab = (tabId === 'pairs' || tabId === 'timer');
+  if (!showOnTab) { banner.style.display = 'none'; return; }
+
+  // Zbierz biegnące pary (started, nie skończone wg getEffectiveFinish)
+  const runningPairs = [];
+  (state.pairs || []).forEach(p => {
+    const run = getRun(p.gender, p.pairNum);
+    if (!run || !run.startedAt) return;
+    const aFin = _patrolEffectiveFinishMs(p.aId, run);
+    const bFin = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
+    if (aFin && bFin) return; // już skończona
+    runningPairs.push({ p, run });
+  });
+
+  if (!runningPairs.length) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+
+  // Sortuj po pairNum/płci dla stabilności
+  runningPairs.sort((a, b) => a.p.gender.localeCompare(b.p.gender) || a.p.pairNum - b.p.pairNum);
+
+  const pills = runningPairs.map(({ p, run }) => {
+    const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
+    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+    const names = [a, b].filter(Boolean).map(x => esc(x.name || '?')).join(' & ');
+    const key = p.gender + '_' + p.pairNum;
+    return '<button class="ptr-running-pill" data-key="' + key + '" onclick="_scrollToRunningPair(\'' + p.gender + '\',' + p.pairNum + ')" title="Kliknij aby przewinąć do tej pary">' +
+      '<span class="ptr-running-pill-num">' + p.pairNum + '</span>' +
+      '<span class="ptr-running-pill-gender">' + (p.gender === 'M' ? '♂' : '♀') + '</span>' +
+      '<span class="ptr-running-pill-names">' + (names || '—') + '</span>' +
+      '<span class="ptr-running-pill-timer" data-banner-timer="' + key + '">0.00</span>' +
+    '</button>';
+  }).join('');
+
+  banner.innerHTML =
+    '<div class="ptr-running-banner-inner">' +
+      '<span class="ptr-running-banner-label">▶ Biegnie teraz</span>' +
+      '<div class="ptr-running-banner-list">' + pills + '</div>' +
+    '</div>';
+}
+
+// Tikaj zegary w bannerze co 100ms (oprócz głównego tickTimers)
+function _tickPtrRunningBannerTimers() {
+  const banner = document.getElementById('ptr-running-banner');
+  if (!banner || banner.style.display === 'none') return;
+  banner.querySelectorAll('[data-banner-timer]').forEach(el => {
+    const [gender, pairNumStr] = el.dataset.bannerTimer.split('_');
+    const run = getRun(gender, parseInt(pairNumStr));
+    if (!run || !run.startedAt) return;
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
+}
+
+// Scroll do karty pary w aktywnym widoku (Pary lub Stoper)
+function _scrollToRunningPair(gender, pairNum) {
+  // Szukaj kart oznaczonych przez pairNum + gender. Pary view: .pair-card[data-pair-num]; Timer view: timer-display data-timer-pair
+  const keys = [
+    '[data-pair-num="' + pairNum + '"][data-gender="' + gender + '"]',
+    '[data-timer-pair="' + gender + '_' + pairNum + '"]'
+  ];
+  for (const sel of keys) {
+    const el = document.querySelector(sel);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Krótki highlight
+      const card = el.closest('.pair-card') || el.closest('.timer-pair-card') || el;
+      if (card) {
+        card.style.transition = 'box-shadow .3s';
+        card.style.boxShadow = '0 0 0 3px var(--orange)';
+        setTimeout(() => { card.style.boxShadow = ''; }, 1500);
+      }
+      return;
+    }
+  }
+}
+
+// ─── B) TOAST detection: ktoś wystartował parę ─────────────────
+const _ptrPrevRunStarted = {}; // {key: startedAt} — poprzednie znane statusy
+function _checkPairStartTransitions() {
+  if (!state || !state.runs) return;
+  Object.keys(state.runs).forEach(key => {
+    const r = state.runs[key];
+    const prevStart = _ptrPrevRunStarted[key];
+    const nowStart = r && r.startedAt;
+    if (nowStart && !prevStart) {
+      // Tylko jeśli nie my sami właśnie wystartowaliśmy (zostalibyśmy zalani spamem)
+      // Detect "ourselves": startedAt bardzo świeży (<2s) + jesteśmy ADMIN/STARTER
+      const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'META';
+      const recentlyStartedSelf = (Date.now() - nowStart) < 2000 && (role === 'STARTER' || role === 'ADMIN');
+      if (!recentlyStartedSelf) {
+        const [gender, pairNumStr] = key.split('_');
+        const pairNum = parseInt(pairNumStr);
+        const p = (state.pairs || []).find(x => x.gender === gender && x.pairNum === pairNum);
+        const a = p && p.aId ? state.athletes.find(x => x.id === p.aId) : null;
+        const b = p && p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+        const names = [a, b].filter(Boolean).map(x => x.name).join(' & ');
+        showToast('▶ Para ' + pairNum + ' (' + (gender === 'M' ? '♂' : '♀') + ') wystartowała' + (names ? ' · ' + names : ''), 'warning', 4000);
+        _playStartBeep();
+      }
+    }
+    _ptrPrevRunStarted[key] = nowStart || 0;
+  });
+}
+
+// Krótki pip — Web Audio API
+let _ptrAudioCtx = null;
+function _playStartBeep() {
+  try {
+    if (!_ptrAudioCtx) _ptrAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _ptrAudioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const t0 = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t0);
+    osc.frequency.setValueAtTime(1320, t0 + 0.08);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.2);
+  } catch (e) { /* audio niedostępne — ignoruj */ }
+}
+
 function tickTimers() {
   // Sprawdź auto-starty
   if (typeof checkScheduledStarts === 'function') checkScheduledStarts();
@@ -4782,6 +4957,8 @@ function tickTimers() {
     }
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
+  // Tikaj też zegary w bannerze "biegnie teraz"
+  if (typeof _tickPtrRunningBannerTimers === 'function') _tickPtrRunningBannerTimers();
 }
 
 // Przenieś parę o ±1
