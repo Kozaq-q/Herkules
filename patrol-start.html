@@ -205,7 +205,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
     </div>
     <div class="header-right">
       <button id="hide-finished-btn" onclick="togglePsHideFinished()" title="Pokaż/ukryj pary które ukończyły bieg" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">👁 <span id="hide-finished-label">Ukryj zakończone</span></button>
-      <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(232,148,77,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram</button>
+      <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(232,148,77,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram <span id="schedule-count" style="margin-left:4px;background:var(--orange);color:#111;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:800;display:none;"></span></button>
+      <button id="schedule-clear-btn" onclick="quickClearAllSchedule()" title="Szybko wyczyść wszystkie zaplanowane czasy startu" style="display:none;background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.5);border-radius:var(--radius);color:var(--red);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;cursor:pointer;">🧹 Wyczyść</button>
       <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
       <div class="hdr-status" id="pulse-status" style="cursor:help;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text3);border:1px solid var(--border);background:var(--bg3);">📡 ...</div>
@@ -234,17 +235,46 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <button onclick="closeScheduleModal()" style="background:none;border:none;color:var(--text3);font-size:24px;cursor:pointer;line-height:1;padding:0 6px;">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
-      Ustaw czas startu pierwszej pary i interwał między parami. Każda para otrzyma swój czas, można potem zmienić godzinę pojedynczej pary klikając na nią w głównym widoku.
+      Ustaw czas startu pierwszej pary i interwał — osobno dla każdej płci. Każda para otrzyma swój czas, można potem zmienić godzinę pojedynczej pary klikając na nią w głównym widoku.
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <label style="display:block;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Pierwsza para startuje o (HH:MM:SS)</label>
-        <input type="time" step="1" id="sched-first" value="10:00:00" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:12px 14px;font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
+
+    <!-- Sekcja Mężczyźni -->
+    <div id="sched-section-M" style="display:none;background:rgba(91,155,213,.04);border:1px solid rgba(91,155,213,.25);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:1.5px;color:var(--male);">♂ Mężczyźni <span id="sched-count-M" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:4px;"></span></div>
+        <button onclick="clearScheduleByGender('M')" id="sched-clear-M" style="background:transparent;border:1px solid rgba(224,85,85,.4);border-radius:var(--radius);color:var(--red);font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;cursor:pointer;display:none;">✕ wyczyść M</button>
       </div>
-      <div>
-        <label style="display:block;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">Interwał między parami (sekundy)</label>
-        <input type="number" min="10" max="3600" step="5" id="sched-interval" value="60" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:12px 14px;font-family:var(--font-m);font-size:18px;font-weight:700;text-align:center;" />
+      <div style="display:grid;grid-template-columns:1fr 110px;gap:10px;">
+        <div>
+          <label style="display:block;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Pierwsza para o</label>
+          <input type="time" step="1" id="sched-first-M" value="10:00:00" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
+        </div>
+        <div>
+          <label style="display:block;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Interwał (s)</label>
+          <input type="number" min="10" max="3600" step="5" id="sched-interval-M" value="60" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
+        </div>
       </div>
+    </div>
+
+    <!-- Sekcja Kobiety -->
+    <div id="sched-section-K" style="display:none;background:rgba(213,123,155,.04);border:1px solid rgba(213,123,155,.25);border-radius:var(--radius);padding:14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:1.5px;color:var(--female);">♀ Kobiety <span id="sched-count-K" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:4px;"></span></div>
+        <button onclick="clearScheduleByGender('K')" id="sched-clear-K" style="background:transparent;border:1px solid rgba(224,85,85,.4);border-radius:var(--radius);color:var(--red);font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;cursor:pointer;display:none;">✕ wyczyść K</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 110px;gap:10px;">
+        <div>
+          <label style="display:block;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Pierwsza para o</label>
+          <input type="time" step="1" id="sched-first-K" value="10:30:00" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
+        </div>
+        <div>
+          <label style="display:block;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Interwał (s)</label>
+          <input type="number" min="10" max="3600" step="5" id="sched-interval-K" value="60" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
       <button onclick="confirmGenerateSchedule()" style="width:100%;padding:16px;background:var(--orange);color:#111;border:none;border-radius:var(--radius);font-family:var(--font-h);font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;">⚙ Wygeneruj harmonogram</button>
       <button onclick="confirmClearSchedule()" style="width:100%;padding:12px;background:transparent;color:var(--red);border:1px solid rgba(224,85,85,.5);border-radius:var(--radius);font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;">✕ Wyczyść cały harmonogram</button>
     </div>
@@ -732,6 +762,7 @@ function renderPairs() {
   }
 
   _updateHideFinishedBtn();
+  if (typeof _refreshScheduleHeaderBtns === 'function') _refreshScheduleHeaderBtns();
 }
 
 // ─── TOGGLE: ukryj zakończone pary ────────────────────────────
@@ -785,6 +816,29 @@ function _applyPsTabStyle() {
   tK.style.cssText = _psTab === 'K' ? activeStyle('var(--female)') : inactiveStyle;
 }
 
+// Pomocniki — wspólne z patrol.html
+function _psIsTimeMarker(v) { return v === 'DNF' || v === 'DNS'; }
+function _psParseTime(t) {
+  if (!t) return Infinity;
+  const m = String(t).trim().match(/^(?:(\d+):)?(\d+)(?:[.,](\d+))?$/);
+  if (!m) return Infinity;
+  const min = parseInt(m[1] || '0');
+  const sec = parseInt(m[2] || '0');
+  const frac = m[3] ? parseFloat('0.' + m[3]) : 0;
+  return min * 60 + sec + frac;
+}
+// Efektywny moment zakończenia: auto-stop (run.finishedAt[id]) LUB ręczny total wpisany w panelu głównym
+function _psEffectiveFinishMs(athleteId, run) {
+  if (!athleteId || !run) return null;
+  if (run.finishedAt && run.finishedAt[athleteId]) return run.finishedAt[athleteId];
+  const t = state.times?.[athleteId]?.total;
+  if (run.startedAt && t && !_psIsTimeMarker(t)) {
+    const sec = _psParseTime(t);
+    if (Number.isFinite(sec) && sec > 0 && sec !== Infinity) return run.startedAt + sec * 1000;
+  }
+  return null;
+}
+
 function renderPairCard(p, isJustFinished) {
   const gender = p.gender;
   const pairNum = p.pairNum;
@@ -792,8 +846,11 @@ function renderPairCard(p, isJustFinished) {
   const started = !!(run && run.startedAt);
   const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
   const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
-  const aFinished = !!(started && run.finishedAt && run.finishedAt[p.aId]);
-  const bFinished = p.bId ? !!(started && run.finishedAt && run.finishedAt[p.bId]) : true;
+  // Wykrywanie zakończenia — uwzględnia auto-stop ORAZ ręcznie wpisany total z panelu głównego
+  const aFinishMs = _psEffectiveFinishMs(p.aId, run);
+  const bFinishMs = p.bId ? _psEffectiveFinishMs(p.bId, run) : null;
+  const aFinished = !!aFinishMs;
+  const bFinished = p.bId ? !!bFinishMs : true;
   const allFinished = started && aFinished && bFinished;
 
   let statusCls, statusTxt;
@@ -804,7 +861,7 @@ function renderPairCard(p, isJustFinished) {
   // Timer display
   let timerHtml;
   if (allFinished) {
-    const last = Math.max(...Object.values(run.finishedAt));
+    const last = Math.max(aFinishMs || 0, bFinishMs || 0);
     timerHtml = '<div class="timer-display" data-finished="1">' + formatRunTime(last - run.startedAt) + '</div>';
   } else if (started) {
     timerHtml = '<div class="timer-display" data-running="1" data-pair="' + gender + '_' + pairNum + '">0.00</div>';
@@ -969,11 +1026,27 @@ function checkScheduledStartsStart() {
 
 setInterval(() => {
   checkScheduledStartsStart();
-  // Update lecącego licznika
+  // Update lecącego licznika — z auto-zatrzymaniem gdy oboje skończyli (auto LUB ręczny total)
   document.querySelectorAll('.timer-display[data-running="1"]').forEach(el => {
-    const [gender, pairNum] = el.dataset.pair.split('_');
-    const run = getRun(gender, parseInt(pairNum));
+    const [gender, pairNumStr] = el.dataset.pair.split('_');
+    const pairNum = parseInt(pairNumStr);
+    const run = getRun(gender, pairNum);
     if (!run || !run.startedAt) return;
+    // Sprawdź czy oboje skończyli (auto-stop LUB ręczny total z panelu)
+    const pair = (state.pairs || []).find(x => x.gender === gender && x.pairNum === pairNum);
+    if (pair) {
+      const aFin = _psEffectiveFinishMs(pair.aId, run);
+      const bFin = pair.bId ? _psEffectiveFinishMs(pair.bId, run) : true;
+      if (aFin && bFin) {
+        const last = Math.max(aFin || 0, (bFin === true ? 0 : bFin) || 0);
+        el.textContent = formatRunTime(last - run.startedAt);
+        el.dataset.running = '0';
+        el.dataset.finished = '1';
+        // Wymuś rerender żeby kafelek złapał stan finished i klasy CSS
+        try { renderPairs(); } catch(_){}
+        return;
+      }
+    }
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
   // Update timer-display dla par z zaplanowanym startem (countdown)
@@ -1050,69 +1123,164 @@ function showToast(msg, type, duration) {
 // HARMONOGRAM AUTO-START
 // ═══════════════════════════════════════════════════════════════
 function openScheduleModal() {
+  // Zaktualizuj sekcje per płeć: pokaż tylko te które mają pary
+  _refreshScheduleModal();
   document.getElementById('schedule-modal').style.display = 'flex';
 }
 function closeScheduleModal() {
   document.getElementById('schedule-modal').style.display = 'none';
 }
 
-// Generuj harmonogram dla wszystkich par (z confirm — zabezpieczenie przed przypadkiem)
+// Pomocnik: liczba zaplanowanych par per płeć
+function _countScheduledByGender(gender) {
+  if (!state.runs) return 0;
+  let n = 0;
+  (state.pairs || []).forEach(p => {
+    if (gender && p.gender !== gender) return;
+    const r = state.runs[p.gender + '_' + p.pairNum];
+    if (r && r.scheduledStartAt && !r.startedAt) n++;
+  });
+  return n;
+}
+
+function _refreshScheduleModal() {
+  const pairs = state.pairs || [];
+  const countM = pairs.filter(p => p.gender === 'M').length;
+  const countK = pairs.filter(p => p.gender === 'K').length;
+  const sectM = document.getElementById('sched-section-M');
+  const sectK = document.getElementById('sched-section-K');
+  if (sectM) sectM.style.display = countM > 0 ? '' : 'none';
+  if (sectK) sectK.style.display = countK > 0 ? '' : 'none';
+  // Liczniki par + zaplanowanych
+  const cM = document.getElementById('sched-count-M');
+  const cK = document.getElementById('sched-count-K');
+  const schedM = _countScheduledByGender('M');
+  const schedK = _countScheduledByGender('K');
+  if (cM) cM.textContent = countM + ' par' + (schedM > 0 ? ' · ' + schedM + ' zaplanowanych' : '');
+  if (cK) cK.textContent = countK + ' par' + (schedK > 0 ? ' · ' + schedK + ' zaplanowanych' : '');
+  // Przyciski wyczyść per płeć — widoczne tylko gdy są zaplanowane
+  const clrM = document.getElementById('sched-clear-M');
+  const clrK = document.getElementById('sched-clear-K');
+  if (clrM) clrM.style.display = schedM > 0 ? '' : 'none';
+  if (clrK) clrK.style.display = schedK > 0 ? '' : 'none';
+}
+
+// Aktualizacja przycisku "🧹 Wyczyść" w nagłówku + badge na "⏰ Harmonogram"
+function _refreshScheduleHeaderBtns() {
+  const totalScheduled = _countScheduledByGender(null);
+  const clearBtn = document.getElementById('schedule-clear-btn');
+  const badge = document.getElementById('schedule-count');
+  if (clearBtn) clearBtn.style.display = totalScheduled > 0 ? '' : 'none';
+  if (badge) {
+    if (totalScheduled > 0) { badge.textContent = totalScheduled; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
+}
+
+// Szybkie wyczyszczenie wszystkich zaplanowanych z nagłówka (jeden klik + confirm)
+function quickClearAllSchedule() {
+  const total = _countScheduledByGender(null);
+  if (total === 0) { showToast('Brak zaplanowanych do wyczyszczenia', 'info', 1500); return; }
+  if (!confirm('Wyczyścić ' + total + ' zaplanowanych godzin startu?\n(Pary już biegnące nie zostaną dotknięte.)')) return;
+  _doClearSchedule(null);
+}
+
+// Wyczyść zaplanowane konkretnej płci ('M' lub 'K') — z modala
+function clearScheduleByGender(gender) {
+  const n = _countScheduledByGender(gender);
+  if (n === 0) { showToast('Brak zaplanowanych ' + gender + ' do wyczyszczenia', 'info', 1500); return; }
+  const label = gender === 'M' ? 'Mężczyźni' : 'Kobiety';
+  if (!confirm('Wyczyścić ' + n + ' zaplanowanych godzin startu (' + label + ')?')) return;
+  _doClearSchedule(gender);
+  _refreshScheduleModal();
+}
+
+function _doClearSchedule(gender) {
+  let cleared = 0;
+  if (state.runs) {
+    (state.pairs || []).forEach(p => {
+      if (gender && p.gender !== gender) return;
+      const k = p.gender + '_' + p.pairNum;
+      const r = state.runs[k];
+      if (r && r.scheduledStartAt && !r.startedAt) {
+        delete r.scheduledStartAt;
+        if (!Object.keys(r).length) delete state.runs[k];
+        cleared++;
+      }
+    });
+  }
+  saveState();
+  renderPairs();
+  showToast('✕ Wyczyszczono ' + cleared + (gender ? ' ' + (gender === 'M' ? 'M' : 'K') : ' par') + ' z harmonogramu', 'info', 2000);
+}
+
+// Generuj harmonogram per płeć — czyta osobne wartości dla M i K
 function confirmGenerateSchedule() {
-  const firstStr = document.getElementById('sched-first').value || '10:00:00';
-  const intervalSec = parseInt(document.getElementById('sched-interval').value || '60');
-  if (!firstStr || !Number.isFinite(intervalSec) || intervalSec < 5) {
-    showToast('Nieprawidłowe parametry', 'error'); return;
+  const pairs = (state.pairs || []).slice();
+  if (!pairs.length) { showToast('Brak par do harmonogramu', 'warning'); return; }
+
+  function parseTimeInputForToday(str) {
+    const parts = (str || '').split(':');
+    const h = parseInt(parts[0]) || 0;
+    const m = parseInt(parts[1]) || 0;
+    const s = parseInt(parts[2]) || 0;
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s, 0).getTime();
   }
-  const pairCount = (state.pairs || []).length;
-  if (!pairCount) { showToast('Brak par do harmonogramu', 'warning'); return; }
-  if (!confirm('Wygenerować harmonogram dla ' + pairCount + ' par?\nPierwsza o ' + firstStr + ', każda kolejna co ' + intervalSec + 's.\n\nPary już biegnące nie zostaną zmienione.')) return;
-  // Parsuj HH:MM:SS dla dzisiaj
-  const parts = firstStr.split(':');
-  const h = parseInt(parts[0]) || 0;
-  const m = parseInt(parts[1]) || 0;
-  const s = parseInt(parts[2]) || 0;
-  // Wall-clock domena (Date.now), nie nowMs — żeby starter offset nie zaburzał wpisanego czasu
-  const now = new Date();
-  const firstDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s, 0);
-  const firstTs = firstDate.getTime();
-  // Walidacja: pierwsza para w przeszłości
-  if (firstTs < Date.now()) {
-    const secAgo = Math.round((Date.now() - firstTs) / 1000);
-    if (!confirm('⚠ Godzina jest ' + secAgo + ' s w przeszłości — pierwsza para wystartuje natychmiast. Kontynuować?')) return;
+
+  const genders = ['M', 'K'];
+  const plan = {};
+  for (const g of genders) {
+    const gPairs = pairs.filter(p => p.gender === g).sort((a, b) => a.pairNum - b.pairNum);
+    if (!gPairs.length) continue;
+    const firstStr = document.getElementById('sched-first-' + g).value || (g === 'M' ? '10:00:00' : '10:30:00');
+    const intervalSec = parseInt(document.getElementById('sched-interval-' + g).value || '60');
+    if (!Number.isFinite(intervalSec) || intervalSec < 5) {
+      showToast('Nieprawidłowy interwał dla ' + g, 'error'); return;
+    }
+    const firstTs = parseTimeInputForToday(firstStr);
+    plan[g] = { firstStr, firstTs, intervalSec, pairs: gPairs };
   }
-  const pairs = (state.pairs || []).slice().sort((a, b) => {
-    if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
-    return a.pairNum - b.pairNum;
-  });
+
+  // Sprawdź "w przeszłości"
+  for (const g of Object.keys(plan)) {
+    if (plan[g].firstTs < Date.now()) {
+      const secAgo = Math.round((Date.now() - plan[g].firstTs) / 1000);
+      const label = g === 'M' ? 'Mężczyźni' : 'Kobiety';
+      if (!confirm('⚠ ' + label + ': godzina pierwszej pary jest ' + secAgo + ' s w przeszłości — para wystartuje natychmiast. Kontynuować?')) return;
+    }
+  }
+
+  // Podsumowanie
+  const summary = Object.keys(plan).map(g => {
+    const lbl = g === 'M' ? '♂ M' : '♀ K';
+    return lbl + ': ' + plan[g].pairs.length + ' par od ' + plan[g].firstStr + ' co ' + plan[g].intervalSec + 's';
+  }).join('\n');
+  if (!confirm('Wygenerować harmonogram?\n\n' + summary + '\n\nPary już biegnące nie zostaną zmienione.')) return;
+
   if (!state.runs) state.runs = {};
-  pairs.forEach((p, idx) => {
-    const k = p.gender + '_' + p.pairNum;
-    if (!state.runs[k]) state.runs[k] = {};
-    if (state.runs[k].startedAt) return;
-    state.runs[k].scheduledStartAt = firstTs + idx * intervalSec * 1000;
-  });
+  let totalAssigned = 0;
+  for (const g of Object.keys(plan)) {
+    plan[g].pairs.forEach((p, idx) => {
+      const k = p.gender + '_' + p.pairNum;
+      if (!state.runs[k]) state.runs[k] = {};
+      if (state.runs[k].startedAt) return;
+      state.runs[k].scheduledStartAt = plan[g].firstTs + idx * plan[g].intervalSec * 1000;
+      totalAssigned++;
+    });
+  }
   saveState();
   closeScheduleModal();
   renderPairs();
-  showToast('⏰ Wygenerowano harmonogram dla ' + pairs.length + ' par', 'success', 3000);
+  showToast('⏰ Wygenerowano harmonogram dla ' + totalAssigned + ' par', 'success', 3000);
 }
 
 function confirmClearSchedule() {
-  if (!confirm('Wyczyścić zaplanowane godziny startu wszystkich par?\n(Pary już biegnące nie zostaną dotknięte.)')) return;
-  let cleared = 0;
-  if (state.runs) {
-    for (const k in state.runs) {
-      if (state.runs[k].scheduledStartAt && !state.runs[k].startedAt) {
-        delete state.runs[k].scheduledStartAt;
-        if (!Object.keys(state.runs[k]).length) delete state.runs[k];
-        cleared++;
-      }
-    }
-  }
-  saveState();
+  const total = _countScheduledByGender(null);
+  if (total === 0) { showToast('Brak zaplanowanych', 'info', 1500); closeScheduleModal(); return; }
+  if (!confirm('Wyczyścić ' + total + ' zaplanowanych godzin startu (wszystkie płcie)?\n(Pary już biegnące nie zostaną dotknięte.)')) return;
+  _doClearSchedule(null);
   closeScheduleModal();
-  renderPairs();
-  showToast('✕ Wyczyszczono harmonogram (' + cleared + ' par)', 'info', 2000);
 }
 
 // Edycja czasu pojedynczej pary — modal z natywnym time pickerem
