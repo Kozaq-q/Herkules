@@ -3530,7 +3530,14 @@ function renderTimerPairHTML(p, role) {
   head += '<span class="timer-pair-num">' + pairNum + '</span>';
   head += '<span class="timer-pair-gender">' + (gender === 'M' ? '♂' : '♀') + '</span>';
   head += '<span class="timer-pair-status ' + statusCls + '">' + statusTxt + '</span>';
-  if (started) head += '<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">start ' + formatClockTime(run.startedAt) + '</span>';
+  if (started) {
+    let stamp = 'start <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong>';
+    if (allFinished) {
+      const finishMs = Math.max(aFinishedAt || 0, bFinishedAt || 0);
+      if (finishMs > 0) stamp += ' <span style="opacity:.4;margin:0 3px;">·</span> koniec <strong style="color:var(--green);font-weight:700;">' + formatClockTime(finishMs) + '</strong>';
+    }
+    head += '<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">' + stamp + '</span>';
+  }
   head += '</div>';
   // Lecący czas (lub końcowy)
   let displayMs;

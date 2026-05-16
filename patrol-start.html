@@ -886,7 +886,13 @@ function renderPairCard(p, isJustFinished) {
   // Info o czasie startu / harmonogramie
   let startTimeInfo = '';
   if (started) {
-    startTimeInfo = '<div class="start-time-info">Start: ' + formatClockTime(run.startedAt) + '</div>';
+    let info = 'Start: <strong>' + formatClockTime(run.startedAt) + '</strong>';
+    if (allFinished) {
+      // Czas zakończenia = najpóźniejszy z efektywnych finishMs (auto-stop LUB ręczny total)
+      const finishMs = Math.max(aFinishMs || 0, bFinishMs || 0);
+      if (finishMs > 0) info += ' <span style="color:var(--text3);margin:0 4px;">·</span> Koniec: <strong>' + formatClockTime(finishMs) + '</strong>';
+    }
+    startTimeInfo = '<div class="start-time-info">' + info + '</div>';
   } else if (run && run.scheduledStartAt) {
     startTimeInfo = '<div class="start-time-info" data-scheduled="' + gender + '_' + pairNum + '" style="color:var(--orange);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">' +
       '<span>⏰ Auto-start: <strong>' + formatClockTime(run.scheduledStartAt) + '</strong> <span class="countdown-text" style="margin-left:6px;font-family:var(--font-m);"></span></span>' +
