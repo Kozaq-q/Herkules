@@ -120,6 +120,15 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .sl-athlete.lane-L { border-right: 1px solid var(--border2); }
 .sl-athlete-name { font-family: var(--font-b); font-weight: 700; line-height: 1.25; white-space: normal; word-break: break-word; }
 .sl-athlete-sub { font-family: var(--font-b); font-size: 11px; font-weight: 400; color: var(--text3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Wyniki przy zawodniku — skromny druk inline */
+.sl-ath-results { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 5px; font-family: var(--font-m); font-size: 11px; line-height: 1.2; }
+.sl-ath-res { white-space: nowrap; }
+.sl-ath-res .lbl { font-family: var(--font-h); font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-right: 4px; }
+.sl-ath-res.total .val { color: var(--green); font-weight: 600; }
+.sl-ath-res.osf   .val { color: var(--blue);  font-weight: 500; }
+.sl-ath-res.hits  .val { color: var(--orange);font-weight: 500; }
+.sl-ath-res.marker .val { color: var(--orange); font-weight: 700; }
+.sl-ath-res.dsq .val { color: var(--red); font-weight: 700; }
 .sl-lane-badge { font-family: var(--font-h); font-weight: 700; font-size: 11px; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; margin-bottom: 4px; display: inline-block; width: fit-content; }
 .sl-lane-badge.L { color: var(--male); border: 1px solid var(--male); background: rgba(96,168,232,.12); }
 .sl-lane-badge.P { color: var(--female); border: 1px solid var(--female); background: rgba(224,96,176,.12); }
@@ -604,21 +613,41 @@ function slPairHTML(p, i) {
   const leftAth = aIsL ? a : b;
   const rightAth = aIsL ? b : a;
 
-  // Czasy startu / końca
+  // W kafelku numeru pary pokazujemy TYLKO czas auto-startu (zaplanowany),
+  // i tylko gdy para jeszcze NIE wystartowała. Wall-clock startu/mety
+  // schodzi z drogi — wyniki pokazujemy przy nazwiskach zawodników.
   const run = state.runs?.[p.gender + '_' + p.pairNum];
   let timeInfo = '';
-  if (cfg.showStartTimes !== false) {
-    if (run && run.startedAt) {
-      timeInfo = '<span class="sl-time' + (finished ? ' finished' : '') + '">' + formatClockTime(run.startedAt) + '</span>';
-      if (finished) {
-        const aFin = effectiveFinishMs(aId, run);
-        const bFin = bId ? effectiveFinishMs(bId, run) : 0;
-        const last = Math.max(aFin || 0, bFin || 0);
-        if (last > 0) timeInfo += '<span class="sl-time finished" style="font-size:9px;">→ ' + formatClockTime(last) + '</span>';
+  if (cfg.showStartTimes !== false && run && !run.startedAt && run.scheduledStartAt) {
+    timeInfo = '<span class="sl-time">⏰ ' + formatClockTime(run.scheduledStartAt) + '</span>';
+  }
+
+  // Wyniki przy zawodniku — skromny druk pod nazwiskiem
+  function resultsChipsHTML(ath) {
+    if (!ath) return '';
+    const r = buildRow(ath);
+    if (!r.hasAny) return '';
+    const chips = [];
+    if (r.dsq) {
+      chips.push('<span class="sl-ath-res dsq"><span class="lbl">Total</span><span class="val">DSQ</span></span>');
+    } else {
+      // Total
+      if (r.total) {
+        if (isTimeMarker(r.total)) chips.push('<span class="sl-ath-res marker"><span class="lbl">Total</span><span class="val">' + r.total + '</span></span>');
+        else chips.push('<span class="sl-ath-res total"><span class="lbl">Total</span><span class="val">' + esc(r.total) + '</span></span>');
       }
-    } else if (run && run.scheduledStartAt) {
-      timeInfo = '<span class="sl-time">⏰ ' + formatClockTime(run.scheduledStartAt) + '</span>';
+      // OSF
+      if (r.osf) {
+        if (isTimeMarker(r.osf)) chips.push('<span class="sl-ath-res marker"><span class="lbl">OSF</span><span class="val">' + r.osf + '</span></span>');
+        else chips.push('<span class="sl-ath-res osf"><span class="lbl">OSF</span><span class="val">' + esc(r.osf) + '</span></span>');
+      }
+      // Trafienia
+      if (r.hits !== undefined && r.hits !== null) {
+        chips.push('<span class="sl-ath-res hits"><span class="lbl">Traf</span><span class="val">' + r.hits + '/5</span></span>');
+      }
     }
+    if (!chips.length) return '';
+    return '<div class="sl-ath-results">' + chips.join('') + '</div>';
   }
 
   const athCell = (ath, lane) => {
@@ -628,6 +657,7 @@ function slPairHTML(p, i) {
       '<span class="sl-lane-badge ' + lane + '">' + lane + '</span>' +
       '<div class="sl-athlete-name">' + esc(displayName(ath)) + bib + '</div>' +
       (ath.team ? '<div class="sl-athlete-sub">' + esc(ath.team) + '</div>' : '') +
+      resultsChipsHTML(ath) +
     '</div>';
   };
 
