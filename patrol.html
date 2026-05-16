@@ -2030,7 +2030,11 @@ const PTR_PDF_CSS = `
   tr.top1 td, tr.top2 td, tr.top3 td { border-bottom: 1px solid #bbb; }
   .dsq { text-decoration: line-through; color: #999; }
   .dsq-label { font-size: 9px; margin-left: 3px; color: #999; }
-  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #000; padding: 4px 0 3px; margin: 16px 0 0; color: #000; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #000; padding: 4px 0 3px; margin: 16px 0 0; color: #000; page-break-after: avoid; break-after: avoid; }
+  /* Kategoria — staraj się trzymać razem; przeskocz na nową stronę jeśli się nie mieści */
+  .ranking-section { page-break-inside: avoid; break-inside: avoid; }
+  tbody tr { page-break-inside: avoid; break-inside: avoid; }
+  thead { display: table-header-group; }
   .podium-block { display: flex; gap: 0; margin-bottom: 16px; align-items: flex-end; }
   .podium-place { flex: 1; padding: 12px 12px; border: 1px solid #ccc; border-right: none; }
   .podium-place:last-child { border-right: 1px solid #ccc; }
@@ -2075,8 +2079,9 @@ function _ptrOpenPrintWindow(htmlBody) {
   setTimeout(() => w.print(), 400);
 }
 
-// Buduje pełną klasyfikację indywidualną (tabela + podium) dla danej płci
-function _ptrBuildIndPrintHTML(gender) {
+// Buduje pełną klasyfikację indywidualną (tabela + podium) dla danej płci.
+// asFragment=true: zwraca tylko sekcję rankingową (bez doc-headera/footera) — do złożenia w "Komplet"
+function _ptrBuildIndPrintHTML(gender, asFragment) {
   const rows = state.athletes.filter(a => a.gender === gender).map(_patrolBuildRow).filter(r => r.hasAny);
   rows.sort((a, b) => a.tier !== b.tier ? a.tier - b.tier : a.totalSec - b.totalSec);
 
@@ -2084,6 +2089,10 @@ function _ptrBuildIndPrintHTML(gender) {
   const title = 'Bieg patrolowy — ' + gLabel;
 
   if (!rows.length) {
+    if (asFragment) {
+      return '<div class="ranking-section"><div class="section-title">' + esc(title) + '</div>' +
+        '<div style="padding:30px;text-align:center;color:#888;font-size:13px;">Brak wpisanych wyników.</div></div>';
+    }
     return _ptrPdfHeader('PATROL', title) +
       '<div style="padding:40px;text-align:center;color:#888;font-size:14px;">Brak wpisanych wyników w tej kategorii.</div>' +
       _ptrPdfFooter();
@@ -2112,46 +2121,51 @@ function _ptrBuildIndPrintHTML(gender) {
     podium += '</div>';
   }
 
-  // Pełna tabela
-  let html = _ptrPdfHeader('PATROL', title);
-  html += podium;
-  html += '<div class="section-title">Pełna klasyfikacja — ' + rows.length + ' zawodników</div>';
-  html += '<table><thead><tr>' +
-    '<th class="rank-col">Msc</th>' +
-    '<th>Zawodnik</th>' +
-    '<th>Drużyna</th>' +
-    '<th class="c">Total</th>' +
-    '<th class="c">OSF</th>' +
-    '<th class="c">Trafienia</th>' +
-    '</tr></thead><tbody>';
+  // Pełna tabela — sekcja owinięta w .ranking-section (smart page-break)
+  const sectionBody =
+    podium +
+    '<div class="section-title">' + (asFragment ? esc(title) + ' — ' : 'Pełna klasyfikacja — ') + rows.length + ' zawodników</div>' +
+    '<table><thead><tr>' +
+      '<th class="rank-col">Msc</th>' +
+      '<th>Zawodnik</th>' +
+      '<th>Drużyna</th>' +
+      '<th class="c">Total</th>' +
+      '<th class="c">OSF</th>' +
+      '<th class="c">Trafienia</th>' +
+    '</tr></thead><tbody>' +
+    (() => {
+      let rank = 1;
+      let body = '';
+      rows.forEach(r => {
+        const noTime = r.totalSec === Infinity;
+        const topCls = (!noTime && !r.dsq) ? (rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '') : '';
+        const rankDisp = r.dsq ? 'DSQ' : (noTime ? (r.marker || '—') : rank);
+        const totalCell = r.dsq ? '<span class="marker-badge">DSQ</span>' :
+                          isTimeMarker(r.total) ? '<span class="marker-badge">' + r.total + '</span>' :
+                          (r.total ? esc(r.total) : '—');
+        const osfCell   = r.dsq ? '—' : (isTimeMarker(r.osf) ? '<span class="marker-badge">' + r.osf + '</span>' : (r.osf ? esc(r.osf) : '—'));
+        const hitsCell  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
+        body += '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + '">' +
+          '<td class="rank-col">' + rankDisp + '</td>' +
+          '<td class="bold">' + esc(displayName(r.ath)) + (r.ath.bib ? '<span class="bib">' + esc(r.ath.bib) + '</span>' : '') + '</td>' +
+          '<td class="small">' + esc(r.ath.team || '') + '</td>' +
+          '<td class="c mono bold">' + totalCell + '</td>' +
+          '<td class="c mono">' + osfCell + '</td>' +
+          '<td class="c mono">' + hitsCell + '</td>' +
+        '</tr>';
+        if (!noTime && !r.dsq) rank++;
+      });
+      return body;
+    })() +
+    '</tbody></table>';
 
-  let rank = 1;
-  rows.forEach(r => {
-    const noTime = r.totalSec === Infinity;
-    const topCls = (!noTime && !r.dsq) ? (rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '') : '';
-    const rankDisp = r.dsq ? 'DSQ' : (noTime ? (r.marker || '—') : rank);
-    const totalCell = r.dsq ? '<span class="marker-badge">DSQ</span>' :
-                      isTimeMarker(r.total) ? '<span class="marker-badge">' + r.total + '</span>' :
-                      (r.total ? esc(r.total) : '—');
-    const osfCell   = r.dsq ? '—' : (isTimeMarker(r.osf) ? '<span class="marker-badge">' + r.osf + '</span>' : (r.osf ? esc(r.osf) : '—'));
-    const hitsCell  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
-    html += '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + '">' +
-      '<td class="rank-col">' + rankDisp + '</td>' +
-      '<td class="bold">' + esc(displayName(r.ath)) + (r.ath.bib ? '<span class="bib">' + esc(r.ath.bib) + '</span>' : '') + '</td>' +
-      '<td class="small">' + esc(r.ath.team || '') + '</td>' +
-      '<td class="c mono bold">' + totalCell + '</td>' +
-      '<td class="c mono">' + osfCell + '</td>' +
-      '<td class="c mono">' + hitsCell + '</td>' +
-    '</tr>';
-    if (!noTime && !r.dsq) rank++;
-  });
-  html += '</tbody></table>';
-  html += _ptrPdfFooter();
-  return html;
+  if (asFragment) return '<div class="ranking-section">' + sectionBody + '</div>';
+  return _ptrPdfHeader('PATROL', title) + '<div class="ranking-section">' + sectionBody + '</div>' + _ptrPdfFooter();
 }
 
-// Klasyfikacja drużynowa do wydruku
-function _ptrBuildTeamPrintHTML() {
+// Klasyfikacja drużynowa do wydruku.
+// asFragment=true: zwraca tylko sekcję (bez doc-headera/footera) — do złożenia w "Komplet"
+function _ptrBuildTeamPrintHTML(asFragment) {
   const byTeam = {};
   (state.athletes || []).forEach(a => {
     const t = (a.team || '').trim();
@@ -2170,73 +2184,83 @@ function _ptrBuildTeamPrintHTML() {
 
   const title = 'Klasyfikacja drużynowa';
   if (!teams.length) {
+    if (asFragment) {
+      return '<div class="ranking-section"><div class="section-title">' + esc(title) + '</div>' +
+        '<div style="padding:30px;text-align:center;color:#888;font-size:13px;">Brak sklasyfikowanych drużyn.</div></div>';
+    }
     return _ptrPdfHeader('PATROL', title) +
       '<div style="padding:40px;text-align:center;color:#888;font-size:14px;">Brak sklasyfikowanych drużyn.</div>' +
       _ptrPdfFooter();
   }
 
-  let html = _ptrPdfHeader('PATROL', title);
   // Podium drużyn (top 3)
+  let podium = '';
   const top3 = teams.slice(0, 3);
   if (top3.length >= 1) {
     const order = [top3[1] || null, top3[0] || null, top3[2] || null];
     const cls   = ['p2', 'p1', 'p3'];
     const medal = ['🥈', '🥇', '🥉'];
-    html += '<div class="podium-block">';
+    podium = '<div class="podium-block">';
     order.forEach((t, i) => {
-      if (!t) { html += '<div class="podium-place ' + cls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
-      html += '<div class="podium-place ' + cls[i] + '">' +
+      if (!t) { podium += '<div class="podium-place ' + cls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + cls[i] + '">' +
         '<div class="podium-rank">' + medal[i] + '</div>' +
         '<div class="podium-name">' + esc(t.name) + '</div>' +
         '<div class="podium-team">' + t.score.classified + ' sklasyfikowanych</div>' +
         '<div class="podium-time">' + t.score.total + ' pkt</div>' +
       '</div>';
     });
-    html += '</div>';
+    podium += '</div>';
   }
 
-  html += '<div class="section-title">Pełna klasyfikacja — ' + teams.length + ' drużyn</div>';
-  html += '<table><thead><tr>' +
-    '<th class="rank-col">Msc</th>' +
-    '<th>Drużyna</th>' +
-    '<th class="c">Skład</th>' +
-    '<th class="c">Sklasyf.</th>' +
-    '<th class="c">DNF/DNS/DSQ</th>' +
-    '<th class="r">Suma pkt</th>' +
-    '</tr></thead><tbody>';
-  teams.forEach((t, i) => {
-    const rank = i + 1;
-    const topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '';
-    const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
-    const extras = [];
-    if (t.score.dnf) extras.push(t.score.dnf + '×DNF');
-    if (t.score.dns) extras.push(t.score.dns + '×DNS');
-    if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
-    const extrasTxt = extras.length ? extras.join(' · ') : '—';
-    html += '<tr class="' + topCls + '">' +
-      '<td class="rank-col">' + rank + '</td>' +
-      '<td class="bold">' + esc(t.name) + '</td>' +
-      '<td class="c small">' + composition + '</td>' +
-      '<td class="c mono">' + t.score.classified + '</td>' +
-      '<td class="c small">' + extrasTxt + '</td>' +
-      '<td class="r mono bold">' + t.score.total + '</td>' +
-    '</tr>';
-  });
-  html += '</tbody></table>';
-  html += _ptrPdfFooter();
-  return html;
+  const sectionBody =
+    podium +
+    '<div class="section-title">' + (asFragment ? 'Klasyfikacja drużynowa — ' : 'Pełna klasyfikacja — ') + teams.length + ' drużyn</div>' +
+    '<table><thead><tr>' +
+      '<th class="rank-col">Msc</th>' +
+      '<th>Drużyna</th>' +
+      '<th class="c">Skład</th>' +
+      '<th class="c">Sklasyf.</th>' +
+      '<th class="c">DNF/DNS/DSQ</th>' +
+      '<th class="r">Suma pkt</th>' +
+    '</tr></thead><tbody>' +
+    teams.map((t, i) => {
+      const rank = i + 1;
+      const topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '';
+      const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
+      const extras = [];
+      if (t.score.dnf) extras.push(t.score.dnf + '×DNF');
+      if (t.score.dns) extras.push(t.score.dns + '×DNS');
+      if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
+      const extrasTxt = extras.length ? extras.join(' · ') : '—';
+      return '<tr class="' + topCls + '">' +
+        '<td class="rank-col">' + rank + '</td>' +
+        '<td class="bold">' + esc(t.name) + '</td>' +
+        '<td class="c small">' + composition + '</td>' +
+        '<td class="c mono">' + t.score.classified + '</td>' +
+        '<td class="c small">' + extrasTxt + '</td>' +
+        '<td class="r mono bold">' + t.score.total + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  if (asFragment) return '<div class="ranking-section">' + sectionBody + '</div>';
+  return _ptrPdfHeader('PATROL', title) + '<div class="ranking-section">' + sectionBody + '</div>' + _ptrPdfFooter();
 }
 
 // Public API — wywoływane z przycisków
 function printPtrInd(gender)   { _ptrOpenPrintWindow(_ptrBuildIndPrintHTML(gender)); }
 function printPtrTeam()        { _ptrOpenPrintWindow(_ptrBuildTeamPrintHTML()); }
 function printPtrAll() {
+  // Jeden wspólny doc-header + footer; sekcje (M, K, drużynowa) jako fragmenty
+  // owinięte w .ranking-section. Przeglądarka stara się zmieścić każdą sekcję
+  // w całości na bieżącej stronie; gdy się nie mieści, przeskakuje na następną.
   const html =
-    _ptrBuildIndPrintHTML('M') +
-    '<div class="page-break"></div>' +
-    _ptrBuildIndPrintHTML('K') +
-    '<div class="page-break"></div>' +
-    _ptrBuildTeamPrintHTML();
+    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (M, K, Drużynowa)') +
+    _ptrBuildIndPrintHTML('M', true) +
+    _ptrBuildIndPrintHTML('K', true) +
+    _ptrBuildTeamPrintHTML(true) +
+    _ptrPdfFooter();
   _ptrOpenPrintWindow(html);
 }
 

@@ -7491,7 +7491,14 @@ const PREMIUM_PDF_CSS = `
   .dsq { text-decoration: line-through; color: #999; }
   .dsq-label { font-size: 9px; margin-left: 3px; color: #999; }
 
-  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #000; padding: 4px 0 3px; margin: 16px 0 0; color: #000; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #000; padding: 4px 0 3px; margin: 16px 0 0; color: #000; page-break-after: avoid; break-after: avoid; }
+
+  /* Kategoria/sekcja rankingu — staraj się trzymać razem; przeskocz na nową stronę jeśli się nie mieści */
+  .ranking-section { page-break-inside: avoid; break-inside: avoid; }
+  /* Pojedyncze wiersze tabeli — nie pękać w środku */
+  tbody tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Nagłówek tabeli zostaje z pierwszymi wierszami */
+  thead { display: table-header-group; }
 
   /* Podium — kolejność bloków: p2 (lewy), p1 (środkowy, wyższy), p3 (prawy) */
   .podium-block { display: flex; gap: 0; margin-bottom: 16px; align-items: flex-end; }
@@ -7944,7 +7951,11 @@ function printKlasyfikacjaPDF() {
   let html = _pdfHeader('OSF', 'Klasyfikacja Zespołowa');
   html += podium;
 
+  // Każda sekcja w osobnym wrapperze "ranking-section" — page-break-inside: avoid.
+  // Przeglądarka spróbuje zmieścić całą sekcję na bieżącej stronie; jeśli się nie zmieści,
+  // przeskoczy w całości na następną stronę (zamiast osierocania kilku wierszy).
   // Tabela klasyfikacji końcowej
+  html += '<div class="ranking-section">';
   html += '<div class="section-title">Klasyfikacja końcowa</div>';
   html += '<table><thead><tr>' +
     '<th class="rank-col">Msc</th><th>Drużyna</th>' +
@@ -7961,9 +7972,10 @@ function printKlasyfikacjaPDF() {
       '<td class="c bold" style="font-size:15px;">' + r.total + '</td>' +
       '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
 
   // Szczegóły drużynowy — nad indywidualnym
+  html += '<div class="ranking-section">';
   html += '<div class="section-title">Bieg drużynowy (N=' + N_team + ' × ' + mult + ')</div>';
   html += '<table><thead><tr>' +
     '<th class="rank-col">Msc</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
@@ -7980,9 +7992,10 @@ function printKlasyfikacjaPDF() {
       '<td class="r bold">' + r.pts + '</td>' +
       '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
 
   // Szczegóły ind. M — pod drużynowym
+  html += '<div class="ranking-section">';
   html += '<div class="section-title">Bieg indywidualny M (N=' + N_men + ')</div>';
   html += '<table><thead><tr>' +
     '<th class="rank-col">Msc</th><th>Zawodnik</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
@@ -8000,10 +8013,11 @@ function printKlasyfikacjaPDF() {
       '<td class="r bold">' + r.pts + '</td>' +
       '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
 
   // Szczegóły ind. K — na samym dole, tylko gdy kobiety punktują
   if (kScores && rankedWomen.length > 0) {
+    html += '<div class="ranking-section">';
     html += '<div class="section-title">Bieg indywidualny K (skala N=' + N_men_nopk + ' M)</div>';
     html += '<table><thead><tr>' +
       '<th class="rank-col">Msc</th><th>Zawodniczka</th><th>Drużyna</th><th class="c">Czas</th><th class="r">Pkt</th>' +
@@ -8026,7 +8040,7 @@ function printKlasyfikacjaPDF() {
         '</tr>';
       if (!isPK && !noBest) kRank++;
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
   }
 
   openPrint(html, PREMIUM_PDF_CSS);
