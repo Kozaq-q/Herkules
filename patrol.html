@@ -1309,17 +1309,27 @@ function _updateStarterClockPill() {
     pill.title = 'Sedzia startu online, wysyla autorytatywny sygnal czasu. Wszyscy mierza czas tak samo.';
   } else if (state === 'cached') {
     pill.style.display = 'inline-flex';
-    pill.style.color = 'var(--orange)';
-    pill.style.borderColor = 'rgba(232,148,77,.5)';
-    pill.style.background = 'rgba(232,148,77,.08)';
     const sec = Math.round(ageMs / 1000);
     const min = Math.floor(sec / 60);
     const hr = Math.floor(min / 60);
     const label = sec < 90 ? (sec + 's')
                 : min < 60 ? (min + ' min')
                 : (hr + 'h ' + (min - hr * 60) + 'min');
-    pill.innerHTML = '🟡 starter ' + label + ' temu';
-    pill.title = 'Sedzia startu offline od ' + label + ' — uzywam zapamietanej kalibracji. Drift kwarcu ~36ms/h, czyli po godzinie wciaz <0.05s niedokladnosci.';
+    if (ageMs < 5 * 60 * 1000) {
+      // Pierwsze 5 min — neutralne (kalibracja wciaz świeża), bez pomarańczy
+      pill.style.color = 'var(--text3)';
+      pill.style.borderColor = 'var(--border2)';
+      pill.style.background = 'var(--bg3)';
+      pill.innerHTML = '💤 starter ' + label + ' temu';
+      pill.title = 'Aplikacja startera chwilowo nieaktywna (' + label + '). Kalibracja zegara jest aktualna — wszystko działa normalnie.';
+    } else {
+      // > 5 min — łagodne ostrzeżenie
+      pill.style.color = 'var(--orange)';
+      pill.style.borderColor = 'rgba(232,148,77,.5)';
+      pill.style.background = 'rgba(232,148,77,.08)';
+      pill.innerHTML = '🟡 starter ' + label + ' temu';
+      pill.title = 'Aplikacja startera nieaktywna od ' + label + '. Używam zapamiętanej kalibracji — drift kwarcu ~36ms/h, więc nawet po godzinie <0.05s niedokładności.';
+    }
   } else {
     pill.style.display = 'inline-flex';
     pill.style.color = 'var(--text3)';
@@ -2558,7 +2568,9 @@ function _updatePtrStatusTile() {
   let sev = 0;
   if (drift.status === 'warn') sev = Math.max(sev, 1);
   if (drift.status === 'block' || drift.status === 'unknown') sev = Math.max(sev, 2);
-  if (starter.state === 'cached') sev = Math.max(sev, 1);
+  // Starter — łagodna logika: cached przez pierwsze 5 min = wciąż OK (kalibracja świeża).
+  // Dopiero po 5 min lub gdy w ogóle brak sygnału (a nie jesteśmy w offline) ostrzegamy.
+  if (starter.state === 'cached' && starter.ageMs > 5 * 60 * 1000) sev = Math.max(sev, 1);
   if (starter.state === 'fallback' && !offline) sev = Math.max(sev, 1);
   if (!rtOK) sev = Math.max(sev, 1);
   if (pendSince > 0) sev = Math.max(sev, (Date.now() - pendSince) > 30000 ? 2 : 1);
@@ -2593,17 +2605,28 @@ function _updatePtrStatusTile() {
   else if (drift.status === 'block') { driftTxt = '⛔ ' + driftSign + driftSec + 's (blokada)'; driftColor = 'var(--red)'; }
   else { driftTxt = '? brak synchronizacji'; driftColor = 'var(--text3)'; }
 
-  // Starter
+  // Aplikacja startera — przyjazne sformułowania (krótka nieaktywność nie jest problemem)
   let starterTxt, starterColor;
-  if (starter.state === 'live') { starterTxt = '🟢 LIVE'; starterColor = 'var(--green)'; }
-  else if (starter.state === 'cached') {
+  if (starter.state === 'live') {
+    starterTxt = '✓ aktywna · LIVE'; starterColor = 'var(--green)';
+  } else if (starter.state === 'cached') {
     const sec = Math.round(starter.ageMs / 1000);
     const min = Math.floor(sec / 60);
     const hr = Math.floor(min / 60);
     const lbl = sec < 90 ? (sec + 's') : min < 60 ? (min + ' min') : (hr + 'h ' + (min - hr*60) + 'min');
-    starterTxt = '🟡 ' + lbl + ' temu (cache)';
-    starterColor = 'var(--orange)';
-  } else { starterTxt = '🔴 brak — używam serwera'; starterColor = 'var(--text3)'; }
+    if (starter.ageMs < 5 * 60 * 1000) {
+      // Pierwsze 5 min — kalibracja świeża, wszystko działa
+      starterTxt = '✓ uśpiona ' + lbl + ' — kalibracja działa';
+      starterColor = 'var(--green)';
+    } else {
+      // > 5 min — info, że dawno nie było pulsu, ale kalibracja jest zapisana
+      starterTxt = '💤 uśpiona ' + lbl + ' — kalibracja zapamiętana';
+      starterColor = 'var(--orange)';
+    }
+  } else {
+    starterTxt = '○ brak sygnału — używam zegara serwera';
+    starterColor = 'var(--text3)';
+  }
 
   // Realtime
   const rtTxt = rtOK ? '✓ aktywny' : '○ polling fallback (1s)';
@@ -2624,7 +2647,7 @@ function _updatePtrStatusTile() {
 
   bodyRows.innerHTML =
     row('🕐', 'Drift zegara (serwer)', driftTxt, driftColor) +
-    row('🎬', 'Zegar startera (puls)', starterTxt, starterColor) +
+    row('🎬', 'Aplikacja startera', starterTxt, starterColor) +
     row('📡', 'Realtime sync', rtTxt, rtColor) +
     row('💾', 'Zapis do chmury', saveTxt, saveColor) +
     row('⚙', 'Tryb działania', modeTxt, modeColor);
