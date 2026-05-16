@@ -126,8 +126,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-mode-sub { font-size: 10px; color: var(--text3); line-height: 1.25; padding: 0 4px; }
 .ptr-mode-tile:not(.active-offline) .ptr-mode-label { color: var(--green); }
 
-/* Sędzia startu / Speaker — rozwijane kafelki */
-.ptr-starter-tile { background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .15s; }
+/* Sędzia startu / Status — rozwijane kafelki (zostają w swojej kolumnie) */
+.ptr-starter-tile { background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .15s; display: flex; flex-direction: column; }
 .ptr-starter-tile:hover { border-color: var(--text3); }
 .ptr-starter-tile.active  { border-color: var(--green); background: linear-gradient(135deg, rgba(80,200,144,.10), var(--bg2) 40%); }
 .ptr-starter-tile.expired { border-color: var(--orange); background: linear-gradient(135deg, rgba(232,148,77,.10), var(--bg2) 40%); }
@@ -135,10 +135,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-starter-head:hover { background: rgba(255,255,255,.02); }
 .ptr-starter-arrow { position: absolute; top: 8px; right: 10px; color: var(--text3); font-size: 10px; }
 .ptr-starter-tile:not(.active):not(.expired) .ptr-starter-head .ptr-mode-icon { opacity: .65; }
-.ptr-starter-tile.expanded { grid-column: 1 / -1; }
-.ptr-starter-tile.expanded .ptr-starter-head { aspect-ratio: auto; min-height: 0; padding: 12px 14px; flex-direction: row; gap: 12px; justify-content: flex-start; }
+/* Po rozwinięciu kafelek ROŚNIE W PIONIE — zostaje w swojej kolumnie, body fit narrow */
+.ptr-starter-tile.expanded .ptr-starter-head { aspect-ratio: auto; min-height: 0; padding: 10px 10px; gap: 3px; }
 .ptr-starter-tile.expanded .ptr-mode-icon { font-size: 22px; }
-.ptr-starter-tile.expanded .ptr-mode-label { font-size: 13px; }
+.ptr-starter-tile.expanded .ptr-mode-label { font-size: 12px; }
+.ptr-starter-tile.expanded .ptr-mode-sub { font-size: 10px; }
+
+/* "?" help icon — pojawia się w rozwiniętym kafelku */
+.ptr-help-btn { position: absolute; top: 6px; left: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border2); color: var(--text3); font-family: var(--font-h); font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; transition: all .12s; z-index: 2; }
+.ptr-help-btn:hover { color: var(--accent); border-color: var(--accent); background: rgba(232,212,77,.1); }
+.ptr-help-popover { position: absolute; top: 28px; left: 8px; right: 8px; background: var(--bg3); border: 1px solid var(--accent); border-radius: var(--radius); padding: 10px 12px; font-family: var(--font-b); font-size: 11px; color: var(--text2); line-height: 1.5; box-shadow: 0 6px 20px rgba(0,0,0,.5); z-index: 10; display: none; }
+.ptr-help-popover.open { display: block; }
+.ptr-help-popover strong { color: var(--accent); }
+/* Pozycjonowanie kontenera kafelka non-expand (offline / speaker placeholder) */
+.ptr-mode-tile { position: relative; }
 .stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; }
 .stat-num { font-family: var(--font-h); font-size: 38px; font-weight: 800; line-height: 1; color: var(--text1); }
 .stat-label { font-family: var(--font-h); font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
@@ -571,21 +581,31 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
       <!-- KAFELKI TRYBU/DOSTĘPU — 4 obok siebie, pełna szerokość -->
       <div class="ptr-tiles-row mb-12">
-        <!-- 1. Tryb offline (online ↔ offline toggle) -->
-        <button id="ptr-tile-offline" onclick="toggleOfflineMode()" class="ptr-mode-tile" title="Tryb offline — synchronizowany stoper wyłączony, sędziowie używają fizycznych stoperów">
-          <span class="ptr-mode-icon">🌐</span>
-          <span class="ptr-mode-label">ONLINE</span>
-          <span class="ptr-mode-sub">stoper synchronizowany</span>
-        </button>
-        <!-- 2. Sędzia startu (rozwijany) -->
-        <div id="ptr-tile-starter" class="ptr-starter-tile">
+        <!-- 1. Tryb offline (online ↔ offline toggle) — kontener wokół żeby pomieścić "?" -->
+        <div style="position:relative;">
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('offline')" title="Co to robi?">?</button>
+          <div class="ptr-help-popover" id="ptr-help-offline">
+            <strong>Tryb działania.</strong> Domyślnie <strong>ONLINE</strong> — wszystkie urządzenia liczą czas razem, sędziowie używają synchronizowanego stopera w panelu. Przełącz na <strong>OFFLINE</strong> gdy sieć jest niestabilna — stoper się wyłączy, mierzcie fizycznymi stoperami i wpiszcie czasy ręcznie w „Pary".
+          </div>
+          <button id="ptr-tile-offline" onclick="toggleOfflineMode()" class="ptr-mode-tile" style="width:100%;" title="Kliknij żeby przełączyć">
+            <span class="ptr-mode-icon">🌐</span>
+            <span class="ptr-mode-label">ONLINE</span>
+            <span class="ptr-mode-sub">stoper synchronizowany</span>
+          </button>
+        </div>
+        <!-- 2. Sędzia startu (rozwijany w pionie, w swojej kolumnie) -->
+        <div id="ptr-tile-starter" class="ptr-starter-tile" style="position:relative;">
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('starter')" title="Co to robi?" style="display:none;">?</button>
+          <div class="ptr-help-popover" id="ptr-help-starter">
+            <strong>Sędzia startu.</strong> Wygeneruj klucz dostępu i wyślij link sędziemu na starcie. Otworzy on osobną apkę na telefonie z dużymi przyciskami <strong>START / RESET</strong> dla każdej pary i zsynchronizowanym czasem startu (działa jako autorytet zegara dla całego systemu).
+          </div>
           <button class="ptr-starter-head" onclick="toggleStarterTile()">
             <span class="ptr-mode-icon">🎬</span>
             <span class="ptr-mode-label" style="color:var(--text1);">SĘDZIA STARTU</span>
             <span class="ptr-mode-sub" id="ptr-starter-tile-status">link nieaktywny</span>
             <span class="ptr-starter-arrow" id="ptr-starter-arrow">▶</span>
           </button>
-          <div id="ptr-starter-body" style="display:none;border-top:1px solid var(--border);padding:14px 16px;">
+          <div id="ptr-starter-body" style="display:none;border-top:1px solid var(--border);padding:12px 12px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
               <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Status dostępu</div>
               <span id="start-status-pill" style="font-family:var(--font-m);font-size:10px;padding:3px 9px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
@@ -623,25 +643,66 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
             </button>
           </div>
         </div>
-        <!-- 3. Speaker (placeholder — aplikacja powstanie wkrótce) -->
-        <div class="ptr-mode-tile placeholder" title="Aplikacja Speaker dla komentatora — wkrótce">
-          <span class="ptr-mode-icon">🎙</span>
-          <span class="ptr-mode-label" style="color:var(--text3);">SPEAKER</span>
-          <span class="ptr-mode-sub">wkrótce</span>
+        <!-- 3. Speaker (rozwijany — link mobilny dla komentatora) -->
+        <div id="ptr-tile-speaker" class="ptr-starter-tile" style="position:relative;">
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('speaker')" title="Co to robi?" style="display:none;">?</button>
+          <div class="ptr-help-popover" id="ptr-help-speaker">
+            <strong>Speaker.</strong> Aplikacja dla komentatora zawodów — wygenerujesz link z kluczem dostępu i wyślesz go speakerowi na telefon. Otrzyma widok mobilny z listą startową (kto biegnie i z kim), aktualnymi parami na trasie i wynikami na żywo (M, K, drużynowa). Tylko do odczytu — speaker nie może niczego edytować.
+          </div>
+          <button class="ptr-starter-head" onclick="toggleSpeakerTile()">
+            <span class="ptr-mode-icon">🎙</span>
+            <span class="ptr-mode-label" style="color:var(--text1);">SPEAKER</span>
+            <span class="ptr-mode-sub" id="ptr-speaker-tile-status">link nieaktywny</span>
+            <span class="ptr-starter-arrow" id="ptr-speaker-arrow">▶</span>
+          </button>
+          <div id="ptr-speaker-body" style="display:none;border-top:1px solid var(--border);padding:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Status dostępu</div>
+              <span id="speaker-status-pill" style="font-family:var(--font-m);font-size:10px;padding:3px 9px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);">—</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px;">
+              Link dla komentatora — otworzy osobną apkę z listą startową, parami biegnącymi i wynikami na żywo.
+            </div>
+            <button id="speaker-toggle-btn" onclick="toggleSpeakerEnabled()" style="width:100%;padding:10px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--text3);text-transform:uppercase;margin-bottom:10px;">Aktywuj link</button>
+            <div id="speaker-link-row" style="display:none;margin-bottom:10px;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Link dla speakera</div>
+              <div style="display:flex;gap:6px;">
+                <input id="speaker-link-input" readonly style="flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:11px;" onclick="this.select()" />
+                <button onclick="copySpeakerLink()" style="background:var(--green);color:#0a0c0e;border:none;border-radius:var(--radius);padding:7px 14px;font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1px;cursor:pointer;flex-shrink:0;">📋 Kopiuj</button>
+              </div>
+            </div>
+            <div id="speaker-expire-row" style="display:none;margin-bottom:8px;">
+              <button id="speaker-expire-toggle" onclick="toggleSpeakerExpireExpanded()" type="button" style="width:100%;display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:6px 10px;cursor:pointer;text-align:left;color:var(--text2);">
+                <span style="font-size:13px;">⏲</span>
+                <span id="speaker-expire-status" style="flex:1;font-size:11px;color:var(--text3);font-family:var(--font-m);">—</span>
+                <span id="speaker-expire-arrow" style="font-size:10px;color:var(--text3);">▶</span>
+              </button>
+              <div id="speaker-expire-expanded" style="display:none;margin-top:6px;padding:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);">
+                <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Ustaw datę wygaszenia</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <input type="datetime-local" id="speaker-expire-input" oninput="setSpeakerExpiry(this.value)" style="flex:1;min-width:160px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-family:var(--font-m);font-size:12px;" />
+                  <button onclick="setSpeakerExpiry('+24h')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:5px 9px;font-size:10px;color:var(--text2);cursor:pointer;">+24h</button>
+                  <button onclick="setSpeakerExpiry('')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);padding:5px 9px;font-size:10px;color:var(--text2);cursor:pointer;">Bezterminowo</button>
+                </div>
+              </div>
+            </div>
+            <button id="speaker-rotate-btn" onclick="regenerateSpeakerKey()" style="display:none;width:100%;padding:6px;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">🔄 Wygeneruj nowy klucz (stary link przestanie działać)</button>
+          </div>
         </div>
-        <!-- 4. Status systemu (rozwijany) -->
-        <div id="ptr-tile-status" class="ptr-starter-tile">
+        <!-- 4. Status systemu (rozwijany w pionie) -->
+        <div id="ptr-tile-status" class="ptr-starter-tile" style="position:relative;">
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('status')" title="Co to robi?" style="display:none;">?</button>
+          <div class="ptr-help-popover" id="ptr-help-status">
+            <strong>Status systemu.</strong> Diagnostyka działania w jednym miejscu: czy zegar serwera się zgadza, czy starter ma świeży puls, czy realtime sync działa, czy nic nie utknęło w kolejce zapisów. Kolory: zielone = wszystko OK, pomarańczowe = warto sprawdzić, czerwone = problem.
+          </div>
           <button class="ptr-starter-head" onclick="toggleStatusTile()">
             <span class="ptr-mode-icon" id="ptr-status-icon">📊</span>
             <span class="ptr-mode-label" style="color:var(--text1);">STATUS</span>
             <span class="ptr-mode-sub" id="ptr-status-tile-sub">sprawdzanie…</span>
             <span class="ptr-starter-arrow" id="ptr-status-arrow">▶</span>
           </button>
-          <div id="ptr-status-body" style="display:none;border-top:1px solid var(--border);padding:14px 16px;">
-            <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px;">
-              Diagnostyka systemu — wszystko co ma znaczenie dla poprawności pomiaru czasu i synchronizacji.
-            </div>
-            <div id="ptr-status-rows" style="display:flex;flex-direction:column;gap:8px;font-family:var(--font-m);font-size:12px;"></div>
+          <div id="ptr-status-body" style="display:none;border-top:1px solid var(--border);padding:12px;">
+            <div id="ptr-status-rows" style="display:flex;flex-direction:column;gap:6px;font-family:var(--font-m);font-size:11px;"></div>
           </div>
         </div>
       </div>
@@ -2001,8 +2062,10 @@ function renderSetupPage() {
   if (dot) dot.style.background = color;
   _renderInfoCardView();
   updatePairingSummary();
-  // Synchronizuj wizualny stan kafelka trybu (online/offline) z state.cfg
+  // Synchronizuj wizualny stan kafelków z state.cfg
   if (typeof _applyOfflineMode === 'function') _applyOfflineMode();
+  if (typeof _renderStartSection === 'function') _renderStartSection();
+  if (typeof _renderSpeakerSection === 'function') _renderSpeakerSection();
 }
 
 function setAccentColor(color) {
@@ -2151,6 +2214,28 @@ function _applyOfflineMode() {
   }
 }
 
+// ─── HELP POPOVER (?) — proste tłumaczenie zasady działania kafelka ─
+function togglePtrHelp(key) {
+  const pop = document.getElementById('ptr-help-' + key);
+  if (!pop) return;
+  const wasOpen = pop.classList.contains('open');
+  // Zamknij wszystkie inne pomoce
+  document.querySelectorAll('.ptr-help-popover.open').forEach(p => p.classList.remove('open'));
+  if (!wasOpen) {
+    pop.classList.add('open');
+    // Klik poza popoverem zamyka
+    setTimeout(() => {
+      const handler = (e) => {
+        if (!pop.contains(e.target) && !e.target.matches('.ptr-help-btn')) {
+          pop.classList.remove('open');
+          document.removeEventListener('click', handler);
+        }
+      };
+      document.addEventListener('click', handler);
+    }, 10);
+  }
+}
+
 // ─── KAFELEK STATUS SYSTEMU ─────────────────────────────────────
 function toggleStatusTile() {
   const body = document.getElementById('ptr-status-body');
@@ -2161,6 +2246,11 @@ function toggleStatusTile() {
   body.style.display = open ? 'none' : 'block';
   if (tile) tile.classList.toggle('expanded', !open);
   if (arrow) arrow.textContent = open ? '▶' : '▼';
+  // Pokaż/ukryj "?" gdy kafelek rozwinięty/zwinięty
+  const helpBtn = tile ? tile.querySelector('.ptr-help-btn') : null;
+  if (helpBtn) helpBtn.style.display = open ? 'none' : 'flex';
+  // Zamknij ewentualny popup pomocy gdy zwijamy
+  if (open) { const pop = document.getElementById('ptr-help-status'); if (pop) pop.classList.remove('open'); }
   if (!open) _updatePtrStatusTile();
 }
 
@@ -2268,7 +2358,11 @@ function toggleStarterTile() {
   body.style.display = open ? 'none' : 'block';
   if (tile) tile.classList.toggle('expanded', !open);
   if (arrow) arrow.textContent = open ? '▶' : '▼';
-  if (!open) _renderStartSection(); // odśwież sekcję gdy otwieramy
+  // "?" widoczne tylko gdy rozwinięte
+  const helpBtn = tile ? tile.querySelector('.ptr-help-btn') : null;
+  if (helpBtn) helpBtn.style.display = open ? 'none' : 'flex';
+  if (open) { const pop = document.getElementById('ptr-help-starter'); if (pop) pop.classList.remove('open'); }
+  if (!open) _renderStartSection();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2351,6 +2445,159 @@ function toggleStartExpireExpanded() {
 function _isStartExpired() {
   if (!state.cfg || !state.cfg.startKeyExpiresAt) return false;
   return Date.now() > state.cfg.startKeyExpiresAt;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPEAKER LINK — komentator (analogicznie do startera)
+// ═══════════════════════════════════════════════════════════════
+function toggleSpeakerTile() {
+  const body = document.getElementById('ptr-speaker-body');
+  const arrow = document.getElementById('ptr-speaker-arrow');
+  const tile = document.getElementById('ptr-tile-speaker');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (tile) tile.classList.toggle('expanded', !open);
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+  const helpBtn = tile ? tile.querySelector('.ptr-help-btn') : null;
+  if (helpBtn) helpBtn.style.display = open ? 'none' : 'flex';
+  if (open) { const pop = document.getElementById('ptr-help-speaker'); if (pop) pop.classList.remove('open'); }
+  if (!open) _renderSpeakerSection();
+}
+
+function _buildSpeakerUrl() {
+  if (!state.cfg || !state.cfg.speakerKey) return '';
+  const base = window.location.href.replace(/[^/]*$/, '') + 'patrol-speaker.html';
+  return base + '?slot=' + encodeURIComponent(STORAGE_KEY) + '&key=' + encodeURIComponent(state.cfg.speakerKey);
+}
+
+function toggleSpeakerEnabled() {
+  if (!state.cfg) state.cfg = {};
+  const wasEnabled = !!state.cfg.speakerEnabled;
+  if (wasEnabled) {
+    state.cfg.speakerEnabled = false;
+  } else {
+    state.cfg.speakerEnabled = true;
+    if (!state.cfg.speakerKey) state.cfg.speakerKey = _genStartKey(); // ten sam generator alfanumeryczny
+  }
+  saveImmediate();
+  _renderSpeakerSection();
+  showToast(state.cfg.speakerEnabled ? '✓ Link speakera aktywny' : '⏸ Link speakera wyłączony',
+            state.cfg.speakerEnabled ? 'success' : 'warning');
+}
+
+function regenerateSpeakerKey() {
+  if (!confirm('Wygenerować nowy klucz speakera?\n\nStary link przestanie działać — komentator zobaczy "Link wygasł".')) return;
+  state.cfg.speakerKey = _genStartKey();
+  state.cfg.speakerEnabled = true;
+  saveImmediate();
+  _renderSpeakerSection();
+  showToast('✓ Nowy klucz speakera — wyślij nowy link', 'success');
+}
+
+function copySpeakerLink() {
+  const url = _buildSpeakerUrl();
+  if (!url) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(
+      () => showToast('📋 Skopiowano link', 'success', 1500),
+      () => _copySpkFallback(url)
+    );
+  } else _copySpkFallback(url);
+}
+function _copySpkFallback(url) {
+  const input = document.getElementById('speaker-link-input');
+  if (input) { input.select(); document.execCommand('copy'); showToast('📋 Skopiowano', 'success', 1500); }
+}
+
+function setSpeakerExpiry(value) {
+  if (!state.cfg) state.cfg = {};
+  if (value === '+24h') state.cfg.speakerKeyExpiresAt = Date.now() + 24*3600*1000;
+  else if (!value)      state.cfg.speakerKeyExpiresAt = null;
+  else {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return;
+    state.cfg.speakerKeyExpiresAt = d.getTime();
+  }
+  saveImmediate();
+  _renderSpeakerSection();
+}
+
+function toggleSpeakerExpireExpanded() {
+  const panel = document.getElementById('speaker-expire-expanded');
+  const arrow = document.getElementById('speaker-expire-arrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▶' : '▼';
+}
+
+function _isSpeakerExpired() {
+  if (!state.cfg || !state.cfg.speakerKeyExpiresAt) return false;
+  return Date.now() > state.cfg.speakerKeyExpiresAt;
+}
+
+function _renderSpeakerSection() {
+  if (!state.cfg) state.cfg = {};
+  const enabled = !!state.cfg.speakerEnabled;
+  const hasKey  = !!state.cfg.speakerKey;
+  const pill = document.getElementById('speaker-status-pill');
+  const btn  = document.getElementById('speaker-toggle-btn');
+  const linkRow = document.getElementById('speaker-link-row');
+  const linkIn  = document.getElementById('speaker-link-input');
+  const rotate  = document.getElementById('speaker-rotate-btn');
+  const expireRow = document.getElementById('speaker-expire-row');
+  const expireIn  = document.getElementById('speaker-expire-input');
+  const expireSt  = document.getElementById('speaker-expire-status');
+  if (!pill || !btn) return;
+  if (enabled && hasKey) {
+    const expired = _isSpeakerExpired();
+    if (expired) {
+      pill.textContent = '⌛ Wygasł'; pill.style.color = 'var(--orange)';
+      pill.style.borderColor = 'rgba(232,148,77,.5)'; pill.style.background = 'rgba(232,148,77,.1)';
+    } else {
+      pill.textContent = '● Aktywny'; pill.style.color = 'var(--green)';
+      pill.style.borderColor = 'rgba(80,200,144,.5)'; pill.style.background = 'rgba(80,200,144,.1)';
+    }
+    btn.textContent = 'Wyłącz dostęp'; btn.style.background = 'rgba(232,88,88,.1)';
+    btn.style.borderColor = 'rgba(232,88,88,.5)'; btn.style.color = 'var(--red)';
+    linkRow.style.display = 'block';
+    if (linkIn) linkIn.value = _buildSpeakerUrl();
+    rotate.style.display = 'block';
+    if (expireRow) expireRow.style.display = 'block';
+    if (expireIn) {
+      const ts = state.cfg.speakerKeyExpiresAt;
+      if (ts) { const d = new Date(ts); const pad = n => (n<10?'0':'')+n; expireIn.value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+      else expireIn.value = '';
+    }
+    if (expireSt) {
+      const ts = state.cfg.speakerKeyExpiresAt;
+      if (!ts) { expireSt.textContent = 'Bezterminowo'; expireSt.style.color = 'var(--text3)'; }
+      else if (expired) { expireSt.textContent = '⌛ Wygasł ' + _fmtFriendlyDateStart(ts); expireSt.style.color = 'var(--orange)'; }
+      else { expireSt.textContent = 'Wygasa: ' + _fmtFriendlyDateStart(ts); expireSt.style.color = 'var(--text2)'; }
+    }
+  } else {
+    pill.textContent = '○ Wyłączony'; pill.style.color = 'var(--text3)';
+    pill.style.borderColor = 'var(--border)'; pill.style.background = 'var(--bg3)';
+    btn.textContent = 'Aktywuj link'; btn.style.background = 'rgba(80,200,144,.1)';
+    btn.style.borderColor = 'rgba(80,200,144,.5)'; btn.style.color = 'var(--green)';
+    linkRow.style.display = 'none';
+    rotate.style.display = 'none';
+    if (expireRow) expireRow.style.display = 'none';
+  }
+  // Sub-status w kafelku
+  const tileStatus = document.getElementById('ptr-speaker-tile-status');
+  const tile = document.getElementById('ptr-tile-speaker');
+  if (tileStatus) {
+    if (enabled && hasKey) {
+      const expired = _isSpeakerExpired();
+      tileStatus.textContent = expired ? 'link wygasł — przedłuż' : 'link aktywny — kliknij aby skopiować';
+      if (tile) { tile.classList.toggle('active', !expired); tile.classList.toggle('expired', expired); }
+    } else {
+      tileStatus.textContent = 'link nieaktywny — kliknij aby aktywować';
+      if (tile) tile.classList.remove('active', 'expired');
+    }
+  }
 }
 
 function _fmtFriendlyDateStart(ts) {
