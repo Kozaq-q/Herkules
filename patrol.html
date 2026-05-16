@@ -1023,20 +1023,27 @@ let _clockSyncOk = false;      // czy kiedykolwiek udało się zsynchronizować
 let _starterOffset = 0;
 let _starterPulseAt = 0;           // moment ostatniego waznego pulsu (Date.now())
 let _starterPulseHistory = [];      // ostatnie probki dla wygladzania
-const STARTER_FRESH_MS = 30 * 1000;        // < 30s = LIVE (zielony)
-const STARTER_CACHED_MS = 5 * 60 * 1000;   // < 5min = uzywamy cache (zolty)
+const STARTER_FRESH_MS = 30 * 1000;             // < 30s = LIVE (zielony)
+const STARTER_CACHED_MS = 4 * 60 * 60 * 1000;   // < 4h = uzywamy cache (zolty po 30s, czerwony po 4h)
 const STARTER_HISTORY_MAX = 8;
+// Komentarz: kwarc w telefonie dryfuje ~10ppm (ok. 36ms na godzine).
+// Po 4h drift to ~150ms — wciaz dokladne dla biegu patrolowego.
+// Caly dzien zawodow miesci sie w cache, nawet jak starter padnie tuz po starcie.
 
-// Wczytaj cache offsetu (gdy uzytkownik odswiezyl strone)
+// Wczytaj cache offsetu (gdy uzytkownik odswiezyl strone).
+// Odrzuc cache starszy niz STARTER_CACHED_MS (drift skumulowany za duzy)
+// lub z absurdalnym offsetem (>10 min — pewnie stary bug, lepiej fallback do serwera).
 (function _loadStarterCache(){
   try {
     const raw = localStorage.getItem('patrol_starter_offset_' + SLOT_ID);
     if (!raw) return;
     const c = JSON.parse(raw);
-    if (c && Number.isFinite(c.offset) && Number.isFinite(c.at)) {
-      _starterOffset = c.offset;
-      _starterPulseAt = c.at;
-    }
+    if (!c || !Number.isFinite(c.offset) || !Number.isFinite(c.at)) return;
+    const ageMs = Date.now() - c.at;
+    if (ageMs < 0 || ageMs > STARTER_CACHED_MS) return;     // za stare
+    if (Math.abs(c.offset) > 10 * 60 * 1000) return;         // bzdura (>10min)
+    _starterOffset = c.offset;
+    _starterPulseAt = c.at;
   } catch(_){}
 })();
 
@@ -1110,9 +1117,13 @@ function _updateStarterClockPill() {
     pill.style.borderColor = 'rgba(232,148,77,.5)';
     pill.style.background = 'rgba(232,148,77,.08)';
     const sec = Math.round(ageMs / 1000);
-    const label = sec < 90 ? (sec + 's') : (Math.round(sec/60) + ' min');
+    const min = Math.floor(sec / 60);
+    const hr = Math.floor(min / 60);
+    const label = sec < 90 ? (sec + 's')
+                : min < 60 ? (min + ' min')
+                : (hr + 'h ' + (min - hr * 60) + 'min');
     pill.innerHTML = '🟡 starter ' + label + ' temu';
-    pill.title = 'Sedzia startu offline od ' + sec + 's — uzywam zapamietanej kalibracji. Wciaz dokladne dla aktualnych biegow.';
+    pill.title = 'Sedzia startu offline od ' + label + ' — uzywam zapamietanej kalibracji. Drift kwarcu ~36ms/h, czyli po godzinie wciaz <0.05s niedokladnosci.';
   } else {
     pill.style.display = 'inline-flex';
     pill.style.color = 'var(--text3)';
@@ -3058,13 +3069,13 @@ function generateAutoStartSchedule() {
   const h = parseInt(parts[0]) || 0;
   const m = parseInt(parts[1]) || 0;
   const s = parseInt(parts[2]) || 0;
-  // Konstruuj timestamp DZIŚ w czasie serwera
-  const now = new Date(nowMs());
+  // Wall-clock domena (Date.now), nie nowMs — żeby starter offset nie zaburzał czasu wpisanego przez sędziego
+  const now = new Date();
   const firstDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s, 0);
   let firstTs = firstDate.getTime();
   // Walidacja: jeśli pierwsza para w przeszłości — wymagaj potwierdzenia (inaczej startuje natychmiast)
-  if (firstTs < nowMs()) {
-    const secAgo = Math.round((nowMs() - firstTs) / 1000);
+  if (firstTs < Date.now()) {
+    const secAgo = Math.round((Date.now() - firstTs) / 1000);
     if (!confirm('⚠ Godzina pierwszej pary jest ' + secAgo + ' s w przeszłości!\n\nPara wystartuje natychmiast po wygenerowaniu, a następne wg interwału.\nKontynuować?')) return;
   }
   // Posortuj pary po gender+pairNum
@@ -3124,8 +3135,8 @@ function editPairStartTime(gender, pairNum) {
     if (currentTs) {
       input.value = fmt(currentTs);
     } else {
-      // Domyślnie: aktualny czas + 60s
-      input.value = fmt(nowMs() + 60000);
+      // Domyślnie: aktualny zegar lokalny + 60s (czas wall-clock — niezależny od starter offsetu)
+      input.value = fmt(Date.now() + 60000);
     }
   }
 
@@ -3144,10 +3155,10 @@ function editPairStartTime(gender, pairNum) {
 
   document.getElementById('ptr-pt-warning').style.display = 'none';
 
-  // Live aktualizacja zegara serwera + ostrzeżenia o przeszłości
+  // Live aktualizacja zegara lokalnego (czasy startu są w domenie wall-clock)
   const updateNow = () => {
     const nowEl = document.getElementById('ptr-pt-now');
-    if (nowEl) nowEl.textContent = fmt(nowMs());
+    if (nowEl) nowEl.textContent = fmt(Date.now());
     _ptrPairTimeUpdateWarning();
   };
   updateNow();
@@ -3170,7 +3181,8 @@ function _ptrPairTimeParseInput() {
   if (!m) return null;
   const h = parseInt(m[1]), mi = parseInt(m[2]), s = parseInt(m[3] || '0');
   if (h > 23 || mi > 59 || s > 59) return null;
-  const now = new Date(nowMs());
+  // Wall-clock domena (Date.now), nie nowMs — żeby starter offset nie zaburzał wpisanego czasu
+  const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, mi, s, 0).getTime();
 }
 
@@ -3183,7 +3195,7 @@ function _ptrPairTimeUpdateWarning() {
     warn.innerHTML = '⚠ Nieprawidłowy format. Wpisz godzinę w formacie <strong>HH:MM:SS</strong>.';
     return;
   }
-  const diff = ts - nowMs();
+  const diff = ts - Date.now();
   if (diff < -2000) {
     const secAgo = Math.round(-diff / 1000);
     warn.style.display = '';
@@ -3250,7 +3262,7 @@ function setScheduledStart(gender, pairNum, value) {
     const serverTs = ts - _serverClockOffset; // konwersja z local na server-equivalent? Hmm.
     // Po prostu zapisz wartość — auto-start sprawdza nowMs() (zegar serwera)
     state.runs[k].scheduledStartAt = ts;
-    const secLeft = Math.round((ts - nowMs()) / 1000);
+    const secLeft = Math.round((ts - Date.now()) / 1000);
     if (secLeft < 0) showToast('⚠ Godzina jest już w przeszłości', 'warning', 2500);
     else showToast('⏰ Auto-start za ' + secLeft + 's', 'success', 1800);
   }
@@ -3258,14 +3270,15 @@ function setScheduledStart(gender, pairNum, value) {
   renderTimerView();
 }
 
-// Sprawdza scheduledStartAt par i automatycznie startuje gdy nadejdzie czas
+// Sprawdza scheduledStartAt par i automatycznie startuje gdy nadejdzie czas.
+// scheduledStartAt jest w domenie wall-clock (Date.now), startedAt w domenie nowMs (zegar startera) — zapewnia spójność elapsed.
 function checkScheduledStarts() {
   if (!state.runs) return;
   let changed = false;
   for (const k in state.runs) {
     const run = state.runs[k];
-    if (run.scheduledStartAt && !run.startedAt && nowMs() >= run.scheduledStartAt) {
-      run.startedAt = run.scheduledStartAt;
+    if (run.scheduledStartAt && !run.startedAt && Date.now() >= run.scheduledStartAt) {
+      run.startedAt = nowMs();  // w domenie startera — spójne z resztą stopera
       run.finishedAt = {};
       delete run.scheduledStartAt;
       changed = true;
@@ -3543,7 +3556,7 @@ function renderTimerPairHTML(p, role) {
   // Status auto-startu obok (widoczny też dla META/OSF — info)
   let scheduledInfo = '';
   if (scheduledAt && !started) {
-    const secLeft = Math.round((scheduledAt - nowMs()) / 1000);
+    const secLeft = Math.round((scheduledAt - Date.now()) / 1000);
     const past = secLeft < 0;
     scheduledInfo = '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:' + (past ? 'var(--red)' : 'var(--orange)') + ';font-family:var(--font-m);">' +
       '⏰ <strong>Auto-start: ' + formatClockTime(scheduledAt) + '</strong>' +
@@ -3705,7 +3718,7 @@ function tickTimers() {
     if (!run) return;
     // Odliczanie do auto-startu (gdy scheduledStartAt jest ustawiony a startedAt brakuje)
     if (run.scheduledStartAt && !run.startedAt) {
-      const left = run.scheduledStartAt - nowMs();
+      const left = run.scheduledStartAt - Date.now();
       if (left > 0) {
         const sec = Math.ceil(left / 1000);
         // Ostatnie 10s — duże i pulsujące cyfry
