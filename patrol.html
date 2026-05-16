@@ -1031,12 +1031,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       <div class="card mb-12">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
           <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Wyniki</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:4px 10px;">
-            ⚠ Punktacja w przygotowaniu — kolumna PKT i drużynowa są placeholderem
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;" title="Wzór: czas_biegu(s) − pkt_OSF − pkt_strzelanie. pkt_OSF = 450 − 2×czas_OSF(s). pkt_strzelanie = pkt_tarcza × 2.">
+            ✓ Regulamin 11DKPanc 2025
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
-          Sortowanie po czasie całkowitym (najszybszy pierwszy). DSQ na dole bez czasu. DNF/DNS poniżej tych z czasem.
+          Sortowanie po <strong>punktach końcowych</strong> (najniższy wynik wygrywa, mogą być ujemne).
+          Tie-break: lepsze strzelanie → lepszy OSF → więcej dziesiątek. DSQ/DNF/DNS na dole.
         </div>
         <div id="ptr-results-no-data" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text3);">
           Brak wpisanych wyników. Przejdź do zakładki <strong>⏱ Wpisywanie wyników</strong> aby wpisać czasy.
@@ -1056,13 +1057,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       <div class="card mb-12" id="ptr-team-card" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
           <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Klasyfikacja drużynowa</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:4px 10px;">
-            ⚠ Reguły do uzupełnienia — obecnie suma punktów wszystkich zawodników z drużyny
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;" title="Suma punktów 3 najlepszych mężczyzn z drużyny. Kobiety nie liczą do klasyfikacji zespołowej (tylko ind. medale).">
+            ✓ Regulamin 11DKPanc 2025
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
-          Wynik drużyny = suma punktów jej zawodników (M + K razem). DSQ/DNF/DNS = 0 pkt.
-          Drużyna musi mieć minimum <strong>1</strong> sklasyfikowanego zawodnika.
+          Wynik drużyny = suma punktów <strong>3 najlepszych mężczyzn</strong> (najniższe pkt). Kobiety <strong>nie liczą się</strong> do klasyfikacji zespołowej. Drużyna musi mieć minimum <strong>3 sklasyfikowanych mężczyzn</strong>.
         </div>
         <div id="ptr-team-list"></div>
       </div>
@@ -2168,6 +2168,23 @@ function _ptrBuildIndPrintHTML(gender, asFragment) {
     podium += '</div>';
   }
 
+  // Sortowanie regulaminowe: po punktach rosnąco (najniższy wygrywa), tie-break: strzelanie → OSF → dziesiątki
+  rows.forEach(r => { r._pts = calcPatrolPoints(r.ath, r); });
+  rows.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.tier === 0) {
+      if (a._pts !== b._pts && a._pts !== null && b._pts !== null) return a._pts - b._pts;
+      const aShot = _shotPointsFromRow(a) || 0;
+      const bShot = _shotPointsFromRow(b) || 0;
+      if (aShot !== bShot) return bShot - aShot;
+      const aOsf = a.osf && !isTimeMarker(a.osf) ? parseTime(a.osf) : Infinity;
+      const bOsf = b.osf && !isTimeMarker(b.osf) ? parseTime(b.osf) : Infinity;
+      if (aOsf !== bOsf) return aOsf - bOsf;
+      return (parseInt(b.tens) || 0) - (parseInt(a.tens) || 0);
+    }
+    return a.totalSec - b.totalSec;
+  });
+
   // Pełna tabela — sekcja owinięta w .ranking-section (smart page-break)
   const sectionBody =
     podium +
@@ -2176,9 +2193,10 @@ function _ptrBuildIndPrintHTML(gender, asFragment) {
       '<th class="rank-col">Msc</th>' +
       '<th>Zawodnik</th>' +
       '<th>Drużyna</th>' +
-      '<th class="c">Total</th>' +
+      '<th class="c">Czas biegu</th>' +
       '<th class="c">OSF</th>' +
-      '<th class="c">Trafienia</th>' +
+      '<th class="c">Strzelanie</th>' +
+      '<th class="c">Wynik (pkt)</th>' +
     '</tr></thead><tbody>' +
     (() => {
       let rank = 1;
@@ -2191,14 +2209,17 @@ function _ptrBuildIndPrintHTML(gender, asFragment) {
                           isTimeMarker(r.total) ? '<span class="marker-badge">' + r.total + '</span>' :
                           (r.total ? esc(r.total) : '—');
         const osfCell   = r.dsq ? '—' : (isTimeMarker(r.osf) ? '<span class="marker-badge">' + r.osf + '</span>' : (r.osf ? esc(r.osf) : '—'));
-        const hitsCell  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
+        const shotPts = _shotPointsFromRow(r);
+        const shotCell  = r.dsq ? '—' : (shotPts !== null ? (shotPts + '/50' + (r.tens ? ' (' + r.tens + '×10)' : '')) : '—');
+        const ptsCell   = (r._pts === null) ? '—' : ('<strong>' + r._pts + '</strong>');
         body += '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + '">' +
           '<td class="rank-col">' + rankDisp + '</td>' +
           '<td class="bold">' + esc(displayName(r.ath)) + (r.ath.bib ? '<span class="bib">' + esc(r.ath.bib) + '</span>' : '') + '</td>' +
           '<td class="small">' + esc(r.ath.team || '') + '</td>' +
-          '<td class="c mono bold">' + totalCell + '</td>' +
+          '<td class="c mono">' + totalCell + '</td>' +
           '<td class="c mono">' + osfCell + '</td>' +
-          '<td class="c mono">' + hitsCell + '</td>' +
+          '<td class="c mono">' + shotCell + '</td>' +
+          '<td class="c mono bold">' + ptsCell + '</td>' +
         '</tr>';
         if (!noTime && !r.dsq) rank++;
       });
@@ -2226,8 +2247,8 @@ function _ptrBuildTeamPrintHTML(asFragment) {
     const counts = { M: 0, K: 0 };
     rows.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
     return { name, rows, score, counts };
-  }).filter(t => t.score.classified >= 1);
-  teams.sort((a, b) => b.score.total - a.score.total);
+  }).filter(t => t.score.eligible); // tylko sklasyfikowane drużyny (≥3 M z wynikiem)
+  teams.sort((a, b) => a.score.total - b.score.total); // niższy = lepszy
 
   const title = 'Klasyfikacja drużynowa';
   if (!teams.length) {
@@ -3867,7 +3888,11 @@ function athleteCardHTML(a, lane, pairNum, gender) {
   const dsq = isDsq(a.id);
   const total = getPatrolTime(a.id, 'total');
   const osf = getPatrolTime(a.id, 'osf');
-  const hits = state.times?.[a.id]?.hits;
+  const hits = state.times?.[a.id]?.hits;            // legacy 0-5
+  const shotPoints = state.times?.[a.id]?.shotPoints; // 0-50 pkt na tarczy
+  const tens = state.times?.[a.id]?.tens;             // 0-5 dziesiątek (tie-break)
+  const shotEff = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
+                  (hits !== undefined ? (hits * 10) : undefined);
   const totalIsMarker = isTimeMarker(total);
   const osfIsMarker = isTimeMarker(osf);
   // Uprawnienia per rola
@@ -3914,14 +3939,26 @@ function athleteCardHTML(a, lane, pairNum, gender) {
           (totalDisabled ? ' disabled' : '') + ' />' +
       '</div>' +
     '</div>' +
-    // Rząd 6 przycisków trafień (0-5)
-    '<div class="ptr-hits-row">' +
-      [0,1,2,3,4,5].map(n =>
-        '<button class="ptr-hit-btn' + (hits === n ? ' active' : '') + (hitsDisabled ? ' dsq' : '') + '"' +
-          ' onclick="setHits(' + a.id + ',' + n + ')"' +
-          (hitsDisabled ? ' disabled' : '') +
-          ' title="' + n + ' trafień">' + n + '</button>'
-      ).join('') +
+    // Strzelanie — punkty na tarczy (0-50) + dziesiątki (tie-break)
+    '<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;margin-top:6px;">' +
+      '<div class="ptr-time-tile' + (hitsDisabled ? ' dsq' : '') + '" style="background:rgba(232,148,77,.05);border-color:rgba(232,148,77,.35);">' +
+        '<div class="ptr-time-lbl" style="color:var(--orange);">🎯 Strzelanie (0-50)' + (!canEditHits ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
+        '<input class="ptr-time-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50 pkt"' +
+          ' onchange="setShotPoints(' + a.id + ', this.value)"' +
+          ' onblur="setShotPoints(' + a.id + ', this.value)"' +
+          ' style="text-align:center;font-weight:700;"' +
+          ' title="Suma punktów na tarczy (5 strzałów × max 10 pkt)"' +
+          (hitsDisabled ? ' disabled' : '') + ' />' +
+      '</div>' +
+      '<div class="ptr-time-tile' + (hitsDisabled ? ' dsq' : '') + '" style="background:var(--bg3);">' +
+        '<div class="ptr-time-lbl" style="font-size:9px;color:var(--text3);">×10 (tie-break)</div>' +
+        '<input class="ptr-time-input" type="number" min="0" max="5" step="1" value="' + (tens !== undefined ? tens : '') + '" placeholder="0-5"' +
+          ' onchange="setTens(' + a.id + ', this.value)"' +
+          ' onblur="setTens(' + a.id + ', this.value)"' +
+          ' style="text-align:center;font-size:13px;"' +
+          ' title="Liczba dziesiątek (tie-breaker przy remisie)"' +
+          (hitsDisabled ? ' disabled' : '') + ' />' +
+      '</div>' +
     '</div>' +
     // Dolna belka: DSQ po prawej
     '<div style="display:flex;justify-content:flex-end;margin-top:6px;">' +
@@ -3939,21 +3976,52 @@ function athleteCardHTML(a, lane, pairNum, gender) {
   '</div>';
 }
 
-// Szybkie ustawianie trafień (klik przycisku 0-5). Klik na aktywny = wyczyść.
-function setHits(id, n) {
+// Ustawianie punktów strzelania (0-50 pkt na tarczy — 5 strzałów × max 10 pkt).
+// Wartość null lub '' = wyczyść pole.
+function setShotPoints(id, val) {
   if (!state.times) state.times = {};
   if (!state.times[id]) state.times[id] = {};
-  state.times[id].hitsAt = nowMs(); // per-field timestamp do merge
-  // Klik na aktualnie aktywny numer wyczyść (toggle off)
-  if (state.times[id].hits === n) {
-    delete state.times[id].hits;
+  state.times[id].shotPointsAt = nowMs(); // per-field timestamp do merge
+  if (val === null || val === '' || val === undefined) {
+    delete state.times[id].shotPoints;
   } else {
-    state.times[id].hits = n;
+    let n = parseInt(val);
+    if (!Number.isFinite(n)) { renderPairsView(); return; }
+    if (n < 0) n = 0;
+    if (n > 50) n = 50;
+    state.times[id].shotPoints = n;
   }
   save();
   renderPairsView();
-  // Jeśli zakładka stopera jest aktywna, też ją odśwież
   if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
+}
+
+// LEGACY: stara funkcja dla pole "hits" (0-5 trafień). Zostawiamy dla kompatybilności
+// gdyby gdzieś jeszcze wisiała w cache UI, ale w nowym kodzie używamy setShotPoints.
+function setHits(id, n) {
+  if (!state.times) state.times = {};
+  if (!state.times[id]) state.times[id] = {};
+  state.times[id].hitsAt = nowMs();
+  if (state.times[id].hits === n) delete state.times[id].hits;
+  else state.times[id].hits = n;
+  save();
+  renderPairsView();
+  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
+}
+
+// Liczba dziesiątek (tie-break) — opcjonalne pole
+function setTens(id, val) {
+  if (!state.times) state.times = {};
+  if (!state.times[id]) state.times[id] = {};
+  state.times[id].tensAt = nowMs();
+  if (val === null || val === '' || val === undefined) { delete state.times[id].tens; }
+  else {
+    let n = parseInt(val);
+    if (!Number.isFinite(n) || n < 0) n = 0;
+    if (n > 5) n = 5;
+    state.times[id].tens = n;
+  }
+  save();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4625,7 +4693,9 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
   const finished = !!(started && run.finishedAt && run.finishedAt[a.id]);
   const total = getPatrolTime(a.id, 'total');
   const osf = getPatrolTime(a.id, 'osf');
-  const hits = state.times?.[a.id]?.hits;
+  const hits = state.times?.[a.id]?.hits;            // legacy 0-5
+  const shotPoints = state.times?.[a.id]?.shotPoints; // 0-50 pkt na tarczy
+  const tens = state.times?.[a.id]?.tens;             // 0-5 dziesiątek (tie-break)
 
   let timeDisplay;
   if (total) {
@@ -4679,17 +4749,35 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
       '</div>';
   }
 
-  // Trafienia — META + ADMIN
+  // STRZELANIE — punkty na tarczy (0-50). META + ADMIN edycja, reszta read-only.
+  // Wartość bezpośrednia z shotPoints (nowe) lub legacy hits × 10 (fallback).
+  const shotEff = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
+                  (hits !== undefined ? (hits * 10) : undefined);
   let hitsRow = '';
   if (role === 'META' || role === 'ADMIN') {
-    hitsRow = '<div class="timer-hits-row">';
-    for (let n = 0; n <= 5; n++) {
-      const active = hits === n ? ' active' : '';
-      hitsRow += '<button class="timer-hit-btn' + active + '" onclick="setHits(' + a.id + ',' + n + ')"' + (dsq ? ' disabled' : '') + '>' + n + '</button>';
-    }
-    hitsRow += '</div>';
-  } else if (hits !== undefined) {
-    hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Trafienia: <strong style="color:var(--text1);">' + hits + '/5</strong></div>';
+    hitsRow =
+      '<div class="timer-osf-input-row" style="margin-top:8px;">' +
+        '<span class="timer-osf-label" style="color:var(--orange);">🎯 Strzelanie</span>' +
+        '<input type="number" min="0" max="50" step="1" class="timer-osf-input" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50 pkt"' +
+          ' onchange="setShotPoints(' + a.id + ', this.value)"' +
+          ' onblur="setShotPoints(' + a.id + ', this.value)"' +
+          ' style="background:rgba(232,148,77,.06);border-color:rgba(232,148,77,.35);text-align:center;font-weight:700;"' +
+          ' title="Suma punktów na tarczy (max 50 = 5 strzałów × 10pkt)"' +
+          (dsq ? ' disabled' : '') + ' />' +
+        '<span style="font-size:10px;color:var(--text3);margin-left:4px;">/50</span>' +
+      '</div>' +
+      // Dziesiątki (tie-break) — drobny dodatkowy input
+      '<div class="timer-osf-input-row" style="margin-top:4px;">' +
+        '<span class="timer-osf-label" style="font-size:9px;color:var(--text3);">×10</span>' +
+        '<input type="number" min="0" max="5" step="1" class="timer-osf-input" value="' + (tens !== undefined ? tens : '') + '" placeholder="0-5"' +
+          ' onchange="setTens(' + a.id + ', this.value)"' +
+          ' onblur="setTens(' + a.id + ', this.value)"' +
+          ' style="background:var(--bg3);text-align:center;font-size:11px;padding:3px 6px;"' +
+          ' title="Liczba dziesiątek (tie-break)"' +
+          (dsq ? ' disabled' : '') + ' />' +
+      '</div>';
+  } else if (shotEff !== undefined) {
+    hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Strzelanie: <strong style="color:var(--text1);">' + shotEff + '/50 pkt</strong></div>';
   }
 
   // DSQ — META + ADMIN
@@ -5344,6 +5432,9 @@ function renderTimesTable(gender) {
     const total = getPatrolTime(id, 'total');
     const osf = getPatrolTime(id, 'osf');
     const hits = state.times?.[id]?.hits;
+    const shotPoints = state.times?.[id]?.shotPoints;
+    const shotEff = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
+                    (hits !== undefined ? (hits * 10) : '');
     const totalIsMarker = isTimeMarker(total);
     const osfIsMarker = isTimeMarker(osf);
     return '<tr class="' + (dsq ? 'dsq' : '') + '">' +
@@ -5354,7 +5445,7 @@ function renderTimesTable(gender) {
       '<td style="font-family:var(--font-m);font-size:12px;color:var(--text3);">' + r.pairNum + '</td>' +
       '<td><input type="text" class="t-time ' + (totalIsMarker ? 'marker' : '') + '" data-id="' + id + '" data-field="total" value="' + esc(total) + '" placeholder="0:00.00 / DNF" oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' + (dsq ? ' disabled' : '') + ' /></td>' +
       '<td><input type="text" class="t-time ' + (osfIsMarker ? 'marker' : '') + '" data-id="' + id + '" data-field="osf" value="' + esc(osf) + '" placeholder="0:00.00" oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' + (dsq ? ' disabled' : '') + ' /></td>' +
-      '<td><input type="number" min="0" max="5" class="t-hits" data-id="' + id + '" data-field="hits" value="' + (hits !== undefined ? hits : '') + '" placeholder="0-5" onchange="commitTimeField(this)" onblur="commitTimeField(this)"' + (dsq ? ' disabled' : '') + ' /></td>' +
+      '<td><input type="number" min="0" max="50" class="t-hits" data-id="' + id + '" value="' + (shotEff !== '' ? shotEff : '') + '" placeholder="0-50" onchange="setShotPoints(' + id + ', this.value)" onblur="setShotPoints(' + id + ', this.value)"' + (dsq ? ' disabled' : '') + ' title="Punkty na tarczy 0-50" /></td>' +
       '<td><button class="dsq-btn ' + (dsq ? 'on' : '') + '" onclick="toggleDsq(' + id + ')" title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button></td>' +
     '</tr>';
   }).join('');
@@ -5365,17 +5456,47 @@ function renderTimesTable(gender) {
 // ═══════════════════════════════════════════════════════════════
 // (switchResultsTab — usunięte: kategorie pokazujemy obok siebie)
 
-// Placeholder punktacji — do zaktualizowania gdy poznasz reguły
+// ─── PUNKTACJA PATROLU (regulamin 11DKPanc 2025) ─────────────────
+// WYNIK = czas_biegu_sek − pkt_OSF − pkt_strzelanie
+//   pkt_OSF       = 450 − 2 × czas_osf_sek (baza 75s = 300pkt; ±2pkt/sek)
+//   pkt_strzelanie = pkt_na_tarczy × 2 (max 50 × 2 = 100)
+// Najniższy wynik wygrywa (mogą wyjść ujemne).
 function calcPatrolPoints(athlete, row) {
-  // Każdy zawodnik startuje z 1000pkt. Reguły kar nieznane.
-  // TODO: implementacja gdy będą znane (czas, OSF, trafienia)
-  return 1000;
+  if (row.dsq) return null; // niesklasyfikowany
+  // Bez czasu biegu — DNF/DNS/brak → niesklasyfikowany
+  if (!Number.isFinite(row.totalSec) || row.totalSec === Infinity) return null;
+  // OSF — wymagany do klasyfikacji
+  const osfSec = (row.osf && !isTimeMarker(row.osf)) ? parseTime(row.osf) : null;
+  if (osfSec === null || !Number.isFinite(osfSec) || osfSec <= 0) return null;
+  // Strzelanie — przyjmij 0 jeśli brak (zawodnik wystrzelał ale spudłował)
+  const shotPts = _shotPointsFromRow(row);
+  const biegPts = row.totalSec;            // 1 sek = 1 pkt karne
+  const osfPts  = 450 - 2 * osfSec;
+  const strzPts = (shotPts || 0) * 2;
+  return Math.round(biegPts - osfPts - strzPts);
+}
+
+// Helper: pobierz shotPoints z row (z fallbackiem do legacy hits × 10)
+function _shotPointsFromRow(row) {
+  if (row.shotPoints !== undefined && row.shotPoints !== null && row.shotPoints !== '') {
+    const n = parseInt(row.shotPoints);
+    return Number.isFinite(n) ? n : null;
+  }
+  // Legacy: stare pole hits (0-5) → przyjmij że to liczba trafień, przeliczamy
+  // szacunkowo × 10 (10 pkt za każde trafienie) — tylko jako rough fallback
+  if (row.hits !== undefined && row.hits !== null) {
+    const h = parseInt(row.hits);
+    return Number.isFinite(h) ? h * 10 : null;
+  }
+  return null;
 }
 
 function _patrolBuildRow(a) {
   const total = getPatrolTime(a.id, 'total');
   const osf   = getPatrolTime(a.id, 'osf');
-  const hits  = state.times?.[a.id]?.hits;
+  const hits  = state.times?.[a.id]?.hits;            // legacy 0-5
+  const shotPoints = state.times?.[a.id]?.shotPoints; // nowe 0-50 (suma pkt na tarczy)
+  const tens  = state.times?.[a.id]?.tens;             // liczba 10-tek (tie-break)
   const dsq   = isDsq(a.id);
   const totalIsMarker = isTimeMarker(total);
   const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
@@ -5385,8 +5506,8 @@ function _patrolBuildRow(a) {
   else if (totalSec < Infinity) tier = 0;
   else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
   else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
-  const hasAny = !!(total || osf || hits !== undefined || dsq);
-  return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
+  const hasAny = !!(total || osf || hits !== undefined || shotPoints !== undefined || dsq);
+  return { ath: a, total, osf, hits, shotPoints, tens, dsq, totalSec, tier, marker, hasAny };
 }
 
 function renderResultsView() {
@@ -5402,8 +5523,29 @@ function renderResultsView() {
       el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak wpisanych wyników.</div>';
       return;
     }
+    // Sortowanie regulaminowe: najpierw tier (0=sklasyfikowany, 1=DNF, 2=DNS, 3=DSQ),
+    // wewnątrz tieru 0: po PUNKTACH rosnąco (najniższy wygrywa).
+    // Tie-break: lepsze strzelanie → lepszy OSF → więcej dziesiątek.
+    rows.forEach(r => { r._pts = calcPatrolPoints(r.ath, r); });
     rows.sort((a, b) => {
       if (a.tier !== b.tier) return a.tier - b.tier;
+      // Sklasyfikowani — po punktach
+      if (a.tier === 0) {
+        if (a._pts !== b._pts && a._pts !== null && b._pts !== null) return a._pts - b._pts;
+        // Tie-break 1: lepsze strzelanie (więcej pkt)
+        const aShot = _shotPointsFromRow(a) || 0;
+        const bShot = _shotPointsFromRow(b) || 0;
+        if (aShot !== bShot) return bShot - aShot;
+        // Tie-break 2: lepszy OSF (mniej sekund)
+        const aOsf = a.osf && !isTimeMarker(a.osf) ? parseTime(a.osf) : Infinity;
+        const bOsf = b.osf && !isTimeMarker(b.osf) ? parseTime(b.osf) : Infinity;
+        if (aOsf !== bOsf) return aOsf - bOsf;
+        // Tie-break 3: więcej dziesiątek (state.times[id].tens)
+        const aTens = parseInt(a.tens) || 0;
+        const bTens = parseInt(b.tens) || 0;
+        return bTens - aTens;
+      }
+      // DNF/DNS — po czasie biegu (jeśli jest)
       return a.totalSec - b.totalSec;
     });
     let rank = 1;
@@ -5417,8 +5559,10 @@ function renderResultsView() {
                        (myRank !== null) ? (myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : myRank) : '—';
       const totalDisp = r.dsq ? '—' : (isTimeMarker(r.total) ? '<span class="marker-badge ' + r.total + '">' + r.total + '</span>' : (r.total || '—'));
       const osfDisp   = r.dsq ? '—' : (isTimeMarker(r.osf) ? '<span class="marker-badge ' + r.osf + '">' + r.osf + '</span>' : (r.osf || '—'));
-      const hitsDisp  = r.dsq ? '—' : (r.hits !== undefined ? (r.hits + '/5') : '—');
-      const pts = (r.dsq || noTime) ? 0 : calcPatrolPoints(r.ath, r);
+      const shotPts = _shotPointsFromRow(r);
+      const hitsDisp  = r.dsq ? '—' : (shotPts !== null ? (shotPts + '/50') : '—');
+      const ptsCalc = calcPatrolPoints(r.ath, r);
+      const pts = ptsCalc === null ? '—' : ptsCalc;
       return '<div class="result-row ' + rankCls + dsqCls + '">' +
         '<div class="result-rank">' + rankDisp + '</div>' +
         '<div style="min-width:0;">' +
@@ -5427,7 +5571,7 @@ function renderResultsView() {
         '</div>' +
         '<div class="result-time"><span class="lbl">Całkowity</span>' + totalDisp + '</div>' +
         '<div class="result-time muted res-hide-osf res-hide-mobile"><span class="lbl">OSF</span>' + osfDisp + '</div>' +
-        '<div class="result-hits res-hide-mobile"><span class="lbl">Traf</span>' + hitsDisp + '</div>' +
+        '<div class="result-hits res-hide-mobile"><span class="lbl">Strzel</span>' + hitsDisp + '</div>' +
         '<div class="result-pts"><span class="lbl">Pkt</span>' + pts + '</div>' +
       '</div>';
     }).join('');
@@ -5450,21 +5594,35 @@ function renderResultsView() {
   renderTeamView();
 }
 
-// ─── KLASYFIKACJA DRUŻYNOWA ─────────────────────────────────────
-// Placeholder: suma punktów wszystkich zawodników z drużyny.
-// Gdy znane będą reguły (np. top N, kara za DNF) — podmień calcTeamScore.
+// ─── KLASYFIKACJA DRUŻYNOWA (regulamin 11DKPanc) ────────────────
+// Wynik drużyny = suma punktów 3 NAJLEPSZYCH (najniższych) mężczyzn.
+// Kobiety NIE liczą się do klasyfikacji zespołowej (tylko medale ind.).
+// Drużyna musi mieć min 3 sklasyfikowanych mężczyzn — inaczej brak wyniku.
 function calcTeamScore(rows) {
-  // rows = wszyscy zawodnicy drużyny z _patrolBuildRow(a)
-  let total = 0, classified = 0, dnf = 0, dns = 0, dsq = 0;
+  const men = rows.filter(r => r.ath.gender === 'M');
+  const women = rows.filter(r => r.ath.gender === 'K');
+
+  // Liczniki dla wszystkich
+  let dnf = 0, dns = 0, dsq = 0;
   rows.forEach(r => {
     if (r.dsq) { dsq++; return; }
-    if (r.totalSec < Infinity) {
-      total += calcPatrolPoints(r.ath, r);
-      classified++;
-    } else if (r.marker === 'DNF') dnf++;
+    if (r.marker === 'DNF') dnf++;
     else if (r.marker === 'DNS') dns++;
   });
-  return { total, classified, dnf, dns, dsq };
+
+  // Sklasyfikowani mężczyźni — z punktami
+  const scoringMen = men
+    .map(r => ({ row: r, pts: calcPatrolPoints(r.ath, r) }))
+    .filter(x => x.pts !== null)
+    .sort((a, b) => a.pts - b.pts);
+
+  const classified = scoringMen.length;
+  if (classified < 3) {
+    return { total: null, classified, scoringCount: classified, men: men.length, women: women.length, dnf, dns, dsq, eligible: false };
+  }
+  const top3 = scoringMen.slice(0, 3);
+  const total = top3.reduce((s, x) => s + x.pts, 0);
+  return { total, classified, scoringCount: 3, men: men.length, women: women.length, dnf, dns, dsq, eligible: true, top3 };
 }
 
 function renderTeamView() {
@@ -5488,34 +5646,45 @@ function renderTeamView() {
     const counts = { M: 0, K: 0 };
     rows.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
     return { name, rows, anyResult, score, counts };
-  }).filter(t => t.anyResult && t.score.classified >= 1);
+  }).filter(t => t.anyResult);
 
   if (!teams.length) {
     card.style.display = 'none';
     return;
   }
   card.style.display = '';
-  teams.sort((a, b) => b.score.total - a.score.total);
+  // Sortuj: najpierw sklasyfikowane (eligible) po pkt rosnąco, potem niesklasyfikowane na dole
+  teams.sort((a, b) => {
+    if (a.score.eligible && !b.score.eligible) return -1;
+    if (!a.score.eligible && b.score.eligible) return 1;
+    if (a.score.eligible && b.score.eligible) return a.score.total - b.score.total; // niższy = lepszy
+    return 0;
+  });
 
-  list.innerHTML = teams.map((t, i) => {
-    const rank = i + 1;
-    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
-    const rankDisp = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-    const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
+  let rank = 0;
+  list.innerHTML = teams.map(t => {
+    const isEligible = t.score.eligible;
+    if (isEligible) rank++;
+    const rankCls = isEligible && rank === 1 ? 'rank-1' : isEligible && rank === 2 ? 'rank-2' : isEligible && rank === 3 ? 'rank-3' : '';
+    const rankDisp = !isEligible ? '—' : (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank);
+    const composition = '♂ ' + (t.counts.M || 0) + (t.counts.K ? ' · ♀ ' + t.counts.K : '');
     const extras = [];
     if (t.score.dnf) extras.push(t.score.dnf + '×DNF');
     if (t.score.dns) extras.push(t.score.dns + '×DNS');
     if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
     const extrasDisp = extras.length ? ' · ' + extras.join(' · ') : '';
-    return '<div class="team-row ' + rankCls + '">' +
+    const notEligibleNote = isEligible ? '' :
+      ' <span style="color:var(--orange);font-weight:700;">— niesklasyfikowana (potrzeba 3 sklasyf. M, ma ' + t.score.classified + ')</span>';
+    const pts = isEligible ? t.score.total : '—';
+    return '<div class="team-row ' + rankCls + (isEligible ? '' : ' dsq') + '" style="' + (isEligible ? '' : 'opacity:.55;') + '">' +
       '<div class="team-rank">' + rankDisp + '</div>' +
       '<div style="min-width:0;">' +
-        '<div class="team-name">' + esc(t.name) + '</div>' +
+        '<div class="team-name">' + esc(t.name) + notEligibleNote + '</div>' +
         '<div class="team-meta">' + esc(composition + extrasDisp) + '</div>' +
       '</div>' +
-      '<div class="team-stat team-hide-mobile"><span class="lbl">Zawodników</span>' + t.rows.length + '</div>' +
-      '<div class="team-stat"><span class="lbl">Sklasyf.</span>' + t.score.classified + '</div>' +
-      '<div class="team-pts"><span class="lbl">Suma pkt</span>' + t.score.total + '</div>' +
+      '<div class="team-stat team-hide-mobile"><span class="lbl">Wszystkich</span>' + t.rows.length + '</div>' +
+      '<div class="team-stat"><span class="lbl">Sklasyf. M</span>' + t.score.classified + '</div>' +
+      '<div class="team-pts"><span class="lbl">Suma (top 3 M)</span>' + pts + '</div>' +
     '</div>';
   }).join('');
 }

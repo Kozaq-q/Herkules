@@ -801,9 +801,12 @@ function _psAthStats(athleteId) {
   if (!athleteId) return null;
   const total = state.times?.[athleteId]?.total || '';
   const osf   = state.times?.[athleteId]?.osf || '';
-  const hits  = state.times?.[athleteId]?.hits;
+  const hits  = state.times?.[athleteId]?.hits;            // legacy 0-5
+  const shotPoints = state.times?.[athleteId]?.shotPoints; // 0-50 (suma pkt na tarczy)
+  const shotPts = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
+                  (hits !== undefined ? hits * 10 : null);
   const dsq   = !!(state.disq && state.disq[athleteId]);
-  return { total, osf, hits, dsq, hasAny: !!(total || osf || hits !== undefined || dsq) };
+  return { total, osf, hits, shotPoints, shotPts, dsq, hasAny: !!(total || osf || hits !== undefined || shotPoints !== undefined || dsq) };
 }
 
 function _applyPsTabStyle() {
@@ -945,10 +948,10 @@ function renderPairCard(p, isJustFinished) {
     let hitsChip;
     if (s.dsq) {
       hitsChip = '';
-    } else if (s.hits !== undefined && s.hits !== null) {
-      hitsChip = '<span class="ath-stat hits"><span class="ath-stat-lbl">Traf</span><span class="ath-stat-val">' + s.hits + '/5</span></span>';
+    } else if (s.shotPts !== null && s.shotPts !== undefined) {
+      hitsChip = '<span class="ath-stat hits"><span class="ath-stat-lbl">Strzel</span><span class="ath-stat-val">' + s.shotPts + '/50</span></span>';
     } else {
-      hitsChip = '<span class="ath-stat empty"><span class="ath-stat-lbl">Traf</span><span class="ath-stat-val">—</span></span>';
+      hitsChip = '<span class="ath-stat empty"><span class="ath-stat-lbl">Strzel</span><span class="ath-stat-val">—</span></span>';
     }
     return '<div class="pair-ath' + (s.dsq ? ' dsq' : '') + '">' +
       '<div class="pair-ath-name">' + esc(displayName(ath)) + '<span class="lane-badge lane-' + lane + '">' + lane + '</span></div>' +

@@ -190,7 +190,7 @@ button { font:inherit; cursor:pointer; }
       </div>
       <div class="brand-sub" id="contest-sub"></div>
     </div>
-    <span class="clock" id="clock">00:00</span>
+    <span class="clock" id="clock">00:00:00</span>
     <span class="sync-dot" id="sync-dot"></span>
   </header>
 
@@ -378,8 +378,12 @@ function afterStateUpdate() {
 // ════════════ CLOCK ════════════
 function startClock() {
   const el = document.getElementById('clock');
-  function tick() { const n = new Date(); const pad = x => (x < 10 ? '0' : '') + x; if (el) el.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()); }
-  tick(); setInterval(tick, 30000);
+  function tick() {
+    const n = new Date();
+    const pad = x => (x < 10 ? '0' : '') + x;
+    if (el) el.textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ':' + pad(n.getSeconds());
+  }
+  tick(); setInterval(tick, 1000);
 }
 
 function renderHeader() {
@@ -491,7 +495,12 @@ function pairRunning(p) {
 function buildRow(a) {
   const total = state.times?.[a.id]?.total || '';
   const osf   = state.times?.[a.id]?.osf || '';
-  const hits  = state.times?.[a.id]?.hits;
+  const hits  = state.times?.[a.id]?.hits;            // legacy 0-5
+  const shotPoints = state.times?.[a.id]?.shotPoints; // nowe 0-50
+  const tens  = state.times?.[a.id]?.tens;
+  // Efektywne pkt strzelania (nowe pole lub legacy hits × 10)
+  const shotPts = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
+                  (hits !== undefined ? hits * 10 : null);
   const dsq   = isDsq(a.id);
   const totalIsMarker = isTimeMarker(total);
   const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
@@ -500,8 +509,16 @@ function buildRow(a) {
   else if (totalSec < Infinity) tier = 0;
   else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
   else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
-  const hasAny = !!(total || osf || hits !== undefined || dsq);
-  return { ath:a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
+  const hasAny = !!(total || osf || hits !== undefined || shotPoints !== undefined || dsq);
+  // Wynik końcowy wg regulaminu 11DKPanc
+  let points = null;
+  if (!dsq && Number.isFinite(totalSec) && totalSec !== Infinity) {
+    const osfSec = (osf && !isTimeMarker(osf)) ? parseTime(osf) : null;
+    if (osfSec !== null && Number.isFinite(osfSec) && osfSec > 0) {
+      points = Math.round(totalSec - (450 - 2 * osfSec) - (shotPts || 0) * 2);
+    }
+  }
+  return { ath:a, total, osf, hits, shotPoints, shotPts, tens, points, dsq, totalSec, tier, marker, hasAny };
 }
 
 // ════════════ MENUS (z progress per płeć) ════════════
@@ -665,9 +682,10 @@ function buildAthStatsHTML(a) {
   if (r.dsq) {
     chips.push('<span class="ath-stat dsq"><span class="lbl">Total</span><span class="val">DSQ</span></span>');
   } else {
-    if (r.total) chips.push('<span class="ath-stat ' + (isTimeMarker(r.total) ? 'marker' : 'total') + '"><span class="lbl">Total</span><span class="val">' + esc(r.total) + '</span></span>');
+    if (r.total) chips.push('<span class="ath-stat ' + (isTimeMarker(r.total) ? 'marker' : 'total') + '"><span class="lbl">Czas</span><span class="val">' + esc(r.total) + '</span></span>');
     if (r.osf)   chips.push('<span class="ath-stat ' + (isTimeMarker(r.osf)   ? 'marker' : 'osf')   + '"><span class="lbl">OSF</span><span class="val">' + esc(r.osf) + '</span></span>');
-    if (r.hits !== undefined && r.hits !== null) chips.push('<span class="ath-stat hits"><span class="lbl">Traf</span><span class="val">' + r.hits + '/5</span></span>');
+    if (r.shotPts !== null && r.shotPts !== undefined) chips.push('<span class="ath-stat hits"><span class="lbl">Strzel</span><span class="val">' + r.shotPts + '/50</span></span>');
+    if (r.points !== null) chips.push('<span class="ath-stat" style="background:rgba(232,212,77,.1);border-color:rgba(232,212,77,.5);"><span class="lbl" style="color:var(--accent);">Pkt</span><span class="val" style="color:var(--accent);font-weight:800;">' + r.points + '</span></span>');
   }
   if (!chips.length) return '';
   return '<div class="ath-stats">' + chips.join('') + '</div>';
@@ -678,7 +696,20 @@ function renderRanking(gender) {
   const gLabel = gender === 'M' ? 'Mężczyźni' : 'Kobiety';
   document.getElementById('detail-title').textContent = 'Wyniki · ' + gLabel;
   const rows = (state.athletes || []).filter(a => a.gender === gender).map(buildRow).filter(r => r.hasAny);
-  rows.sort((a, b) => a.tier !== b.tier ? a.tier - b.tier : a.totalSec - b.totalSec);
+  // Sortowanie wg punktów (najniższy wygrywa), tie-break: strzelanie → OSF → dziesiątki
+  rows.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.tier === 0) {
+      if (a.points !== null && b.points !== null && a.points !== b.points) return a.points - b.points;
+      const aS = a.shotPts || 0, bS = b.shotPts || 0;
+      if (aS !== bS) return bS - aS;
+      const aO = a.osf && !isTimeMarker(a.osf) ? parseTime(a.osf) : Infinity;
+      const bO = b.osf && !isTimeMarker(b.osf) ? parseTime(b.osf) : Infinity;
+      if (aO !== bO) return aO - bO;
+      return (parseInt(b.tens) || 0) - (parseInt(a.tens) || 0);
+    }
+    return a.totalSec - b.totalSec;
+  });
   document.getElementById('detail-count').textContent = rows.length ? (rows.length + ' wyników') : '';
   if (!rows.length) {
     document.getElementById('detail-body').innerHTML = '<div class="empty"><div class="emoji">⌛</div><div class="msg2">Brak wpisanych wyników. Lista startowa może być jeszcze przygotowywana.</div></div>';
@@ -695,15 +726,18 @@ function renderRanking(gender) {
     else if (myRank === 3) cls.push('p3');
     const posCls = r.dsq ? 'dsq' : (myRank === 1 ? 'p1' : myRank === 2 ? 'p2' : myRank === 3 ? 'p3' : '');
     const posTxt = r.dsq ? 'DSQ' : (r.marker ? r.marker : (myRank || '—'));
+    // Główny wynik = PUNKTY (regulamin), nie czas
     let timeTxt, timeCls = 'rank-time-main';
     if (r.dsq) { timeTxt = 'DSQ'; timeCls += ' dsq'; }
     else if (r.marker) { timeTxt = r.marker; timeCls += ' empty'; }
-    else if (r.total) { timeTxt = esc(r.total); }
+    else if (r.points !== null) { timeTxt = r.points + ' pkt'; }
+    else if (r.total) { timeTxt = esc(r.total); timeCls += ' empty'; }
     else { timeTxt = '—'; timeCls += ' empty'; }
     const subParts = [];
     if (!r.dsq) {
+      if (r.total && r.points !== null) subParts.push('<span class="ok">Czas: ' + esc(r.total) + '</span>');
       if (r.osf)  subParts.push('<span class="ok">OSF: ' + esc(r.osf) + '</span>');
-      if (r.hits !== undefined) subParts.push('<span class="ok">Traf: ' + r.hits + '/5</span>');
+      if (r.shotPts !== null && r.shotPts !== undefined) subParts.push('<span class="ok">Strzel: ' + r.shotPts + '/50</span>');
     }
     const sub = subParts.length ? '<div class="rank-times">' + subParts.join('') + '</div>' : '';
     return '<div class="' + cls.join(' ') + '">' +
@@ -728,15 +762,21 @@ function renderTeamClassification() {
     if (!byTeam[t]) byTeam[t] = [];
     byTeam[t].push(buildRow(a));
   });
+  // Wynik drużyny = suma 3 najlepszych mężczyzn (najniższe pkt). Kobiety nie liczą.
   const calc = rows => {
-    let total = 0, classified = 0, dnf = 0, dns = 0, dsq = 0;
+    let dnf = 0, dns = 0, dsq = 0;
     rows.forEach(r => {
       if (r.dsq) { dsq++; return; }
-      if (r.totalSec < Infinity) { total += 1000; classified++; }
-      else if (r.marker === 'DNF') dnf++;
+      if (r.marker === 'DNF') dnf++;
       else if (r.marker === 'DNS') dns++;
     });
-    return { total, classified, dnf, dns, dsq };
+    const scoringMen = rows.filter(r => r.ath.gender === 'M' && r.points !== null && !r.dsq)
+      .sort((a, b) => a.points - b.points);
+    const classified = scoringMen.length;
+    if (classified < 3) return { total: null, classified, dnf, dns, dsq, eligible: false };
+    const top3 = scoringMen.slice(0, 3);
+    const total = top3.reduce((s, r) => s + r.points, 0);
+    return { total, classified, dnf, dns, dsq, eligible: true };
   };
   const teams = Object.keys(byTeam).map(name => {
     const rows = byTeam[name];
@@ -744,11 +784,11 @@ function renderTeamClassification() {
     const counts = { M:0, K:0 };
     rows.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
     return { name, rows, count:rows.length, counts, ...c };
-  }).filter(t => t.classified >= 1);
-  teams.sort((a, b) => b.total - a.total);
+  }).filter(t => t.eligible);
+  teams.sort((a, b) => a.total - b.total); // niższy = lepszy
   document.getElementById('detail-count').textContent = teams.length ? (teams.length + ' drużyn') : '';
   if (!teams.length) {
-    document.getElementById('detail-body').innerHTML = '<div class="empty"><div class="emoji">🛡</div><div class="msg2">Brak sklasyfikowanych drużyn — żaden zawodnik nie ma jeszcze wpisanego czasu.</div></div>';
+    document.getElementById('detail-body').innerHTML = '<div class="empty"><div class="emoji">🛡</div><div class="msg2">Brak sklasyfikowanych drużyn — potrzebne min. 3 mężczyzn z wpisanym wynikiem na drużynę.</div></div>';
     return;
   }
   document.getElementById('detail-body').innerHTML = teams.map((t, i) => {
@@ -765,7 +805,7 @@ function renderTeamClassification() {
     if (t.dnf) extras.push(t.dnf + '×DNF');
     if (t.dns) extras.push(t.dns + '×DNS');
     if (t.dsq) extras.push(t.dsq + '×DSQ');
-    const detail = composition + ' · ' + t.classified + ' sklasyfikowanych' + (extras.length ? ' · ' + extras.join(' · ') : '');
+    const detail = composition + ' · ' + t.classified + ' sklasyf. M' + (extras.length ? ' · ' + extras.join(' · ') : '');
     return '<div class="' + cls.join(' ') + '">' +
       '<div class="klas-pos ' + posCls + '">' + medal + '</div>' +
       '<div class="klas-info"><div class="klas-name">' + esc(t.name) + '</div><div class="klas-detail">' + esc(detail) + '</div></div>' +

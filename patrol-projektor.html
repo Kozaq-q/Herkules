@@ -191,6 +191,7 @@ let state  = null;
 let cfg    = null;
 let rtChannel = null;
 const _scrollRAFs = {};
+const _scrollOffsets = {}; // zachowuje pozycję scroll między rerenderami żeby się nie restartowało
 
 const URL_PARAMS = new URLSearchParams(window.location.search);
 const PROJ_MODE  = URL_PARAMS.get('mode') || 'results';
@@ -283,13 +284,27 @@ function formatClockTime(ms) {
   const pad = n => (n < 10 ? '0' : '') + n;
   return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
-// Placeholder punktacji (lustro patrol.html)
-function calcPatrolPoints(athlete, row) { return 1000; }
+// Punktacja regulaminowa (lustro patrol.html — regulamin 11DKPanc 2025)
+// WYNIK = czas_biegu_sek − pkt_OSF − pkt_strzelanie
+//   pkt_OSF       = 450 − 2 × czas_osf_sek
+//   pkt_strzelanie = pkt_na_tarczy × 2
+function calcPatrolPoints(row) {
+  if (row.dsq) return null;
+  if (!Number.isFinite(row.totalSec) || row.totalSec === Infinity) return null;
+  const osfSec = (row.osf && !isTimeMarker(row.osf)) ? parseTime(row.osf) : null;
+  if (osfSec === null || !Number.isFinite(osfSec) || osfSec <= 0) return null;
+  const shotPts = row.shotPts || 0;
+  return Math.round(row.totalSec - (450 - 2 * osfSec) - shotPts * 2);
+}
 
 function buildRow(a) {
   const total = state.times?.[a.id]?.total || '';
   const osf   = state.times?.[a.id]?.osf || '';
   const hits  = state.times?.[a.id]?.hits;
+  const shotPoints = state.times?.[a.id]?.shotPoints;
+  const tens  = state.times?.[a.id]?.tens;
+  const shotPts = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
+                  (hits !== undefined ? hits * 10 : null);
   const dsq   = isDsq(a.id);
   const totalIsMarker = isTimeMarker(total);
   const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
@@ -298,14 +313,29 @@ function buildRow(a) {
   else if (totalSec < Infinity) tier = 0;
   else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
   else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
-  const hasAny = !!(total || osf || hits !== undefined || dsq);
-  return { ath: a, total, osf, hits, dsq, totalSec, tier, marker, hasAny };
+  const hasAny = !!(total || osf || hits !== undefined || shotPoints !== undefined || dsq);
+  const row = { ath: a, total, osf, hits, shotPoints, shotPts, tens, dsq, totalSec, tier, marker, hasAny };
+  row.points = calcPatrolPoints(row);
+  return row;
 }
 
 // ════════════ BUILD: RANKING M/K ════════════
 function buildIndRows(gender) {
   const list = (state.athletes || []).filter(a => a.gender === gender).map(buildRow).filter(r => r.hasAny);
-  list.sort((a, b) => a.tier !== b.tier ? a.tier - b.tier : a.totalSec - b.totalSec);
+  // Sortowanie po PUNKTACH (regulamin) — najniższy wygrywa. Tie-break: strzelanie → OSF → dziesiątki.
+  list.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.tier === 0) {
+      if (a.points !== null && b.points !== null && a.points !== b.points) return a.points - b.points;
+      const aS = a.shotPts || 0, bS = b.shotPts || 0;
+      if (aS !== bS) return bS - aS;
+      const aO = a.osf && !isTimeMarker(a.osf) ? parseTime(a.osf) : Infinity;
+      const bO = b.osf && !isTimeMarker(b.osf) ? parseTime(b.osf) : Infinity;
+      if (aO !== bO) return aO - bO;
+      return (parseInt(b.tens) || 0) - (parseInt(a.tens) || 0);
+    }
+    return a.totalSec - b.totalSec;
+  });
   return list;
 }
 
@@ -334,22 +364,26 @@ function rankRowHTML(r, idx) {
   const team = esc(r.ath.team || '');
   const bib  = r.ath.bib ? '<span style="color:var(--text3);font-family:var(--font-m);font-weight:400;margin-left:6px;">#' + esc(r.ath.bib) + '</span>' : '';
 
+  // Główny wynik = PUNKTY (regulamin). Czas/OSF/strzelanie w sub.
   let timeCell;
   if (r.dsq) {
     timeCell = '<span class="rank-dsq-label">DSQ</span>';
   } else if (r.marker) {
     timeCell = '<span class="rank-marker">' + r.marker + '</span>';
+  } else if (r.points !== null) {
+    timeCell = '<strong>' + r.points + '</strong> <span style="font-size:10px;color:var(--text3);">pkt</span>';
   } else if (r.total) {
-    timeCell = esc(r.total);
+    timeCell = '<span style="color:var(--text3);font-size:13px;">' + esc(r.total) + '</span>';
   } else {
     timeCell = '<span style="color:var(--text3);font-weight:400;">—</span>';
   }
   let sub = '';
   if (!r.dsq) {
     const parts = [];
+    if (r.total && r.points !== null) parts.push('czas: ' + esc(r.total));
     if (r.osf && !isTimeMarker(r.osf)) parts.push('OSF: ' + esc(r.osf));
     else if (isTimeMarker(r.osf)) parts.push('OSF: ' + r.osf);
-    if (r.hits !== undefined) parts.push('Traf: ' + r.hits + '/5');
+    if (r.shotPts !== null && r.shotPts !== undefined) parts.push('strzel: ' + r.shotPts + '/50');
     if (parts.length) sub = '<span class="rank-sub-time">' + parts.join(' · ') + '</span>';
   }
 
@@ -374,18 +408,22 @@ function buildTeamRows() {
   });
   const rows = Object.keys(byTeam).map(name => {
     const all = byTeam[name];
-    let total = 0, classified = 0, dnf = 0, dns = 0, dsq = 0;
+    let dnf = 0, dns = 0, dsq = 0;
     all.forEach(r => {
       if (r.dsq) { dsq++; return; }
-      if (r.totalSec < Infinity) { total += calcPatrolPoints(r.ath, r); classified++; }
-      else if (r.marker === 'DNF') dnf++;
+      if (r.marker === 'DNF') dnf++;
       else if (r.marker === 'DNS') dns++;
     });
+    // Top 3 mężczyzn z wynikiem (najniższe pkt). Kobiety nie liczą.
+    const scoringMen = all.filter(r => r.ath.gender === 'M' && r.points !== null && !r.dsq)
+      .sort((a, b) => a.points - b.points);
+    const classified = scoringMen.length;
+    const total = (classified >= 3) ? scoringMen.slice(0, 3).reduce((s, r) => s + r.points, 0) : null;
     const counts = { M: 0, K: 0 };
     all.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
-    return { name, total, classified, dnf, dns, dsq, count: all.length, counts };
-  }).filter(t => t.classified >= 1);
-  rows.sort((a, b) => b.total - a.total);
+    return { name, total, classified, dnf, dns, dsq, count: all.length, counts, eligible: total !== null };
+  }).filter(t => t.eligible);
+  rows.sort((a, b) => a.total - b.total); // niższy = lepszy
   return rows;
 }
 
@@ -493,25 +531,32 @@ function applyScroll(id) {
   if (!speed) {
     const track = document.getElementById('track-' + id);
     if (track) track.style.transform = '';
+    _scrollOffsets[id] = 0;
     return;
   }
-  const viewport = document.getElementById('viewport-' + id);
-  const track = document.getElementById('track-' + id);
-  if (!viewport || !track) return;
-  const vh = viewport.clientHeight;
-  const th = track.scrollHeight;
-  if (th <= vh) { track.style.transform = ''; return; }
-  let offset = 0;
-  let last = performance.now();
-  function step(now) {
-    const dt = (now - last) / 1000;
-    last = now;
-    offset += speed * dt;
+  // Defer pomiar do następnej klatki — żeby layout zdążył się ułożyć po innerHTML
+  requestAnimationFrame(() => {
+    const viewport = document.getElementById('viewport-' + id);
+    const track = document.getElementById('track-' + id);
+    if (!viewport || !track) return;
+    const vh = viewport.clientHeight;
+    const th = track.scrollHeight;
+    if (th <= vh + 2) { track.style.transform = ''; _scrollOffsets[id] = 0; return; }
+    // Kontynuuj od ostatniej pozycji (przeżyła rerender) — przycinając jeśli za daleko
+    let offset = _scrollOffsets[id] || 0;
     if (offset >= th) offset = -vh;
-    track.style.transform = 'translateY(' + (-offset) + 'px)';
+    let last = performance.now();
+    function step(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+      offset += speed * dt;
+      if (offset >= th) offset = -vh;
+      track.style.transform = 'translateY(' + (-offset) + 'px)';
+      _scrollOffsets[id] = offset;
+      _scrollRAFs[id] = requestAnimationFrame(step);
+    }
     _scrollRAFs[id] = requestAnimationFrame(step);
-  }
-  _scrollRAFs[id] = requestAnimationFrame(step);
+  });
 }
 
 // ════════════ PROGRESS BAR (results mode) ════════════
@@ -641,9 +686,13 @@ function slPairHTML(p, i) {
         if (isTimeMarker(r.osf)) chips.push('<span class="sl-ath-res marker"><span class="lbl">OSF</span><span class="val">' + r.osf + '</span></span>');
         else chips.push('<span class="sl-ath-res osf"><span class="lbl">OSF</span><span class="val">' + esc(r.osf) + '</span></span>');
       }
-      // Trafienia
-      if (r.hits !== undefined && r.hits !== null) {
-        chips.push('<span class="sl-ath-res hits"><span class="lbl">Traf</span><span class="val">' + r.hits + '/5</span></span>');
+      // Strzelanie (pkt na tarczy 0-50)
+      if (r.shotPts !== null && r.shotPts !== undefined) {
+        chips.push('<span class="sl-ath-res hits"><span class="lbl">Strzel</span><span class="val">' + r.shotPts + '/50</span></span>');
+      }
+      // Wynik końcowy (pkt regulaminowe)
+      if (r.points !== null) {
+        chips.push('<span class="sl-ath-res" style="background:rgba(232,212,77,.12);border:1px solid rgba(232,212,77,.5);padding:2px 6px;border-radius:3px;"><span class="lbl" style="color:var(--accent);">Pkt</span><span class="val" style="color:var(--accent);font-weight:800;">' + r.points + '</span></span>');
       }
     }
     if (!chips.length) return '';
@@ -673,25 +722,48 @@ function applySLScroll(g) {
   const key = 'sl-' + g;
   if (_scrollRAFs[key]) { cancelAnimationFrame(_scrollRAFs[key]); _scrollRAFs[key] = null; }
   const speed = cfg.scrollSpeed | 0;
-  if (!speed) return;
-  const viewport = document.getElementById('sl-viewport-' + g);
-  const track = document.getElementById('sl-track-' + g);
-  if (!viewport || !track) return;
-  const vh = viewport.clientHeight;
-  const th = track.scrollHeight;
-  if (th <= vh) return;
-  let offset = 0;
-  let last = performance.now();
-  function step(now) {
-    const dt = (now - last) / 1000;
-    last = now;
-    offset += speed * dt;
+  if (!speed) { _scrollOffsets[key] = 0; const t = document.getElementById('sl-track-' + g); if (t) t.style.transform = ''; return; }
+  requestAnimationFrame(() => {
+    const viewport = document.getElementById('sl-viewport-' + g);
+    const track = document.getElementById('sl-track-' + g);
+    if (!viewport || !track) return;
+    const vh = viewport.clientHeight;
+    const th = track.scrollHeight;
+    if (th <= vh + 2) { track.style.transform = ''; _scrollOffsets[key] = 0; return; }
+    let offset = _scrollOffsets[key] || 0;
     if (offset >= th) offset = -vh;
-    track.style.transform = 'translateY(' + (-offset) + 'px)';
+    let last = performance.now();
+    function step(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+      offset += speed * dt;
+      if (offset >= th) offset = -vh;
+      track.style.transform = 'translateY(' + (-offset) + 'px)';
+      _scrollOffsets[key] = offset;
+      _scrollRAFs[key] = requestAnimationFrame(step);
+    }
     _scrollRAFs[key] = requestAnimationFrame(step);
-  }
-  _scrollRAFs[key] = requestAnimationFrame(step);
+  });
 }
+
+// ════════════ LIVE SETTINGS UPDATE ════════════
+// Gdy panel zmienia ustawienia projektora (localStorage), inne karty/okna
+// dostają 'storage' event. Reaguj — aktualizuj cfg i przerenderuj.
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'patrol_proj_settings') return;
+  try {
+    const fresh = loadSettings();
+    // Co się zmieniło wpływa na layout sekcji
+    const layoutChanged = (cfg.showIndM !== fresh.showIndM) ||
+                          (cfg.showIndK !== fresh.showIndK) ||
+                          (cfg.showTeam !== fresh.showTeam) ||
+                          (cfg.showProgress !== fresh.showProgress);
+    cfg = fresh;
+    applyTitle();
+    if (PROJ_MODE === 'startlist') { renderStartlist(); return; }
+    if (layoutChanged) buildLayout(); else softRender();
+  } catch(_){}
+});
 
 // ════════════ CLOCK ════════════
 function startClock() {
