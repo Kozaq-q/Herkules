@@ -6274,6 +6274,7 @@ function renderTeamRunList() {
 }
 
 // ─── STOPER DRUŻYNOWY (zakładka osobna, ONLINE only) ────────────
+// Identyczny layout jak renderTimerView (timer-pair-card, timer-athlete, btn-timer-*)
 function renderTeamTimerView() {
   const list = document.getElementById('ptr-team-timer-list');
   const empty = document.getElementById('ptr-team-timer-empty');
@@ -6301,66 +6302,143 @@ function renderTeamTimerView() {
   });
 
   const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
-  const canStart = role === 'STARTER' || role === 'ADMIN';
-  let html = '';
-  pairs.forEach(p => {
-    if (!p.aTeam) return;
-    const isSolo = !p.bTeam;
-    const run = getTeamRunPair(p.pairNum);
-    const started = !!(run && run.startedAt);
-    const aFin = started && run.finishedAt?.[p.aTeam];
-    const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
-    const allFinished = started && aFin && bFin;
-    let statusTxt;
-    if (allFinished) statusTxt = '✓ Skończona';
-    else if (started) statusTxt = '▶ Biegnie';
-    else statusTxt = '○ Oczekuje';
-
-    const pairKeyArg = JSON.stringify(p.pairNum);
-    const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
-    const pairAttr = String(p.pairNum).replace(/"/g, '&quot;');
-
-    html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + (started && !allFinished ? ' running' : '') + (allFinished ? ' finished' : '') + '" data-pair="' + pairAttr + '">';
-    html += '<div class="pair-header" style="align-items:center;">';
-    html += '<span class="pair-num">' + displayNum + '</span>';
-    html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">' + (p._virtual ? 'Drużyna (SOLO)' : 'Para drużyn') + '</span>';
-    html += '<span style="font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-left:8px;' +
-      (allFinished ? 'background:rgba(76,175,130,.15);color:var(--green);border:1px solid rgba(76,175,130,.5);' :
-       started ? 'background:rgba(232,148,77,.15);color:var(--orange);border:1px solid rgba(232,148,77,.5);' :
-       'background:var(--bg3);color:var(--text3);border:1px solid var(--border);') + '">' + statusTxt + '</span>';
-    if (isSolo && !p._virtual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
-    // Stoper pary po prawej
-    html += '<div style="margin-left:auto;display:flex;align-items:center;gap:10px;">';
-    if (allFinished) {
-      const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
-      html += '<div class="timer-display" data-team-pair="' + pairAttr + '" data-finished="1" style="font-size:28px;font-weight:800;color:var(--green);font-family:var(--font-m);">' + formatRunTime(last - run.startedAt) + '</div>';
-    } else if (started) {
-      html += '<div class="timer-display" data-team-pair="' + pairAttr + '" style="font-size:28px;font-weight:800;color:var(--orange);font-family:var(--font-m);">0.00</div>';
-    } else {
-      html += '<div class="timer-display" style="font-size:22px;color:var(--text3);font-weight:400;">—</div>';
-    }
-    if (canStart) {
-      if (!started) {
-        html += '<button class="btn btn-primary" onclick="startTeamRunPair(' + pairKeyArg + ')" style="font-size:13px;padding:8px 18px;background:var(--green);color:#fff;border:none;font-weight:800;letter-spacing:1px;">▶ START</button>';
-      } else if (allFinished) {
-        html += '<button class="btn btn-sm" onclick="resetTeamRunPair(' + pairKeyArg + ')" style="font-size:10px;color:var(--text3);" title="Reset pary (rzadko potrzebne)">↺ reset</button>';
-      } else {
-        html += '<button class="btn btn-sm" onclick="resetTeamRunPair(' + pairKeyArg + ')" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">↺ RESET (falstart)</button>';
-      }
-    } else if (!started) {
-      html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;">(start: STARTER/ADMIN)</span>';
-    }
-    html += '</div>';
-    html += '</div>';
-    // Karty drużyn z STOP buttonami (showStoper: true) ale bez pełnej wpisywanki (kompakt)
-    html += '<div class="pair-athletes">';
-    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: true });
-    html += '<div class="pair-vs">VS</div>';
-    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: true }) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
-    html += '</div>';
-    html += '</div>';
-  });
+  let html = pairs.map(p => renderTeamTimerPairHTML(p, role)).join('');
   list.innerHTML = html;
+
+  // Restart ticker (timer-display[data-team-pair] obsłużony w tickTimers → _tickTeamRunTimers)
+  if (_timerTickInterval) clearInterval(_timerTickInterval);
+  _timerTickInterval = setInterval(tickTimers, 100);
+  tickTimers();
+}
+
+// Karta pary drużyn w stoperze — analog. do renderTimerPairHTML w indywidualnym
+function renderTeamTimerPairHTML(p, role) {
+  const pairNum = p.pairNum;
+  const isSolo = !p.bTeam;
+  const run = getTeamRunPair(pairNum);
+  const started = !!(run && run.startedAt);
+  const aFin = started && run.finishedAt?.[p.aTeam];
+  const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
+  const allFinished = started && aFin && (bFin || !p.bTeam);
+
+  let statusCls, statusTxt;
+  if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
+  else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
+  else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
+
+  const pairKeyArg = JSON.stringify(pairNum);
+  const displayNum = p._displayNum != null ? p._displayNum : pairNum;
+  const pairAttr = String(pairNum).replace(/"/g, '&quot;');
+
+  // Header — taki sam jak w timer-pair-head indywidualnym
+  let head = '<div class="timer-pair-head">';
+  head += '<div class="timer-pair-label">';
+  head += '<span class="timer-pair-num">' + displayNum + '</span>';
+  head += '<span class="timer-pair-gender">🛡</span>';
+  head += '<span class="timer-pair-status ' + statusCls + '">' + statusTxt + '</span>';
+  if (started) {
+    let stamp = 'start <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong>';
+    if (allFinished) {
+      const finishMs = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
+      if (finishMs > 0) stamp += ' <span style="opacity:.4;margin:0 3px;">·</span> koniec <strong style="color:var(--green);font-weight:700;">' + formatClockTime(finishMs) + '</strong>';
+    }
+    head += '<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">' + stamp + '</span>';
+  }
+  if (isSolo && !p._virtual) head += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+  head += '</div>';
+  // Big timer
+  if (allFinished) {
+    const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
+    head += '<div class="timer-display" data-team-pair="' + pairAttr + '" data-finished="1">' + formatRunTime(last - run.startedAt) + '</div>';
+  } else if (started) {
+    head += '<div class="timer-display" data-team-pair="' + pairAttr + '">0.00</div>';
+  } else {
+    head += '<div class="timer-display" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
+  }
+  head += '</div>';
+
+  // Pasek akcji START/RESET (STARTER/ADMIN)
+  let actionsBar = '';
+  const canStartReset = (role === 'STARTER' || role === 'ADMIN');
+  if (canStartReset) {
+    actionsBar = '<div class="timer-actions-bar" style="flex-wrap:wrap;">';
+    if (!started) {
+      actionsBar += '<button class="btn-timer btn-timer-start" onclick="startTeamRunPair(' + pairKeyArg + ')">▶ START</button>';
+    } else if (allFinished) {
+      actionsBar += '<button class="btn-timer btn-timer-reset-small" onclick="resetTeamRunPair(' + pairKeyArg + ')" title="Reset całej pary (rzadko potrzebne)">↺ reset</button>';
+    } else {
+      actionsBar += '<button class="btn-timer btn-timer-reset" onclick="resetTeamRunPair(' + pairKeyArg + ')">↺ RESET (falstart)</button>';
+    }
+    actionsBar += '</div>';
+  }
+
+  // Karty drużyn (jak timer-athlete w indywidualnym)
+  let teams = '<div class="timer-athletes">';
+  teams += teamTimerAthleteHTML(p.aTeam, p.aLane || 'L', pairNum, run, role);
+  if (p.bTeam) {
+    teams += teamTimerAthleteHTML(p.bTeam, p.bLane || 'P', pairNum, run, role);
+  } else {
+    teams += '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak drużyny P</div>';
+  }
+  teams += '</div>';
+
+  const cardCls = 'timer-pair-card' + (allFinished ? ' finished' : (started ? ' running' : ''));
+  return '<div class="' + cardCls + '">' + head + actionsBar + teams + '</div>';
+}
+
+// Karta drużyny w stoperze — analog. do renderTimerAthleteHTML w indywidualnym
+function teamTimerAthleteHTML(teamName, lane, pairNum, run, role) {
+  if (!teamName) {
+    return '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak drużyny ' + lane + '</div>';
+  }
+  const started = !!(run && run.startedAt);
+  const teamFinished = !!(started && run.finishedAt?.[teamName]);
+  const tr = (state.teamRun || {})[teamName] || {};
+  const dsq = !!tr.dsq;
+  const pairKeyArg = JSON.stringify(pairNum);
+  const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const pairAttr = String(pairNum).replace(/"/g,'&quot;');
+
+  // Live time per drużyna
+  let timeDisplay;
+  if (teamFinished) {
+    const ms = run.finishedAt[teamName] - run.startedAt;
+    timeDisplay = '<div class="timer-athlete-time finished">' + formatRunTime(ms) + '</div>';
+  } else if (started) {
+    timeDisplay = '<div class="timer-athlete-time" data-team-timer="' + safeT + '|' + pairAttr + '" data-running="1">0.00</div>';
+  } else {
+    timeDisplay = '<div class="timer-athlete-time idle">—</div>';
+  }
+
+  // STOP META button — analog. do stopAthlete
+  let stopBtn = '';
+  const canStop = role === 'META' || role === 'ADMIN';
+  if (canStop && started) {
+    if (teamFinished) {
+      stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="font-size:11px;padding:6px 12px;margin-top:8px;">↺ Cofnij stop</button>';
+    } else if (!dsq) {
+      stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="margin-top:8px;">■ STOP META</button>';
+    }
+  }
+
+  // DSQ button
+  let dsqBtn = '';
+  if (role === 'META' || role === 'ADMIN') {
+    dsqBtn = '<button onclick="toggleTeamRunDsq(\'' + safeT + '\')" style="margin-top:8px;font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 10px;border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';cursor:pointer;">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>';
+  }
+
+  const cls = 'timer-athlete' + (teamFinished ? ' finished' : '') + (dsq ? ' dsq' : '');
+  return '<div class="' + cls + '">' +
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div class="timer-athlete-name">' + esc(teamName) + ' <span class="lane-badge lane-' + lane + '" style="margin-left:4px;">' + lane + '</span></div>' +
+        '<div class="timer-athlete-meta">Patrol 3-osobowy</div>' +
+      '</div>' +
+    '</div>' +
+    timeDisplay +
+    stopBtn +
+    dsqBtn +
+  '</div>';
 }
 
 // ─── KLASYFIKACJA GENERALNA (ind. M top 3 + bieg drużynowy) ─────
