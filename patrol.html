@@ -6184,18 +6184,25 @@ function checkScheduledTeamRunStarts() {
       changed = true;
     }
   }
-  if (changed) { save(); renderTeamRunList(); }
+  if (changed) { save(); _renderTeamRunActive(); }
+}
+
+// Pomocnik: pairKey może być liczbą ("1") lub stringiem ("solo:TeamName")
+function _parsePairKey(s) {
+  if (s == null) return null;
+  return /^\d+$/.test(s) ? parseInt(s) : s;
 }
 
 // Tick zegarów drużynowych — wywoływany z tickTimers
 function _tickTeamRunTimers() {
   document.querySelectorAll('.timer-display[data-team-pair]').forEach(el => {
     if (el.dataset.finished === '1') return;
-    const pairNum = parseInt(el.dataset.teamPair);
+    const pairNum = _parsePairKey(el.dataset.teamPair);
+    if (pairNum === null) return;
     const run = getTeamRunPair(pairNum);
     if (!run || !run.startedAt) return;
     // Sprawdź czy oboje skończyli — wtedy zamroź
-    const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+    const p = (state.teamRunPairs || []).find(x => x.pairNum == pairNum); // == żeby liczba/string nie miały znaczenia
     if (p) {
       const aFin = run.finishedAt?.[p.aTeam];
       const bFin = p.bTeam ? run.finishedAt?.[p.bTeam] : true;
@@ -6205,13 +6212,26 @@ function _tickTeamRunTimers() {
         el.dataset.finished = '1';
         return;
       }
+    } else {
+      // Virtual SOLO: tylko jedna drużyna w teamRunPairs nie istnieje, sprawdź czy ta drużyna skończyła
+      // klucz pairNum to 'solo:TeamName' — wyciągnij nazwę
+      if (typeof pairNum === 'string' && pairNum.indexOf('solo:') === 0) {
+        const teamName = pairNum.slice(5);
+        const tFin = run.finishedAt?.[teamName];
+        if (tFin) {
+          el.textContent = formatRunTime(tFin - run.startedAt);
+          el.dataset.finished = '1';
+          return;
+        }
+      }
     }
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
-  // Per team timers (data-team-timer="teamName_pairNum")
+  // Per team timers (data-team-timer="teamName|pairNum")
   document.querySelectorAll('.timer-athlete-time[data-team-timer]').forEach(el => {
     const [teamName, pairNumStr] = el.dataset.teamTimer.split('|');
-    const pairNum = parseInt(pairNumStr);
+    const pairNum = _parsePairKey(pairNumStr);
+    if (pairNum === null) return;
     const run = getTeamRunPair(pairNum);
     if (!run || !run.startedAt) return;
     if (run.finishedAt?.[teamName]) {
