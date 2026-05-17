@@ -607,7 +607,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
     <button class="nav-tab" onclick="showTab('athletes')" id="tab-athletes">👥 Zawodnicy</button>
     <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🎲 Pary / wpisywanie</button>
     <button class="nav-tab" onclick="showTab('timer')" id="tab-timer">⏱ Stoper</button>
-    <button class="nav-tab" onclick="showTab('team-run')" id="tab-team-run">🏃 Drużynowy</button>
+    <button class="nav-tab" onclick="showTab('team-run')" id="tab-team-run">🏃 Pary drużyn</button>
+    <button class="nav-tab" onclick="showTab('team-timer')" id="tab-team-timer">⏱ Stoper drużyn</button>
     <button class="nav-tab" onclick="showTab('results')" id="tab-results">🏆 Wyniki</button>
   </nav>
 
@@ -1028,17 +1029,44 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       <div id="timer-list"></div>
     </div>
 
-    <!-- 🏃 BIEG DRUŻYNOWY (patrol 3-osobowy) — osobna zakładka, layout jak w indywidualnym -->
+    <!-- 🏃 PARY DRUŻYN / wpisywanie — działa OFFLINE (manualne wpisywanie czasów) -->
     <div class="page" id="page-team-run">
+      <div id="team-offline-banner" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.45);border-left:4px solid var(--orange);border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;line-height:1.5;">
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">🔌 Tryb offline aktywny</div>
+        <div style="font-size:12px;color:var(--text2);">
+          Stoper drużynowy wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie poniżej w polach Bieg / OSF / Strzelanie.
+        </div>
+      </div>
       <div class="card mb-12">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Bieg drużynowy</div>
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Pary drużyn / wpisywanie</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-primary" onclick="generateTeamRunPairs()" title="Wygeneruj pary drużyn wg wyników indywidualnych — najsłabsi pierwsi">🔑 Generuj pary</button>
             <button class="btn" onclick="clearTeamRunPairs()" title="Wyczyść tylko pary (nie wyniki)" style="font-size:11px;padding:5px 10px;">✕ pary</button>
           </div>
         </div>
         <div id="ptr-team-run-list"></div>
+      </div>
+    </div>
+
+    <!-- ⏱ STOPER DRUŻYNOWY — działa TYLKO ONLINE (synchronizowany) -->
+    <div class="page" id="page-team-timer">
+      <div class="card mb-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">⏱ Stoper drużynowy</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;">
+            🌐 Wymaga połączenia · sync między urządzeniami
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          START pary uruchamia stoper. STOP dla każdej drużyny zapisuje czas biegu (wg roli). Wszystkie urządzenia widzą ten sam czas.
+        </div>
+        <div id="ptr-team-timer-empty" style="display:none;text-align:center;padding:50px 20px;color:var(--text3);border:1px dashed var(--border);border-radius:var(--radius);">
+          <div style="font-size:40px;opacity:.4;margin-bottom:10px;">🎲</div>
+          <div style="font-family:var(--font-h);font-size:16px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:6px;">Brak drużyn</div>
+          <div style="font-size:12px;">Najpierw dodaj zawodników z drużynami w zakładce <strong>👥 Zawodnicy</strong>.</div>
+        </div>
+        <div id="ptr-team-timer-list"></div>
       </div>
     </div>
 
@@ -1852,6 +1880,7 @@ function _applyRemoteStateNow(stateJson) {
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
       else if (tabId === 'timer' && typeof renderTimerView === 'function') renderTimerView();
       else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
+      else if (tabId === 'team-timer' && typeof renderTeamTimerView === 'function') renderTeamTimerView();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     // B) Wykryj nowy start pary od innego sędziego — toast + pip
@@ -1886,6 +1915,7 @@ function showTab(id) {
     else if (id === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
     else if (id === 'timer' && typeof renderTimerView === 'function') renderTimerView();
     else if (id === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
+    else if (id === 'team-timer' && typeof renderTeamTimerView === 'function') renderTeamTimerView();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
   // Odśwież sticky banner "BIEGNIE TERAZ" — widoczny tylko na zakładkach Pary/Stoper
@@ -2689,16 +2719,23 @@ function toggleOfflineMode() {
 
 function _applyOfflineMode() {
   const offline = !!(state.cfg && state.cfg.offlineMode);
-  // Pokaż/ukryj zakładkę Stoper
+  // Pokaż/ukryj zakładkę Stoper (ind) i Stoper drużynowy
   const tabTimer = document.getElementById('tab-timer');
   if (tabTimer) tabTimer.style.display = offline ? 'none' : '';
+  const tabTeamTimer = document.getElementById('tab-team-timer');
+  if (tabTeamTimer) tabTeamTimer.style.display = offline ? 'none' : '';
   // Jeśli aktualnie jesteśmy w stoperze a właśnie włączono offline → przerzuć do Pary
   if (offline && document.getElementById('page-timer')?.classList.contains('active')) {
     showTab('pairs');
   }
-  // Pokaż/ukryj banner w zakładce Pary
+  if (offline && document.getElementById('page-team-timer')?.classList.contains('active')) {
+    showTab('team-run');
+  }
+  // Pokaż/ukryj banner w zakładkach Pary (ind) i Pary drużyn
   const banner = document.getElementById('offline-banner');
   if (banner) banner.style.display = offline ? 'block' : 'none';
+  const tBanner = document.getElementById('team-offline-banner');
+  if (tBanner) tBanner.style.display = offline ? 'block' : 'none';
   // Update kafelka trybu w konfiguracji
   const tile = document.getElementById('ptr-tile-offline');
   if (tile) {
@@ -4984,7 +5021,7 @@ function _renderPtrRunningBanner() {
   // Tylko na zakładkach Pary i Stoper — gdzie sędziowie pracują
   const active = document.querySelector('.nav-tab.active');
   const tabId = active ? active.id.replace('tab-', '') : '';
-  const showOnTab = (tabId === 'pairs' || tabId === 'timer');
+  const showOnTab = (tabId === 'pairs' || tabId === 'timer' || tabId === 'team-run' || tabId === 'team-timer');
   if (!showOnTab) { banner.style.display = 'none'; return; }
 
   // Zbierz biegnące pary (started, nie skończone wg getEffectiveFinish)
@@ -5904,7 +5941,10 @@ function removeTeamRun(team) {
 }
 
 // ─── KARTA DRUŻYNY w biegu drużynowym (analog. do athleteCardHTML w ind.) ──
-function teamRunCardHTML(teamName, lane, pairNum, run) {
+// opts.showStoper: false = czysta wpisywanka (offline-friendly), true = z live timerem i STOP META
+function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
+  opts = opts || {};
+  const showStoper = opts.showStoper !== false; // domyślnie pokazuj (wstecznie kompatybilne)
   const tr = (state.teamRun || {})[teamName] || {};
   const dsq = !!tr.dsq;
   const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
@@ -5919,11 +5959,11 @@ function teamRunCardHTML(teamName, lane, pairNum, run) {
   const started = !!(run && run.startedAt);
   const teamFinished = !!(started && run.finishedAt?.[teamName]);
   const pairKeyArg = JSON.stringify(pairNum); // może być stringiem 'solo:T' lub liczbą
-  const pairAttr = String(pairNum).replace(/"/g,'&quot;');
+  const pairAttr = String(pairNum == null ? '' : pairNum).replace(/"/g,'&quot;');
   // Stop/Live timer integration: META/ADMIN może klikać STOP gdy para wystartowała
   let stopBtnHTML = '';
   let liveTimerHTML = '';
-  if (started && pairNum != null) {
+  if (showStoper && started && pairNum != null) {
     if (teamFinished) {
       const teamSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 1000);
       liveTimerHTML = '<div class="timer-athlete-time finished" style="margin-top:6px;text-align:center;font-family:var(--font-m);font-size:18px;font-weight:800;color:var(--green);">' + Math.floor(teamSec/60) + ':' + String(teamSec%60).padStart(2,'0') + ' <span style="font-size:10px;color:var(--text3);">(stoper)</span></div>';
@@ -6188,13 +6228,12 @@ function renderTeamRunList() {
 
   const usedTeams = new Set();
   let html = '';
-  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
-  const canStart = role === 'STARTER' || role === 'ADMIN';
-  // Banner gdy pary nie zostały wygenerowane — zachęta do kliknięcia "Generuj"
+  // (Pary drużyn / wpisywanie — bez stopera, działa offline)
+  // Banner zachęcający do kliknięcia "Generuj pary" gdy pary nie zostały utworzone
   if (!realPairs.length && unpaired.length >= 2) {
     html += '<div style="background:rgba(232,212,77,.06);border:1px solid rgba(232,212,77,.35);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.5;">' +
-      '💡 Pary drużyn nie zostały wygenerowane — każda drużyna ma teraz <strong>wirtualny SOLO</strong> ze stoperem. ' +
-      'Kliknij <strong>"🔑 Generuj pary (wg ind.)"</strong> aby utworzyć pary startowe wg klucza regulaminowego (najsłabsi z indywidualnego startują pierwsi).' +
+      '💡 Pary drużyn nie zostały wygenerowane. ' +
+      'Kliknij <strong>"🔑 Generuj pary"</strong> aby utworzyć pary startowe wg klucza regulaminowego (najsłabsi z indywidualnego startują pierwsi).' +
     '</div>';
   }
   pairs.forEach(p => {
@@ -6216,6 +6255,71 @@ function renderTeamRunList() {
     const pairKeyArg = JSON.stringify(p.pairNum);
     const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
     const pairAttr = String(p.pairNum).replace(/"/g, '&quot;');
+    // Pary drużyn — bez stopera (offline-friendly), prostszy nagłówek (jak w pairs view ind.)
+    html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + '" data-pair="' + pairAttr + '">';
+    html += '<div class="pair-header">';
+    html += '<span class="pair-num">' + displayNum + '</span>';
+    html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">' + (p._virtual ? 'Drużyna (SOLO)' : 'Para drużyn') + '</span>';
+    if (isSolo && !p._virtual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+    html += '</div>';
+    html += '<div class="pair-athletes">';
+    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: false });
+    html += '<div class="pair-vs">VS</div>';
+    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: false }) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  // (Niesparowane drużyny obsłużone wyżej jako virtualne SOLO pary)
+  list.innerHTML = html;
+}
+
+// ─── STOPER DRUŻYNOWY (zakładka osobna, ONLINE only) ────────────
+function renderTeamTimerView() {
+  const list = document.getElementById('ptr-team-timer-list');
+  const empty = document.getElementById('ptr-team-timer-empty');
+  if (!list) return;
+  ensureTeamRun();
+  const allTeams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))].sort();
+  const teamsWithEntry = Object.keys(state.teamRun || {});
+  const teamSet = new Set([...allTeams, ...teamsWithEntry]);
+  if (!teamSet.size) {
+    if (empty) empty.style.display = 'block';
+    list.innerHTML = '';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const realPairs = state.teamRunPairs || [];
+  const realUsedTeams = new Set();
+  realPairs.forEach(p => { if (p.aTeam) realUsedTeams.add(p.aTeam); if (p.bTeam) realUsedTeams.add(p.bTeam); });
+  const unpaired = [...teamSet].sort().filter(t => !realUsedTeams.has(t));
+  const pairs = realPairs.slice();
+  let virtualStart = pairs.length;
+  unpaired.forEach(t => {
+    virtualStart++;
+    pairs.push({ pairNum: 'solo:' + t, _displayNum: virtualStart, _virtual: true, aTeam: t, aLane: 'L', bTeam: null, bLane: null });
+  });
+
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const canStart = role === 'STARTER' || role === 'ADMIN';
+  let html = '';
+  pairs.forEach(p => {
+    if (!p.aTeam) return;
+    const isSolo = !p.bTeam;
+    const run = getTeamRunPair(p.pairNum);
+    const started = !!(run && run.startedAt);
+    const aFin = started && run.finishedAt?.[p.aTeam];
+    const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
+    const allFinished = started && aFin && bFin;
+    let statusTxt;
+    if (allFinished) statusTxt = '✓ Skończona';
+    else if (started) statusTxt = '▶ Biegnie';
+    else statusTxt = '○ Oczekuje';
+
+    const pairKeyArg = JSON.stringify(p.pairNum);
+    const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
+    const pairAttr = String(p.pairNum).replace(/"/g, '&quot;');
+
     html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + (started && !allFinished ? ' running' : '') + (allFinished ? ' finished' : '') + '" data-pair="' + pairAttr + '">';
     html += '<div class="pair-header" style="align-items:center;">';
     html += '<span class="pair-num">' + displayNum + '</span>';
@@ -6225,20 +6329,19 @@ function renderTeamRunList() {
        started ? 'background:rgba(232,148,77,.15);color:var(--orange);border:1px solid rgba(232,148,77,.5);' :
        'background:var(--bg3);color:var(--text3);border:1px solid var(--border);') + '">' + statusTxt + '</span>';
     if (isSolo && !p._virtual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
-    // Stoper pary (po prawej)
+    // Stoper pary po prawej
     html += '<div style="margin-left:auto;display:flex;align-items:center;gap:10px;">';
     if (allFinished) {
       const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
-      html += '<div class="timer-display" data-team-pair="' + pairAttr + '" data-finished="1" style="font-size:22px;font-weight:800;color:var(--green);font-family:var(--font-m);">' + formatRunTime(last - run.startedAt) + '</div>';
+      html += '<div class="timer-display" data-team-pair="' + pairAttr + '" data-finished="1" style="font-size:28px;font-weight:800;color:var(--green);font-family:var(--font-m);">' + formatRunTime(last - run.startedAt) + '</div>';
     } else if (started) {
-      html += '<div class="timer-display" data-team-pair="' + pairAttr + '" style="font-size:22px;font-weight:800;color:var(--orange);font-family:var(--font-m);">0.00</div>';
+      html += '<div class="timer-display" data-team-pair="' + pairAttr + '" style="font-size:28px;font-weight:800;color:var(--orange);font-family:var(--font-m);">0.00</div>';
     } else {
-      html += '<div class="timer-display" style="font-size:18px;color:var(--text3);font-weight:400;">—</div>';
+      html += '<div class="timer-display" style="font-size:22px;color:var(--text3);font-weight:400;">—</div>';
     }
-    // Akcje START/RESET (tylko STARTER/ADMIN)
     if (canStart) {
       if (!started) {
-        html += '<button class="btn btn-primary btn-sm" onclick="startTeamRunPair(' + pairKeyArg + ')" style="font-size:12px;padding:6px 14px;background:var(--green);color:#fff;border:none;">▶ START</button>';
+        html += '<button class="btn btn-primary" onclick="startTeamRunPair(' + pairKeyArg + ')" style="font-size:13px;padding:8px 18px;background:var(--green);color:#fff;border:none;font-weight:800;letter-spacing:1px;">▶ START</button>';
       } else if (allFinished) {
         html += '<button class="btn btn-sm" onclick="resetTeamRunPair(' + pairKeyArg + ')" style="font-size:10px;color:var(--text3);" title="Reset pary (rzadko potrzebne)">↺ reset</button>';
       } else {
@@ -6249,14 +6352,14 @@ function renderTeamRunList() {
     }
     html += '</div>';
     html += '</div>';
+    // Karty drużyn z STOP buttonami (showStoper: true) ale bez pełnej wpisywanki (kompakt)
     html += '<div class="pair-athletes">';
-    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run);
+    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: true });
     html += '<div class="pair-vs">VS</div>';
-    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: true }) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
     html += '</div>';
     html += '</div>';
   });
-  // (Niesparowane drużyny obsłużone wyżej jako virtualne SOLO pary — każda ze swoim stoperem)
   list.innerHTML = html;
 }
 
@@ -6475,6 +6578,7 @@ async function boot() {
     else if (tabId === 'pairs') renderPairsView();
     else if (tabId === 'timer') renderTimerView();
     else if (tabId === 'team-run') renderTeamRunList();
+    else if (tabId === 'team-timer') renderTeamTimerView();
     else if (tabId === 'results') renderResultsView();
   }
   startRealtimeSync();
