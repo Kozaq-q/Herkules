@@ -1100,7 +1100,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <div id="ptr-team-run-list"></div>
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-sm" onclick="initTeamRunsForAll()" style="font-size:11px;">＋ Dodaj wszystkie drużyny</button>
-          <button class="btn btn-sm" onclick="clearAllTeamRuns()" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">✕ Wyczyść wszystkie</button>
+          <button class="btn btn-sm" onclick="generateTeamRunPairs()" style="font-size:11px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🔑 Generuj pary (wg ind.)</button>
+          <button class="btn btn-sm" onclick="clearTeamRunPairs()" style="font-size:11px;color:var(--text3);">✕ Wyczyść pary</button>
+          <button class="btn btn-sm" onclick="clearAllTeamRuns()" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">✕ Wyczyść wszystkie wyniki</button>
         </div>
       </div>
 
@@ -3744,11 +3746,9 @@ function getBibY(a) {
   return parseInt(s) || 1;
 }
 
-function getLaneFromBib(a) {
-  // Tor wg regulaminu: pierwszy z pary (Y nieparzysty) → L, drugi (Y parzysty) → P
-  const y = getBibY(a);
-  return y % 2 === 1 ? 'L' : 'P';
-}
+// (getLaneFromBib usunięta — niezgodna z regulaminem patrolu.
+//  Regulamin: tor zależy od KOLEJNOŚCI W PARZE, nie od bibu.
+//  Pierwszy z pary → L, drugi → P. Logika w drawPairsByKey.)
 
 function lockKey(gender, pairNum) { return gender + '_' + pairNum; }
 function isPairLocked(gender, pairNum) {
@@ -3831,48 +3831,48 @@ function drawPairsByKey(gender) {
     const teams = Object.keys(byTeam).sort();
     const maxY = Math.max(...teams.map(t => byTeam[t].length));
 
-    // Round-robin Berger: dla rundy r generuje pary spośród dostępnych zespołów
-    function bergerPairs(roundIdx, availIdx) {
-      if (availIdx.length < 2) return { pairs: [], byes: availIdx.slice() };
-      let arr = availIdx.slice();
-      const hadBye = arr.length % 2 === 1;
-      if (hadBye) arr.push(-1);
-      const len = arr.length;
-      const rotations = roundIdx % (len - 1);
-      for (let i = 0; i < rotations; i++) arr.splice(1, 0, arr.pop()); // pierwszy stoi, reszta rotuje
-      const pairs = [];
-      for (let i = 0; i < len / 2; i++) {
-        const a = arr[i], b = arr[len - 1 - i];
-        if (a !== -1 && b !== -1) pairs.push([a, b]);
+    // Fisher-Yates shuffle (losowe wymieszanie tablicy)
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
       }
-      const used = new Set(pairs.flat());
-      const byes = availIdx.filter(x => !used.has(x));
-      return { pairs, byes };
+      return arr;
     }
 
     const result = [];
     for (let y = 0; y < maxY; y++) {
-      const availIdx = [];
-      teams.forEach((t, i) => { if (byTeam[t].length > y) availIdx.push(i); });
-      const { pairs: bp, byes } = bergerPairs(y, availIdx);
-      bp.forEach(([tA, tB]) => {
-        const athA = byTeam[teams[tA]][y];
-        const athB = byTeam[teams[tB]][y];
-        // Tor wg bib: parzysty=P, nieparzysty=L (lub wg getLaneFromBib)
-        const laneA = getLaneFromBib(athA);
-        const laneB = getLaneFromBib(athB);
-        let aL, bL;
-        if (laneA === 'L' && laneB === 'P') { aL = 'L'; bL = 'P'; }
-        else if (laneA === 'P' && laneB === 'L') { aL = 'P'; bL = 'L'; }
-        else { aL = 'L'; bL = 'P'; } // domyślnie L-P (pierwszy z pary L)
-        result.push({ gender: g, aId: athA.id, aLane: aL, bId: athB.id, bLane: bL });
-      });
-      // Zespoły bez pary w tej warstwie Y → SOLO (regulamin dopuszcza nieparzystą liczbę zespołów)
-      byes.forEach(ti => {
-        const a = byTeam[teams[ti]][y];
-        if (!a) return;
-        result.push({ gender: g, aId: a.id, aLane: getLaneFromBib(a), bId: null, bLane: null });
-      });
+      // Zbierz indeksy zespołów które mają zawodnika w tej warstwie Y
+      const avail = [];
+      teams.forEach((t, i) => { if (byTeam[t].length > y) avail.push(i); });
+      // LOSOWO wymieszaj kolejność zespołów dla tej warstwy
+      shuffle(avail);
+      // Paruj parami w shufflowanej kolejności: [0]-[1], [2]-[3], ...
+      // Jeśli liczba zespołów nieparzysta → ostatni SOLO.
+      // REGUŁA TORÓW: pierwszy z pary → tor L, drugi → tor P (regulamin).
+      // PREFERENCJA: gdy się da, zawodnik z NIEPARZYSTYM numerem zespołu (X) idzie
+      // pierwszy (na L), parzysty → drugi (P). Jeśli oba nieparzyste lub oba
+      // parzyste — zostaw kolejność z shuffle.
+      function _getX(ath) {
+        const m = String(ath.bib || '').match(/^(\d+)\//);
+        return m ? parseInt(m[1]) : 0;
+      }
+      let i = 0;
+      while (i + 1 < avail.length) {
+        let athA = byTeam[teams[avail[i]]][y];
+        let athB = byTeam[teams[avail[i + 1]]][y];
+        const xA = _getX(athA), xB = _getX(athB);
+        const oddA = xA % 2 === 1, oddB = xB % 2 === 1;
+        // Jeśli A parzysty a B nieparzysty → zamień, żeby nieparzysty był pierwszy
+        if (!oddA && oddB) { const t = athA; athA = athB; athB = t; }
+        result.push({ gender: g, aId: athA.id, aLane: 'L', bId: athB.id, bLane: 'P' });
+        i += 2;
+      }
+      // Pozostały (nieparzysty) zespół → SOLO. Pierwszy z "pary" więc tor L.
+      if (i < avail.length) {
+        const a = byTeam[teams[avail[i]]][y];
+        result.push({ gender: g, aId: a.id, aLane: 'L', bId: null, bLane: null });
+      }
     }
     return result;
   }
@@ -5838,6 +5838,54 @@ function initTeamRunsForAll() {
   renderTeamRunList();
 }
 
+// ─── PARY ZESPOŁÓW DO BIEGU DRUŻYNOWEGO ──────────────────────────
+// Generuje pary zespołów na podstawie sumy 3 najlepszych M ind.
+// Analogicznie do OSF S1: najsłabsi (najwyższe pkt) startują pierwsi,
+// najlepsi (najniższe pkt) ostatni. W parze: lepszy → tor L, gorszy → tor P.
+// Zespoły bez 3 sklasyfikowanych M (brak wyniku ind.) idą na koniec.
+function generateTeamRunPairs() {
+  const allTeams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))].sort();
+  if (!allTeams.length) { showToast('Brak drużyn', 'warning'); return; }
+  if (!confirm('Wygenerować pary zespołów do biegu drużynowego na podstawie sumy ind. (3 najlepszych M)?\nNajsłabsi indywidualnie startują pierwsi (jak w OSF S1).')) return;
+
+  // Oblicz wyniki ind. dla każdej drużyny
+  const ranked = allTeams.map(name => {
+    const rows = (state.athletes || []).filter(a => (a.team || '').trim() === name).map(_patrolBuildRow);
+    const score = calcTeamScore(rows);
+    return { name, total: score.total, eligible: score.eligible };
+  });
+  // Sortuj: najsłabsi (wyższe pkt) PIERWSI; zespoły niesklasyfikowane na końcu
+  ranked.sort((a, b) => {
+    if (a.eligible && !b.eligible) return -1;
+    if (!a.eligible && b.eligible) return 1;
+    if (a.eligible && b.eligible) return b.total - a.total; // wyższy = gorszy = pierwszy
+    return a.name.localeCompare(b.name);
+  });
+
+  // Paruj sąsiadująco: (1,2), (3,4) ... Pierwszy z pary = lepszy (drugi w listingu) → tor L?
+  // Wg regulaminu OSF: "pierwszy zespół [czyli najsłabszy] tor lewy". Ale potem pierwsza para
+  // to dwa najsłabsze; pierwszy w parze (= z grupy najsłabszych) → tor L, drugi → tor P.
+  // Najlepiej: po prostu sąsiadująco, lewy z listy → L, prawy → P.
+  const pairs = [];
+  let pairNum = 1;
+  for (let i = 0; i < ranked.length; i += 2) {
+    const a = ranked[i], b = ranked[i + 1] || null;
+    if (b) pairs.push({ pairNum: pairNum++, aTeam: a.name, bTeam: b.name, aLane: 'L', bLane: 'P' });
+    else pairs.push({ pairNum: pairNum++, aTeam: a.name, bTeam: null, aLane: 'L', bLane: null }); // SOLO
+  }
+  state.teamRunPairs = pairs;
+  save();
+  renderTeamRunList();
+  showToast('🏃 Wygenerowano pary zespołów: ' + pairs.length, 'success', 2500);
+}
+
+function clearTeamRunPairs() {
+  if (!confirm('Wyczyścić pary zespołów do biegu drużynowego?')) return;
+  delete state.teamRunPairs;
+  save();
+  renderTeamRunList();
+}
+
 function clearAllTeamRuns() {
   if (!confirm('Wyczyścić WSZYSTKIE wyniki biegu drużynowego?')) return;
   state.teamRun = {};
@@ -5861,15 +5909,30 @@ function renderTeamRunList() {
   if (!list) return;
   ensureTeamRun();
   const allTeams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))].sort();
-  // Pokaż drużyny które są w state.teamRun lub mają wszystkich M w state.athletes (potencjał do drużynowego)
   const teamsWithEntry = Object.keys(state.teamRun || {});
-  const teams = [...new Set([...allTeams, ...teamsWithEntry])].sort();
-  if (!teams.length) {
+  const teamSet = new Set([...allTeams, ...teamsWithEntry]);
+
+  // Kolejność wyświetlania: jeśli mamy state.teamRunPairs (wygenerowane pary),
+  // pokaż wg pair order z numerami par i kolumną toru; inaczej alfabetycznie.
+  const rows = [];
+  const usedTeams = new Set();
+  if (state.teamRunPairs && state.teamRunPairs.length) {
+    state.teamRunPairs.forEach(p => {
+      if (p.aTeam && teamSet.has(p.aTeam)) { rows.push({ team: p.aTeam, pairNum: p.pairNum, lane: p.aLane }); usedTeams.add(p.aTeam); }
+      if (p.bTeam && teamSet.has(p.bTeam)) { rows.push({ team: p.bTeam, pairNum: p.pairNum, lane: p.bLane }); usedTeams.add(p.bTeam); }
+    });
+  }
+  // Drużyny które nie zostały sparowane (np. nowo dodane, lub nie ma pairs) — na dole
+  [...teamSet].sort().forEach(t => { if (!usedTeams.has(t)) rows.push({ team: t, pairNum: null, lane: null }); });
+
+  if (!rows.length) {
     list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak drużyn. Dodaj zawodników z drużynami lub kliknij "Dodaj wszystkie drużyny".</div>';
     return;
   }
+
   const headerHTML =
-    '<div style="display:grid;grid-template-columns:1.5fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);margin-bottom:4px;">' +
+    '<div style="display:grid;grid-template-columns:50px 1.3fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);margin-bottom:4px;">' +
+      '<div style="text-align:center;">Para / Tor</div>' +
       '<div>Drużyna</div>' +
       '<div style="text-align:center;">Bieg (m:s)</div>' +
       '<div style="text-align:center;">OSF (s)</div>' +
@@ -5879,21 +5942,36 @@ function renderTeamRunList() {
       '<div style="text-align:center;">Punkty</div>' +
       '<div></div>' +
     '</div>';
-  list.innerHTML = headerHTML + teams.map(t => {
+
+  function pairCell(r) {
+    if (!r.pairNum) return '<span style="color:var(--text3);font-size:10px;">—</span>';
+    const laneBg = r.lane === 'L' ? 'rgba(96,168,232,.15)' : r.lane === 'P' ? 'rgba(213,123,155,.15)' : 'var(--bg3)';
+    const laneCol = r.lane === 'L' ? 'var(--male)' : r.lane === 'P' ? 'var(--female)' : 'var(--text3)';
+    const laneBd = r.lane === 'L' ? 'rgba(96,168,232,.45)' : r.lane === 'P' ? 'rgba(213,123,155,.45)' : 'var(--border)';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">' +
+      '<span style="font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--accent);">' + r.pairNum + '</span>' +
+      (r.lane ? '<span style="font-family:var(--font-h);font-size:10px;font-weight:800;padding:1px 6px;border-radius:3px;background:' + laneBg + ';color:' + laneCol + ';border:1px solid ' + laneBd + ';">' + r.lane + '</span>' : '') +
+    '</div>';
+  }
+
+  list.innerHTML = headerHTML + rows.map(r => {
+    const t = r.team;
     const tr = state.teamRun[t] || {};
     const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
     const pts = calcTeamRunPoints(tr);
     const ptsCell = tr.dsq ? '<span style="color:var(--red);font-weight:800;">DSQ</span>'
                             : (pts === null ? '—' : '<span style="color:var(--accent);font-weight:800;">' + pts + '</span>');
-    return '<div style="display:grid;grid-template-columns:1.5fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;' + (tr.dsq ? 'opacity:.6;' : '') + '">' +
+    const safeT = esc(t).replace(/'/g,'\\\'');
+    return '<div style="display:grid;grid-template-columns:50px 1.3fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;' + (tr.dsq ? 'opacity:.6;' : '') + '">' +
+      pairCell(r) +
       '<div style="font-weight:600;color:var(--text1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(t) + '</div>' +
-      '<input type="text" value="' + esc(biegStr) + '" placeholder="m:ss" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'biegStr\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'biegStr\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
-      '<input type="number" min="0" max="3600" value="' + (tr.osfSec || '') + '" placeholder="0-300" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'osfSec\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'osfSec\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
-      '<input type="number" min="0" max="150" value="' + (tr.shotPoints !== undefined ? tr.shotPoints : '') + '" placeholder="0-150" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'shotPoints\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'shotPoints\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
-      '<input type="number" min="0" max="3" value="' + (tr.eliminated || 0) + '" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'eliminated\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'eliminated\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba wyeliminowanych z patrolu (0-2; 3=DSQ)" />' +
-      '<input type="number" min="0" max="15" value="' + (tr.tens !== undefined ? tr.tens : '') + '" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'tens\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:12px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba dziesiątek (tie-break)" />' +
+      '<input type="text" value="' + esc(biegStr) + '" placeholder="m:ss" onchange="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
+      '<input type="number" min="0" max="3600" value="' + (tr.osfSec || '') + '" placeholder="0-300" onchange="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
+      '<input type="number" min="0" max="150" value="' + (tr.shotPoints !== undefined ? tr.shotPoints : '') + '" placeholder="0-150" onchange="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
+      '<input type="number" min="0" max="3" value="' + (tr.eliminated || 0) + '" onchange="setTeamRunField(\'' + safeT + '\',\'eliminated\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'eliminated\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba wyeliminowanych z patrolu (0-2; 3=DSQ)" />' +
+      '<input type="number" min="0" max="15" value="' + (tr.tens !== undefined ? tr.tens : '') + '" onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:12px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba dziesiątek (tie-break)" />' +
       '<div style="text-align:center;font-family:var(--font-m);font-size:15px;">' + ptsCell + '</div>' +
-      '<button onclick="toggleTeamRunDsq(\'' + esc(t).replace(/'/g,'\\\'') + '\')" title="' + (tr.dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '" style="background:' + (tr.dsq ? 'rgba(224,85,85,.15)' : 'transparent') + ';border:1px solid ' + (tr.dsq ? 'rgba(224,85,85,.5)' : 'var(--border2)') + ';border-radius:var(--radius);color:' + (tr.dsq ? 'var(--red)' : 'var(--text3)') + ';font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 0;cursor:pointer;">' + (tr.dsq ? '✕' : 'DSQ') + '</button>' +
+      '<button onclick="toggleTeamRunDsq(\'' + safeT + '\')" title="' + (tr.dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '" style="background:' + (tr.dsq ? 'rgba(224,85,85,.15)' : 'transparent') + ';border:1px solid ' + (tr.dsq ? 'rgba(224,85,85,.5)' : 'var(--border2)') + ';border-radius:var(--radius);color:' + (tr.dsq ? 'var(--red)' : 'var(--text3)') + ';font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 0;cursor:pointer;">' + (tr.dsq ? '✕' : 'DSQ') + '</button>' +
     '</div>';
   }).join('');
 }
