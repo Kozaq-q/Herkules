@@ -1519,6 +1519,8 @@ function ensureStateDefaults() {
   if (!state.runs) state.runs = {};
   // Bieg drużynowy (3-osobowy patrol) — wyniki per drużyna
   if (!state.teamRun) state.teamRun = {};
+  // Stoper biegu drużynowego — state.teamRuns[pairNum] = {startedAt, finishedAt:{team:ms}, scheduledStartAt}
+  if (!state.teamRuns) state.teamRuns = {};
   if (!state.cfg) state.cfg = {};
   // Sędzia startu — dane dostępu jak speaker w OSF
   if (state.cfg.startEnabled === undefined) state.cfg.startEnabled = false;
@@ -5214,6 +5216,9 @@ function tickTimers() {
   });
   // Tikaj też zegary w bannerze "biegnie teraz"
   if (typeof _tickPtrRunningBannerTimers === 'function') _tickPtrRunningBannerTimers();
+  // Tikaj zegary biegu drużynowego + sprawdź auto-starty drużyn
+  if (typeof checkScheduledTeamRunStarts === 'function') checkScheduledTeamRunStarts();
+  if (typeof _tickTeamRunTimers === 'function') _tickTeamRunTimers();
 }
 
 // Przenieś parę o ±1
@@ -5908,7 +5913,7 @@ function removeTeamRun(team) {
 }
 
 // ─── KARTA DRUŻYNY w biegu drużynowym (analog. do athleteCardHTML w ind.) ──
-function teamRunCardHTML(teamName, lane) {
+function teamRunCardHTML(teamName, lane, pairNum, run) {
   const tr = (state.teamRun || {})[teamName] || {};
   const dsq = !!tr.dsq;
   const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
@@ -5919,6 +5924,22 @@ function teamRunCardHTML(teamName, lane) {
   const pts = calcTeamRunPoints(tr);
   const ptsDisp = dsq ? '<span style="background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.4);padding:1px 6px;border-radius:3px;font-family:var(--font-h);font-size:11px;font-weight:800;">DSQ</span>'
                       : (pts === null ? '<span style="color:var(--text3);">—</span>' : '<strong style="color:var(--accent);font-family:var(--font-m);">' + pts + ' pkt</strong>');
+  // Stoper drużynowy: status tej drużyny
+  const started = !!(run && run.startedAt);
+  const teamFinished = !!(started && run.finishedAt?.[teamName]);
+  // Stop/Live timer integration: META/ADMIN może klikać STOP gdy para wystartowała
+  let stopBtnHTML = '';
+  let liveTimerHTML = '';
+  if (started && pairNum != null) {
+    if (teamFinished) {
+      const teamSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 1000);
+      liveTimerHTML = '<div class="timer-athlete-time finished" style="margin-top:6px;text-align:center;font-family:var(--font-m);font-size:18px;font-weight:800;color:var(--green);">' + Math.floor(teamSec/60) + ':' + String(teamSec%60).padStart(2,'0') + ' <span style="font-size:10px;color:var(--text3);">(stoper)</span></div>';
+      if (canEdit) stopBtnHTML = '<button onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairNum + ')" style="margin-top:6px;width:100%;padding:6px;font-family:var(--font-h);font-size:11px;font-weight:700;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text3);cursor:pointer;">↺ Cofnij stop</button>';
+    } else {
+      liveTimerHTML = '<div class="timer-athlete-time" data-team-timer="' + safeT + '|' + pairNum + '" data-running="1" style="margin-top:6px;text-align:center;font-family:var(--font-m);font-size:20px;font-weight:800;color:var(--orange);">0.00</div>';
+      if (canEdit) stopBtnHTML = '<button onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairNum + ')" style="margin-top:6px;width:100%;padding:8px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border:none;border-radius:var(--radius);background:var(--red);color:#fff;cursor:pointer;">■ STOP META</button>';
+    }
+  }
 
   return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '" style="' + (dsq ? 'opacity:.65;' : '') + '">' +
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
@@ -5926,6 +5947,9 @@ function teamRunCardHTML(teamName, lane) {
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">Patrol 3-osobowy</div>' +
+    // Live timer + STOP button (gdy stoper aktywny dla tej pary)
+    liveTimerHTML +
+    stopBtnHTML +
     // OSF + Bieg (czas) — kafelki obok siebie jak w ind.
     '<div class="ptr-times-row">' +
       '<div class="ptr-time-tile ptr-time-osf' + (disabled ? ' dsq' : '') + '">' +
@@ -6001,6 +6025,126 @@ function toggleTeamRunTens(team, n) {
   else setTeamRunField(team, 'tens', n);
 }
 
+// ─── STOPER DRUŻYNOWY (synchronizowany — analog. do stopera ind.) ──
+// state.teamRuns[pairNum] = { startedAt, finishedAt: {teamName: ms}, scheduledStartAt }
+function getTeamRunPair(pairNum) { return state.teamRuns?.[pairNum] || null; }
+
+function startTeamRunPair(pairNum) {
+  if (!state.teamRuns) state.teamRuns = {};
+  if (state.teamRuns[pairNum] && state.teamRuns[pairNum].startedAt) {
+    if (!confirm('Para drużyn ' + pairNum + ' już biegnie. Reset i start od nowa? (Falstart)')) return;
+  }
+  state.teamRuns[pairNum] = { startedAt: nowMs(), finishedAt: {} };
+  // Wyczyść biegSec drużyn w tej parze (jeśli były wpisane wcześniej)
+  const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+  if (p) {
+    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
+      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
+    });
+  }
+  save();
+  renderTeamRunList();
+  showToast('▶ Para drużyn ' + pairNum + ' wystartowała', 'success', 1800);
+}
+
+function resetTeamRunPair(pairNum) {
+  if (!state.teamRuns?.[pairNum]) return;
+  if (!confirm('Reset stopera pary drużyn ' + pairNum + '? Czasy biegu zostaną usunięte.')) return;
+  delete state.teamRuns[pairNum];
+  // Wyczyść biegSec drużyn w tej parze
+  const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+  if (p) {
+    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
+      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
+    });
+  }
+  save();
+  renderTeamRunList();
+  showToast('↺ Reset pary drużyn ' + pairNum, 'info', 1500);
+}
+
+function stopTeamRunTeam(teamName, pairNum) {
+  const run = state.teamRuns?.[pairNum];
+  if (!run || !run.startedAt) {
+    showToast('Para jeszcze nie wystartowała', 'warning'); return;
+  }
+  if (!run.finishedAt) run.finishedAt = {};
+  if (run.finishedAt[teamName]) {
+    // Cofnij stop
+    delete run.finishedAt[teamName];
+    if (state.teamRun?.[teamName]?.biegSec) {
+      delete state.teamRun[teamName].biegSec;
+      state.teamRun[teamName].biegSecAt = nowMs();
+    }
+    save();
+    renderTeamRunList();
+    showToast('↺ Cofnięto stop ' + teamName, 'info', 1500);
+    return;
+  }
+  run.finishedAt[teamName] = nowMs();
+  const biegSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 1000);
+  if (!state.teamRun) state.teamRun = {};
+  if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
+  state.teamRun[teamName].biegSec = biegSec;
+  state.teamRun[teamName].biegSecAt = nowMs();
+  save();
+  renderTeamRunList();
+  showToast('■ STOP ' + teamName + ': ' + Math.floor(biegSec/60) + ':' + String(biegSec%60).padStart(2,'0'), 'success', 1500);
+}
+
+// Sprawdza scheduledStartAt par drużynowych i automatycznie startuje gdy nadejdzie czas
+function checkScheduledTeamRunStarts() {
+  if (!state.teamRuns) return;
+  let changed = false;
+  for (const k in state.teamRuns) {
+    const r = state.teamRuns[k];
+    if (r.scheduledStartAt && !r.startedAt && Date.now() >= r.scheduledStartAt) {
+      r.startedAt = nowMs();
+      r.finishedAt = {};
+      delete r.scheduledStartAt;
+      changed = true;
+    }
+  }
+  if (changed) { save(); renderTeamRunList(); }
+}
+
+// Tick zegarów drużynowych — wywoływany z tickTimers
+function _tickTeamRunTimers() {
+  document.querySelectorAll('.timer-display[data-team-pair]').forEach(el => {
+    if (el.dataset.finished === '1') return;
+    const pairNum = parseInt(el.dataset.teamPair);
+    const run = getTeamRunPair(pairNum);
+    if (!run || !run.startedAt) return;
+    // Sprawdź czy oboje skończyli — wtedy zamroź
+    const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+    if (p) {
+      const aFin = run.finishedAt?.[p.aTeam];
+      const bFin = p.bTeam ? run.finishedAt?.[p.bTeam] : true;
+      if (aFin && (bFin || !p.bTeam)) {
+        const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
+        el.textContent = formatRunTime(last - run.startedAt);
+        el.dataset.finished = '1';
+        return;
+      }
+    }
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
+  // Per team timers (data-team-timer="teamName_pairNum")
+  document.querySelectorAll('.timer-athlete-time[data-team-timer]').forEach(el => {
+    const [teamName, pairNumStr] = el.dataset.teamTimer.split('|');
+    const pairNum = parseInt(pairNumStr);
+    const run = getTeamRunPair(pairNum);
+    if (!run || !run.startedAt) return;
+    if (run.finishedAt?.[teamName]) {
+      el.textContent = formatRunTime(run.finishedAt[teamName] - run.startedAt);
+      el.dataset.running = '0';
+      el.classList.add('finished');
+      return;
+    }
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
+}
+
 // Inkrementuj/dekrementuj strzelanie drużyny. Domyślna wartość: 100 (typ. wynik patrolu 3-os.)
 function bumpTeamRunShot(team, delta) {
   ensureTeamRun();
@@ -6033,21 +6177,60 @@ function renderTeamRunList() {
   const pairs = state.teamRunPairs || [];
   const usedTeams = new Set();
   let html = '';
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const canStart = role === 'STARTER' || role === 'ADMIN';
   pairs.forEach(p => {
     if (!p.aTeam) return;
     const isSolo = !p.bTeam;
     usedTeams.add(p.aTeam);
     if (p.bTeam) usedTeams.add(p.bTeam);
-    html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + '" data-pair="' + p.pairNum + '">';
-    html += '<div class="pair-header">';
+    const run = getTeamRunPair(p.pairNum);
+    const started = !!(run && run.startedAt);
+    const aFin = started && run.finishedAt?.[p.aTeam];
+    const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
+    const allFinished = started && aFin && bFin;
+    let statusCls, statusTxt;
+    if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
+    else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
+    else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
+
+    html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + (started && !allFinished ? ' running' : '') + (allFinished ? ' finished' : '') + '" data-pair="' + p.pairNum + '">';
+    html += '<div class="pair-header" style="align-items:center;">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
     html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">Para drużyn</span>';
+    html += '<span style="font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-left:8px;' +
+      (allFinished ? 'background:rgba(76,175,130,.15);color:var(--green);border:1px solid rgba(76,175,130,.5);' :
+       started ? 'background:rgba(232,148,77,.15);color:var(--orange);border:1px solid rgba(232,148,77,.5);' :
+       'background:var(--bg3);color:var(--text3);border:1px solid var(--border);') + '">' + statusTxt + '</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+    // Stoper pary (po prawej)
+    html += '<div style="margin-left:auto;display:flex;align-items:center;gap:10px;">';
+    if (allFinished) {
+      const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
+      html += '<div class="timer-display" data-team-pair="' + p.pairNum + '" data-finished="1" style="font-size:22px;font-weight:800;color:var(--green);font-family:var(--font-m);">' + formatRunTime(last - run.startedAt) + '</div>';
+    } else if (started) {
+      html += '<div class="timer-display" data-team-pair="' + p.pairNum + '" style="font-size:22px;font-weight:800;color:var(--orange);font-family:var(--font-m);">0.00</div>';
+    } else {
+      html += '<div class="timer-display" style="font-size:18px;color:var(--text3);font-weight:400;">—</div>';
+    }
+    // Akcje START/RESET (tylko STARTER/ADMIN)
+    if (canStart) {
+      if (!started) {
+        html += '<button class="btn btn-primary btn-sm" onclick="startTeamRunPair(' + p.pairNum + ')" style="font-size:12px;padding:6px 14px;background:var(--green);color:#fff;border:none;">▶ START</button>';
+      } else if (allFinished) {
+        html += '<button class="btn btn-sm" onclick="resetTeamRunPair(' + p.pairNum + ')" style="font-size:10px;color:var(--text3);" title="Reset pary (rzadko potrzebne)">↺ reset</button>';
+      } else {
+        html += '<button class="btn btn-sm" onclick="resetTeamRunPair(' + p.pairNum + ')" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">↺ RESET (falstart)</button>';
+      }
+    } else if (!started) {
+      html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;">(start: STARTER/ADMIN)</span>';
+    }
+    html += '</div>';
     html += '</div>';
     html += '<div class="pair-athletes">';
-    html += teamRunCardHTML(p.aTeam, p.aLane || 'L');
+    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run);
     html += '<div class="pair-vs">VS</div>';
-    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P') : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
     html += '</div>';
     html += '</div>';
   });
