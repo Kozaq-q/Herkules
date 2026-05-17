@@ -5954,29 +5954,33 @@ function teamRunCardHTML(teamName, lane) {
         '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',+10)"' + (disabled ? ' disabled' : '') + ' title="+10">+10</button>' +
       '</div>' +
     '</div>' +
-    // ×10 (tie-break) — mały numeryczny input zamiast 16 kafelków
-    '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
-      '<span class="ptr-time-lbl" style="font-size:9px;color:var(--text3);margin:0;flex:1;">×10 dziesiątek (tie-break, max 15)</span>' +
-      '<input type="number" min="0" max="15" step="1" value="' + (tr.tens !== undefined ? tr.tens : '') + '" placeholder="0-15"' +
-        ' onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
-        ' style="width:54px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:4px 6px;font-family:var(--font-m);font-size:12px;text-align:center;"' +
-        (disabled ? ' disabled' : '') + ' />' +
-    '</div>' +
-    // Eliminacja zawodnika — rzadko używane, schowane w collapse
-    '<details style="margin-top:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">' +
-      '<summary style="cursor:pointer;padding:5px 10px;font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);user-select:none;">' +
-        '⚠ Eliminacja zawodnika z patrolu' + (tr.eliminated ? ' <span style="color:var(--red);margin-left:6px;">(' + tr.eliminated + ' wyeliminowanych, +' + (tr.eliminated*100) + ' pkt)</span>' : '') +
-      '</summary>' +
-      '<div style="padding:8px 10px;">' +
-        '<div style="font-size:10px;color:var(--text3);line-height:1.5;margin-bottom:6px;">Regulamin: za 1 wyeliminowanego z patrolu +100 pkt, za 2 → +200 pkt. Pozostali biegną dalej.</div>' +
-        '<div class="ptr-tens-row" style="grid-template-columns:repeat(4,1fr);">' +
-          [0,1,2,3].map(n => {
-            const active = (tr.eliminated || 0) === n;
-            return '<button class="ptr-tens-btn' + (active ? ' active' : '') + '" onclick="setTeamRunField(\'' + safeT + '\',\'eliminated\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' wyeliminowanych' + (n>0 ? ' (+' + (n*100) + ' pkt karne)' : '') + '">' + n + '</button>';
-          }).join('') +
-        '</div>' +
+    // ×10 (kafelek z lewej) + Eliminacja (rozwijana z prawej) w jednym rzędzie
+    '<div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start;">' +
+      // ×10 jako kafelek (tile-styled jak OSF/Bieg powyżej)
+      '<div class="ptr-time-tile' + (disabled ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">×10 dziesiątek (tie-break, max 15)</div>' +
+        '<input class="ptr-time-input" type="number" min="0" max="15" step="1" value="' + (tr.tens !== undefined ? tr.tens : '') + '" placeholder="0-15"' +
+          ' onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
+          ' style="text-align:center;font-weight:700;"' +
+          (disabled ? ' disabled' : '') + ' />' +
       '</div>' +
-    '</details>' +
+      // Eliminacja — rozwijana, ostylowana jak tile
+      '<details class="ptr-time-tile" style="padding:0;overflow:hidden;">' +
+        '<summary style="cursor:pointer;padding:6px 10px;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);user-select:none;display:flex;align-items:center;gap:6px;">' +
+          '<span style="flex:1;">⚠ Eliminacja zawodnika' + (tr.eliminated ? ' <span style="color:var(--red);font-weight:800;">(' + tr.eliminated + ' / +' + (tr.eliminated*100) + ' pkt)</span>' : '') + '</span>' +
+          '<span style="font-size:9px;color:var(--text3);">▾</span>' +
+        '</summary>' +
+        '<div style="padding:8px 10px;border-top:1px solid var(--border);">' +
+          '<div style="font-size:10px;color:var(--text3);line-height:1.5;margin-bottom:6px;">Regulamin: za 1 wyeliminowanego z patrolu +100 pkt, za 2 → +200 pkt. Pozostali biegną dalej.</div>' +
+          '<div class="ptr-tens-row" style="grid-template-columns:repeat(4,1fr);">' +
+            [0,1,2,3].map(n => {
+              const active = (tr.eliminated || 0) === n;
+              return '<button class="ptr-tens-btn' + (active ? ' active' : '') + '" onclick="setTeamRunField(\'' + safeT + '\',\'eliminated\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' wyeliminowanych' + (n>0 ? ' (+' + (n*100) + ' pkt karne)' : '') + '">' + n + '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+      '</details>' +
+    '</div>' +
     // Stopka: wynik + DSQ
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);">' +
       '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Wynik: ' + ptsDisp + '</span>' +
