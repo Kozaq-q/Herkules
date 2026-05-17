@@ -295,9 +295,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .timer-osf-input:disabled { opacity: .5; }
 .timer-hits-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 8px; }
 
-/* Strzelanie — input + duże kafelki "−" "+" */
-.ptr-shot-row { display: grid; grid-template-columns: 42px 1fr 42px 38px 38px; gap: 4px; align-items: stretch; }
-.ptr-shot-row.compact { grid-template-columns: 36px 1fr 36px 32px 32px; }
+/* Strzelanie — input z lewej, kafelki "−" "+" "−5" "+5" obok siebie z prawej */
+.ptr-shot-row { display: grid; grid-template-columns: 1fr 42px 42px 38px 38px; gap: 4px; align-items: stretch; }
+.ptr-shot-row.compact { grid-template-columns: 1fr 36px 36px 32px 32px; }
 .ptr-shot-btn { background: var(--bg3); border: 1.5px solid var(--border2); border-radius: var(--radius); color: var(--orange); font-family: var(--font-h); font-size: 18px; font-weight: 800; cursor: pointer; padding: 0; line-height: 1; transition: all .1s; display: flex; align-items: center; justify-content: center; }
 .ptr-shot-btn.small { font-size: 11px; color: var(--text3); }
 .ptr-shot-btn:hover:not(:disabled) { background: rgba(232,148,77,.15); border-color: var(--orange); }
@@ -4076,12 +4076,12 @@ function athleteCardHTML(a, lane, pairNum, gender) {
     '<div style="margin-top:8px;">' +
       '<div class="ptr-time-lbl" style="color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-50 pkt)' + (!canEditHits ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') + '</div>' +
       '<div class="ptr-shot-row">' +
-        '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)" ' + (hitsDisabled ? 'disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
         '<input class="ptr-shot-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50"' +
           ' onchange="setShotPoints(' + a.id + ', this.value)"' +
           ' onblur="setShotPoints(' + a.id + ', this.value)"' +
           ' title="Suma punktów na tarczy (5 strzałów × max 10 pkt)"' +
           (hitsDisabled ? ' disabled' : '') + ' />' +
+        '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)" ' + (hitsDisabled ? 'disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
         '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',+1)" ' + (hitsDisabled ? 'disabled' : '') + ' title="+1 (start od 50 jeśli puste)">+</button>' +
         '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',-5)" ' + (hitsDisabled ? 'disabled' : '') + ' title="−5">−5</button>' +
         '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',+5)" ' + (hitsDisabled ? 'disabled' : '') + ' title="+5">+5</button>' +
@@ -4919,12 +4919,12 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
       '<div style="margin-top:8px;">' +
         '<div style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-50)</div>' +
         '<div class="ptr-shot-row compact">' +
-          '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)"' + (dsq ? ' disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
           '<input class="ptr-shot-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50"' +
             ' onchange="setShotPoints(' + a.id + ', this.value)"' +
             ' onblur="setShotPoints(' + a.id + ', this.value)"' +
             ' title="Suma punktów na tarczy"' +
             (dsq ? ' disabled' : '') + ' />' +
+          '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)"' + (dsq ? ' disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
           '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',+1)"' + (dsq ? ' disabled' : '') + ' title="+1 (start od 50 jeśli puste)">+</button>' +
           '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',-5)"' + (dsq ? ' disabled' : '') + ' title="−5">−5</button>' +
           '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',+5)"' + (dsq ? ' disabled' : '') + ' title="+5">+5</button>' +
