@@ -607,6 +607,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
     <button class="nav-tab" onclick="showTab('athletes')" id="tab-athletes">👥 Zawodnicy</button>
     <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🎲 Pary / wpisywanie</button>
     <button class="nav-tab" onclick="showTab('timer')" id="tab-timer">⏱ Stoper</button>
+    <button class="nav-tab" onclick="showTab('team-run')" id="tab-team-run">🏃 Drużynowy</button>
     <button class="nav-tab" onclick="showTab('results')" id="tab-results">🏆 Wyniki</button>
   </nav>
 
@@ -1027,6 +1028,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       <div id="timer-list"></div>
     </div>
 
+    <!-- 🏃 BIEG DRUŻYNOWY (patrol 3-osobowy) — osobna zakładka -->
+    <div class="page" id="page-team-run">
+      <div class="card mb-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Bieg drużynowy (patrol 3-osobowy)</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(96,168,232,.06);border:1px solid rgba(96,168,232,.3);border-radius:var(--radius);padding:4px 10px;" title="Wzór: czas_biegu(s) − pkt_OSF − pkt_strzelanie. pkt_OSF zespół: 480−2×czas_OSF (baza 90s=300pkt). Pkt strzelanie: suma 3 zawodników × 2. Eliminacja zawodnika: +100pkt.">
+            ✓ Regulamin 11DKPanc 2025
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          Patrol 3-osobowy biegnie wspólnie. Wpisz: <strong>Bieg (m:ss)</strong>, <strong>OSF (sekundy)</strong>, <strong>Strzelanie (0-150 pkt)</strong>, ewentualnie <strong>Eliminację</strong> (0-3 zawodników wycofanych z patrolu) i <strong>×10</strong> (dziesiątki — tie-break).<br>
+          <strong>Wzór punktów drużyny:</strong> czas_biegu(s) − (480 − 2×czas_OSF) − strzelanie×2 + eliminowani×100.
+        </div>
+        <div id="ptr-team-run-list"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="initTeamRunsForAll()" style="font-size:11px;">＋ Dodaj wszystkie drużyny</button>
+          <button class="btn btn-sm" onclick="generateTeamRunPairs()" style="font-size:11px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🔑 Generuj pary (wg ind.)</button>
+          <button class="btn btn-sm" onclick="clearTeamRunPairs()" style="font-size:11px;color:var(--text3);">✕ Wyczyść pary</button>
+          <button class="btn btn-sm" onclick="clearAllTeamRuns()" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">✕ Wyczyść wszystkie wyniki</button>
+        </div>
+      </div>
+    </div>
+
     <!-- WYNIKI -->
     <div class="page" id="page-results">
       <!-- Pasek wydruków — analogicznie do klasyfikacji w OSF -->
@@ -1081,29 +1105,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           Suma punktów <strong>3 najlepszych mężczyzn</strong> z biegu indywidualnego. Kobiety nie liczą.
         </div>
         <div id="ptr-team-list"></div>
-      </div>
-
-      <!-- 🏃 BIEG DRUŻYNOWY (patrol 3-osobowy) -->
-      <div class="card mb-12">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Bieg drużynowy (patrol 3-os.)</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(96,168,232,.06);border:1px solid rgba(96,168,232,.3);border-radius:var(--radius);padding:4px 10px;" title="Wzór: czas_biegu(s) − pkt_OSF − pkt_strzelanie. pkt_OSF zespół: 480−2×czas_OSF (baza 90s=300pkt). Pkt strzelanie: suma 3 zawodników × 2. Eliminacja zawodnika: +100pkt.">
-            ✓ Regulamin 11DKPanc 2025
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
-          Wpisz wyniki biegu drużynowego per drużyna (3-osobowy patrol mężczyzn).
-          <strong>pkt_OSF zespół</strong> = 480 − 2×czas_OSF (baza 90s = 300 pkt).
-          <strong>pkt strzelanie</strong> = suma przestrzelin 3 zawodników × 2.
-          <strong>Kara za eliminację:</strong> +100 pkt/osobę.
-        </div>
-        <div id="ptr-team-run-list"></div>
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-sm" onclick="initTeamRunsForAll()" style="font-size:11px;">＋ Dodaj wszystkie drużyny</button>
-          <button class="btn btn-sm" onclick="generateTeamRunPairs()" style="font-size:11px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🔑 Generuj pary (wg ind.)</button>
-          <button class="btn btn-sm" onclick="clearTeamRunPairs()" style="font-size:11px;color:var(--text3);">✕ Wyczyść pary</button>
-          <button class="btn btn-sm" onclick="clearAllTeamRuns()" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">✕ Wyczyść wszystkie wyniki</button>
-        </div>
       </div>
 
       <!-- 🏆 KLASYFIKACJA GENERALNA -->
@@ -1857,6 +1858,7 @@ function _applyRemoteStateNow(stateJson) {
       else if (tabId === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); updateAthleteStats(); }
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
       else if (tabId === 'timer' && typeof renderTimerView === 'function') renderTimerView();
+      else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     // B) Wykryj nowy start pary od innego sędziego — toast + pip
@@ -1890,6 +1892,7 @@ function showTab(id) {
     else if (id === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); if (typeof updateAthleteStats === 'function') updateAthleteStats(); }
     else if (id === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
     else if (id === 'timer' && typeof renderTimerView === 'function') renderTimerView();
+    else if (id === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
   // Odśwież sticky banner "BIEGNIE TERAZ" — widoczny tylko na zakładkach Pary/Stoper
@@ -6190,6 +6193,7 @@ async function boot() {
     else if (tabId === 'athletes') { renderAthletes(); updateAthleteStats(); }
     else if (tabId === 'pairs') renderPairsView();
     else if (tabId === 'timer') renderTimerView();
+    else if (tabId === 'team-run') renderTeamRunList();
     else if (tabId === 'results') renderResultsView();
   }
   startRealtimeSync();
