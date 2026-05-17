@@ -3824,10 +3824,10 @@ function drawPairsByKey(gender) {
   function buildForGender(g) {
     const ath = state.athletes.filter(a => a.gender === g && !lockedAthIds.has(a.id));
     if (!ath.length) return [];
-    // Pogrupuj po team, sortuj po bib (parseBibForSort → Y position)
+    // Pogrupuj po team, sortuj po Y (pozycja w zespole) — getBibY zwraca Y z bib "X/Y"
     const byTeam = {};
     ath.forEach(a => { const t = (a.team || '').trim() || '(brak)'; (byTeam[t] = byTeam[t] || []).push(a); });
-    Object.keys(byTeam).forEach(t => byTeam[t].sort((a, b) => parseBibForSort(a.bib) - parseBibForSort(b.bib)));
+    Object.keys(byTeam).forEach(t => byTeam[t].sort((a, b) => getBibY(a) - getBibY(b)));
     const teams = Object.keys(byTeam).sort();
     const maxY = Math.max(...teams.map(t => byTeam[t].length));
 
