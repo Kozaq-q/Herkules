@@ -294,6 +294,27 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .timer-osf-input:focus { outline: none; border-color: var(--male); background: rgba(91,155,213,.12); }
 .timer-osf-input:disabled { opacity: .5; }
 .timer-hits-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 8px; }
+
+/* Strzelanie — input + duże kafelki "−" "+" */
+.ptr-shot-row { display: grid; grid-template-columns: 42px 1fr 42px 38px 38px; gap: 4px; align-items: stretch; }
+.ptr-shot-row.compact { grid-template-columns: 36px 1fr 36px 32px 32px; }
+.ptr-shot-btn { background: var(--bg3); border: 1.5px solid var(--border2); border-radius: var(--radius); color: var(--orange); font-family: var(--font-h); font-size: 18px; font-weight: 800; cursor: pointer; padding: 0; line-height: 1; transition: all .1s; display: flex; align-items: center; justify-content: center; }
+.ptr-shot-btn.small { font-size: 11px; color: var(--text3); }
+.ptr-shot-btn:hover:not(:disabled) { background: rgba(232,148,77,.15); border-color: var(--orange); }
+.ptr-shot-btn.small:hover:not(:disabled) { color: var(--orange); }
+.ptr-shot-btn:active:not(:disabled) { transform: scale(.92); }
+.ptr-shot-btn:disabled { opacity: .35; cursor: not-allowed; }
+.ptr-shot-input { background: rgba(232,148,77,.06); border: 1.5px solid rgba(232,148,77,.45); border-radius: var(--radius); color: var(--text1); font-family: var(--font-m); font-size: 17px; font-weight: 800; text-align: center; padding: 6px 4px; width: 100%; }
+.ptr-shot-input::-webkit-inner-spin-button, .ptr-shot-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ptr-shot-input[type=number] { -moz-appearance: textfield; }
+
+/* Dziesiątki — kafelkowy wybór 0..5 */
+.ptr-tens-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 4px; }
+.ptr-tens-btn { background: var(--bg3); border: 1.5px solid var(--border2); border-radius: var(--radius); color: var(--text3); font-family: var(--font-h); font-size: 13px; font-weight: 800; padding: 6px 0; cursor: pointer; transition: all .1s; line-height: 1; }
+.ptr-tens-btn:hover:not(.active):not(:disabled) { background: var(--bg4); color: var(--text1); border-color: var(--text3); }
+.ptr-tens-btn.active { background: var(--orange); border-color: var(--orange); color: #111; box-shadow: 0 0 0 1px var(--orange); }
+.ptr-tens-btn:active { transform: scale(.92); }
+.ptr-tens-btn:disabled { opacity: .35; cursor: not-allowed; }
 .timer-hit-btn { background: var(--bg4); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text2); font-family: var(--font-h); font-size: 14px; font-weight: 800; padding: 5px 0; cursor: pointer; transition: all .12s; }
 .timer-hit-btn:hover:not(.active):not(:disabled) { background: var(--bg3); color: var(--text1); }
 .timer-hit-btn.active { background: var(--orange); border-color: var(--orange); color: #111; }
@@ -4051,25 +4072,28 @@ function athleteCardHTML(a, lane, pairNum, gender) {
           (totalDisabled ? ' disabled' : '') + ' />' +
       '</div>' +
     '</div>' +
-    // Strzelanie — punkty na tarczy (0-50) + dziesiątki (tie-break)
-    '<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;margin-top:6px;">' +
-      '<div class="ptr-time-tile' + (hitsDisabled ? ' dsq' : '') + '" style="background:rgba(232,148,77,.05);border-color:rgba(232,148,77,.35);">' +
-        '<div class="ptr-time-lbl" style="color:var(--orange);">🎯 Strzelanie (0-50)' + (!canEditHits ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
-        '<input class="ptr-time-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50 pkt"' +
+    // 🎯 Strzelanie (0-50): input + kafelki ±1 / ±5. Domyślna wartość strzałek = 50.
+    '<div style="margin-top:8px;">' +
+      '<div class="ptr-time-lbl" style="color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-50 pkt)' + (!canEditHits ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') + '</div>' +
+      '<div class="ptr-shot-row">' +
+        '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)" ' + (hitsDisabled ? 'disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
+        '<input class="ptr-shot-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50"' +
           ' onchange="setShotPoints(' + a.id + ', this.value)"' +
           ' onblur="setShotPoints(' + a.id + ', this.value)"' +
-          ' style="text-align:center;font-weight:700;"' +
           ' title="Suma punktów na tarczy (5 strzałów × max 10 pkt)"' +
           (hitsDisabled ? ' disabled' : '') + ' />' +
+        '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',+1)" ' + (hitsDisabled ? 'disabled' : '') + ' title="+1 (start od 50 jeśli puste)">+</button>' +
+        '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',-5)" ' + (hitsDisabled ? 'disabled' : '') + ' title="−5">−5</button>' +
+        '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',+5)" ' + (hitsDisabled ? 'disabled' : '') + ' title="+5">+5</button>' +
       '</div>' +
-      '<div class="ptr-time-tile' + (hitsDisabled ? ' dsq' : '') + '" style="background:var(--bg3);">' +
-        '<div class="ptr-time-lbl" style="font-size:9px;color:var(--text3);">×10 (tie-break)</div>' +
-        '<input class="ptr-time-input" type="number" min="0" max="5" step="1" value="' + (tens !== undefined ? tens : '') + '" placeholder="0-5"' +
-          ' onchange="setTens(' + a.id + ', this.value)"' +
-          ' onblur="setTens(' + a.id + ', this.value)"' +
-          ' style="text-align:center;font-size:13px;"' +
-          ' title="Liczba dziesiątek (tie-breaker przy remisie)"' +
-          (hitsDisabled ? ' disabled' : '') + ' />' +
+    '</div>' +
+    // ×10 (dziesiątki tie-break) — kafelkowe 0..5
+    '<div style="margin-top:6px;">' +
+      '<div class="ptr-time-lbl" style="font-size:9px;color:var(--text3);margin-bottom:3px;">×10 (tie-break)</div>' +
+      '<div class="ptr-tens-row">' +
+        [0,1,2,3,4,5].map(n =>
+          '<button class="ptr-tens-btn' + (tens === n ? ' active' : '') + '" onclick="toggleTens(' + a.id + ',' + n + ')"' + (hitsDisabled ? ' disabled' : '') + ' title="' + n + ' dziesiątek">' + n + '</button>'
+        ).join('') +
       '</div>' +
     '</div>' +
     // Dolna belka: DSQ po prawej
@@ -4134,6 +4158,31 @@ function setTens(id, val) {
     state.times[id].tens = n;
   }
   save();
+  renderPairsView();
+  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
+}
+
+// Toggle dziesiątek: klik na aktywny kafelek = wyczyść; inaczej ustaw.
+function toggleTens(id, n) {
+  const cur = state.times?.[id]?.tens;
+  if (cur === n) setTens(id, '');
+  else setTens(id, n);
+}
+
+// Inkrementuj/dekrementuj shotPoints. Brak wartości → start od 50.
+// Wartość ZEROWA (lub jakakolwiek wpisana) → start od niej, nie od 50.
+function bumpShotPoints(id, delta) {
+  const cur = state.times?.[id]?.shotPoints;
+  const legacy = state.times?.[id]?.hits;
+  let base;
+  if (cur !== undefined && cur !== null && cur !== '') base = parseInt(cur);
+  else if (legacy !== undefined && legacy !== null && legacy !== '') base = parseInt(legacy) * 10; // legacy 0-5 → ~0-50
+  else base = 50; // domyślnie wyjściowe = 50
+  if (!Number.isFinite(base)) base = 50;
+  let next = base + delta;
+  if (next < 0) next = 0;
+  if (next > 50) next = 50;
+  setShotPoints(id, next);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4862,34 +4911,37 @@ function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) 
   }
 
   // STRZELANIE — punkty na tarczy (0-50). META + ADMIN edycja, reszta read-only.
-  // Wartość bezpośrednia z shotPoints (nowe) lub legacy hits × 10 (fallback).
   const shotEff = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
                   (hits !== undefined ? (hits * 10) : undefined);
   let hitsRow = '';
   if (role === 'META' || role === 'ADMIN') {
     hitsRow =
-      '<div class="timer-osf-input-row" style="margin-top:8px;">' +
-        '<span class="timer-osf-label" style="color:var(--orange);">🎯 Strzelanie</span>' +
-        '<input type="number" min="0" max="50" step="1" class="timer-osf-input" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50 pkt"' +
-          ' onchange="setShotPoints(' + a.id + ', this.value)"' +
-          ' onblur="setShotPoints(' + a.id + ', this.value)"' +
-          ' style="background:rgba(232,148,77,.06);border-color:rgba(232,148,77,.35);text-align:center;font-weight:700;"' +
-          ' title="Suma punktów na tarczy (max 50 = 5 strzałów × 10pkt)"' +
-          (dsq ? ' disabled' : '') + ' />' +
-        '<span style="font-size:10px;color:var(--text3);margin-left:4px;">/50</span>' +
+      '<div style="margin-top:8px;">' +
+        '<div style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-50)</div>' +
+        '<div class="ptr-shot-row compact">' +
+          '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)"' + (dsq ? ' disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
+          '<input class="ptr-shot-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50"' +
+            ' onchange="setShotPoints(' + a.id + ', this.value)"' +
+            ' onblur="setShotPoints(' + a.id + ', this.value)"' +
+            ' title="Suma punktów na tarczy"' +
+            (dsq ? ' disabled' : '') + ' />' +
+          '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',+1)"' + (dsq ? ' disabled' : '') + ' title="+1 (start od 50 jeśli puste)">+</button>' +
+          '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',-5)"' + (dsq ? ' disabled' : '') + ' title="−5">−5</button>' +
+          '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',+5)"' + (dsq ? ' disabled' : '') + ' title="+5">+5</button>' +
+        '</div>' +
       '</div>' +
-      // Dziesiątki (tie-break) — drobny dodatkowy input
-      '<div class="timer-osf-input-row" style="margin-top:4px;">' +
-        '<span class="timer-osf-label" style="font-size:9px;color:var(--text3);">×10</span>' +
-        '<input type="number" min="0" max="5" step="1" class="timer-osf-input" value="' + (tens !== undefined ? tens : '') + '" placeholder="0-5"' +
-          ' onchange="setTens(' + a.id + ', this.value)"' +
-          ' onblur="setTens(' + a.id + ', this.value)"' +
-          ' style="background:var(--bg3);text-align:center;font-size:11px;padding:3px 6px;"' +
-          ' title="Liczba dziesiątek (tie-break)"' +
-          (dsq ? ' disabled' : '') + ' />' +
+      // Dziesiątki — kafelki 0..5
+      '<div style="margin-top:6px;">' +
+        '<div style="font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:3px;">×10 (tie-break)</div>' +
+        '<div class="ptr-tens-row">' +
+          [0,1,2,3,4,5].map(n =>
+            '<button class="ptr-tens-btn' + (tens === n ? ' active' : '') + '" onclick="toggleTens(' + a.id + ',' + n + ')"' + (dsq ? ' disabled' : '') + ' title="' + n + ' dziesiątek">' + n + '</button>'
+          ).join('') +
+        '</div>' +
       '</div>';
   } else if (shotEff !== undefined) {
-    hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Strzelanie: <strong style="color:var(--text1);">' + shotEff + '/50 pkt</strong></div>';
+    hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Strzelanie: <strong style="color:var(--text1);">' + shotEff + '/50 pkt</strong>' +
+      (tens !== undefined ? ' (' + tens + '×10)' : '') + '</div>';
   }
 
   // DSQ — META + ADMIN
