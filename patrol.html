@@ -5216,6 +5216,8 @@ function tickTimers() {
   });
   // Update timer-athlete-time — auto-zatrzymanie gdy ręczny total wpisany
   document.querySelectorAll('.timer-athlete-time[data-running="1"]').forEach(el => {
+    // Pomiń team-timery — obsługiwane w _tickTeamRunTimers
+    if (el.dataset.teamTimer || !el.dataset.pair) return;
     const athleteId = parseInt(el.dataset.timerAthlete);
     const [gender, pairNumStr] = el.dataset.pair.split('_');
     const run = getRun(gender, parseInt(pairNumStr));
