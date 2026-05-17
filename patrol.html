@@ -5805,8 +5805,9 @@ function renderResultsView() {
 function calcTeamRunPoints(tr) {
   if (!tr) return null;
   if (tr.dsq) return null; // drużyna zdyskwalifikowana
-  const biegSec = parseInt(tr.biegSec);
-  const osfSec  = parseInt(tr.osfSec);
+  // biegSec i osfSec mogą być float (setne) — używamy parseFloat
+  const biegSec = parseFloat(tr.biegSec);
+  const osfSec  = parseFloat(tr.osfSec);
   if (!Number.isFinite(biegSec) || biegSec <= 0) return null;
   if (!Number.isFinite(osfSec) || osfSec <= 0) return null;
   const shotPts = parseInt(tr.shotPoints) || 0;
@@ -5814,6 +5815,40 @@ function calcTeamRunPoints(tr) {
   const osfTeamPts = 480 - 2 * osfSec;
   const strzPts    = shotPts * 2;
   return Math.round(biegSec - osfTeamPts - strzPts + elim * 100);
+}
+
+// Format float seconds → "m:ss.SS" (np. 154.32 → "2:34.32")
+function _formatTeamSec(sec) {
+  if (sec == null || sec === '') return '';
+  const n = parseFloat(sec);
+  if (!Number.isFinite(n)) return '';
+  const m = Math.floor(n / 60);
+  const s = n - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+
+// Parse "m:ss.SS" / "ss.SS" / "ss" → float seconds (lub null)
+function _parseTeamSec(str) {
+  if (str == null) return null;
+  str = String(str).trim().replace(',', '.');
+  if (!str) return null;
+  const m = str.match(/^(\d+):(\d{1,2})(?:\.(\d+))?$/);
+  if (m) return parseInt(m[1]) * 60 + parseInt(m[2]) + (m[3] ? parseFloat('0.' + m[3]) : 0);
+  if (/^\d+(?:\.\d+)?$/.test(str)) return parseFloat(str);
+  return null;
+}
+
+// Wywołuje render aktywnej zakładki drużynówki (Pary drużyn lub Stoper drużyn)
+function _renderTeamRunActive() {
+  const active = document.querySelector('.nav-tab.active');
+  const tabId = active ? active.id.replace('tab-', '') : '';
+  if (tabId === 'team-timer') { if (typeof renderTeamTimerView === 'function') renderTeamTimerView(); return; }
+  if (tabId === 'team-run')   { if (typeof renderTeamRunList   === 'function') renderTeamRunList();   return; }
+  // Inna zakładka — i tak warto odświeżyć obie cicho dla spójności gdy user wróci
+  if (typeof renderTeamRunList   === 'function') renderTeamRunList();
+  // Klasyfikacje (gdy są w Wynikach)
+  if (typeof renderTeamView      === 'function') renderTeamView();
+  if (typeof renderOverallView   === 'function') renderOverallView();
 }
 
 function ensureTeamRun() {
@@ -5828,8 +5863,16 @@ function getTeamRun(team) {
 function setTeamRunField(team, field, value) {
   ensureTeamRun();
   if (!state.teamRun[team]) state.teamRun[team] = {};
-  // Walidacja per pole
-  if (field === 'biegSec' || field === 'osfSec' || field === 'shotPoints' || field === 'eliminated' || field === 'tens') {
+  // biegSec / osfSec mogą być float (setne); reszta to int
+  if (field === 'biegSec' || field === 'osfSec') {
+    if (value === '' || value === null || value === undefined) delete state.teamRun[team][field];
+    else {
+      let n = parseFloat(String(value).replace(',', '.'));
+      if (!Number.isFinite(n)) return;
+      if (n < 0) n = 0;
+      state.teamRun[team][field] = n;
+    }
+  } else if (field === 'shotPoints' || field === 'eliminated' || field === 'tens') {
     if (value === '' || value === null || value === undefined) delete state.teamRun[team][field];
     else {
       let n = parseInt(value);
@@ -5843,14 +5886,17 @@ function setTeamRunField(team, field, value) {
   } else if (field === 'dsq') {
     state.teamRun[team].dsq = !!value;
   } else if (field === 'biegStr') {
-    // "8:31" → biegSec=511
-    const m = String(value || '').match(/^(\d+):(\d+)/);
-    if (m) state.teamRun[team].biegSec = parseInt(m[1]) * 60 + parseInt(m[2]);
-    else if (value === '' || value === null) delete state.teamRun[team].biegSec;
+    // "8:31.45" / "511.32" / "" → float biegSec
+    if (value === '' || value === null || value === undefined) {
+      delete state.teamRun[team].biegSec;
+    } else {
+      const sec = _parseTeamSec(value);
+      if (sec !== null && Number.isFinite(sec) && sec >= 0) state.teamRun[team].biegSec = sec;
+    }
   }
   state.teamRun[team][field + 'At'] = nowMs();
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   renderTeamView();
   renderOverallView();
 }
@@ -5861,7 +5907,7 @@ function toggleTeamRunDsq(team) {
   state.teamRun[team].dsq = !state.teamRun[team].dsq;
   state.teamRun[team].dsqAt = nowMs();
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   renderTeamView();
   renderOverallView();
 }
@@ -5871,7 +5917,7 @@ function initTeamRunsForAll() {
   ensureTeamRun();
   teams.forEach(t => { if (!state.teamRun[t]) state.teamRun[t] = {}; });
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
 }
 
 // ─── PARY ZESPOŁÓW DO BIEGU DRUŻYNOWEGO ──────────────────────────
@@ -5911,7 +5957,7 @@ function generateTeamRunPairs() {
   }
   state.teamRunPairs = pairs;
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   showToast('🏃 Wygenerowano pary zespołów: ' + pairs.length, 'success', 2500);
 }
 
@@ -5919,14 +5965,14 @@ function clearTeamRunPairs() {
   if (!confirm('Wyczyścić pary zespołów do biegu drużynowego?')) return;
   delete state.teamRunPairs;
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
 }
 
 function clearAllTeamRuns() {
   if (!confirm('Wyczyścić WSZYSTKIE wyniki biegu drużynowego?')) return;
   state.teamRun = {};
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   renderTeamView();
   renderOverallView();
 }
@@ -5935,7 +5981,7 @@ function removeTeamRun(team) {
   if (!state.teamRun) return;
   delete state.teamRun[team];
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   renderTeamView();
   renderOverallView();
 }
@@ -5947,7 +5993,7 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
   const showStoper = opts.showStoper !== false; // domyślnie pokazuj (wstecznie kompatybilne)
   const tr = (state.teamRun || {})[teamName] || {};
   const dsq = !!tr.dsq;
-  const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
+  const biegStr = (tr.biegSec != null && tr.biegSec !== '') ? _formatTeamSec(tr.biegSec) : '';
   const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
   const canEdit = role === 'ADMIN' || role === 'META';
   const disabled = dsq || !canEdit;
@@ -6076,7 +6122,7 @@ function startTeamRunPair(pairNum) {
     });
   }
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   showToast('▶ Para drużyn ' + pairNum + ' wystartowała', 'success', 1800);
 }
 
@@ -6084,7 +6130,6 @@ function resetTeamRunPair(pairNum) {
   if (!state.teamRuns?.[pairNum]) return;
   if (!confirm('Reset stopera pary drużyn ' + pairNum + '? Czasy biegu zostaną usunięte.')) return;
   delete state.teamRuns[pairNum];
-  // Wyczyść biegSec drużyn w tej parze
   const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
   if (p) {
     [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
@@ -6092,7 +6137,7 @@ function resetTeamRunPair(pairNum) {
     });
   }
   save();
-  renderTeamRunList();
+  _renderTeamRunActive();
   showToast('↺ Reset pary drużyn ' + pairNum, 'info', 1500);
 }
 
@@ -6110,19 +6155,20 @@ function stopTeamRunTeam(teamName, pairNum) {
       state.teamRun[teamName].biegSecAt = nowMs();
     }
     save();
-    renderTeamRunList();
+    _renderTeamRunActive();
     showToast('↺ Cofnięto stop ' + teamName, 'info', 1500);
     return;
   }
   run.finishedAt[teamName] = nowMs();
-  const biegSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 1000);
+  // Setne sekundy (float) — analogiczne do indywidualnego total
+  const biegSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 10) / 100;
   if (!state.teamRun) state.teamRun = {};
   if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
   state.teamRun[teamName].biegSec = biegSec;
   state.teamRun[teamName].biegSecAt = nowMs();
   save();
-  renderTeamRunList();
-  showToast('■ STOP ' + teamName + ': ' + Math.floor(biegSec/60) + ':' + String(biegSec%60).padStart(2,'0'), 'success', 1500);
+  _renderTeamRunActive();
+  showToast('■ STOP ' + teamName + ': ' + _formatTeamSec(biegSec), 'success', 1500);
 }
 
 // Sprawdza scheduledStartAt par drużynowych i automatycznie startuje gdy nadejdzie czas
@@ -6386,7 +6432,8 @@ function renderTeamTimerPairHTML(p, role) {
   return '<div class="' + cardCls + '">' + head + actionsBar + teams + '</div>';
 }
 
-// Karta drużyny w stoperze — analog. do renderTimerAthleteHTML w indywidualnym
+// Karta drużyny w stoperze — analog. do renderTimerAthleteHTML w indywidualnym.
+// Pełen zestaw: live timer, STOP META, ręczny Bieg, OSF (rola OSF), Strzelanie ± , ×10, DSQ.
 function teamTimerAthleteHTML(teamName, lane, pairNum, run, role) {
   if (!teamName) {
     return '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak drużyny ' + lane + '</div>';
@@ -6399,35 +6446,104 @@ function teamTimerAthleteHTML(teamName, lane, pairNum, run, role) {
   const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const pairAttr = String(pairNum).replace(/"/g,'&quot;');
 
-  // Live time per drużyna
+  // Uprawnienia per rola (jak w indywidualnym)
+  const canStop      = role === 'META' || role === 'ADMIN';
+  const canEditTotal = role === 'META' || role === 'ADMIN';
+  const canEditOsf   = role === 'OSF'  || role === 'ADMIN';
+  const canEditHits  = role === 'META' || role === 'ADMIN';
+  const canEditDsq   = role === 'META' || role === 'ADMIN';
+
+  // Live time per drużyna (lub finished z biegSec)
+  const biegStr = (tr.biegSec != null && tr.biegSec !== '') ? _formatTeamSec(tr.biegSec) : '';
   let timeDisplay;
-  if (teamFinished) {
-    const ms = run.finishedAt[teamName] - run.startedAt;
-    timeDisplay = '<div class="timer-athlete-time finished">' + formatRunTime(ms) + '</div>';
+  if (biegStr) {
+    timeDisplay = '<div class="timer-athlete-time finished">' + esc(biegStr) + '</div>';
   } else if (started) {
     timeDisplay = '<div class="timer-athlete-time" data-team-timer="' + safeT + '|' + pairAttr + '" data-running="1">0.00</div>';
   } else {
     timeDisplay = '<div class="timer-athlete-time idle">—</div>';
   }
 
-  // STOP META button — analog. do stopAthlete
+  // STOP META button
   let stopBtn = '';
-  const canStop = role === 'META' || role === 'ADMIN';
   if (canStop && started) {
-    if (teamFinished) {
+    if (biegStr) {
       stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="font-size:11px;padding:6px 12px;margin-top:8px;">↺ Cofnij stop</button>';
     } else if (!dsq) {
       stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="margin-top:8px;">■ STOP META</button>';
     }
   }
 
+  // Pole ręcznego BIEGu (backup gdy auto-stop był niedokładny)
+  let totalInput = '';
+  if (canEditTotal) {
+    totalInput = '<div class="timer-osf-input-row" style="margin-top:8px;">' +
+      '<span class="timer-osf-label" style="color:var(--green);">🏁 Bieg drużyny</span>' +
+      '<input type="text" class="timer-osf-input" value="' + esc(biegStr) + '" placeholder="m:ss.SS (ręcznie)"' +
+        ' onchange="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)"' +
+        ' onblur="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)"' +
+        ' style="background:rgba(76,175,130,.06);border-color:rgba(76,175,130,.35);"' +
+        ' title="Wpisz ręcznie jeśli auto-stop był nieprecyzyjny"' +
+        (dsq ? ' disabled' : '') + ' />' +
+    '</div>';
+  }
+
+  // OSF — tylko OSF/ADMIN, reszta read-only
+  let osfInput;
+  const osfDisp = (tr.osfSec != null && tr.osfSec !== '') ? tr.osfSec : '';
+  if (canEditOsf) {
+    osfInput = '<div class="timer-osf-input-row">' +
+      '<span class="timer-osf-label">⏱ OSF (s)</span>' +
+      '<input type="number" min="0" max="3600" step="0.01" class="timer-osf-input" value="' + esc(String(osfDisp)) + '" placeholder="np. 95"' +
+        ' onchange="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)"' +
+        ' onblur="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)"' +
+        (dsq ? ' disabled' : '') + ' />' +
+    '</div>';
+  } else {
+    osfInput = '<div class="timer-osf-input-row">' +
+      '<span class="timer-osf-label">⏱ OSF (s)</span>' +
+      '<span style="flex:1;font-family:var(--font-m);font-size:13px;color:' + (osfDisp ? 'var(--male)' : 'var(--text3)') + ';padding:5px 8px;background:rgba(91,155,213,.04);border:1px dashed rgba(91,155,213,.25);border-radius:var(--radius);" title="Tylko OSF/Admin może wpisać">' + (osfDisp ? esc(String(osfDisp)) : '— (wpisze OSF)') + '</span>' +
+    '</div>';
+  }
+
+  // Strzelanie (0-150 pkt) z input + kafelkami ±
+  let shotRow = '';
+  const shotVal = (tr.shotPoints !== undefined && tr.shotPoints !== null) ? tr.shotPoints : '';
+  if (canEditHits) {
+    shotRow =
+      '<div style="margin-top:8px;">' +
+        '<div style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-150)</div>' +
+        '<div class="ptr-shot-row compact">' +
+          '<input class="ptr-shot-input" type="number" min="0" max="150" step="1" value="' + esc(String(shotVal)) + '" placeholder="0-150"' +
+            ' onchange="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)"' +
+            ' onblur="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)"' +
+            (dsq ? ' disabled' : '') + ' />' +
+          '<button class="ptr-shot-btn" onclick="bumpTeamRunShot(\'' + safeT + '\',-1)"' + (dsq ? ' disabled' : '') + ' title="−1">−</button>' +
+          '<button class="ptr-shot-btn" onclick="bumpTeamRunShot(\'' + safeT + '\',+1)"' + (dsq ? ' disabled' : '') + ' title="+1">+</button>' +
+          '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',-10)"' + (dsq ? ' disabled' : '') + ' title="−10">−10</button>' +
+          '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',+10)"' + (dsq ? ' disabled' : '') + ' title="+10">+10</button>' +
+        '</div>' +
+      '</div>' +
+      // ×10 (tens) jako mały input
+      '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
+        '<span class="timer-osf-label" style="font-size:9px;color:var(--text3);">×10 (tie-break)</span>' +
+        '<input type="number" min="0" max="15" step="1" value="' + (tr.tens !== undefined ? tr.tens : '') + '" placeholder="0-15"' +
+          ' onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
+          ' onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
+          ' style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:4px 6px;font-family:var(--font-m);font-size:12px;text-align:center;"' +
+          (dsq ? ' disabled' : '') + ' />' +
+      '</div>';
+  } else if (shotVal !== '') {
+    shotRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Strzelanie: <strong style="color:var(--text1);">' + shotVal + '/150 pkt</strong></div>';
+  }
+
   // DSQ button
   let dsqBtn = '';
-  if (role === 'META' || role === 'ADMIN') {
+  if (canEditDsq) {
     dsqBtn = '<button onclick="toggleTeamRunDsq(\'' + safeT + '\')" style="margin-top:8px;font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 10px;border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';cursor:pointer;">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>';
   }
 
-  const cls = 'timer-athlete' + (teamFinished ? ' finished' : '') + (dsq ? ' dsq' : '');
+  const cls = 'timer-athlete' + (biegStr ? ' finished' : '') + (dsq ? ' dsq' : '');
   return '<div class="' + cls + '">' +
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
       '<div style="flex:1;min-width:0;">' +
@@ -6437,6 +6553,9 @@ function teamTimerAthleteHTML(teamName, lane, pairNum, run, role) {
     '</div>' +
     timeDisplay +
     stopBtn +
+    totalInput +
+    osfInput +
+    shotRow +
     dsqBtn +
   '</div>';
 }
