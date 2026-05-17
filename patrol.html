@@ -5919,10 +5919,6 @@ function teamRunCardHTML(teamName, lane) {
   const pts = calcTeamRunPoints(tr);
   const ptsDisp = dsq ? '<span style="background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.4);padding:1px 6px;border-radius:3px;font-family:var(--font-h);font-size:11px;font-weight:800;">DSQ</span>'
                       : (pts === null ? '<span style="color:var(--text3);">—</span>' : '<strong style="color:var(--accent);font-family:var(--font-m);">' + pts + ' pkt</strong>');
-  const tensCurrent = tr.tens !== undefined ? tr.tens : null;
-  const tensTiles = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(n =>
-    '<button class="ptr-tens-btn' + (tensCurrent === n ? ' active' : '') + '" onclick="toggleTeamRunTens(\'' + safeT + '\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' dziesiątek">' + n + '</button>'
-  ).join('');
 
   return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '" style="' + (dsq ? 'opacity:.65;' : '') + '">' +
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
@@ -5958,22 +5954,29 @@ function teamRunCardHTML(teamName, lane) {
         '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',+10)"' + (disabled ? ' disabled' : '') + ' title="+10">+10</button>' +
       '</div>' +
     '</div>' +
-    // Eliminacja (0-3) kafelkami + ×10 (0-15) kafelkami
-    '<div style="margin-top:6px;display:grid;grid-template-columns:1fr 1.5fr;gap:6px;">' +
-      '<div>' +
-        '<div class="ptr-time-lbl" style="font-size:9px;color:var(--red);margin-bottom:3px;">Eliminacja zaw.</div>' +
+    // ×10 (tie-break) — mały numeryczny input zamiast 16 kafelków
+    '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
+      '<span class="ptr-time-lbl" style="font-size:9px;color:var(--text3);margin:0;flex:1;">×10 dziesiątek (tie-break, max 15)</span>' +
+      '<input type="number" min="0" max="15" step="1" value="' + (tr.tens !== undefined ? tr.tens : '') + '" placeholder="0-15"' +
+        ' onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
+        ' style="width:54px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:4px 6px;font-family:var(--font-m);font-size:12px;text-align:center;"' +
+        (disabled ? ' disabled' : '') + ' />' +
+    '</div>' +
+    // Eliminacja zawodnika — rzadko używane, schowane w collapse
+    '<details style="margin-top:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">' +
+      '<summary style="cursor:pointer;padding:5px 10px;font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);user-select:none;">' +
+        '⚠ Eliminacja zawodnika z patrolu' + (tr.eliminated ? ' <span style="color:var(--red);margin-left:6px;">(' + tr.eliminated + ' wyeliminowanych, +' + (tr.eliminated*100) + ' pkt)</span>' : '') +
+      '</summary>' +
+      '<div style="padding:8px 10px;">' +
+        '<div style="font-size:10px;color:var(--text3);line-height:1.5;margin-bottom:6px;">Regulamin: za 1 wyeliminowanego z patrolu +100 pkt, za 2 → +200 pkt. Pozostali biegną dalej.</div>' +
         '<div class="ptr-tens-row" style="grid-template-columns:repeat(4,1fr);">' +
           [0,1,2,3].map(n => {
             const active = (tr.eliminated || 0) === n;
-            return '<button class="ptr-tens-btn' + (active ? ' active' : '') + '" onclick="setTeamRunField(\'' + safeT + '\',\'eliminated\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' wyeliminowanych (+' + (n*100) + ' pkt)">' + n + '</button>';
+            return '<button class="ptr-tens-btn' + (active ? ' active' : '') + '" onclick="setTeamRunField(\'' + safeT + '\',\'eliminated\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' wyeliminowanych' + (n>0 ? ' (+' + (n*100) + ' pkt karne)' : '') + '">' + n + '</button>';
           }).join('') +
         '</div>' +
       '</div>' +
-      '<div>' +
-        '<div class="ptr-time-lbl" style="font-size:9px;color:var(--text3);margin-bottom:3px;">×10 (tie-break, max 15)</div>' +
-        '<div class="ptr-tens-row" style="grid-template-columns:repeat(8,1fr);">' + tensTiles + '</div>' +
-      '</div>' +
-    '</div>' +
+    '</details>' +
     // Stopka: wynik + DSQ
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);">' +
       '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Wynik: ' + ptsDisp + '</span>' +
