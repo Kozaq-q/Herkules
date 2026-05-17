@@ -5907,6 +5907,108 @@ function removeTeamRun(team) {
   renderOverallView();
 }
 
+// ─── KARTA DRUŻYNY w biegu drużynowym (analog. do athleteCardHTML w ind.) ──
+function teamRunCardHTML(teamName, lane) {
+  const tr = (state.teamRun || {})[teamName] || {};
+  const dsq = !!tr.dsq;
+  const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const canEdit = role === 'ADMIN' || role === 'META';
+  const disabled = dsq || !canEdit;
+  const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const pts = calcTeamRunPoints(tr);
+  const ptsDisp = dsq ? '<span style="background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.4);padding:1px 6px;border-radius:3px;font-family:var(--font-h);font-size:11px;font-weight:800;">DSQ</span>'
+                      : (pts === null ? '<span style="color:var(--text3);">—</span>' : '<strong style="color:var(--accent);font-family:var(--font-m);">' + pts + ' pkt</strong>');
+  const tensCurrent = tr.tens !== undefined ? tr.tens : null;
+  const tensTiles = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15].map(n =>
+    '<button class="ptr-tens-btn' + (tensCurrent === n ? ' active' : '') + '" onclick="toggleTeamRunTens(\'' + safeT + '\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' dziesiątek">' + n + '</button>'
+  ).join('');
+
+  return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '" style="' + (dsq ? 'opacity:.65;' : '') + '">' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+      '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(teamName) + '</span>' +
+      '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
+    '</div>' +
+    '<div class="pair-athlete-meta" style="margin-bottom:8px;">Patrol 3-osobowy</div>' +
+    // OSF + Bieg (czas) — kafelki obok siebie jak w ind.
+    '<div class="ptr-times-row">' +
+      '<div class="ptr-time-tile ptr-time-osf' + (disabled ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">⏱ OSF (s)' + (!canEdit ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
+        '<input class="ptr-time-input" type="number" min="0" max="3600" value="' + (tr.osfSec || '') + '" placeholder="np. 95"' +
+          ' onchange="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)"' +
+          (disabled ? ' disabled' : '') + ' />' +
+      '</div>' +
+      '<div class="ptr-time-tile ptr-time-total' + (disabled ? ' dsq' : '') + '">' +
+        '<div class="ptr-time-lbl">🏃 Bieg (m:ss)' + (!canEdit ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
+        '<input class="ptr-time-input" type="text" value="' + esc(biegStr) + '" placeholder="np. 9:30"' +
+          ' onchange="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)"' +
+          (disabled ? ' disabled' : '') + ' />' +
+      '</div>' +
+    '</div>' +
+    // Strzelanie (0-150) z input + kafelkami ±1 / ±10
+    '<div style="margin-top:8px;">' +
+      '<div class="ptr-time-lbl" style="color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-150 pkt, suma 3 zaw.)' + (!canEdit ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') + '</div>' +
+      '<div class="ptr-shot-row">' +
+        '<input class="ptr-shot-input" type="number" min="0" max="150" step="1" value="' + (tr.shotPoints !== undefined ? tr.shotPoints : '') + '" placeholder="0-150"' +
+          ' onchange="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)"' +
+          (disabled ? ' disabled' : '') + ' />' +
+        '<button class="ptr-shot-btn" onclick="bumpTeamRunShot(\'' + safeT + '\',-1)"' + (disabled ? ' disabled' : '') + ' title="−1 (start od 100 jeśli puste)">−</button>' +
+        '<button class="ptr-shot-btn" onclick="bumpTeamRunShot(\'' + safeT + '\',+1)"' + (disabled ? ' disabled' : '') + ' title="+1 (start od 100 jeśli puste)">+</button>' +
+        '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',-10)"' + (disabled ? ' disabled' : '') + ' title="−10">−10</button>' +
+        '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',+10)"' + (disabled ? ' disabled' : '') + ' title="+10">+10</button>' +
+      '</div>' +
+    '</div>' +
+    // Eliminacja (0-3) kafelkami + ×10 (0-15) kafelkami
+    '<div style="margin-top:6px;display:grid;grid-template-columns:1fr 1.5fr;gap:6px;">' +
+      '<div>' +
+        '<div class="ptr-time-lbl" style="font-size:9px;color:var(--red);margin-bottom:3px;">Eliminacja zaw.</div>' +
+        '<div class="ptr-tens-row" style="grid-template-columns:repeat(4,1fr);">' +
+          [0,1,2,3].map(n => {
+            const active = (tr.eliminated || 0) === n;
+            return '<button class="ptr-tens-btn' + (active ? ' active' : '') + '" onclick="setTeamRunField(\'' + safeT + '\',\'eliminated\',' + n + ')"' + (disabled ? ' disabled' : '') + ' title="' + n + ' wyeliminowanych (+' + (n*100) + ' pkt)">' + n + '</button>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="ptr-time-lbl" style="font-size:9px;color:var(--text3);margin-bottom:3px;">×10 (tie-break, max 15)</div>' +
+        '<div class="ptr-tens-row" style="grid-template-columns:repeat(8,1fr);">' + tensTiles + '</div>' +
+      '</div>' +
+    '</div>' +
+    // Stopka: wynik + DSQ
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);">' +
+      '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Wynik: ' + ptsDisp + '</span>' +
+      '<button onclick="toggleTeamRunDsq(\'' + safeT + '\')" ' + (!canEdit ? 'disabled' : '') +
+        ' style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 8px;' +
+        'border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';border-radius:var(--radius);' +
+        'background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';cursor:pointer;white-space:nowrap;' + (!canEdit ? 'opacity:.4;' : '') + '"' +
+        ' title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj drużynę') + '">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
+    '</div>' +
+  '</div>';
+}
+
+// Toggle ×10 dla drużyny (klik na aktywny = wyczyść)
+function toggleTeamRunTens(team, n) {
+  ensureTeamRun();
+  if (!state.teamRun[team]) state.teamRun[team] = {};
+  if (state.teamRun[team].tens === n) setTeamRunField(team, 'tens', '');
+  else setTeamRunField(team, 'tens', n);
+}
+
+// Inkrementuj/dekrementuj strzelanie drużyny. Domyślna wartość: 100 (typ. wynik patrolu 3-os.)
+function bumpTeamRunShot(team, delta) {
+  ensureTeamRun();
+  if (!state.teamRun[team]) state.teamRun[team] = {};
+  const cur = state.teamRun[team].shotPoints;
+  let base;
+  if (cur !== undefined && cur !== null && cur !== '') base = parseInt(cur);
+  else base = 100;
+  if (!Number.isFinite(base)) base = 100;
+  let next = base + delta;
+  if (next < 0) next = 0;
+  if (next > 150) next = 150;
+  setTeamRunField(team, 'shotPoints', next);
+}
+
 function renderTeamRunList() {
   const list = document.getElementById('ptr-team-run-list');
   if (!list) return;
@@ -5915,68 +6017,54 @@ function renderTeamRunList() {
   const teamsWithEntry = Object.keys(state.teamRun || {});
   const teamSet = new Set([...allTeams, ...teamsWithEntry]);
 
-  // Kolejność wyświetlania: jeśli mamy state.teamRunPairs (wygenerowane pary),
-  // pokaż wg pair order z numerami par i kolumną toru; inaczej alfabetycznie.
-  const rows = [];
-  const usedTeams = new Set();
-  if (state.teamRunPairs && state.teamRunPairs.length) {
-    state.teamRunPairs.forEach(p => {
-      if (p.aTeam && teamSet.has(p.aTeam)) { rows.push({ team: p.aTeam, pairNum: p.pairNum, lane: p.aLane }); usedTeams.add(p.aTeam); }
-      if (p.bTeam && teamSet.has(p.bTeam)) { rows.push({ team: p.bTeam, pairNum: p.pairNum, lane: p.bLane }); usedTeams.add(p.bTeam); }
-    });
-  }
-  // Drużyny które nie zostały sparowane (np. nowo dodane, lub nie ma pairs) — na dole
-  [...teamSet].sort().forEach(t => { if (!usedTeams.has(t)) rows.push({ team: t, pairNum: null, lane: null }); });
-
-  if (!rows.length) {
-    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak drużyn. Dodaj zawodników z drużynami lub kliknij "Dodaj wszystkie drużyny".</div>';
+  if (!teamSet.size) {
+    list.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--text3);font-size:13px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak drużyn. Dodaj zawodników z drużynami lub kliknij <strong>"＋ Dodaj wszystkie drużyny"</strong> poniżej.</div>';
     return;
   }
 
-  const headerHTML =
-    '<div style="display:grid;grid-template-columns:50px 1.3fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);margin-bottom:4px;">' +
-      '<div style="text-align:center;">Para / Tor</div>' +
-      '<div>Drużyna</div>' +
-      '<div style="text-align:center;">Bieg (m:s)</div>' +
-      '<div style="text-align:center;">OSF (s)</div>' +
-      '<div style="text-align:center;">Strzel. (0-150)</div>' +
-      '<div style="text-align:center;">Elim.</div>' +
-      '<div style="text-align:center;">×10</div>' +
-      '<div style="text-align:center;">Punkty</div>' +
-      '<div></div>' +
-    '</div>';
-
-  function pairCell(r) {
-    if (!r.pairNum) return '<span style="color:var(--text3);font-size:10px;">—</span>';
-    const laneBg = r.lane === 'L' ? 'rgba(96,168,232,.15)' : r.lane === 'P' ? 'rgba(213,123,155,.15)' : 'var(--bg3)';
-    const laneCol = r.lane === 'L' ? 'var(--male)' : r.lane === 'P' ? 'var(--female)' : 'var(--text3)';
-    const laneBd = r.lane === 'L' ? 'rgba(96,168,232,.45)' : r.lane === 'P' ? 'rgba(213,123,155,.45)' : 'var(--border)';
-    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">' +
-      '<span style="font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--accent);">' + r.pairNum + '</span>' +
-      (r.lane ? '<span style="font-family:var(--font-h);font-size:10px;font-weight:800;padding:1px 6px;border-radius:3px;background:' + laneBg + ';color:' + laneCol + ';border:1px solid ' + laneBd + ';">' + r.lane + '</span>' : '') +
-    '</div>';
+  // Drużyny wg par (jeśli wygenerowane), niesparowane na dole
+  const pairs = state.teamRunPairs || [];
+  const usedTeams = new Set();
+  let html = '';
+  pairs.forEach(p => {
+    if (!p.aTeam) return;
+    const isSolo = !p.bTeam;
+    usedTeams.add(p.aTeam);
+    if (p.bTeam) usedTeams.add(p.bTeam);
+    html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + '" data-pair="' + p.pairNum + '">';
+    html += '<div class="pair-header">';
+    html += '<span class="pair-num">' + p.pairNum + '</span>';
+    html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">Para drużyn</span>';
+    if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+    html += '</div>';
+    html += '<div class="pair-athletes">';
+    html += teamRunCardHTML(p.aTeam, p.aLane || 'L');
+    html += '<div class="pair-vs">VS</div>';
+    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P') : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  // Niesparowane drużyny na dole
+  const unpaired = [...teamSet].sort().filter(t => !usedTeams.has(t));
+  if (unpaired.length) {
+    html += '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">' +
+      '<div style="font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;">' +
+      (pairs.length ? 'Drużyny bez przypisanej pary' : 'Drużyny (kliknij "🔑 Generuj pary (wg ind.)" aby utworzyć pary startowe)') +
+      '</div>';
+    unpaired.forEach(t => {
+      html += '<div class="pair-card" style="margin-bottom:10px;">';
+      html += '<div class="pair-header">';
+      html += '<span class="pair-num" style="opacity:.4;">—</span>';
+      html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">Bez pary</span>';
+      html += '</div>';
+      html += '<div class="pair-athletes" style="grid-template-columns:1fr;">';
+      html += teamRunCardHTML(t, 'L');
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
   }
-
-  list.innerHTML = headerHTML + rows.map(r => {
-    const t = r.team;
-    const tr = state.teamRun[t] || {};
-    const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
-    const pts = calcTeamRunPoints(tr);
-    const ptsCell = tr.dsq ? '<span style="color:var(--red);font-weight:800;">DSQ</span>'
-                            : (pts === null ? '—' : '<span style="color:var(--accent);font-weight:800;">' + pts + '</span>');
-    const safeT = esc(t).replace(/'/g,'\\\'');
-    return '<div style="display:grid;grid-template-columns:50px 1.3fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;' + (tr.dsq ? 'opacity:.6;' : '') + '">' +
-      pairCell(r) +
-      '<div style="font-weight:600;color:var(--text1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(t) + '</div>' +
-      '<input type="text" value="' + esc(biegStr) + '" placeholder="m:ss" onchange="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
-      '<input type="number" min="0" max="3600" value="' + (tr.osfSec || '') + '" placeholder="0-300" onchange="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
-      '<input type="number" min="0" max="150" value="' + (tr.shotPoints !== undefined ? tr.shotPoints : '') + '" placeholder="0-150" onchange="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
-      '<input type="number" min="0" max="3" value="' + (tr.eliminated || 0) + '" onchange="setTeamRunField(\'' + safeT + '\',\'eliminated\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'eliminated\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba wyeliminowanych z patrolu (0-2; 3=DSQ)" />' +
-      '<input type="number" min="0" max="15" value="' + (tr.tens !== undefined ? tr.tens : '') + '" onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:12px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba dziesiątek (tie-break)" />' +
-      '<div style="text-align:center;font-family:var(--font-m);font-size:15px;">' + ptsCell + '</div>' +
-      '<button onclick="toggleTeamRunDsq(\'' + safeT + '\')" title="' + (tr.dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '" style="background:' + (tr.dsq ? 'rgba(224,85,85,.15)' : 'transparent') + ';border:1px solid ' + (tr.dsq ? 'rgba(224,85,85,.5)' : 'var(--border2)') + ';border-radius:var(--radius);color:' + (tr.dsq ? 'var(--red)' : 'var(--text3)') + ';font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 0;cursor:pointer;">' + (tr.dsq ? '✕' : 'DSQ') + '</button>' +
-    '</div>';
-  }).join('');
+  list.innerHTML = html;
 }
 
 // ─── KLASYFIKACJA GENERALNA (ind. M top 3 + bieg drużynowy) ─────
