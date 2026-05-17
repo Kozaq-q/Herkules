@@ -1022,8 +1022,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm" onclick="printPtrInd('M')" style="font-size:11px;padding:6px 12px;color:var(--male);border-color:rgba(91,155,213,.4);">🖨 ♂ Mężczyźni</button>
             <button class="btn btn-sm" onclick="printPtrInd('K')" style="font-size:11px;padding:6px 12px;color:var(--female);border-color:rgba(213,123,155,.4);">🖨 ♀ Kobiety</button>
-            <button class="btn btn-sm" onclick="printPtrTeam()" style="font-size:11px;padding:6px 12px;color:var(--orange);border-color:rgba(232,148,77,.4);">🖨 🛡 Drużynowa</button>
-            <button class="btn btn-sm" onclick="printPtrAll()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">📄 Komplet (M + K + Drużynowa)</button>
+            <button class="btn btn-sm" onclick="printPtrTeam()" style="font-size:11px;padding:6px 12px;color:var(--orange);border-color:rgba(232,148,77,.4);">🖨 🛡 Drużynowa ind.</button>
+            <button class="btn btn-sm" onclick="printPtrTeamRun()" style="font-size:11px;padding:6px 12px;color:var(--blue);border-color:rgba(96,168,232,.4);">🖨 🏃 Bieg drużynowy</button>
+            <button class="btn btn-sm" onclick="printPtrOverall()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🖨 🏆 Generalna</button>
+            <button class="btn btn-sm" onclick="printPtrAll()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">📄 Komplet (wszystko)</button>
           </div>
         </div>
       </div>
@@ -1056,15 +1058,51 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
       <div class="card mb-12" id="ptr-team-card" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Klasyfikacja drużynowa</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;" title="Suma punktów 3 najlepszych mężczyzn z drużyny. Kobiety nie liczą do klasyfikacji zespołowej (tylko ind. medale).">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Drużynowa (suma 3 najlepszych M ind.)</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;">
             ✓ Regulamin 11DKPanc 2025
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
-          Wynik drużyny = suma punktów <strong>3 najlepszych mężczyzn</strong> (najniższe pkt). Kobiety <strong>nie liczą się</strong> do klasyfikacji zespołowej. Drużyna musi mieć minimum <strong>3 sklasyfikowanych mężczyzn</strong>.
+          Suma punktów <strong>3 najlepszych mężczyzn</strong> z biegu indywidualnego. Kobiety nie liczą.
         </div>
         <div id="ptr-team-list"></div>
+      </div>
+
+      <!-- 🏃 BIEG DRUŻYNOWY (patrol 3-osobowy) -->
+      <div class="card mb-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Bieg drużynowy (patrol 3-os.)</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(96,168,232,.06);border:1px solid rgba(96,168,232,.3);border-radius:var(--radius);padding:4px 10px;" title="Wzór: czas_biegu(s) − pkt_OSF − pkt_strzelanie. pkt_OSF zespół: 480−2×czas_OSF (baza 90s=300pkt). Pkt strzelanie: suma 3 zawodników × 2. Eliminacja zawodnika: +100pkt.">
+            ✓ Regulamin 11DKPanc 2025
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          Wpisz wyniki biegu drużynowego per drużyna (3-osobowy patrol mężczyzn).
+          <strong>pkt_OSF zespół</strong> = 480 − 2×czas_OSF (baza 90s = 300 pkt).
+          <strong>pkt strzelanie</strong> = suma przestrzelin 3 zawodników × 2.
+          <strong>Kara za eliminację:</strong> +100 pkt/osobę.
+        </div>
+        <div id="ptr-team-run-list"></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="initTeamRunsForAll()" style="font-size:11px;">＋ Dodaj wszystkie drużyny</button>
+          <button class="btn btn-sm" onclick="clearAllTeamRuns()" style="font-size:11px;color:var(--red);border-color:rgba(224,85,85,.4);">✕ Wyczyść wszystkie</button>
+        </div>
+      </div>
+
+      <!-- 🏆 KLASYFIKACJA GENERALNA -->
+      <div class="card mb-12" id="ptr-overall-card" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Klasyfikacja generalna (ind. + drużynowy)</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,212,77,.08);border:1px solid rgba(232,212,77,.4);border-radius:var(--radius);padding:4px 10px;">
+            ✓ Regulamin 11DKPanc 2025
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          SUMA = suma 3 najlepszych M indywidualnie + pkt z biegu drużynowego. Najniższa suma wygrywa.
+          Tie-break: wyższe miejsce w biegu drużynowym.
+        </div>
+        <div id="ptr-overall-list"></div>
       </div>
     </div>
 
@@ -1116,9 +1154,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
     <div class="form-group"><label>Płeć do wylosowania</label>
       <select id="draw-gender"><option value="">M + K (oba)</option><option value="M">Tylko M</option><option value="K">Tylko K</option></select>
     </div>
+    <div class="form-group">
+      <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
+        <input type="checkbox" id="ptr-draw-keymode" style="margin-top:2px;flex-shrink:0;" />
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--accent);">🔑 Klucz startowy regulaminowy</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5;">
+            Para = 2 zawodników z różnych zespołów, z tej samej "pozycji" (1/1−2/1, 3/1−4/1, …; potem 1/2−4/2, 2/2−6/2 …).
+            Pierwsi z każdego zespołu razem, drudzy razem itd. Zgodne z regulaminem 11DKPanc.
+          </div>
+        </div>
+      </label>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-draw')">Anuluj</button>
-      <button class="btn btn-primary" onclick="doDrawPairs()">⚙ Losuj</button>
+      <button class="btn btn-primary" onclick="doDrawPairs()">⚙ Losuj / Generuj</button>
     </div>
   </div>
 </div>
@@ -1477,6 +1527,8 @@ function ensureStateDefaults() {
   if (!state.lockedPairs.all) state.lockedPairs.all = [];
   // Stoper: state.runs[gender + '_' + pairNum] = { startedAt: ms, finishedAt: {id: ms} }
   if (!state.runs) state.runs = {};
+  // Bieg drużynowy (3-osobowy patrol) — wyniki per drużyna
+  if (!state.teamRun) state.teamRun = {};
   if (!state.cfg) state.cfg = {};
   // Sędzia startu — dane dostępu jak speaker w OSF
   if (state.cfg.startEnabled === undefined) state.cfg.startEnabled = false;
@@ -2320,16 +2372,147 @@ function _ptrBuildTeamPrintHTML(asFragment) {
 function printPtrInd(gender)   { _ptrOpenPrintWindow(_ptrBuildIndPrintHTML(gender)); }
 function printPtrTeam()        { _ptrOpenPrintWindow(_ptrBuildTeamPrintHTML()); }
 function printPtrAll() {
-  // Kolejność: DRUŻYNOWA na górze (najważniejsza w patrolu), potem M, K.
-  // Jeden wspólny doc-header + footer; sekcje jako fragmenty owinięte w
-  // .ranking-section — smart page-break (nie pęka w środku kategorii).
+  // Kolejność: GENERALNA (najważniejsza) → DRUŻYNOWA ind. → BIEG DRUŻYNOWY → M → K
   const html =
-    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (Drużynowa, M, K)') +
+    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (Generalna, Drużynowa ind., Bieg drużynowy, M, K)') +
+    _ptrBuildOverallPrintHTML(true) +
     _ptrBuildTeamPrintHTML(true) +
+    _ptrBuildTeamRunPrintHTML(true) +
     _ptrBuildIndPrintHTML('M', true) +
     _ptrBuildIndPrintHTML('K', true) +
     _ptrPdfFooter();
   _ptrOpenPrintWindow(html);
+}
+
+function printPtrTeamRun() { _ptrOpenPrintWindow(_ptrBuildTeamRunPrintHTML()); }
+function printPtrOverall() { _ptrOpenPrintWindow(_ptrBuildOverallPrintHTML()); }
+
+// ─── PDF: bieg drużynowy ────────────────────────────────────────
+function _ptrBuildTeamRunPrintHTML(asFragment) {
+  ensureTeamRun();
+  const teamNames = Object.keys(state.teamRun || {});
+  const rows = teamNames.map(name => {
+    const tr = state.teamRun[name];
+    const pts = calcTeamRunPoints(tr);
+    return { name, tr, pts, dsq: !!tr.dsq };
+  }).filter(r => r.pts !== null || r.dsq);
+  rows.sort((a, b) => {
+    if (a.dsq && !b.dsq) return 1;
+    if (!a.dsq && b.dsq) return -1;
+    return (a.pts || 0) - (b.pts || 0);
+  });
+  const title = 'Bieg drużynowy (patrol 3-osobowy)';
+  if (!rows.length) {
+    const inner = '<div style="padding:30px;text-align:center;color:#888;font-size:13px;">Brak wpisanych wyników biegu drużynowego.</div>';
+    if (asFragment) return '<div class="ranking-section"><div class="section-title">' + esc(title) + '</div>' + inner + '</div>';
+    return _ptrPdfHeader('PATROL', title) + inner + _ptrPdfFooter();
+  }
+  let rank = 0;
+  const sectionBody =
+    '<div class="section-title">' + (asFragment ? esc(title) + ' — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div>' +
+    '<table><thead><tr>' +
+      '<th class="rank-col">Msc</th>' +
+      '<th>Drużyna</th>' +
+      '<th class="c">Czas biegu</th>' +
+      '<th class="c">OSF (s)</th>' +
+      '<th class="c">Strzelanie</th>' +
+      '<th class="c">Elim.</th>' +
+      '<th class="c">Wynik (pkt)</th>' +
+    '</tr></thead><tbody>' +
+    rows.map(r => {
+      let topCls = '';
+      if (!r.dsq) { rank++; topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : ''; }
+      const biegStr = r.tr.biegSec ? Math.floor(r.tr.biegSec/60) + ':' + String(r.tr.biegSec%60).padStart(2,'0') : '—';
+      const elim = r.tr.eliminated || 0;
+      const pts = r.dsq ? '<span style="color:#c00;font-weight:800;">DSQ</span>' : r.pts;
+      return '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + '">' +
+        '<td class="rank-col">' + (r.dsq ? 'DSQ' : rank) + '</td>' +
+        '<td class="bold">' + esc(r.name) + '</td>' +
+        '<td class="c mono">' + biegStr + '</td>' +
+        '<td class="c mono">' + (r.tr.osfSec || '—') + '</td>' +
+        '<td class="c mono">' + (r.tr.shotPoints !== undefined ? r.tr.shotPoints + '/150' : '—') + '</td>' +
+        '<td class="c mono">' + (elim > 0 ? elim + ' (+' + (elim*100) + ')' : '—') + '</td>' +
+        '<td class="c mono bold">' + pts + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+  if (asFragment) return '<div class="ranking-section">' + sectionBody + '</div>';
+  return _ptrPdfHeader('PATROL', title) + '<div class="ranking-section">' + sectionBody + '</div>' + _ptrPdfFooter();
+}
+
+// ─── PDF: klasyfikacja generalna (ind. M top3 + bieg drużynowy) ─
+function _ptrBuildOverallPrintHTML(asFragment) {
+  ensureTeamRun();
+  const byTeam = {};
+  (state.athletes || []).forEach(a => {
+    const t = (a.team || '').trim();
+    if (!t) return;
+    if (!byTeam[t]) byTeam[t] = [];
+    byTeam[t].push(_patrolBuildRow(a));
+  });
+  const rows = Object.keys(byTeam).map(name => {
+    const ind = calcTeamScore(byTeam[name]);
+    const tr = state.teamRun[name] || null;
+    const trPts = calcTeamRunPoints(tr);
+    const trMissing = !ind.eligible ? false : (trPts === null);
+    const trEff = trPts !== null ? trPts : (trMissing ? 1200 : null);
+    const overall = (ind.eligible && trEff !== null) ? ind.total + trEff : null;
+    return { name, indPts: ind.total, eligibleInd: ind.eligible, classifiedM: ind.classified, trPts, trEff, trMissing, overall };
+  }).filter(r => r.overall !== null);
+  rows.sort((a, b) => {
+    if (a.overall !== b.overall) return a.overall - b.overall;
+    return (a.trEff || Infinity) - (b.trEff || Infinity);
+  });
+  const title = 'KLASYFIKACJA GENERALNA — 11DKPanc';
+  if (!rows.length) {
+    const inner = '<div style="padding:30px;text-align:center;color:#888;font-size:13px;">Brak sklasyfikowanych drużyn.</div>';
+    if (asFragment) return '<div class="ranking-section"><div class="section-title">' + esc(title) + '</div>' + inner + '</div>';
+    return _ptrPdfHeader('PATROL', title) + inner + _ptrPdfFooter();
+  }
+  // Podium top 3
+  let podium = '';
+  const top3 = rows.slice(0, 3);
+  if (top3.length >= 1) {
+    const order = [top3[1] || null, top3[0] || null, top3[2] || null];
+    const cls   = ['p2', 'p1', 'p3'];
+    const medal = ['🥈', '🥇', '🥉'];
+    podium = '<div class="podium-block">';
+    order.forEach((r, i) => {
+      if (!r) { podium += '<div class="podium-place ' + cls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>'; return; }
+      podium += '<div class="podium-place ' + cls[i] + '">' +
+        '<div class="podium-rank">' + medal[i] + '</div>' +
+        '<div class="podium-name">' + esc(r.name) + '</div>' +
+        '<div class="podium-team">ind: ' + r.indPts + ' · druż: ' + (r.trEff || '—') + '</div>' +
+        '<div class="podium-time">' + r.overall + ' PKT</div>' +
+      '</div>';
+    });
+    podium += '</div>';
+  }
+  const sectionBody =
+    podium +
+    '<div class="section-title">' + (asFragment ? 'Klasyfikacja generalna — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div>' +
+    '<table><thead><tr>' +
+      '<th class="rank-col">Msc</th>' +
+      '<th>Drużyna</th>' +
+      '<th class="c">3 najlepszych M ind.</th>' +
+      '<th class="c">Bieg drużynowy</th>' +
+      '<th class="r">SUMA</th>' +
+    '</tr></thead><tbody>' +
+    rows.map((r, i) => {
+      const rank = i + 1;
+      const topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '';
+      const trCell = r.trMissing ? r.trEff + ' <span class="small" style="color:#c80;">(brak biegu +1200)</span>' : (r.trEff !== null ? r.trEff : '—');
+      return '<tr class="' + topCls + '">' +
+        '<td class="rank-col">' + rank + '</td>' +
+        '<td class="bold">' + esc(r.name) + '</td>' +
+        '<td class="c mono">' + r.indPts + '</td>' +
+        '<td class="c mono">' + trCell + '</td>' +
+        '<td class="r mono bold" style="font-size:15px;">' + r.overall + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+  if (asFragment) return '<div class="ranking-section">' + sectionBody + '</div>';
+  return _ptrPdfHeader('PATROL', title) + '<div class="ranking-section">' + sectionBody + '</div>' + _ptrPdfFooter();
 }
 
 function exportPatrolBackup() {
@@ -3651,8 +3834,113 @@ function openDrawModal() {
 
 function doDrawPairs() {
   const gender = document.getElementById('draw-gender').value;
+  const keyMode = !!document.getElementById('ptr-draw-keymode')?.checked;
   closeModal('modal-draw');
-  drawPairs(gender || undefined);
+  if (keyMode) drawPairsByKey(gender || undefined);
+  else drawPairs(gender || undefined);
+}
+
+// ─── KLUCZ STARTOWY REGULAMINOWY ────────────────────────────────
+// Pary tworzone wg pozycji zawodnika w zespole (Y). Pierwsi razem w pierwszych N/2 parach,
+// drudzy w kolejnych itd. Algorytm round-robin Berger'a per warstwa Y — zapewnia
+// że ten sam zespół spotka różne zespoły w różnych "rundach Y".
+function drawPairsByKey(gender) {
+  const genders = gender ? [gender] : ['M', 'K'];
+  const newPairs = [];
+
+  // Zachowaj zablokowane pary (jak w drawPairs)
+  const lockedKeys = (state.lockedPairs && state.lockedPairs.all) || [];
+  const lockedPairsOld = state.pairs.filter(p => genders.includes(p.gender) && lockedKeys.includes(lockKey(p.gender, p.pairNum)));
+  const lockedAthIds = new Set();
+  lockedPairsOld.forEach(p => { lockedAthIds.add(p.aId); if (p.bId) lockedAthIds.add(p.bId); });
+
+  function buildForGender(g) {
+    const ath = state.athletes.filter(a => a.gender === g && !lockedAthIds.has(a.id));
+    if (!ath.length) return [];
+    // Pogrupuj po team, sortuj po bib (parseBibForSort → Y position)
+    const byTeam = {};
+    ath.forEach(a => { const t = (a.team || '').trim() || '(brak)'; (byTeam[t] = byTeam[t] || []).push(a); });
+    Object.keys(byTeam).forEach(t => byTeam[t].sort((a, b) => parseBibForSort(a.bib) - parseBibForSort(b.bib)));
+    const teams = Object.keys(byTeam).sort();
+    const maxY = Math.max(...teams.map(t => byTeam[t].length));
+
+    // Round-robin Berger: dla rundy r generuje pary spośród dostępnych zespołów
+    function bergerPairs(roundIdx, availIdx) {
+      if (availIdx.length < 2) return { pairs: [], byes: availIdx.slice() };
+      let arr = availIdx.slice();
+      const hadBye = arr.length % 2 === 1;
+      if (hadBye) arr.push(-1);
+      const len = arr.length;
+      const rotations = roundIdx % (len - 1);
+      for (let i = 0; i < rotations; i++) arr.splice(1, 0, arr.pop()); // pierwszy stoi, reszta rotuje
+      const pairs = [];
+      for (let i = 0; i < len / 2; i++) {
+        const a = arr[i], b = arr[len - 1 - i];
+        if (a !== -1 && b !== -1) pairs.push([a, b]);
+      }
+      const used = new Set(pairs.flat());
+      const byes = availIdx.filter(x => !used.has(x));
+      return { pairs, byes };
+    }
+
+    const result = [];
+    for (let y = 0; y < maxY; y++) {
+      const availIdx = [];
+      teams.forEach((t, i) => { if (byTeam[t].length > y) availIdx.push(i); });
+      const { pairs: bp, byes } = bergerPairs(y, availIdx);
+      bp.forEach(([tA, tB]) => {
+        const athA = byTeam[teams[tA]][y];
+        const athB = byTeam[teams[tB]][y];
+        // Tor wg bib: parzysty=P, nieparzysty=L (lub wg getLaneFromBib)
+        const laneA = getLaneFromBib(athA);
+        const laneB = getLaneFromBib(athB);
+        let aL, bL;
+        if (laneA === 'L' && laneB === 'P') { aL = 'L'; bL = 'P'; }
+        else if (laneA === 'P' && laneB === 'L') { aL = 'P'; bL = 'L'; }
+        else { aL = 'L'; bL = 'P'; } // domyślnie L-P (pierwszy z pary L)
+        result.push({ gender: g, aId: athA.id, aLane: aL, bId: athB.id, bLane: bL });
+      });
+      // Zespoły bez pary w tej warstwie Y → SOLO
+      if (state.setup && state.setup.allowSoloPair) {
+        byes.forEach(ti => {
+          const a = byTeam[teams[ti]][y];
+          if (!a) return;
+          result.push({ gender: g, aId: a.id, aLane: getLaneFromBib(a), bId: null, bLane: null });
+        });
+      }
+    }
+    return result;
+  }
+
+  genders.forEach(g => {
+    const generated = buildForGender(g);
+    generated.forEach(p => newPairs.push(p));
+  });
+
+  // Połącz z zablokowanymi (na początku) i numeruj
+  const combined = [];
+  // Zachowaj numerację zablokowanych
+  lockedPairsOld.forEach(p => combined.push(p));
+  // Per płeć: numeruj nowo wygenerowane od następnego wolnego numeru
+  genders.forEach(g => {
+    const lockedNums = new Set(combined.filter(p => p.gender === g).map(p => p.pairNum));
+    let next = 1;
+    const newOnes = newPairs.filter(p => p.gender === g);
+    newOnes.forEach(p => {
+      while (lockedNums.has(next)) next++;
+      p.pairNum = next;
+      lockedNums.add(next);
+      combined.push(p);
+    });
+  });
+
+  // Zachowaj pary innych płci (jeśli rysujemy tylko jedną)
+  const otherGenderPairs = state.pairs.filter(p => !genders.includes(p.gender));
+  state.pairs = [...otherGenderPairs, ...combined];
+  save();
+  renderPairsView();
+  if (typeof renderTimerView === 'function') renderTimerView();
+  showToast('🔑 Wygenerowano klucz startowy: ' + combined.length + ' par', 'success', 2500);
 }
 
 function drawPairs(gender) {
@@ -5592,6 +5880,227 @@ function renderResultsView() {
     renderList('ptr-results-K', 'K');
   }
   renderTeamView();
+  if (typeof renderTeamRunList === 'function') renderTeamRunList();
+  if (typeof renderOverallView === 'function') renderOverallView();
+}
+
+// ─── BIEG DRUŻYNOWY (patrol 3-osobowy) — regulamin 11DKPanc ─────
+// state.teamRun = { [teamName]: { biegSec, osfSec, shotPoints, eliminated, dsq, tens } }
+// pkt_OSF zespół = 480 − 2 × czas_OSF (baza 90s = 300pkt)
+// pkt_strzelanie = suma_przestrzelin × 2 (max 50×3 = 150 × 2 = 300)
+// kara eliminacja: +100 pkt/zawodnika (do 2 max przed DSQ całej drużyny)
+// niewykonanie biegu drużynowego: +1200 pkt do klasyfikacji generalnej (handled w overall)
+function calcTeamRunPoints(tr) {
+  if (!tr) return null;
+  if (tr.dsq) return null; // drużyna zdyskwalifikowana
+  const biegSec = parseInt(tr.biegSec);
+  const osfSec  = parseInt(tr.osfSec);
+  if (!Number.isFinite(biegSec) || biegSec <= 0) return null;
+  if (!Number.isFinite(osfSec) || osfSec <= 0) return null;
+  const shotPts = parseInt(tr.shotPoints) || 0;
+  const elim    = parseInt(tr.eliminated) || 0;
+  const osfTeamPts = 480 - 2 * osfSec;
+  const strzPts    = shotPts * 2;
+  return Math.round(biegSec - osfTeamPts - strzPts + elim * 100);
+}
+
+function ensureTeamRun() {
+  if (!state.teamRun) state.teamRun = {};
+}
+
+function getTeamRun(team) {
+  ensureTeamRun();
+  return state.teamRun[team] || null;
+}
+
+function setTeamRunField(team, field, value) {
+  ensureTeamRun();
+  if (!state.teamRun[team]) state.teamRun[team] = {};
+  // Walidacja per pole
+  if (field === 'biegSec' || field === 'osfSec' || field === 'shotPoints' || field === 'eliminated' || field === 'tens') {
+    if (value === '' || value === null || value === undefined) delete state.teamRun[team][field];
+    else {
+      let n = parseInt(value);
+      if (!Number.isFinite(n)) return;
+      if (n < 0) n = 0;
+      if (field === 'shotPoints' && n > 150) n = 150;
+      if (field === 'eliminated' && n > 3) n = 3;
+      if (field === 'tens' && n > 15) n = 15;
+      state.teamRun[team][field] = n;
+    }
+  } else if (field === 'dsq') {
+    state.teamRun[team].dsq = !!value;
+  } else if (field === 'biegStr') {
+    // "8:31" → biegSec=511
+    const m = String(value || '').match(/^(\d+):(\d+)/);
+    if (m) state.teamRun[team].biegSec = parseInt(m[1]) * 60 + parseInt(m[2]);
+    else if (value === '' || value === null) delete state.teamRun[team].biegSec;
+  }
+  state.teamRun[team][field + 'At'] = nowMs();
+  save();
+  renderTeamRunList();
+  renderTeamView();
+  renderOverallView();
+}
+
+function toggleTeamRunDsq(team) {
+  ensureTeamRun();
+  if (!state.teamRun[team]) state.teamRun[team] = {};
+  state.teamRun[team].dsq = !state.teamRun[team].dsq;
+  state.teamRun[team].dsqAt = nowMs();
+  save();
+  renderTeamRunList();
+  renderTeamView();
+  renderOverallView();
+}
+
+function initTeamRunsForAll() {
+  const teams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))].sort();
+  ensureTeamRun();
+  teams.forEach(t => { if (!state.teamRun[t]) state.teamRun[t] = {}; });
+  save();
+  renderTeamRunList();
+}
+
+function clearAllTeamRuns() {
+  if (!confirm('Wyczyścić WSZYSTKIE wyniki biegu drużynowego?')) return;
+  state.teamRun = {};
+  save();
+  renderTeamRunList();
+  renderTeamView();
+  renderOverallView();
+}
+
+function removeTeamRun(team) {
+  if (!state.teamRun) return;
+  delete state.teamRun[team];
+  save();
+  renderTeamRunList();
+  renderTeamView();
+  renderOverallView();
+}
+
+function renderTeamRunList() {
+  const list = document.getElementById('ptr-team-run-list');
+  if (!list) return;
+  ensureTeamRun();
+  const allTeams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))].sort();
+  // Pokaż drużyny które są w state.teamRun lub mają wszystkich M w state.athletes (potencjał do drużynowego)
+  const teamsWithEntry = Object.keys(state.teamRun || {});
+  const teams = [...new Set([...allTeams, ...teamsWithEntry])].sort();
+  if (!teams.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak drużyn. Dodaj zawodników z drużynami lub kliknij "Dodaj wszystkie drużyny".</div>';
+    return;
+  }
+  const headerHTML =
+    '<div style="display:grid;grid-template-columns:1.5fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);margin-bottom:4px;">' +
+      '<div>Drużyna</div>' +
+      '<div style="text-align:center;">Bieg (m:s)</div>' +
+      '<div style="text-align:center;">OSF (s)</div>' +
+      '<div style="text-align:center;">Strzel. (0-150)</div>' +
+      '<div style="text-align:center;">Elim.</div>' +
+      '<div style="text-align:center;">×10</div>' +
+      '<div style="text-align:center;">Punkty</div>' +
+      '<div></div>' +
+    '</div>';
+  list.innerHTML = headerHTML + teams.map(t => {
+    const tr = state.teamRun[t] || {};
+    const biegStr = tr.biegSec ? (Math.floor(tr.biegSec/60) + ':' + String(tr.biegSec%60).padStart(2,'0')) : '';
+    const pts = calcTeamRunPoints(tr);
+    const ptsCell = tr.dsq ? '<span style="color:var(--red);font-weight:800;">DSQ</span>'
+                            : (pts === null ? '—' : '<span style="color:var(--accent);font-weight:800;">' + pts + '</span>');
+    return '<div style="display:grid;grid-template-columns:1.5fr 90px 90px 90px 70px 70px 90px 36px;gap:6px;align-items:center;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;' + (tr.dsq ? 'opacity:.6;' : '') + '">' +
+      '<div style="font-weight:600;color:var(--text1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(t) + '</div>' +
+      '<input type="text" value="' + esc(biegStr) + '" placeholder="m:ss" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'biegStr\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'biegStr\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
+      '<input type="number" min="0" max="3600" value="' + (tr.osfSec || '') + '" placeholder="0-300" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'osfSec\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'osfSec\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
+      '<input type="number" min="0" max="150" value="' + (tr.shotPoints !== undefined ? tr.shotPoints : '') + '" placeholder="0-150" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'shotPoints\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'shotPoints\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' />' +
+      '<input type="number" min="0" max="3" value="' + (tr.eliminated || 0) + '" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'eliminated\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'eliminated\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:13px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba wyeliminowanych z patrolu (0-2; 3=DSQ)" />' +
+      '<input type="number" min="0" max="15" value="' + (tr.tens !== undefined ? tr.tens : '') + '" onchange="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'tens\',this.value)" onblur="setTeamRunField(\'' + esc(t).replace(/'/g,'\\\'') + '\',\'tens\',this.value)" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:5px 8px;font-family:var(--font-m);font-size:12px;text-align:center;width:100%;" ' + (tr.dsq ? 'disabled' : '') + ' title="Liczba dziesiątek (tie-break)" />' +
+      '<div style="text-align:center;font-family:var(--font-m);font-size:15px;">' + ptsCell + '</div>' +
+      '<button onclick="toggleTeamRunDsq(\'' + esc(t).replace(/'/g,'\\\'') + '\')" title="' + (tr.dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj') + '" style="background:' + (tr.dsq ? 'rgba(224,85,85,.15)' : 'transparent') + ';border:1px solid ' + (tr.dsq ? 'rgba(224,85,85,.5)' : 'var(--border2)') + ';border-radius:var(--radius);color:' + (tr.dsq ? 'var(--red)' : 'var(--text3)') + ';font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 0;cursor:pointer;">' + (tr.dsq ? '✕' : 'DSQ') + '</button>' +
+    '</div>';
+  }).join('');
+}
+
+// ─── KLASYFIKACJA GENERALNA (ind. M top 3 + bieg drużynowy) ─────
+function renderOverallView() {
+  const card = document.getElementById('ptr-overall-card');
+  const list = document.getElementById('ptr-overall-list');
+  if (!card || !list) return;
+  // Zbierz drużyny
+  const byTeam = {};
+  (state.athletes || []).forEach(a => {
+    const t = (a.team || '').trim();
+    if (!t) return;
+    if (!byTeam[t]) byTeam[t] = [];
+    byTeam[t].push(_patrolBuildRow(a));
+  });
+  ensureTeamRun();
+
+  const teams = Object.keys(byTeam).map(name => {
+    const rows = byTeam[name];
+    const indScore = calcTeamScore(rows); // .total (top 3 M) lub null
+    const tr = state.teamRun[name] || null;
+    const teamRunPts = calcTeamRunPoints(tr); // może być null
+    const teamRunDsq = !!(tr && tr.dsq);
+    // Klasyfikacja generalna wymaga BOTH ind eligible AND bieg drużynowy.
+    // Jeśli brak biegu drużynowego (niewykonany): +1200 pkt (regulamin) — tylko gdy zespół ma ind.
+    let overallTotal = null;
+    let teamRunPtsEff = teamRunPts;
+    let teamRunMissingPenalty = false;
+    if (indScore.eligible) {
+      if (teamRunPts !== null) {
+        overallTotal = indScore.total + teamRunPts;
+      } else if (teamRunDsq || !tr || (tr && (!tr.biegSec || !tr.osfSec))) {
+        // Brak biegu drużynowego — kara 1200 pkt
+        teamRunPtsEff = 1200;
+        teamRunMissingPenalty = true;
+        overallTotal = indScore.total + 1200;
+      }
+    }
+    return { name, indScore, teamRunPts, teamRunPtsEff, teamRunDsq, teamRunMissingPenalty, overallTotal, eligible: overallTotal !== null };
+  });
+
+  const eligible = teams.filter(t => t.eligible);
+  if (!eligible.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  // Sortuj: po overallTotal rosnąco; tie-break: po pkt biegu drużynowego (niższy lepiej)
+  eligible.sort((a, b) => {
+    if (a.overallTotal !== b.overallTotal) return a.overallTotal - b.overallTotal;
+    const aT = a.teamRunPtsEff !== null ? a.teamRunPtsEff : Infinity;
+    const bT = b.teamRunPtsEff !== null ? b.teamRunPtsEff : Infinity;
+    return aT - bT;
+  });
+  // Niesklasyfikowane (mają ind. ale brak biegu w ogóle) — pokażemy na dole
+  const nonEligible = teams.filter(t => !t.eligible);
+
+  list.innerHTML = eligible.map((t, i) => {
+    const rank = i + 1;
+    const rankCls = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const rankDisp = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+    const penaltyNote = t.teamRunMissingPenalty ? ' <span style="color:var(--orange);font-size:10px;">(brak biegu = +1200)</span>' : '';
+    return '<div class="team-row ' + rankCls + '" style="grid-template-columns:50px 1fr 90px 90px 90px;">' +
+      '<div class="team-rank">' + rankDisp + '</div>' +
+      '<div style="min-width:0;">' +
+        '<div class="team-name">' + esc(t.name) + '</div>' +
+        '<div class="team-meta">3 najlepszych M ind. + bieg drużynowy</div>' +
+      '</div>' +
+      '<div class="team-stat"><span class="lbl">Ind. M</span>' + t.indScore.total + '</div>' +
+      '<div class="team-stat"><span class="lbl">Bieg druż.</span>' + (t.teamRunPtsEff !== null ? t.teamRunPtsEff : '—') + penaltyNote + '</div>' +
+      '<div class="team-pts"><span class="lbl">Suma</span>' + t.overallTotal + '</div>' +
+    '</div>';
+  }).join('') + nonEligible.map(t => {
+    return '<div class="team-row dsq" style="grid-template-columns:50px 1fr 90px 90px 90px;opacity:.55;">' +
+      '<div class="team-rank">—</div>' +
+      '<div style="min-width:0;">' +
+        '<div class="team-name">' + esc(t.name) + ' <span style="color:var(--orange);font-weight:700;font-size:11px;">— niesklasyfikowana</span></div>' +
+        '<div class="team-meta">' + (t.indScore.eligible ? 'brak biegu drużynowego' : 'brak 3 sklasyf. M ind.') + '</div>' +
+      '</div>' +
+      '<div class="team-stat"><span class="lbl">Ind. M</span>' + (t.indScore.total !== null ? t.indScore.total : '—') + '</div>' +
+      '<div class="team-stat"><span class="lbl">Bieg druż.</span>' + (t.teamRunPts !== null ? t.teamRunPts : '—') + '</div>' +
+      '<div class="team-pts"><span class="lbl">Suma</span>—</div>' +
+    '</div>';
+  }).join('');
 }
 
 // ─── KLASYFIKACJA DRUŻYNOWA (regulamin 11DKPanc) ────────────────
