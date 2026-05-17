@@ -801,13 +801,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
             </div>
           </div>
 
-          <!-- Reguły parowania -->
-          <div class="card" style="padding:12px 14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-              <div style="font-size:12px;color:var(--text3);line-height:1.5;flex:1;" id="ptr-pairing-summary">Ustawienia domyślne — algorytm działa regulaminowo.</div>
-              <button class="btn" onclick="openModal('modal-pairing')" style="font-size:10px;padding:4px 9px;flex-shrink:0;">⚙ Zmień</button>
-            </div>
-          </div>
         </div>
 
         <!-- PRAWA: Import + Operacje -->
@@ -1146,57 +1139,30 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
 <div class="modal-overlay" id="modal-draw">
   <div class="modal" style="max-width:480px;">
-    <div class="modal-title">⚙ Losowanie par</div>
+    <div class="modal-title">🔑 Generuj klucz startowy</div>
     <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;">
-      Wylosuj pary 2-osobowe. Algorytm jak w OSF S1 — bib parzysty = tor P, nieparzysty = tor L. Para z dwóch różnych drużyn.
+      Klucz startowy wg regulaminu 11DKPanc:
+      <ul style="margin:8px 0 0 18px;padding:0;font-size:12px;color:var(--text3);line-height:1.6;">
+        <li>Para = 2 zawodników z różnych zespołów, z tej samej „pozycji" (1/1−2/1, 3/1−4/1, …)</li>
+        <li>Pierwsi z każdego zespołu razem, drudzy razem itd.</li>
+        <li>Pierwszy z pary → tor L (strzelnica skrajna lewa), drugi → tor P</li>
+        <li>Zespół bez „N-tego" zawodnika → SOLO w tej rundzie</li>
+      </ul>
     </div>
     <div id="ptr-draw-warning" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.4);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.5;color:var(--text2);"></div>
-    <div class="form-group"><label>Płeć do wylosowania</label>
+    <div class="form-group"><label>Płeć</label>
       <select id="draw-gender"><option value="">M + K (oba)</option><option value="M">Tylko M</option><option value="K">Tylko K</option></select>
-    </div>
-    <div class="form-group">
-      <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">
-        <input type="checkbox" id="ptr-draw-keymode" style="margin-top:2px;flex-shrink:0;" />
-        <div>
-          <div style="font-size:12px;font-weight:700;color:var(--accent);">🔑 Klucz startowy regulaminowy</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;line-height:1.5;">
-            Para = 2 zawodników z różnych zespołów, z tej samej "pozycji" (1/1−2/1, 3/1−4/1, …; potem 1/2−4/2, 2/2−6/2 …).
-            Pierwsi z każdego zespołu razem, drudzy razem itd. Zgodne z regulaminem 11DKPanc.
-          </div>
-        </div>
-      </label>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-draw')">Anuluj</button>
-      <button class="btn btn-primary" onclick="doDrawPairs()">⚙ Losuj / Generuj</button>
+      <button class="btn btn-primary" onclick="doDrawPairs()">🔑 Generuj klucz</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-pairing">
-  <div class="modal">
-    <div class="modal-title">⚙ Reguły parowania</div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
-        <input type="checkbox" id="cfg-allow-solo" onchange="saveSetup();updatePairingSummary()" style="margin-top:2px;flex-shrink:0;" />
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text2);">Sparuj wszystkich (ignoruj wymóg toru)</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Gdy po sparowaniu zostają osoby bez pary — dobierz je ze sobą, nawet jeśli mają ten sam wymagany tor.</div>
-        </div>
-      </label>
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;padding:10px 12px;background:rgba(232,148,77,.04);border-radius:var(--radius);border:1px solid rgba(232,148,77,.25);">
-        <input type="checkbox" id="cfg-ignore-lane" onchange="saveSetup();updatePairingSummary()" style="margin-top:2px;flex-shrink:0;" />
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--orange);">Losuj tory zamiast wg numeru startowego</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Domyślnie tor wynika z numeru startowego (parzysty = P, nieparzysty = L). Zaznacz, aby tory były losowane niezależnie od numeru.</div>
-        </div>
-      </label>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" onclick="closeModal('modal-pairing')">Gotowe</button>
-    </div>
-  </div>
-</div>
+<!-- Modal "Reguły parowania" usunięty — wszystkie opcje były nie-regulaminowe.
+     Aktualny algorytm działa zgodnie z regulaminem 11DKPanc. -->
+
 
 <div class="modal-overlay" id="modal-pair-time">
   <div class="modal" style="max-width:440px;">
@@ -1537,8 +1503,7 @@ function ensureStateDefaults() {
   // Tryb offline — wyłącza stoper, sędziowie wpisują ręcznie
   if (state.cfg.offlineMode === undefined) state.cfg.offlineMode = false;
   const SETUP_DEFAULTS = {
-    accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: '',
-    allowSoloPair: false, pkAtEnd: false, ignoreLaneRule: false
+    accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: ''
   };
   if (!state.setup) state.setup = { ...SETUP_DEFAULTS };
   else for (const k in SETUP_DEFAULTS) {
@@ -2566,8 +2531,9 @@ function saveSetup() {
   state.setup.date  = getVal('ptr-date');
   state.setup.org   = getVal('ptr-org');
   state.setup.notes = getVal('ptr-notes');
-  state.setup.allowSoloPair  = getChk('cfg-allow-solo');
-  state.setup.ignoreLaneRule = getChk('cfg-ignore-lane');
+  // (allowSoloPair / ignoreLaneRule usunięte — nie-regulaminowe.
+  //  SOLO obsługiwane automatycznie gdy zespół nie ma N-tego zawodnika.
+  //  Tor wynika z bib zgodnie z regulaminem.)
   // Sync z contest (dla headera)
   state.contest = state.contest || {};
   if (state.setup.name) state.contest.name = state.setup.name;
@@ -2586,8 +2552,6 @@ function renderSetupPage() {
   setVal('ptr-date',  s.date  || state.contest?.date  || '');
   setVal('ptr-org',   s.org   || '');
   setVal('ptr-notes', s.notes || '');
-  setChk('cfg-allow-solo',  s.allowSoloPair);
-  setChk('cfg-ignore-lane', s.ignoreLaneRule);
   // Kolor akcentu
   const color = s.accentColor || '#4caf82';
   document.documentElement.style.setProperty('--orange', color);
@@ -2597,7 +2561,6 @@ function renderSetupPage() {
   const dot = document.getElementById('ptr-accent-current');
   if (dot) dot.style.background = color;
   _renderInfoCardView();
-  updatePairingSummary();
   // Synchronizuj wizualny stan kafelków z state.cfg
   if (typeof _applyOfflineMode === 'function') _applyOfflineMode();
   if (typeof _renderStartSection === 'function') _renderStartSection();
@@ -2680,21 +2643,8 @@ function _renderInfoCardView() {
   }
 }
 
-function updatePairingSummary() {
-  const el = document.getElementById('ptr-pairing-summary');
-  if (!el) return;
-  const s = state.setup || {};
-  const parts = [];
-  if (!s.allowSoloPair && !s.ignoreLaneRule) {
-    el.textContent = 'Ustawienia domyślne — algorytm działa regulaminowo.';
-    el.style.color = 'var(--text3)';
-    return;
-  }
-  if (s.allowSoloPair)  parts.push('parowanie zawodników z tego samego toru');
-  if (s.ignoreLaneRule) parts.push('losowanie torów (niezależnie od numeru startowego)');
-  el.innerHTML = '⚠ Aktywne: <span style="color:var(--orange);">' + parts.join(', ') + '</span>';
-  el.style.color = '';
-}
+// updatePairingSummary usunięte — modal/karta "Reguły parowania" zostały
+// wyeliminowane (zawierały nie-regulaminowe opcje).
 
 function toggleOps() {
   const panel = document.getElementById('ptr-ops-panel');
@@ -3774,9 +3724,7 @@ function getBibY(a) {
 }
 
 function getLaneFromBib(a) {
-  if (state.setup && state.setup.ignoreLaneRule) {
-    return Math.random() < 0.5 ? 'L' : 'P';
-  }
+  // Tor wg regulaminu: pierwszy z pary (Y nieparzysty) → L, drugi (Y parzysty) → P
   const y = getBibY(a);
   return y % 2 === 1 ? 'L' : 'P';
 }
@@ -3834,10 +3782,8 @@ function openDrawModal() {
 
 function doDrawPairs() {
   const gender = document.getElementById('draw-gender').value;
-  const keyMode = !!document.getElementById('ptr-draw-keymode')?.checked;
   closeModal('modal-draw');
-  if (keyMode) drawPairsByKey(gender || undefined);
-  else drawPairs(gender || undefined);
+  drawPairsByKey(gender || undefined);
 }
 
 // ─── KLUCZ STARTOWY REGULAMINOWY ────────────────────────────────
@@ -3900,14 +3846,12 @@ function drawPairsByKey(gender) {
         else { aL = 'L'; bL = 'P'; } // domyślnie L-P (pierwszy z pary L)
         result.push({ gender: g, aId: athA.id, aLane: aL, bId: athB.id, bLane: bL });
       });
-      // Zespoły bez pary w tej warstwie Y → SOLO
-      if (state.setup && state.setup.allowSoloPair) {
-        byes.forEach(ti => {
-          const a = byTeam[teams[ti]][y];
-          if (!a) return;
-          result.push({ gender: g, aId: a.id, aLane: getLaneFromBib(a), bId: null, bLane: null });
-        });
-      }
+      // Zespoły bez pary w tej warstwie Y → SOLO (regulamin dopuszcza nieparzystą liczbę zespołów)
+      byes.forEach(ti => {
+        const a = byTeam[teams[ti]][y];
+        if (!a) return;
+        result.push({ gender: g, aId: a.id, aLane: getLaneFromBib(a), bId: null, bLane: null });
+      });
     }
     return result;
   }
@@ -3943,128 +3887,8 @@ function drawPairsByKey(gender) {
   showToast('🔑 Wygenerowano klucz startowy: ' + combined.length + ' par', 'success', 2500);
 }
 
-function drawPairs(gender) {
-  const genders = gender ? [gender] : ['M', 'K'];
-  const athletes = state.athletes;
-
-  // Zachowaj zablokowane pary tej płci
-  const lockedKeys = (state.lockedPairs && state.lockedPairs.all) || [];
-  const lockedPairsOld = state.pairs.filter(p => {
-    if (!genders.includes(p.gender)) return false;
-    return lockedKeys.includes(lockKey(p.gender, p.pairNum));
-  });
-  const lockedAthleteIds = new Set();
-  lockedPairsOld.forEach(p => { lockedAthleteIds.add(p.aId); if (p.bId) lockedAthleteIds.add(p.bId); });
-
-  function drawForGender(g) {
-    const pool = athletes.filter(a => a.gender === g && !lockedAthleteIds.has(a.id))
-      .map(a => ({ athlete: a, lane: getLaneFromBib(a), team: a.team }));
-
-    function spreadByTeam(list) {
-      const byTeam = {};
-      list.forEach(p => { (byTeam[p.team] = byTeam[p.team] || []).push(p); });
-      Object.values(byTeam).forEach(arr => {
-        for (let i = arr.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-      });
-      const queues = Object.values(byTeam);
-      for (let i = queues.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [queues[i], queues[j]] = [queues[j], queues[i]];
-      }
-      const result = [];
-      let round = 0;
-      while (result.length < list.length) {
-        for (const q of queues) { if (round < q.length) result.push(q[round]); }
-        round++;
-      }
-      return result;
-    }
-
-    let laneL = spreadByTeam(pool.filter(p => p.lane === 'L'));
-    let laneP = spreadByTeam(pool.filter(p => p.lane === 'P'));
-    const allowSameTeam = false;
-    const allowSoloPair = state.setup && state.setup.allowSoloPair;
-
-    const pairs = [];
-    const assignedP = new Set();
-    for (let i = 0; i < laneL.length; i++) {
-      const a = laneL[i];
-      let partnerId = -1;
-      for (let j = 0; j < laneP.length; j++) {
-        if (assignedP.has(j)) continue;
-        if (laneP[j].team !== a.team) { partnerId = j; break; }
-      }
-      if (partnerId === -1 && allowSameTeam) {
-        for (let j = 0; j < laneP.length; j++) {
-          if (!assignedP.has(j)) { partnerId = j; break; }
-        }
-      }
-      if (partnerId !== -1) {
-        assignedP.add(partnerId);
-        pairs.push({ pairNum: 0, gender: g, aId: a.athlete.id, aLane: 'L', bId: laneP[partnerId].athlete.id, bLane: 'P' });
-      } else {
-        pairs.push({ pairNum: 0, gender: g, aId: a.athlete.id, aLane: 'L', bId: null, bLane: null, _solo: true });
-      }
-    }
-    const soloP = [];
-    for (let j = 0; j < laneP.length; j++) {
-      if (!assignedP.has(j)) soloP.push(laneP[j]);
-    }
-    if (allowSoloPair && soloP.length > 0) {
-      const soloL = pairs.filter(p => p._solo);
-      const usedSoloP = new Set();
-      soloL.forEach(p => {
-        if (usedSoloP.size >= soloP.length) return;
-        for (let k = 0; k < soloP.length; k++) {
-          if (usedSoloP.has(k)) continue;
-          p.bId = soloP[k].athlete.id; p.bLane = 'P'; delete p._solo; usedSoloP.add(k); break;
-        }
-      });
-    }
-    soloP.forEach((s, i) => {
-      const used = pairs.find(p => p._solo && p.bId === s.athlete.id);
-      if (used) return;
-      pairs.push({ pairNum: 0, gender: g, aId: s.athlete.id, aLane: 'P', bId: null, bLane: null, _solo: true });
-    });
-
-    const normalPairs = pairs.filter(p => !p._solo);
-    const soloPairs = pairs.filter(p => p._solo);
-    const ordered = [...normalPairs, ...soloPairs];
-    ordered.forEach((p, i) => { p.pairNum = i + 1; delete p._solo; });
-    return ordered;
-  }
-
-  const newPairs = [];
-  genders.forEach(g => newPairs.push(...drawForGender(g)));
-
-  // Zachowaj pary innych płci
-  const keptPairs = state.pairs.filter(p => !genders.includes(p.gender));
-
-  // Wstaw zablokowane pary z zachowaniem ich numerów
-  if (lockedPairsOld.length > 0) {
-    const usedByGender = { M: new Set(), K: new Set() };
-    lockedPairsOld.forEach(p => { usedByGender[p.gender]?.add(p.pairNum); });
-    const next = { M: 1, K: 1 };
-    newPairs.forEach(p => {
-      const g = p.gender;
-      while (usedByGender[g].has(next[g])) next[g]++;
-      p.pairNum = next[g]++;
-      usedByGender[g].add(p.pairNum);
-    });
-    state.pairs = [...lockedPairsOld, ...newPairs, ...keptPairs];
-  } else {
-    state.pairs = [...newPairs, ...keptPairs];
-  }
-
-  // Sortuj per gender po pairNum
-  state.pairs.sort((a, b) => a.gender.localeCompare(b.gender) || a.pairNum - b.pairNum);
-  save();
-  renderPairsView();
-  showToast('🎲 Wylosowano ' + newPairs.length + ' par', 'success');
-}
+// Stara funkcja drawPairs (losowanie nie-regulaminowe) — usunięta.
+// Cała logika parowania w drawPairsByKey (klucz startowy 11DKPanc).
 
 function switchPairsTab(gender) {
   _pairsActiveTab = gender;
