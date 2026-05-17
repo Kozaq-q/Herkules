@@ -215,15 +215,34 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   </header>
 
   <div class="main">
-    <div id="ps-tabs-row" style="display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;">
-      <div style="display:flex;gap:4px;">
-        <button id="ps-tab-M" onclick="switchPsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni<span class="ps-tab-count" id="ps-tab-count-M"></span></button>
-        <button id="ps-tab-K" onclick="switchPsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety<span class="ps-tab-count" id="ps-tab-count-K"></span></button>
-      </div>
-      <button id="ps-emergency-reset" onclick="emergencyResetRunning()" style="display:none;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;font-family:var(--font-h);letter-spacing:1px;text-transform:lowercase;padding:4px 10px;cursor:pointer;" title="Awaryjny reset biegnących par">↺ reset biegnących</button>
+    <!-- Top-level: Indywidualne ↔ Drużynowe -->
+    <div id="ps-mode-tabs" style="display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:4px;">
+      <button id="ps-mode-ind" onclick="switchPsMode('ind')" style="flex:1;background:var(--bg3);border:none;border-radius:8px;padding:10px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text1);cursor:pointer;">🏃 Indywidualne</button>
+      <button id="ps-mode-team" onclick="switchPsMode('team')" style="flex:1;background:transparent;border:none;border-radius:8px;padding:10px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);cursor:pointer;">🛡 Drużynowe</button>
     </div>
-    <div id="pairs-list"></div>
-    <div id="ps-finished-info" style="display:none;text-align:center;font-size:11px;color:var(--text3);margin-top:14px;font-style:italic;"></div>
+
+    <!-- Tryb INDYWIDUALNY (płeć M/K) -->
+    <div id="ps-ind-view">
+      <div id="ps-tabs-row" style="display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;">
+        <div style="display:flex;gap:4px;">
+          <button id="ps-tab-M" onclick="switchPsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni<span class="ps-tab-count" id="ps-tab-count-M"></span></button>
+          <button id="ps-tab-K" onclick="switchPsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety<span class="ps-tab-count" id="ps-tab-count-K"></span></button>
+        </div>
+        <button id="ps-emergency-reset" onclick="emergencyResetRunning()" style="display:none;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;font-family:var(--font-h);letter-spacing:1px;text-transform:lowercase;padding:4px 10px;cursor:pointer;" title="Awaryjny reset biegnących par">↺ reset biegnących</button>
+      </div>
+      <div id="pairs-list"></div>
+      <div id="ps-finished-info" style="display:none;text-align:center;font-size:11px;color:var(--text3);margin-top:14px;font-style:italic;"></div>
+    </div>
+
+    <!-- Tryb DRUŻYNOWY -->
+    <div id="ps-team-view" style="display:none;">
+      <div id="ps-team-empty" style="display:none;text-align:center;padding:40px 20px;color:var(--text3);border:1px dashed var(--border2);border-radius:var(--radius);">
+        <div style="font-size:40px;opacity:.5;margin-bottom:10px;">🛡</div>
+        <div style="font-family:var(--font-h);font-size:14px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Brak par drużyn</div>
+        <div style="font-size:12px;line-height:1.5;">Sędzia główny musi wygenerować pary drużyn w panelu (zakładka <strong>🏃 Pary drużyn</strong>) klikając „🔑 Generuj pary".</div>
+      </div>
+      <div id="team-pairs-list"></div>
+    </div>
   </div>
 </div>
 
@@ -462,6 +481,9 @@ function ensureStateDefaults() {
   if (!state.disq) state.disq = {};
   if (!state.runs) state.runs = {};
   if (!state.cfg) state.cfg = {};
+  if (!state.teamRun) state.teamRun = {};
+  if (!state.teamRuns) state.teamRuns = {};
+  if (!state.teamRunPairs) state.teamRunPairs = [];
 }
 
 async function loadState() {
@@ -498,7 +520,8 @@ function enterApp() {
   document.getElementById('app').style.display = 'block';
   renderHeader();
   if (typeof _updateHideFinishedBtn === 'function') _updateHideFinishedBtn();
-  renderPairs();
+  if (typeof _applyPsMode === 'function') _applyPsMode();
+  else renderPairs();
   showSyncStatus('ok');
 }
 
@@ -603,7 +626,9 @@ function applyRemoteState(json) {
       return;
     }
     renderHeader();
-    renderPairs();
+    // Renderuj aktywny tryb (indywidualny lub drużynowy)
+    if (typeof _applyPsMode === 'function') _applyPsMode();
+    else renderPairs();
   } catch(e) { console.error('applyRemoteState:', e); }
 }
 
@@ -670,6 +695,187 @@ function emergencyResetRunning() {
   saveState();
   renderPairs();
   showToast('↺ Zresetowano ' + running.length + ' par', 'warning', 3000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// TRYB INDYWIDUALNY ↔ DRUŻYNOWY (top-level mode)
+// ════════════════════════════════════════════════════════════════
+let _psMode = (function(){
+  try { return localStorage.getItem('ps_mode_' + STORAGE_KEY) || 'ind'; }
+  catch(_) { return 'ind'; }
+})();
+
+function switchPsMode(m) {
+  if (m !== 'ind' && m !== 'team') return;
+  _psMode = m;
+  try { localStorage.setItem('ps_mode_' + STORAGE_KEY, m); } catch(_){}
+  _applyPsMode();
+}
+
+function _applyPsMode() {
+  const indBtn = document.getElementById('ps-mode-ind');
+  const teamBtn = document.getElementById('ps-mode-team');
+  const indView = document.getElementById('ps-ind-view');
+  const teamView = document.getElementById('ps-team-view');
+  if (indBtn && teamBtn) {
+    if (_psMode === 'ind') {
+      indBtn.style.background = 'var(--bg3)';  indBtn.style.color = 'var(--text1)';
+      teamBtn.style.background = 'transparent'; teamBtn.style.color = 'var(--text3)';
+    } else {
+      indBtn.style.background = 'transparent'; indBtn.style.color = 'var(--text3)';
+      teamBtn.style.background = 'var(--bg3)'; teamBtn.style.color = 'var(--text1)';
+    }
+  }
+  if (indView)  indView.style.display  = _psMode === 'ind'  ? '' : 'none';
+  if (teamView) teamView.style.display = _psMode === 'team' ? '' : 'none';
+  if (_psMode === 'team') renderTeamPairs();
+  else                    renderPairs();
+}
+
+// ════════════════════════════════════════════════════════════════
+// TEAM PAIRS — render par drużyn (START/RESET)
+// ════════════════════════════════════════════════════════════════
+function renderTeamPairs() {
+  const listEl = document.getElementById('team-pairs-list');
+  const emptyEl = document.getElementById('ps-team-empty');
+  if (!listEl) return;
+  // Tryb offline — stoper nieaktywny
+  if (state.cfg && state.cfg.offlineMode) {
+    listEl.innerHTML = '<div class="empty" style="border-color:rgba(232,148,77,.5);background:rgba(232,148,77,.04);">' +
+      '<div class="empty-icon">🔌</div>' +
+      '<div class="empty-title" style="color:var(--orange);">Tryb offline aktywny</div>' +
+      '<div style="line-height:1.6;">Sędzia główny włączył tryb offline.<br>' +
+      '<strong>Użyj fizycznego stopera</strong> dla biegu drużynowego.<br>' +
+      'Czasy wpisywane ręcznie w panelu głównym.</div></div>';
+    if (emptyEl) emptyEl.style.display = 'none';
+    return;
+  }
+  const pairs = (state.teamRunPairs || []).slice().sort((a, b) => a.pairNum - b.pairNum);
+  if (!pairs.length) {
+    if (emptyEl) emptyEl.style.display = '';
+    listEl.innerHTML = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  listEl.innerHTML = pairs.map(p => renderTeamPairCard(p)).join('');
+}
+
+function renderTeamPairCard(p) {
+  const pairNum = p.pairNum;
+  const isSolo = !p.bTeam;
+  const run = state.teamRuns?.[pairNum] || null;
+  const started = !!(run && run.startedAt);
+  const aFin = !!(started && run.finishedAt?.[p.aTeam]);
+  const bFin = p.bTeam ? !!(started && run.finishedAt?.[p.bTeam]) : true;
+  const allFinished = started && aFin && bFin;
+
+  let statusCls, statusTxt;
+  if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
+  else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
+  else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
+
+  // Timer display
+  let timerHtml;
+  if (allFinished) {
+    const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
+    timerHtml = '<div class="timer-display" data-finished="1">' + formatRunTime(last - run.startedAt) + '</div>';
+  } else if (started) {
+    timerHtml = '<div class="timer-display" data-running="1" data-team-pair="' + pairNum + '">0.00</div>';
+  } else {
+    timerHtml = '<div class="timer-display" style="color:var(--text3);font-weight:400;">—</div>';
+  }
+
+  // Akcja: START / RESET (starter ma tylko START/RESET, STOP per team to META w panelu)
+  let actionHtml = '';
+  if (!started) {
+    actionHtml = '<button class="btn-start" onclick="startTeamPairFromStarter(' + pairNum + ')">▶ START</button>';
+  } else if (allFinished) {
+    actionHtml = ''; // skończona — bez akcji starter
+  } else {
+    actionHtml = '<button class="btn-reset" onclick="resetTeamPairFromStarter(' + pairNum + ')">↺ RESET (falstart)</button>';
+  }
+
+  // Info o czasie startu
+  let startTimeInfo = '';
+  if (started) {
+    let info = 'Start: <strong>' + formatClockTime(run.startedAt) + '</strong>';
+    if (allFinished) {
+      const finishMs = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
+      if (finishMs > 0) info += ' <span style="color:var(--text3);margin:0 4px;">·</span> Koniec: <strong>' + formatClockTime(finishMs) + '</strong>';
+    }
+    startTimeInfo = '<div class="start-time-info">' + info + '</div>';
+  }
+
+  // Header
+  const head = '<div class="pair-head">' +
+    '<div style="display:flex;align-items:center;gap:12px;">' +
+      '<span class="pair-num">' + pairNum + '</span>' +
+      '<span class="pair-gender">🛡</span>' +
+      '<span class="pair-status ' + statusCls + '">' + statusTxt + '</span>' +
+      (isSolo ? '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:3px;">SOLO</span>' : '') +
+    '</div>' +
+    timerHtml +
+  '</div>';
+
+  // Drużyny (left/right)
+  const teamCellHTML = (teamName, lane) => {
+    if (!teamName) {
+      return '<div class="pair-ath" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak ' + lane + '</div>';
+    }
+    return '<div class="pair-ath">' +
+      '<span class="lane-badge ' + lane + '">' + lane + '</span>' +
+      '<div class="pair-ath-info">' +
+        '<div class="pair-ath-name" style="font-family:var(--font-h);font-size:14px;letter-spacing:1px;text-transform:uppercase;">' + esc(teamName) + '</div>' +
+        '<div class="pair-ath-sub">Patrol 3-osobowy</div>' +
+      '</div>' +
+    '</div>';
+  };
+  const teams = '<div class="pair-athletes">' +
+    teamCellHTML(p.aTeam, p.aLane || 'L') +
+    teamCellHTML(p.bTeam, p.bLane || 'P') +
+  '</div>';
+
+  const action = '<div class="pair-action" style="flex-direction:column;align-items:stretch;">' + actionHtml + startTimeInfo + '</div>';
+  const cls = 'pair-card' + (allFinished ? ' finished' : (started ? ' running' : ''));
+  return '<div class="' + cls + '">' + head + teams + action + '</div>';
+}
+
+function startTeamPairFromStarter(pairNum) {
+  const drift = getClockDriftStatus();
+  if (drift.status === 'block') {
+    showToast('Zegar systemowy ma drift > 10s — skoryguj zanim wystartujesz', 'error', 4000);
+    return;
+  }
+  if (state.teamRuns?.[pairNum]?.startedAt) {
+    if (!confirm('Para drużyn ' + pairNum + ' już biegnie. Reset i start od nowa? (Falstart)')) return;
+  }
+  if (!state.teamRuns) state.teamRuns = {};
+  state.teamRuns[pairNum] = { startedAt: nowMs(), finishedAt: {} };
+  // Wyczyść biegSec drużyn z tej pary
+  const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+  if (p) {
+    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
+      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
+    });
+  }
+  saveState();
+  renderTeamPairs();
+  showToast('▶ Para drużyn ' + pairNum + ' wystartowała', 'success', 1800);
+}
+
+function resetTeamPairFromStarter(pairNum) {
+  if (!state.teamRuns?.[pairNum]) return;
+  if (!confirm('Reset pary drużyn ' + pairNum + '? Czasy biegu zostaną usunięte.')) return;
+  delete state.teamRuns[pairNum];
+  const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+  if (p) {
+    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
+      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
+    });
+  }
+  saveState();
+  renderTeamPairs();
+  showToast('↺ Reset pary drużyn ' + pairNum, 'info', 1500);
 }
 
 function renderPairs() {
@@ -1037,6 +1243,9 @@ setInterval(() => {
   checkScheduledStartsStart();
   // Update lecącego licznika — z auto-zatrzymaniem gdy oboje skończyli (auto LUB ręczny total)
   document.querySelectorAll('.timer-display[data-running="1"]').forEach(el => {
+    // Skip team-pair timers — obsługiwane w osobnym selektorze
+    if (el.dataset.teamPair) return;
+    if (!el.dataset.pair) return;
     const [gender, pairNumStr] = el.dataset.pair.split('_');
     const pairNum = parseInt(pairNumStr);
     const run = getRun(gender, pairNum);
@@ -1091,6 +1300,26 @@ setInterval(() => {
         el.textContent = m > 0 ? '-' + m + ':' + (s < 10 ? '0' : '') + s : '-' + s + 's';
       }
     }
+  });
+  // Team-pair timers (data-team-pair="pairNum")
+  document.querySelectorAll('.timer-display[data-team-pair]').forEach(el => {
+    if (el.dataset.finished === '1') return;
+    const pairNum = parseInt(el.dataset.teamPair);
+    const run = state.teamRuns?.[pairNum];
+    if (!run || !run.startedAt) return;
+    const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
+    if (p) {
+      const aFin = run.finishedAt?.[p.aTeam];
+      const bFin = p.bTeam ? run.finishedAt?.[p.bTeam] : true;
+      if (aFin && (bFin || !p.bTeam)) {
+        const last = Math.max(aFin || 0, (bFin === true ? 0 : bFin) || 0);
+        el.textContent = formatRunTime(last - run.startedAt);
+        el.dataset.finished = '1';
+        try { renderTeamPairs(); } catch(_){}
+        return;
+      }
+    }
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
 }, 100);
 
