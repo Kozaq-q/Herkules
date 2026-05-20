@@ -1327,6 +1327,15 @@ tr:last-child > td { border-bottom: none; }
             <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5;">Najlepsza K dostaje tyle samo pkt co najlepszy M (N = liczba zawodników M). Bez tej opcji kobiety mają osobną klasyfikację, ale nie wpływają na wynik drużynowy.</div>
           </div>
         </label>
+        <!-- Limit punktujących K na drużynę -->
+        <div id="osf-k-limit-row" style="display:flex;align-items:center;gap:12px;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;font-weight:700;color:var(--female);">Maks. punktujących K na drużynę</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.5;"><strong>0</strong> = bez limitu. Powyżej zera: tylko X najlepszych K (wg czasu) z danej drużyny dodaje swoje pkt do sumy drużynowej. Pozostałe K wciąż liczą się w rankingu indywidualnym K i zajmują miejsca w rankingu globalnym (obniżając pkt kolejnym K).</div>
+          </div>
+          <input type="number" id="osf-max-scoring-k" min="0" max="20" value="0" onchange="saveSetup();renderResults();renderKlasyfikacja()" onblur="saveSetup();renderResults();renderKlasyfikacja()"
+            style="font-family:var(--font-m);font-size:24px;font-weight:800;color:var(--female);text-align:center;width:60px;background:none;border:1px solid var(--border);border-radius:6px;outline:none;padding:4px;" />
+        </div>
       </div>
 
       <!-- Reguły parowania — informacyjny summary, modal otwierany z karty Drużynowej -->
@@ -2129,6 +2138,7 @@ let state = {
     maxScoringM: 0,    // maks. punktujących M do sumy ind. (0 = wszyscy)
     teamNMode: 'teams', // 'teams' = liczba drużyn, 'ind' = N z ind. M
     kScores: false,    // czy kobiety punktują
+    maxScoringK: 0,    // maks. punktujących K na drużynę (0 = bez limitu; pozostałe K nadal w rankingu ind., ale nie dodają pkt do drużyny)
     teamMin: 8,        // min. skład do startu (poniżej → DSQ, brak pary, brak pkt)
     teamMultiplier: 3, // mnożnik punktowy dla biegu drużynowego
     allowSoloPair: false,
@@ -2149,6 +2159,7 @@ function TEAM_N_MANUAL() {
 }
 
 function K_SCORES() { return !!(state.setup && state.setup.kScores); }
+function MAX_SCORING_K() { return (state.setup && state.setup.maxScoringK) ? state.setup.maxScoringK : 0; }
 
 // N dla biegu drużynowego
 function TEAM_RACE_N() {
@@ -2753,6 +2764,7 @@ function ensureStateDefaults() {
     teamNManual: 0,        // 0 = brak ręcznego N drużyn
     teamNMode: 'teams',    // 'teams' | 'ind' | 'manual'
     kScores: false,        // czy K punktują w klasyfikacji
+    maxScoringK: 0,        // 0 = brak limitu punktujących K na drużynę
     pkAtEnd: false,        // czy PK na końcu losowania
     ignoreLaneRule: false  // czy ignorować zasadę torów
   };
@@ -2913,6 +2925,21 @@ function getScoringAthleteIds(team) {
   if (!limit) return null; // null = wszyscy punktują
   const athletes = getTeamAthletes(team); // bez PK
   const ranked = athletes
+    .filter(a => parseTime(bestTime(a.id)) < Infinity)
+    .sort((a, b) => parseTime(bestTime(a.id)) - parseTime(bestTime(b.id)));
+  const scoringIds = new Set(ranked.slice(0, limit).map(a => a.id));
+  return scoringIds;
+}
+
+// Zwraca zbiór id zawodniczek K z drużyny, które LICZĄ SIĘ DO SUMY DRUŻYNOWEJ.
+// Ranking globalny K (i punkty indywidualne K) zostają bez zmian — limit wpływa
+// wyłącznie na sumowanie kPts dla drużyny. K spoza limitu zajmują miejsca
+// w rankingu globalnym (i obniżają pkt kolejnym K), ale ich pkt nie idą do team.
+function getScoringWomenIds(team) {
+  const limit = MAX_SCORING_K();
+  if (!limit) return null; // null = wszystkie K z drużyny punktują
+  const women = state.athletes.filter(a => a.gender === 'K' && !a.pk && (a.team || '') === team);
+  const ranked = women
     .filter(a => parseTime(bestTime(a.id)) < Infinity)
     .sort((a, b) => parseTime(bestTime(a.id)) - parseTime(bestTime(b.id)));
   const scoringIds = new Set(ranked.slice(0, limit).map(a => a.id));
@@ -6569,6 +6596,8 @@ function renderSetupPage() {
   setVal('osf-team-count',       s.teamCount      || 8);
   setVal('osf-max-scoring-m',    s.maxScoringM    !== undefined ? s.maxScoringM : 0);
   setChk('osf-k-scores',         s.kScores || false);
+  setVal('osf-max-scoring-k',    s.maxScoringK    !== undefined ? s.maxScoringK : 0);
+  _updateKLimitRowState();
   setVal('osf-team-n-manual',    s.teamNManual !== undefined ? s.teamNManual : '');
   updateTeamNModeButtons(s.teamNMode || 'teams');
   setVal('osf-team-min-start',   s.teamMin        !== undefined ? s.teamMin : (s.teamCount || 8));
@@ -6589,6 +6618,18 @@ function renderSetupPage() {
   updatePairingRulesSummary();
   // Auto-collapse karty info gdy miasto + data są wypełnione
   _updateInfoCollapsedLine();
+}
+
+// Wizualnie wyłącz input "maks. punktujących K" gdy kobiety nie punktują.
+function _updateKLimitRowState() {
+  const row   = document.getElementById('osf-k-limit-row');
+  const input = document.getElementById('osf-max-scoring-k');
+  const chk   = document.getElementById('osf-k-scores');
+  if (!row || !input || !chk) return;
+  const on = chk.checked;
+  row.style.opacity = on ? '' : '.45';
+  input.disabled = !on;
+  input.style.cursor = on ? '' : 'not-allowed';
 }
 
 // Subtelny toast gdy data zawodów < dzisiaj (informacja, nie blokada)
@@ -6622,6 +6663,8 @@ function saveSetup() {
   state.setup.teamNMode      = state.setup.teamNMode || 'teams';
   state.setup.teamNManual    = getNum('osf-team-n-manual', 0);
   state.setup.kScores        = getChk('osf-k-scores');
+  state.setup.maxScoringK    = getNum('osf-max-scoring-k', 0);
+  _updateKLimitRowState();
   state.setup.teamMin        = getNum('osf-team-min-start', state.setup.teamCount || 8);
   state.setup.teamMultiplier = getNum('osf-team-multiplier', 3);
   state.setup.allowSoloPair     = getChk('osf-allow-solo-pair');
@@ -7254,19 +7297,25 @@ function getTeamClassification() {
     const team = r.athlete.team;
     if (team && indPts[team] !== undefined) indPts[team] += r.pts;
   });
-  // Kobiety punktują jeśli włączone — N = liczba zawodników M
+  // Kobiety punktują jeśli włączone — N = liczba zawodników M.
+  // Limit maxScoringK: pkt indywidualne K nadal się przyznają (ranking globalny
+  // bez zmian), ale do sumy drużynowej liczy się tylko top X K z każdej drużyny.
   if (K_SCORES()) {
     const nM = state.athletes.filter(a => a.gender === 'M' && !a.pk).length;
     const women = state.athletes.filter(a => a.gender === 'K' && !a.pk);
     const rankedW = women.map(a => ({
       athlete: a, bestSec: parseTime(bestTime(a.id))
     })).sort((a,b) => a.bestSec - b.bestSec);
+    const scoringByTeam = {}; // team → Set<id> lub null (bez limitu)
     let wRank = 1;
     rankedW.forEach(r => {
       if (r.bestSec === Infinity) return;
       const pts  = calcIndividualPoints(wRank++, nM);
       const team = r.athlete.team;
-      if (team && indPts[team] !== undefined) indPts[team] += pts;
+      if (!team || indPts[team] === undefined) return;
+      if (!(team in scoringByTeam)) scoringByTeam[team] = getScoringWomenIds(team);
+      const ids = scoringByTeam[team];
+      if (ids === null || ids.has(r.athlete.id)) indPts[team] += pts;
     });
   }
 
@@ -7810,19 +7859,25 @@ function printKlasyfikacjaGeneralnaPDF() {
     if (r.athlete.team && mPts[r.athlete.team] !== undefined) mPts[r.athlete.team] += r.pts;
   });
 
-  // Punkty K per drużyna (tylko gdy kScores) — skala N mężczyzn
+  // Punkty K per drużyna (tylko gdy kScores) — skala N mężczyzn.
+  // Limit maxScoringK: tylko top X K z każdej drużyny dodaje pkt do team.
   const kPts = {}; teams.forEach(t => kPts[t] = 0);
   if (kScores) {
     const women = state.athletes.filter(a => a.gender === 'K' && !a.pk);
     const wRanked = women.map(a => ({
       athlete: a, bestSec: parseTime(bestTime(a.id))
     })).sort((a,b) => a.bestSec - b.bestSec);
+    const scoringByTeam = {};
     let wr = 1;
     wRanked.forEach(r => {
       if (r.bestSec === Infinity) return;
       const pts = calcIndividualPoints(wr, N_men);
-      if (r.athlete.team && kPts[r.athlete.team] !== undefined) kPts[r.athlete.team] += pts;
+      const team = r.athlete.team;
       wr++;
+      if (!team || kPts[team] === undefined) return;
+      if (!(team in scoringByTeam)) scoringByTeam[team] = getScoringWomenIds(team);
+      const ids = scoringByTeam[team];
+      if (ids === null || ids.has(r.athlete.id)) kPts[team] += pts;
     });
   }
 
