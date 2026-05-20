@@ -124,9 +124,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   0%,100% { box-shadow: 0 4px 14px rgba(232,148,77,.22); }
   50%     { box-shadow: 0 4px 22px rgba(232,148,77,.4); }
 }
-.ptr-running-banner-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ptr-running-banner-inner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ptr-running-section { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ptr-running-section + .ptr-running-section { padding-left: 14px; border-left: 1px solid rgba(232,148,77,.35); }
+.ptr-running-section.scheduled { opacity: .92; }
 .ptr-running-banner-label { font-family: var(--font-h); font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); flex-shrink: 0; }
-.ptr-running-banner-list { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.ptr-running-section.scheduled .ptr-running-banner-label { color: var(--text2); }
+.ptr-running-banner-list { display: flex; gap: 8px; flex-wrap: wrap; }
 .ptr-running-pill {
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--bg2); border: 1px solid rgba(232,148,77,.55); border-radius: 18px;
@@ -138,6 +142,36 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-running-pill-gender { color: var(--text3); font-size: 11px; }
 .ptr-running-pill-names { color: var(--text1); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
 .ptr-running-pill-timer { font-family: var(--font-m); font-weight: 800; color: var(--orange); font-variant-numeric: tabular-nums; }
+
+/* checkpointy w pigułce (OSF / META per zawodnik lub drużyna) */
+.ptr-running-pill-checks { display: inline-flex; gap: 4px; font-size: 10px; font-family: var(--font-m); align-items: center; }
+.ptr-running-pill-check { padding: 1px 5px; border-radius: 6px; background: var(--bg3); color: var(--text3); letter-spacing: .5px; font-weight: 700; }
+.ptr-running-pill-check.done { background: rgba(74,222,128,.16); color: #4ade80; }
+.ptr-running-pill-check.miss { background: rgba(255,91,91,.10); color: #ff7373; }
+
+/* drużynowa pigułka — niebieskawy numer dla odróżnienia od indywidualnej */
+.ptr-running-pill.team { border-color: rgba(78,201,240,.55); }
+.ptr-running-pill.team .ptr-running-pill-num { background: #4ec9f0; color: #003; }
+.ptr-running-pill.team .ptr-running-pill-timer { color: #4ec9f0; }
+.ptr-running-pill.team:hover { border-color: #4ec9f0; }
+
+/* eskalacja kolorem w miarę przedłużania się biegu */
+.ptr-running-pill.warn-yellow { border-color: #ffcb47; box-shadow: 0 0 0 1px rgba(255,203,71,.45); }
+.ptr-running-pill.warn-yellow .ptr-running-pill-timer { color: #ffcb47; }
+.ptr-running-pill.warn-red { border-color: #ff5b5b; box-shadow: 0 0 0 1px rgba(255,91,91,.55); animation: ptr-pill-pulse 1.4s ease-in-out infinite; }
+.ptr-running-pill.warn-red .ptr-running-pill-timer { color: #ff7373; }
+@keyframes ptr-pill-pulse { 50% { box-shadow: 0 0 0 4px rgba(255,91,91,.55); } }
+
+/* zaplanowane (pre-start) — szare z odliczaniem */
+.ptr-running-pill.scheduled { background: var(--bg2); border-color: rgba(255,255,255,.20); }
+.ptr-running-pill.scheduled .ptr-running-pill-num { background: var(--bg3); color: var(--text2); border: 1px dashed var(--text3); }
+.ptr-running-pill.scheduled .ptr-running-pill-timer { color: var(--text2); }
+.ptr-running-pill.scheduled.imminent { border-color: var(--orange); }
+.ptr-running-pill.scheduled.imminent .ptr-running-pill-timer { color: var(--orange); }
+
+/* compact: ukryj nazwiska i checkpointy gdy zbyt wiele par */
+.ptr-running-pill.compact .ptr-running-pill-names,
+.ptr-running-pill.compact .ptr-running-pill-checks { display: none; }
 
 /* Konfiguracja — rząd 4 kwadratowych kafelków (mniejsze, na pełną szerokość konfiguracji) */
 .ptr-tiles-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -5015,76 +5049,353 @@ function _patrolEffectiveFinishMs(athleteId, run) {
 }
 
 // ─── BANNER "BIEGNIE TERAZ" — widoczność + tikanie zegarów ──────
+// Progi eskalacji koloru pigułki (od startu)
+const _PTR_PILL_WARN_YELLOW_MS = 10 * 60 * 1000; // 10 min
+const _PTR_PILL_WARN_RED_MS    = 15 * 60 * 1000; // 15 min
+// Próg "imminent" dla zaplanowanych — pigułka zmienia akcent na pomarańczowy
+const _PTR_PILL_IMMINENT_MS    = 60 * 1000;      // 60 s przed startem
+
+function _pillWarnClass(elapsedMs) {
+  if (elapsedMs >= _PTR_PILL_WARN_RED_MS)    return 'warn-red';
+  if (elapsedMs >= _PTR_PILL_WARN_YELLOW_MS) return 'warn-yellow';
+  return '';
+}
+
+// Format odliczania do startu: "-m:ss" lub "-XXs"
+function _formatScheduledLeft(ms) {
+  if (ms <= 0) return '0s';
+  const sec = Math.ceil(ms / 1000);
+  if (sec < 60) return sec + 's';
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+// Renderuje pojedynczą pigułkę. Wspólny szablon dla ind/team, running/scheduled.
+function _renderRunningPill(opts) {
+  // opts: { type:'ind'|'team', key, label, icon, names, checks:[{label,state}], timerInit, scheduled, compact, warnCls, imminent, scrollFn }
+  const cls = ['ptr-running-pill', opts.type];
+  if (opts.scheduled) cls.push('scheduled');
+  if (opts.scheduled && opts.imminent) cls.push('imminent');
+  if (opts.compact)   cls.push('compact');
+  if (opts.warnCls)   cls.push(opts.warnCls);
+  const checks = (opts.checks || []).map(c =>
+    '<span class="ptr-running-pill-check ' + (c.state === 'done' ? 'done' : (c.state === 'miss' ? 'miss' : '')) + '">' + esc(c.label) + '</span>'
+  ).join('');
+  const dataAttr = opts.scheduled
+    ? ' data-banner-scheduled="' + esc(opts.key) + '"'
+    : ' data-banner-timer="' + esc(opts.key) + '"';
+  const tooltip = opts.names ? opts.label + ' · ' + opts.names : opts.label;
+  return '<button class="' + cls.join(' ') + '" type="button" data-banner-key="' + esc(opts.key) + '" onclick="' + opts.scrollFn + '" title="' + esc(tooltip) + '">' +
+    '<span class="ptr-running-pill-num">' + esc(String(opts.numLabel != null ? opts.numLabel : opts.label)) + '</span>' +
+    (opts.icon  ? '<span class="ptr-running-pill-gender">' + opts.icon + '</span>' : '') +
+    (opts.names ? '<span class="ptr-running-pill-names">' + esc(opts.names) + '</span>' : '') +
+    (checks    ? '<span class="ptr-running-pill-checks">' + checks + '</span>' : '') +
+    '<span class="ptr-running-pill-timer"' + dataAttr + '>' + esc(opts.timerInit || '0.00') + '</span>' +
+  '</button>';
+}
+
+// Checkpointy zawodnika: OSF / META (na podst. times[id] oraz finishedAt[id])
+function _athleteChecks(athleteId, run, labelPrefix) {
+  const t = (state.times && state.times[athleteId]) || {};
+  const osfDone = (t.osf != null && t.osf !== '' && !isTimeMarker(t.osf));
+  const metaDone = (run && run.finishedAt && run.finishedAt[athleteId])
+    || (t.total != null && t.total !== '');
+  return [
+    { label: labelPrefix + 'OSF', state: osfDone ? 'done' : 'miss' },
+    { label: labelPrefix + 'META', state: metaDone ? 'done' : 'miss' },
+  ];
+}
+
+// Checkpointy drużyny: OSF (teamRun[name].osfSec) / META (teamRuns[pair].finishedAt[name])
+function _teamChecks(teamName, run, labelPrefix) {
+  const tr = (state.teamRun && state.teamRun[teamName]) || {};
+  const osfDone = (tr.osfSec != null && tr.osfSec !== '' && !isTimeMarker(tr.osfSec));
+  const metaDone = !!(run && run.finishedAt && run.finishedAt[teamName]);
+  return [
+    { label: labelPrefix + 'OSF', state: osfDone ? 'done' : 'miss' },
+    { label: labelPrefix + 'META', state: metaDone ? 'done' : 'miss' },
+  ];
+}
+
 function _renderPtrRunningBanner() {
   const banner = document.getElementById('ptr-running-banner');
   if (!banner) return;
-  // Tylko na zakładkach Pary i Stoper — gdzie sędziowie pracują
+  // Tylko na zakładkach Pary/Stoper (ind + drużynowe)
   const active = document.querySelector('.nav-tab.active');
   const tabId = active ? active.id.replace('tab-', '') : '';
   const showOnTab = (tabId === 'pairs' || tabId === 'timer' || tabId === 'team-run' || tabId === 'team-timer');
   if (!showOnTab) { banner.style.display = 'none'; return; }
 
-  // Zbierz biegnące pary (started, nie skończone wg getEffectiveFinish)
-  const runningPairs = [];
+  // ── A) RUNNING — indywidualne ──
+  const runningInd = [];
   (state.pairs || []).forEach(p => {
     const run = getRun(p.gender, p.pairNum);
     if (!run || !run.startedAt) return;
     const aFin = _patrolEffectiveFinishMs(p.aId, run);
     const bFin = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
-    if (aFin && bFin) return; // już skończona
-    runningPairs.push({ p, run });
+    if (aFin && bFin) return;
+    runningInd.push({ p, run });
+  });
+  runningInd.sort((a, b) => a.p.gender.localeCompare(b.p.gender) || a.p.pairNum - b.p.pairNum);
+
+  // ── B) RUNNING — drużynowe (z virtualnymi SOLO) ──
+  const realTeamPairs = state.teamRunPairs || [];
+  const teamPairsByKey = {};
+  realTeamPairs.forEach(p => { teamPairsByKey[p.pairNum] = p; });
+  // Dodaj virtual SOLO dla drużyn z teamRuns[] których nie ma w teamRunPairs
+  Object.keys(state.teamRuns || {}).forEach(key => {
+    if (teamPairsByKey[key]) return;
+    if (typeof key === 'string' && key.indexOf('solo:') === 0) {
+      const teamName = key.slice(5);
+      teamPairsByKey[key] = { pairNum: key, _virtual: true, aTeam: teamName, aLane: 'L', bTeam: null, bLane: null };
+    }
+  });
+  const runningTeam = [];
+  Object.keys(teamPairsByKey).forEach(key => {
+    const p = teamPairsByKey[key];
+    const run = getTeamRunPair(p.pairNum);
+    if (!run || !run.startedAt) return;
+    const aFin = run.finishedAt && run.finishedAt[p.aTeam];
+    const bFin = p.bTeam ? (run.finishedAt && run.finishedAt[p.bTeam]) : true;
+    if (aFin && bFin) return;
+    runningTeam.push({ p, run });
+  });
+  // Stabilne sortowanie: numeryczne pierwsze, potem SOLO alfabetycznie
+  runningTeam.sort((a, b) => {
+    const an = typeof a.p.pairNum === 'number' ? a.p.pairNum : 9999;
+    const bn = typeof b.p.pairNum === 'number' ? b.p.pairNum : 9999;
+    if (an !== bn) return an - bn;
+    return String(a.p.pairNum).localeCompare(String(b.p.pairNum));
   });
 
-  if (!runningPairs.length) { banner.style.display = 'none'; return; }
+  // ── C) SCHEDULED — indywidualne (scheduledStartAt && !startedAt) ──
+  const scheduledInd = [];
+  Object.keys(state.runs || {}).forEach(key => {
+    const r = state.runs[key];
+    if (!r || !r.scheduledStartAt || r.startedAt) return;
+    const [gender, pairNumStr] = key.split('_');
+    const pairNum = parseInt(pairNumStr);
+    const p = (state.pairs || []).find(x => x.gender === gender && x.pairNum === pairNum);
+    if (!p) return;
+    scheduledInd.push({ p, run: r });
+  });
+  scheduledInd.sort((a, b) => a.run.scheduledStartAt - b.run.scheduledStartAt);
+
+  // ── D) SCHEDULED — drużynowe ──
+  const scheduledTeam = [];
+  Object.keys(state.teamRuns || {}).forEach(key => {
+    const r = state.teamRuns[key];
+    if (!r || !r.scheduledStartAt || r.startedAt) return;
+    const p = teamPairsByKey[key];
+    if (!p) return;
+    scheduledTeam.push({ p, run: r });
+  });
+  scheduledTeam.sort((a, b) => a.run.scheduledStartAt - b.run.scheduledStartAt);
+
+  const totalRunning   = runningInd.length + runningTeam.length;
+  const totalScheduled = scheduledInd.length + scheduledTeam.length;
+  if (!totalRunning && !totalScheduled) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
 
-  // Sortuj po pairNum/płci dla stabilności
-  runningPairs.sort((a, b) => a.p.gender.localeCompare(b.p.gender) || a.p.pairNum - b.p.pairNum);
+  // Compact gdy razem > 5 pigułek
+  const compact = (totalRunning + totalScheduled) > 5;
+  const nowWall = Date.now();
 
-  const pills = runningPairs.map(({ p, run }) => {
+  // Buduj pigułki: running
+  const indRunPills = runningInd.map(({ p, run }) => {
     const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
     const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
     const names = [a, b].filter(Boolean).map(x => esc(x.name || '?')).join(' & ');
     const key = p.gender + '_' + p.pairNum;
-    return '<button class="ptr-running-pill" data-key="' + key + '" onclick="_scrollToRunningPair(\'' + p.gender + '\',' + p.pairNum + ')" title="Kliknij aby przewinąć do tej pary">' +
-      '<span class="ptr-running-pill-num">' + p.pairNum + '</span>' +
-      '<span class="ptr-running-pill-gender">' + (p.gender === 'M' ? '♂' : '♀') + '</span>' +
-      '<span class="ptr-running-pill-names">' + (names || '—') + '</span>' +
-      '<span class="ptr-running-pill-timer" data-banner-timer="' + key + '">0.00</span>' +
-    '</button>';
+    const elapsed = nowMs() - run.startedAt;
+    const checks = []
+      .concat(p.aId ? _athleteChecks(p.aId, run, 'A:') : [])
+      .concat(p.bId ? _athleteChecks(p.bId, run, 'B:') : []);
+    return _renderRunningPill({
+      type: 'ind',
+      key: key,
+      numLabel: p.pairNum,
+      icon: (p.gender === 'M' ? '♂' : '♀'),
+      names: names || '—',
+      checks: checks,
+      timerInit: formatRunTime(elapsed),
+      warnCls: _pillWarnClass(elapsed),
+      compact: compact,
+      scrollFn: '_scrollToRunningPair(\'' + p.gender + '\',' + p.pairNum + ')',
+      label: 'Para ' + p.pairNum + ' (' + (p.gender === 'M' ? 'M' : 'K') + ')'
+    });
   }).join('');
 
-  banner.innerHTML =
-    '<div class="ptr-running-banner-inner">' +
-      '<span class="ptr-running-banner-label">▶ Biegnie teraz</span>' +
-      '<div class="ptr-running-banner-list">' + pills + '</div>' +
-    '</div>';
+  const teamRunPills = runningTeam.map(({ p, run }) => {
+    const names = [p.aTeam, p.bTeam].filter(Boolean).map(esc).join(' & ');
+    const keyStr = String(p.pairNum);
+    const numLabel = (p._virtual || typeof p.pairNum === 'string') ? '∗' : p.pairNum;
+    const elapsed = nowMs() - run.startedAt;
+    const checks = [].concat(_teamChecks(p.aTeam, run, 'A:'))
+                     .concat(p.bTeam ? _teamChecks(p.bTeam, run, 'B:') : []);
+    return _renderRunningPill({
+      type: 'team',
+      key: keyStr,
+      numLabel: numLabel,
+      icon: '🏃',
+      names: names || '—',
+      checks: checks,
+      timerInit: formatRunTime(elapsed),
+      warnCls: _pillWarnClass(elapsed),
+      compact: compact,
+      scrollFn: '_scrollToRunningTeamPair(\'' + String(p.pairNum).replace(/'/g, "\\'") + '\')',
+      label: 'Drużyny ' + (typeof p.pairNum === 'number' ? '#' + p.pairNum : 'SOLO')
+    });
+  }).join('');
+
+  // Pigułki scheduled
+  const indSchedPills = scheduledInd.map(({ p, run }) => {
+    const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
+    const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
+    const names = [a, b].filter(Boolean).map(x => esc(x.name || '?')).join(' & ');
+    const key = p.gender + '_' + p.pairNum;
+    const left = run.scheduledStartAt - nowWall;
+    return _renderRunningPill({
+      type: 'ind',
+      key: key,
+      numLabel: p.pairNum,
+      icon: (p.gender === 'M' ? '♂' : '♀'),
+      names: names || '—',
+      timerInit: '⏱ ' + _formatScheduledLeft(left),
+      scheduled: true,
+      imminent: left <= _PTR_PILL_IMMINENT_MS,
+      compact: compact,
+      scrollFn: '_scrollToRunningPair(\'' + p.gender + '\',' + p.pairNum + ')',
+      label: 'Start za ' + _formatScheduledLeft(left)
+    });
+  }).join('');
+
+  const teamSchedPills = scheduledTeam.map(({ p, run }) => {
+    const names = [p.aTeam, p.bTeam].filter(Boolean).map(esc).join(' & ');
+    const keyStr = String(p.pairNum);
+    const numLabel = (p._virtual || typeof p.pairNum === 'string') ? '∗' : p.pairNum;
+    const left = run.scheduledStartAt - nowWall;
+    return _renderRunningPill({
+      type: 'team',
+      key: keyStr,
+      numLabel: numLabel,
+      icon: '🏃',
+      names: names || '—',
+      timerInit: '⏱ ' + _formatScheduledLeft(left),
+      scheduled: true,
+      imminent: left <= _PTR_PILL_IMMINENT_MS,
+      compact: compact,
+      scrollFn: '_scrollToRunningTeamPair(\'' + String(p.pairNum).replace(/'/g, "\\'") + '\')',
+      label: 'Start za ' + _formatScheduledLeft(left)
+    });
+  }).join('');
+
+  // Sekcje: Running (IND ✦ DRUŻ), Scheduled (IND ✦ DRUŻ)
+  const sectionsHtml = [];
+  if (totalRunning) {
+    const subSections = [];
+    if (indRunPills) subSections.push(
+      '<div class="ptr-running-section">' +
+        '<span class="ptr-running-banner-label">▶ Bieg</span>' +
+        '<div class="ptr-running-banner-list">' + indRunPills + '</div>' +
+      '</div>'
+    );
+    if (teamRunPills) subSections.push(
+      '<div class="ptr-running-section">' +
+        '<span class="ptr-running-banner-label">▶ Drużynowy</span>' +
+        '<div class="ptr-running-banner-list">' + teamRunPills + '</div>' +
+      '</div>'
+    );
+    sectionsHtml.push(subSections.join(''));
+  }
+  if (totalScheduled) {
+    const subSections = [];
+    if (indSchedPills) subSections.push(
+      '<div class="ptr-running-section scheduled">' +
+        '<span class="ptr-running-banner-label">⏱ Za chwilę</span>' +
+        '<div class="ptr-running-banner-list">' + indSchedPills + '</div>' +
+      '</div>'
+    );
+    if (teamSchedPills) subSections.push(
+      '<div class="ptr-running-section scheduled">' +
+        '<span class="ptr-running-banner-label">⏱ Drużyny</span>' +
+        '<div class="ptr-running-banner-list">' + teamSchedPills + '</div>' +
+      '</div>'
+    );
+    sectionsHtml.push(subSections.join(''));
+  }
+
+  banner.innerHTML = '<div class="ptr-running-banner-inner">' + sectionsHtml.join('') + '</div>';
 }
 
 // Tikaj zegary w bannerze co 100ms (oprócz głównego tickTimers)
 function _tickPtrRunningBannerTimers() {
   const banner = document.getElementById('ptr-running-banner');
   if (!banner || banner.style.display === 'none') return;
+  // Running — ind i team (jednolicie po data-banner-timer)
   banner.querySelectorAll('[data-banner-timer]').forEach(el => {
-    const [gender, pairNumStr] = el.dataset.bannerTimer.split('_');
-    const run = getRun(gender, parseInt(pairNumStr));
+    const key = el.dataset.bannerTimer;
+    const pill = el.closest('.ptr-running-pill');
+    const isTeam = pill && pill.classList.contains('team');
+    let run = null;
+    if (isTeam) {
+      run = getTeamRunPair(_parsePairKey(key));
+    } else {
+      const [gender, pairNumStr] = key.split('_');
+      run = getRun(gender, parseInt(pairNumStr));
+    }
     if (!run || !run.startedAt) return;
-    el.textContent = formatRunTime(nowMs() - run.startedAt);
+    const elapsed = nowMs() - run.startedAt;
+    el.textContent = formatRunTime(elapsed);
+    if (pill) {
+      // Eskalacja koloru — aktualizuj klasy w locie (bez re-rendera)
+      pill.classList.remove('warn-yellow', 'warn-red');
+      const wc = _pillWarnClass(elapsed);
+      if (wc) pill.classList.add(wc);
+    }
+  });
+  // Scheduled — odliczanie (wall-clock)
+  const nowWall = Date.now();
+  banner.querySelectorAll('[data-banner-scheduled]').forEach(el => {
+    const key = el.dataset.bannerScheduled;
+    const pill = el.closest('.ptr-running-pill');
+    const isTeam = pill && pill.classList.contains('team');
+    const r = isTeam ? (state.teamRuns && state.teamRuns[_parsePairKey(key)]) : (state.runs && state.runs[key]);
+    if (!r || !r.scheduledStartAt) return;
+    const left = r.scheduledStartAt - nowWall;
+    el.textContent = '⏱ ' + _formatScheduledLeft(left);
+    if (pill) {
+      const imminent = left <= _PTR_PILL_IMMINENT_MS;
+      pill.classList.toggle('imminent', imminent);
+    }
   });
 }
 
-// Scroll do karty pary w aktywnym widoku (Pary lub Stoper)
+// Scroll do karty pary w aktywnym widoku (Pary lub Stoper) — indywidualnej
 function _scrollToRunningPair(gender, pairNum) {
-  // Szukaj kart oznaczonych przez pairNum + gender. Pary view: .pair-card[data-pair-num]; Timer view: timer-display data-timer-pair
   const keys = [
     '[data-pair-num="' + pairNum + '"][data-gender="' + gender + '"]',
     '[data-timer-pair="' + gender + '_' + pairNum + '"]'
   ];
-  for (const sel of keys) {
+  _scrollAndHighlight(keys);
+}
+
+// Scroll do karty pary drużynowej (pairNum może być stringiem 'solo:T' lub liczbą)
+function _scrollToRunningTeamPair(pairNum) {
+  const safe = String(pairNum).replace(/"/g, '\\"');
+  const keys = [
+    '[data-team-pair="' + safe + '"]',
+    '.pair-card[data-pair="' + safe + '"]'
+  ];
+  _scrollAndHighlight(keys);
+}
+
+function _scrollAndHighlight(selectors) {
+  for (const sel of selectors) {
     const el = document.querySelector(sel);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Krótki highlight
       const card = el.closest('.pair-card') || el.closest('.timer-pair-card') || el;
       if (card) {
         card.style.transition = 'box-shadow .3s';
@@ -5097,17 +5408,17 @@ function _scrollToRunningPair(gender, pairNum) {
 }
 
 // ─── B) TOAST detection: ktoś wystartował parę ─────────────────
-const _ptrPrevRunStarted = {}; // {key: startedAt} — poprzednie znane statusy
+const _ptrPrevRunStarted     = {}; // {key: startedAt} — poprzednie znane statusy (ind)
+const _ptrPrevTeamRunStarted = {}; // {key: startedAt} — poprzednie znane statusy (drużyny)
 function _checkPairStartTransitions() {
-  if (!state || !state.runs) return;
-  Object.keys(state.runs).forEach(key => {
+  if (!state) return;
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'META';
+  // Indywidualne
+  Object.keys(state.runs || {}).forEach(key => {
     const r = state.runs[key];
     const prevStart = _ptrPrevRunStarted[key];
     const nowStart = r && r.startedAt;
     if (nowStart && !prevStart) {
-      // Tylko jeśli nie my sami właśnie wystartowaliśmy (zostalibyśmy zalani spamem)
-      // Detect "ourselves": startedAt bardzo świeży (<2s) + jesteśmy ADMIN/STARTER
-      const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'META';
       const recentlyStartedSelf = (Date.now() - nowStart) < 2000 && (role === 'STARTER' || role === 'ADMIN');
       if (!recentlyStartedSelf) {
         const [gender, pairNumStr] = key.split('_');
@@ -5121,6 +5432,31 @@ function _checkPairStartTransitions() {
       }
     }
     _ptrPrevRunStarted[key] = nowStart || 0;
+  });
+  // Drużynowe
+  Object.keys(state.teamRuns || {}).forEach(key => {
+    const r = state.teamRuns[key];
+    const prevStart = _ptrPrevTeamRunStarted[key];
+    const nowStart = r && r.startedAt;
+    if (nowStart && !prevStart) {
+      const recentlyStartedSelf = (Date.now() - nowStart) < 2000 && (role === 'STARTER' || role === 'ADMIN');
+      if (!recentlyStartedSelf) {
+        const p = (state.teamRunPairs || []).find(x => String(x.pairNum) === String(key));
+        let label, names = '';
+        if (p) {
+          label = '▶ Drużyny #' + p.pairNum + ' wystartowały';
+          names = [p.aTeam, p.bTeam].filter(Boolean).join(' & ');
+        } else if (typeof key === 'string' && key.indexOf('solo:') === 0) {
+          label = '▶ Drużyna wystartowała';
+          names = key.slice(5);
+        } else {
+          label = '▶ Drużyny wystartowały';
+        }
+        showToast(label + (names ? ' · ' + names : ''), 'warning', 4000);
+        _playStartBeep();
+      }
+    }
+    _ptrPrevTeamRunStarted[key] = nowStart || 0;
   });
 }
 
