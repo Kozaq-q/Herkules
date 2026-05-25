@@ -81,8 +81,10 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-name { font-family: var(--font-b); font-weight: 700; display: block; white-space: normal; word-break: break-word; line-height: 1.3; padding-right: 4px; }
 .rank-team-sub { font-family: var(--font-b); font-size: 11px; font-weight: 400; color: var(--text3); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; padding-right: 4px; }
 
-.rank-time-cell { font-family: var(--font-m); font-weight: 500; color: var(--green); text-align: right; white-space: nowrap; padding: 10px 12px 10px 6px; width: 170px; min-width: 170px; }
-.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; white-space: normal; line-height: 1.35; }
+.rank-time-cell { font-family: var(--font-m); font-weight: 500; color: var(--green); text-align: right; white-space: nowrap; padding: 10px 12px 10px 6px; width: 220px; min-width: 220px; }
+.rank-sub-time  { font-size: 11px; color: var(--text3); display: block; text-align: right; margin-top: 3px; white-space: nowrap; line-height: 1.2; }
+.rank-sub-time b { font-family: var(--font-m); font-weight: 700; color: var(--text2); }
+.rank-sub-time .sep { color: var(--border2); margin: 0 6px; }
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 .rank-marker { font-family: var(--font-h); font-size: 11px; font-weight: 800; color: var(--orange); }
 
@@ -392,16 +394,16 @@ function rankRowHTML(r, idx) {
   } else {
     timeCell = '<span style="color:var(--text3);font-weight:400;">—</span>';
   }
-  // Sub-line: czas mety / OSF / strzelanie — zawsze pokazywane gdy wpisane (nawet
-  // gdy zawodnik niesklasyfikowany), zeby publika widziala czastkowe wyniki.
+  // Sub-line: kompaktowo w jednej linii, tylko wartosci (czas | OSF | strzel/50).
+  // Kolejnosc staly: meta -> OSF -> strzelanie.
   let sub = '';
   if (!r.dsq) {
     const parts = [];
-    if (r.total && !r.marker) parts.push('czas: ' + esc(r.total));
-    if (r.osf && !isTimeMarker(r.osf)) parts.push('OSF: ' + esc(r.osf));
-    else if (isTimeMarker(r.osf)) parts.push('OSF: ' + r.osf);
-    if (r.shotPts !== null && r.shotPts !== undefined) parts.push('strzel: ' + r.shotPts + '/50');
-    if (parts.length) sub = '<span class="rank-sub-time">' + parts.join(' · ') + '</span>';
+    if (r.total && !r.marker) parts.push('<b>' + esc(r.total) + '</b>');
+    if (r.osf && !isTimeMarker(r.osf)) parts.push('OSF <b>' + esc(r.osf) + '</b>');
+    else if (isTimeMarker(r.osf)) parts.push('OSF <b>' + r.osf + '</b>');
+    if (r.shotPts !== null && r.shotPts !== undefined) parts.push('<b>' + r.shotPts + '</b>/50');
+    if (parts.length) sub = '<span class="rank-sub-time">' + parts.join('<span class="sep">·</span>') + '</span>';
   }
 
   return '<tr class="' + cls + '">' +
