@@ -81,8 +81,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-name { font-family: var(--font-b); font-weight: 700; display: block; white-space: normal; word-break: break-word; line-height: 1.3; padding-right: 4px; }
 .rank-team-sub { font-family: var(--font-b); font-size: 11px; font-weight: 400; color: var(--text3); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; padding-right: 4px; }
 
-.rank-time-cell { font-family: var(--font-m); font-weight: 500; color: var(--green); text-align: right; white-space: nowrap; padding: 10px 12px 10px 6px; width: 90px; min-width: 90px; }
-.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; }
+.rank-time-cell { font-family: var(--font-m); font-weight: 500; color: var(--green); text-align: right; white-space: nowrap; padding: 10px 12px 10px 6px; width: 170px; min-width: 170px; }
+.rank-sub-time  { font-size: 10px; color: var(--text3); display: block; text-align: right; margin-top: 2px; white-space: normal; line-height: 1.35; }
 .rank-dsq-label { font-size: 10px; color: var(--red); font-family: var(--font-b); font-weight: 600; }
 .rank-marker { font-family: var(--font-h); font-size: 11px; font-weight: 800; color: var(--orange); }
 
@@ -379,7 +379,9 @@ function rankRowHTML(r, idx) {
   const team = esc(r.ath.team || '');
   const bib  = r.ath.bib ? '<span style="color:var(--text3);font-family:var(--font-m);font-weight:400;margin-left:6px;">#' + esc(r.ath.bib) + '</span>' : '';
 
-  // Główny wynik = PUNKTY (regulamin). Czas/OSF/strzelanie w sub.
+  // Głowny wynik = PUNKTY (regulamin). Czas/OSF/strzelanie w sub-linii.
+  // Niesklasyfikowani (brak pkt, ale czas wpisany) -> "—" w glownym, ale sub
+  // pokazuje co juz jest wpisane, zeby publika widziala progress.
   let timeCell;
   if (r.dsq) {
     timeCell = '<span class="rank-dsq-label">DSQ</span>';
@@ -387,15 +389,15 @@ function rankRowHTML(r, idx) {
     timeCell = '<span class="rank-marker">' + r.marker + '</span>';
   } else if (r.points !== null) {
     timeCell = '<strong>' + r.points + '</strong> <span style="font-size:10px;color:var(--text3);">pkt</span>';
-  } else if (r.total) {
-    timeCell = '<span style="color:var(--text3);font-size:13px;">' + esc(r.total) + '</span>';
   } else {
     timeCell = '<span style="color:var(--text3);font-weight:400;">—</span>';
   }
+  // Sub-line: czas mety / OSF / strzelanie — zawsze pokazywane gdy wpisane (nawet
+  // gdy zawodnik niesklasyfikowany), zeby publika widziala czastkowe wyniki.
   let sub = '';
   if (!r.dsq) {
     const parts = [];
-    if (r.total && r.points !== null) parts.push('czas: ' + esc(r.total));
+    if (r.total && !r.marker) parts.push('czas: ' + esc(r.total));
     if (r.osf && !isTimeMarker(r.osf)) parts.push('OSF: ' + esc(r.osf));
     else if (isTimeMarker(r.osf)) parts.push('OSF: ' + r.osf);
     if (r.shotPts !== null && r.shotPts !== undefined) parts.push('strzel: ' + r.shotPts + '/50');
