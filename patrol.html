@@ -477,8 +477,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .team-name { font-size: 14px; font-weight: 700; color: var(--text1); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-meta { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .team-stat { font-family: var(--font-m); font-size: 13px; font-weight: 700; color: var(--text2); text-align: center; }
-.team-stat .lbl { display: block; font-family: var(--font-h); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-weight: 700; }
-.team-pts { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--orange); text-align: center; }
+.team-stat .lbl, .team-pts .lbl { display: block; font-family: var(--font-h); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-weight: 700; }
+.team-pts { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--orange); text-align: center; line-height: 1.05; }
+.team-pts.partial { color: var(--text2); font-size: 18px; }
+.team-pts .partial-tag { display: block; font-family: var(--font-h); font-size: 8px; color: var(--orange); letter-spacing: 1.5px; font-weight: 700; margin-top: 3px; }
 @media (max-width: 700px) {
   .team-row { grid-template-columns: 40px 1fr 70px 80px; }
   .team-row .team-hide-mobile { display: none; }
@@ -7071,12 +7073,15 @@ function renderTeamView() {
     return;
   }
   card.style.display = '';
-  // Sortuj: najpierw sklasyfikowane (eligible) po pkt rosnąco, potem niesklasyfikowane na dole
+  // Sortuj:
+  // 1) wiecej sklasyfikowanych M -> ZAWSZE wyzej (3 > 2 > 1 > 0)
+  // 2) w obrebie tej samej liczby sklasyfikowanych: pkt rosnaco (nizszy = lepszy, regulamin)
+  // Medale i numery miejsc tylko dla eligible (3 sklasyf.).
   teams.sort((a, b) => {
-    if (a.score.eligible && !b.score.eligible) return -1;
-    if (!a.score.eligible && b.score.eligible) return 1;
-    if (a.score.eligible && b.score.eligible) return a.score.total - b.score.total; // niższy = lepszy
-    return 0;
+    if (a.score.classified !== b.score.classified) return b.score.classified - a.score.classified;
+    if (a.score.classified >= 3) return a.score.total - b.score.total;
+    if (a.score.classified === 0) return 0;
+    return (a.score.partialTotal || 0) - (b.score.partialTotal || 0);
   });
 
   let rank = 0;
@@ -7092,13 +7097,15 @@ function renderTeamView() {
     if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
     const extrasDisp = extras.length ? ' · ' + extras.join(' · ') : '';
     const notEligibleNote = isEligible ? '' :
-      ' <span style="color:var(--orange);font-weight:700;">— niepełna drużyna (' + t.score.classified + '/3 sklasyf. M)</span>';
-    // Pokazuj punkty nawet dla niepelnej druzyny (partialTotal). Niesklasyfikowane bez ani jednego M -> "—".
+      ' <span style="color:var(--orange);font-weight:700;font-size:11px;">— niepełna (' + t.score.classified + '/3 M)</span>';
+    // Pokazuj pkt nawet dla niepelnej druzyny (partialTotal). Bez ani jednego sklasyf. M -> "—".
     const ptsVal = isEligible ? t.score.total : t.score.partialTotal;
-    const pts = (ptsVal !== null && ptsVal !== undefined)
-      ? (isEligible ? ptsVal : '<span style="color:var(--text2);">' + ptsVal + '</span><span style="color:var(--orange);font-size:9px;font-weight:700;margin-left:4px;letter-spacing:1px;">CZĘŚCIOWA</span>')
-      : '—';
-    return '<div class="team-row ' + rankCls + (isEligible ? '' : ' dsq') + '" style="' + (isEligible ? '' : 'opacity:.7;') + '">' +
+    const ptsCls = 'team-pts' + (isEligible ? '' : ' partial');
+    let ptsHtml;
+    if (ptsVal === null || ptsVal === undefined) ptsHtml = '—';
+    else if (isEligible) ptsHtml = ptsVal;
+    else ptsHtml = ptsVal + '<span class="partial-tag">CZĘŚCIOWA</span>';
+    return '<div class="team-row ' + rankCls + (isEligible ? '' : ' dsq') + '" style="' + (isEligible ? '' : 'opacity:.75;') + '">' +
       '<div class="team-rank">' + rankDisp + '</div>' +
       '<div style="min-width:0;">' +
         '<div class="team-name">' + esc(t.name) + notEligibleNote + '</div>' +
@@ -7106,7 +7113,7 @@ function renderTeamView() {
       '</div>' +
       '<div class="team-stat team-hide-mobile"><span class="lbl">Wszystkich</span>' + t.rows.length + '</div>' +
       '<div class="team-stat"><span class="lbl">Sklasyf. M</span>' + t.score.classified + '</div>' +
-      '<div class="team-pts"><span class="lbl">Suma (top 3 M)</span>' + pts + '</div>' +
+      '<div class="' + ptsCls + '"><span class="lbl">Suma</span>' + ptsHtml + '</div>' +
     '</div>';
   }).join('');
 }
