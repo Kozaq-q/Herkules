@@ -204,6 +204,7 @@ function loadSettings() {
     showIndM: true,
     showIndK: true,
     showTeam: true,
+    showTeamRun: false,
     topN: 0,
     scrollSpeed: 0,
     showProgress: false,
@@ -343,11 +344,20 @@ function buildIndRows(gender) {
   return list;
 }
 
+// Globalne liczniki rang per plec — resetowane w renderIndM/renderIndK.
+// Inkrementowane TYLKO dla sklasyfikowanych (points != null, nie DSQ, czas mety),
+// zeby zawodnik bez pkt nie dostal miejsca/medalu.
+let _projIndRankM = 0, _projIndRankK = 0;
 function rankRowHTML(r, idx) {
   const noTime = r.totalSec === Infinity;
-  const rank = idx + 1;
+  const classified = !r.dsq && !noTime && r.points !== null;
+  let rank = null;
+  if (classified) {
+    if (r.ath.gender === 'M') rank = ++_projIndRankM;
+    else                       rank = ++_projIndRankK;
+  }
   let topCls = '';
-  if (!noTime && !r.dsq) {
+  if (classified) {
     if (rank === 1) topCls = ' top1';
     else if (rank === 2) topCls = ' top2';
     else if (rank === 3) topCls = ' top3';
@@ -359,6 +369,7 @@ function rankRowHTML(r, idx) {
   let posTxt = '';
   if (r.dsq) { posTxt = 'DSQ'; posCls = ' other'; }
   else if (noTime) { posTxt = r.marker || '—'; posCls = ' other'; }
+  else if (!classified) { posTxt = '—'; posCls = ' other'; }
   else if (rank === 1) { posTxt = '🥇'; posCls = ' p1'; }
   else if (rank === 2) { posTxt = '🥈'; posCls = ' p2'; }
   else if (rank === 3) { posTxt = '🥉'; posCls = ' p3'; }
@@ -496,9 +507,10 @@ function applyTitle() {
 
 function buildLayout() {
   const sections = [];
-  if (cfg.showIndM) sections.push({ id: 'ind-m', cls: 'ind-m', label: '♂ Mężczyźni',    render: renderIndM });
-  if (cfg.showIndK) sections.push({ id: 'ind-k', cls: 'ind-k', label: '♀ Kobiety',       render: renderIndK });
-  if (cfg.showTeam) sections.push({ id: 'team',  cls: 'team',  label: '🛡 Drużynowa',    render: renderTeam });
+  if (cfg.showIndM)    sections.push({ id: 'ind-m',    cls: 'ind-m', label: '♂ Mężczyźni',    render: renderIndM });
+  if (cfg.showIndK)    sections.push({ id: 'ind-k',    cls: 'ind-k', label: '♀ Kobiety',       render: renderIndK });
+  if (cfg.showTeam)    sections.push({ id: 'team',     cls: 'team',  label: '🛡 Drużynowa',    render: renderTeam });
+  if (cfg.showTeamRun) sections.push({ id: 'team-run', cls: 'team',  label: '🏃 Bieg druż.',  render: renderTeamRun });
   if (!sections.length) sections.push({ id: 'empty', cls: 'ind-m', label: 'Nic do wyświetlenia', render: () => {} });
 
   const main = document.getElementById('proj-main');
@@ -515,9 +527,10 @@ function buildLayout() {
     '</div>'
   ).join('');
 
-  if (cfg.showIndM) renderIndM();
-  if (cfg.showIndK) renderIndK();
-  if (cfg.showTeam) renderTeam();
+  if (cfg.showIndM)    renderIndM();
+  if (cfg.showIndK)    renderIndK();
+  if (cfg.showTeam)    renderTeam();
+  if (cfg.showTeamRun) renderTeamRun();
   if (cfg.showProgress) renderProgress();
 }
 
@@ -530,9 +543,10 @@ function softRender() {
   // Refill bez full rerender (zachowuje scroll offset gdzie się da)
   // WAŻNE: M i K muszą dostać wrapperCls='rank-table' bo to są <tr> wymagające <table> rodzica.
   // Bez tego browser robi voodoo z surowymi <tr> i layout się rozjeżdża poza kadr.
-  if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table');
-  if (cfg.showIndK) refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table');
-  if (cfg.showTeam) { _projTeamRank = 0; refillTrack('team', buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
+  if (cfg.showIndM)    { _projIndRankM    = 0; refillTrack('ind-m',    buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
+  if (cfg.showIndK)    { _projIndRankK    = 0; refillTrack('ind-k',    buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
+  if (cfg.showTeam)    { _projTeamRank    = 0; refillTrack('team',     buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
+  if (cfg.showTeamRun) { _projTeamRunRank = 0; refillTrack('team-run', buildTeamRunRows().map((r,i) => teamRunRowHTML(r,i))); }
   if (cfg.showProgress) renderProgress();
 }
 
@@ -541,9 +555,85 @@ function renderAll() {
   softRender();
 }
 
-function renderIndM() { refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
-function renderIndK() { refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
+function renderIndM() { _projIndRankM = 0; refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
+function renderIndK() { _projIndRankK = 0; refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
 function renderTeam() { _projTeamRank = 0; refillTrack('team', buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
+function renderTeamRun() { _projTeamRunRank = 0; refillTrack('team-run', buildTeamRunRows().map((r,i) => teamRunRowHTML(r,i))); }
+
+// ════════════ BUILD: BIEG DRUŻYNOWY (3-osobowy patrol) ════════════
+// state.teamRun = { [teamName]: { biegSec, osfSec, shotPoints, eliminated, tens, dsq } }
+// Wynik = biegSec − (480 − 2×osfSec) − shotPoints×2 + eliminated×100
+function _calcTeamRunPointsProj(tr) {
+  if (!tr || tr.dsq) return null;
+  const biegSec = parseFloat(tr.biegSec);
+  const osfSec  = parseFloat(tr.osfSec);
+  const shotPts = (tr.shotPoints !== undefined && tr.shotPoints !== null && tr.shotPoints !== '') ? parseInt(tr.shotPoints) : null;
+  if (!Number.isFinite(biegSec) || biegSec <= 0) return null;
+  if (!Number.isFinite(osfSec) || osfSec <= 0) return null;
+  if (shotPts === null) return null;
+  const elim = parseInt(tr.eliminated) || 0;
+  return Math.round(biegSec - (480 - 2 * osfSec) - shotPts * 2 + elim * 100);
+}
+function _formatTeamRunSec(sec) {
+  const n = parseFloat(sec);
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  const m = Math.floor(n / 60);
+  const s = (n % 60).toFixed(2).padStart(5, '0');
+  return m + ':' + s;
+}
+function buildTeamRunRows() {
+  const tr = state.teamRun || {};
+  const rows = Object.keys(tr).map(name => {
+    const r = tr[name] || {};
+    const pts = _calcTeamRunPointsProj(r);
+    const hasAny = !!(r.biegSec || r.osfSec || r.shotPoints !== undefined || r.eliminated || r.dsq);
+    return { name, tr: r, pts, dsq: !!r.dsq, hasAny };
+  }).filter(r => r.hasAny);
+  // Sort: eligible (pts != null && !dsq) po pts ASC; potem DSQ; potem niepelne (pts null)
+  const tier = r => r.dsq ? 3 : (r.pts != null ? 1 : 2);
+  rows.sort((a, b) => {
+    const aT = tier(a), bT = tier(b);
+    if (aT !== bT) return aT - bT;
+    if (aT === 1) return a.pts - b.pts;
+    return 0;
+  });
+  return rows;
+}
+let _projTeamRunRank = 0;
+function teamRunRowHTML(r, idx) {
+  const evenOdd = (idx % 2 === 0) ? ' even' : ' odd';
+  const eligible = r.pts != null && !r.dsq;
+  let topCls = '', posCls, posTxt;
+  if (eligible) {
+    _projTeamRunRank++;
+    const rk = _projTeamRunRank;
+    if (rk === 1) topCls = ' top1'; else if (rk === 2) topCls = ' top2'; else if (rk === 3) topCls = ' top3';
+    posCls = rk === 1 ? 'p1' : rk === 2 ? 'p2' : rk === 3 ? 'p3' : 'other';
+    posTxt = rk === 1 ? '🥇' : rk === 2 ? '🥈' : rk === 3 ? '🥉' : rk;
+  } else if (r.dsq) {
+    topCls = ' dsq'; posCls = 'other'; posTxt = 'DSQ';
+  } else {
+    posCls = 'other'; posTxt = '—';
+  }
+  const biegStr = _formatTeamRunSec(r.tr.biegSec);
+  const osfStr  = _formatTeamRunSec(r.tr.osfSec);
+  const shotStr = (r.tr.shotPoints !== undefined && r.tr.shotPoints !== null && r.tr.shotPoints !== '') ? (r.tr.shotPoints + '/150') : '—';
+  const elim    = parseInt(r.tr.eliminated) || 0;
+  const elimStr = elim > 0 ? (elim + ' (+' + (elim*100) + ')') : '';
+  const subParts = ['bieg: ' + biegStr, 'OSF: ' + osfStr, 'strzel: ' + shotStr];
+  if (elimStr) subParts.push('elim: ' + elimStr);
+  const sub = subParts.join(' · ');
+  let scoreHtml;
+  if (r.dsq) scoreHtml = '<span style="color:var(--text3);">DSQ</span>';
+  else if (eligible) scoreHtml = r.pts;
+  else scoreHtml = '<span style="color:var(--text3);">—</span>';
+  const rowStyle = (eligible || r.dsq) ? '' : 'opacity:.7;';
+  return '<div class="team-row' + topCls + evenOdd + '" style="' + rowStyle + '">' +
+    '<div class="team-pos rank-pos ' + posCls + '">' + posTxt + '</div>' +
+    '<div class="team-name">' + esc(r.name) + '<span class="team-meta-sub">' + esc(sub) + '</span></div>' +
+    '<div class="team-score">' + scoreHtml + '</div>' +
+  '</div>';
+}
 
 function refillTrack(id, rowsHTML, wrapperCls) {
   const track = document.getElementById('track-' + id);
@@ -795,6 +885,7 @@ window.addEventListener('storage', (e) => {
     const layoutChanged = (cfg.showIndM !== fresh.showIndM) ||
                           (cfg.showIndK !== fresh.showIndK) ||
                           (cfg.showTeam !== fresh.showTeam) ||
+                          (cfg.showTeamRun !== fresh.showTeamRun) ||
                           (cfg.showProgress !== fresh.showProgress);
     cfg = fresh;
     applyTitle();

@@ -572,15 +572,16 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
             <span style="font-size:22px;">📊</span>
             <div>
               <div style="font-weight:700;font-size:13px;color:var(--accent);">Otwórz projektor wyników</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px;">M · K · Drużynowa</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">M · K · Drużynowa · Bieg druż.</div>
             </div>
           </button>
 
           <!-- Sekcje wyników — kafelki toggle -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
             <button id="ptr-ps-tile-ind-m" onclick="togglePtrProjTile('ind-m')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--male);">♂ M</button>
             <button id="ptr-ps-tile-ind-k" onclick="togglePtrProjTile('ind-k')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--female);">♀ K</button>
             <button id="ptr-ps-tile-team" onclick="togglePtrProjTile('team')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--orange);">🛡 Drużynowa</button>
+            <button id="ptr-ps-tile-team-run" onclick="togglePtrProjTile('team-run')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--blue);">🏃 Bieg druż.</button>
           </div>
 
           <!-- Scroll + progress -->
@@ -2041,6 +2042,7 @@ function defaultPtrProjSettings() {
     showIndM: true,
     showIndK: true,
     showTeam: true,
+    showTeamRun: false,
     topN: 0,
     scrollSpeed: 0,
     showProgress: false,
@@ -2075,6 +2077,7 @@ function _updatePtrProjTiles() {
   setTile('ptr-ps-tile-ind-m', s.showIndM, 'var(--male)');
   setTile('ptr-ps-tile-ind-k', s.showIndK, 'var(--female)');
   setTile('ptr-ps-tile-team',  s.showTeam, 'var(--orange)');
+  setTile('ptr-ps-tile-team-run', s.showTeamRun, 'var(--blue)');
   setTile('ptr-ps-tile-progress', s.showProgress, 'var(--green)');
   // SL progress
   const slProgTile = document.getElementById('ptr-ps-tile-sl-progress');
@@ -2116,7 +2119,7 @@ function _updatePtrProjTiles() {
 }
 function togglePtrProjTile(key) {
   const s = getPtrProjSettings();
-  const map = { 'ind-m':'showIndM','ind-k':'showIndK','team':'showTeam','progress':'showProgress','sl-progress':'showSLProgress','start-times':'showStartTimes' };
+  const map = { 'ind-m':'showIndM','ind-k':'showIndK','team':'showTeam','team-run':'showTeamRun','progress':'showProgress','sl-progress':'showSLProgress','start-times':'showStartTimes' };
   const field = map[key];
   if (field) s[field] = !s[field];
   localStorage.setItem('patrol_proj_settings', JSON.stringify(s));
