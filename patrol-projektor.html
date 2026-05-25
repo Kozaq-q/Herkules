@@ -293,8 +293,9 @@ function calcPatrolPoints(row) {
   if (!Number.isFinite(row.totalSec) || row.totalSec === Infinity) return null;
   const osfSec = (row.osf && !isTimeMarker(row.osf)) ? parseTime(row.osf) : null;
   if (osfSec === null || !Number.isFinite(osfSec) || osfSec <= 0) return null;
-  const shotPts = row.shotPts || 0;
-  return Math.round(row.totalSec - (450 - 2 * osfSec) - shotPts * 2);
+  // Strzelanie WYMAGANE — brak wpisu = niesklasyfikowany (sedzia musi wpisac 0 jawnie)
+  if (row.shotPts === null || row.shotPts === undefined) return null;
+  return Math.round(row.totalSec - (450 - 2 * osfSec) - row.shotPts * 2);
 }
 
 function buildRow(a) {
@@ -326,6 +327,9 @@ function buildIndRows(gender) {
   list.sort((a, b) => {
     if (a.tier !== b.tier) return a.tier - b.tier;
     if (a.tier === 0) {
+      // Brak pkt (null) -> ZAWSZE nizej niz ktokolwiek z policzonymi pkt
+      if (a.points === null && b.points !== null) return 1;
+      if (b.points === null && a.points !== null) return -1;
       if (a.points !== null && b.points !== null && a.points !== b.points) return a.points - b.points;
       const aS = a.shotPts || 0, bS = b.shotPts || 0;
       if (aS !== bS) return bS - aS;
@@ -414,36 +418,70 @@ function buildTeamRows() {
       if (r.marker === 'DNF') dnf++;
       else if (r.marker === 'DNS') dns++;
     });
-    // Top 3 mężczyzn z wynikiem (najniższe pkt). Kobiety nie liczą.
+    // Top mężczyzn z wynikiem (najniższe pkt). Kobiety nie liczą.
     const scoringMen = all.filter(r => r.ath.gender === 'M' && r.points !== null && !r.dsq)
       .sort((a, b) => a.points - b.points);
     const classified = scoringMen.length;
-    const total = (classified >= 3) ? scoringMen.slice(0, 3).reduce((s, r) => s + r.points, 0) : null;
+    // partialTotal = suma top do 3 dostepnych (nawet gdy classified < 3) — do wyswietlania niepelnych
+    const topN = scoringMen.slice(0, 3);
+    const partialTotal = topN.length ? topN.reduce((s, r) => s + r.points, 0) : null;
+    const total = (classified >= 3) ? partialTotal : null;
     const counts = { M: 0, K: 0 };
     all.forEach(r => { counts[r.ath.gender] = (counts[r.ath.gender] || 0) + 1; });
-    return { name, total, classified, dnf, dns, dsq, count: all.length, counts, eligible: total !== null };
-  }).filter(t => t.eligible);
-  rows.sort((a, b) => a.total - b.total); // niższy = lepszy
+    const anyResult = all.some(r => r.hasAny);
+    return { name, total, partialTotal, classified, dnf, dns, dsq, count: all.length, counts, anyResult, eligible: total !== null };
+  }).filter(t => t.anyResult);
+  // Sortowanie:
+  // 1) Wiecej sklasyfikowanych M -> ZAWSZE wyzej (3 > 2 > 1 > 0)
+  // 2) W obrebie tej samej liczby sklasyfikowanych: pkt rosnaco (nizszy = lepszy)
+  rows.sort((a, b) => {
+    if (a.classified !== b.classified) return b.classified - a.classified;
+    if (a.classified === 0) return 0;
+    if (a.classified >= 3) return a.total - b.total;
+    return (a.partialTotal || 0) - (b.partialTotal || 0);
+  });
   return rows;
 }
 
+// Globalny licznik miejsc — tylko eligible (>=3 sklasyf. M) dostaja medal/numer.
+// Inicjalizowany na nowo w renderTeam(). Idx z buildTeamRows nie sluzy juz do rangi
+// (bo niepelne druzyny tez sa na liscie, ale bez miejsca).
+let _projTeamRank = 0;
 function teamRowHTML(t, idx) {
-  const rank = idx + 1;
-  let topCls = '';
-  if (rank === 1) topCls = ' top1'; else if (rank === 2) topCls = ' top2'; else if (rank === 3) topCls = ' top3';
   const evenOdd = (idx % 2 === 0) ? ' even' : ' odd';
-  const posCls = rank === 1 ? 'p1' : rank === 2 ? 'p2' : rank === 3 ? 'p3' : 'other';
-  const posTxt = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+  let topCls = '';
+  let posCls, posTxt;
+  if (t.eligible) {
+    _projTeamRank++;
+    const r = _projTeamRank;
+    if (r === 1) topCls = ' top1'; else if (r === 2) topCls = ' top2'; else if (r === 3) topCls = ' top3';
+    posCls = r === 1 ? 'p1' : r === 2 ? 'p2' : r === 3 ? 'p3' : 'other';
+    posTxt = r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : r;
+  } else {
+    posCls = 'other';
+    posTxt = '—';
+  }
   const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
   const extras = [];
   if (t.dnf) extras.push(t.dnf + '×DNF');
   if (t.dns) extras.push(t.dns + '×DNS');
   if (t.dsq) extras.push(t.dsq + '×DSQ');
-  const meta = composition + (extras.length ? ' · ' + extras.join(' · ') : '');
-  return '<div class="team-row' + topCls + evenOdd + '">' +
+  const partialNote = t.eligible ? '' : ' · ' + t.classified + '/3 sklasyf. M';
+  const meta = composition + (extras.length ? ' · ' + extras.join(' · ') : '') + partialNote;
+  // Wartosc: eligible -> total; partial (>=1 sklasyf.) -> partialTotal z badge; 0 sklasyf. -> "—"
+  let scoreHtml;
+  if (t.eligible) {
+    scoreHtml = t.total;
+  } else if (t.partialTotal !== null) {
+    scoreHtml = '<span style="color:var(--text2);">' + t.partialTotal + '</span><span style="display:block;font-size:10px;color:var(--orange);letter-spacing:1.5px;font-weight:700;margin-top:2px;">CZĘŚCIOWA</span>';
+  } else {
+    scoreHtml = '<span style="color:var(--text3);">—</span>';
+  }
+  const rowStyle = t.eligible ? '' : 'opacity:.7;';
+  return '<div class="team-row' + topCls + evenOdd + '" style="' + rowStyle + '">' +
     '<div class="team-pos rank-pos ' + posCls + '">' + posTxt + '</div>' +
     '<div class="team-name">' + esc(t.name) + '<span class="team-meta-sub">' + esc(meta) + '</span></div>' +
-    '<div class="team-score">' + t.total + '</div>' +
+    '<div class="team-score">' + scoreHtml + '</div>' +
   '</div>';
 }
 
@@ -494,7 +532,7 @@ function softRender() {
   // Bez tego browser robi voodoo z surowymi <tr> i layout się rozjeżdża poza kadr.
   if (cfg.showIndM) refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table');
   if (cfg.showIndK) refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table');
-  if (cfg.showTeam) refillTrack('team',  buildTeamRows().map((r,i) => teamRowHTML(r,i)));
+  if (cfg.showTeam) { _projTeamRank = 0; refillTrack('team', buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
   if (cfg.showProgress) renderProgress();
 }
 
@@ -505,7 +543,7 @@ function renderAll() {
 
 function renderIndM() { refillTrack('ind-m', buildIndRows('M').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
 function renderIndK() { refillTrack('ind-k', buildIndRows('K').map((r,i) => rankRowHTML(r,i)), 'rank-table'); }
-function renderTeam() { refillTrack('team',  buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
+function renderTeam() { _projTeamRank = 0; refillTrack('team', buildTeamRows().map((r,i) => teamRowHTML(r,i))); }
 
 function refillTrack(id, rowsHTML, wrapperCls) {
   const track = document.getElementById('track-' + id);

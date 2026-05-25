@@ -1166,6 +1166,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
         <div id="ptr-team-list"></div>
       </div>
 
+      <!-- 🏃 BIEG DRUŻYNOWY (3-osobowy patrol) -->
+      <div class="card mb-12" id="ptr-teamrun-card" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Bieg drużynowy (patrol 3-osobowy)</div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(96,168,232,.06);border:1px solid rgba(96,168,232,.3);border-radius:var(--radius);padding:4px 10px;">
+            ✓ Regulamin 11DKPanc 2025
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+          Wzór: <strong>czas_biegu(s) − pkt_OSF − pkt_strzelanie + eliminowani×100</strong>.
+          pkt_OSF = 480 − 2×czas_OSF(s). pkt_strzelanie = pkt_tarcza × 2. Najniższy wynik wygrywa.
+        </div>
+        <div id="ptr-teamrun-list"></div>
+      </div>
+
       <!-- 🏆 KLASYFIKACJA GENERALNA -->
       <div class="card mb-12" id="ptr-overall-card" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
@@ -6144,8 +6159,65 @@ function renderResultsView() {
     renderList('ptr-results-K', 'K');
   }
   renderTeamView();
-  if (typeof renderTeamRunList === 'function') renderTeamRunList();
+  if (typeof renderTeamRunResults === 'function') renderTeamRunResults();
   if (typeof renderOverallView === 'function') renderOverallView();
+}
+
+// ─── BIEG DRUŻYNOWY — karta wynikow na zakladce Wyniki ──────────
+// Tabela analogiczna do .team-row, kolumny: rank | nazwa | bieg | osf | strz | elim | wynik
+function renderTeamRunResults() {
+  const card = document.getElementById('ptr-teamrun-card');
+  const list = document.getElementById('ptr-teamrun-list');
+  if (!card || !list) return;
+  ensureTeamRun();
+  const teamNames = Object.keys(state.teamRun || {});
+  const rows = teamNames.map(name => {
+    const tr = state.teamRun[name] || {};
+    const pts = calcTeamRunPoints(tr);
+    const hasAny = !!(tr.biegSec || tr.osfSec || tr.shotPoints !== undefined || tr.eliminated || tr.dsq);
+    return { name, tr, pts, dsq: !!tr.dsq, hasAny };
+  }).filter(r => r.hasAny);
+  if (!rows.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  // Sortuj: sklasyfikowane (pts != null && !dsq) na gorze po pts ASC; potem DSQ; potem niepelne (pts == null)
+  const _trTier = r => r.dsq ? 3 : (r.pts != null ? 1 : 2);
+  rows.sort((a, b) => {
+    const aT = _trTier(a), bT = _trTier(b);
+    if (aT !== bT) return aT - bT;
+    if (aT === 1) return a.pts - b.pts;
+    return 0;
+  });
+  let rank = 0;
+  list.innerHTML = rows.map(r => {
+    const eligible = r.pts != null && !r.dsq;
+    if (eligible) rank++;
+    const rankCls = eligible && rank === 1 ? 'rank-1' : eligible && rank === 2 ? 'rank-2' : eligible && rank === 3 ? 'rank-3' : '';
+    const rankDisp = r.dsq ? '<span style="color:var(--red);font-weight:800;font-size:13px;">DSQ</span>'
+                            : eligible ? (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank)
+                            : '—';
+    const biegStr = r.tr.biegSec != null && r.tr.biegSec !== '' ? _formatTeamSec(r.tr.biegSec) : '—';
+    const osfStr  = r.tr.osfSec  != null && r.tr.osfSec  !== '' ? _formatTeamSec(r.tr.osfSec)  : '—';
+    const shotStr = (r.tr.shotPoints !== undefined && r.tr.shotPoints !== null && r.tr.shotPoints !== '') ? (r.tr.shotPoints + '/150') : '—';
+    const elim    = parseInt(r.tr.eliminated) || 0;
+    const elimStr = elim > 0 ? (elim + ' <span style="color:var(--red);font-size:10px;">(+' + (elim*100) + ')</span>') : '—';
+    const ptsCls = 'team-pts' + (eligible ? '' : ' partial');
+    let ptsHtml;
+    if (r.dsq) ptsHtml = '<span style="color:var(--red);">DSQ</span>';
+    else if (r.pts != null) ptsHtml = r.pts;
+    else ptsHtml = '—<span class="partial-tag">NIEPEŁNE</span>';
+    return '<div class="team-row ' + rankCls + (eligible ? '' : ' dsq') + '" style="grid-template-columns:50px 1fr 80px 80px 80px 70px 100px;gap:8px;' + (eligible ? '' : 'opacity:.75;') + '">' +
+      '<div class="team-rank">' + rankDisp + '</div>' +
+      '<div style="min-width:0;">' +
+        '<div class="team-name">' + esc(r.name) + '</div>' +
+        '<div class="team-meta">Bieg + OSF + strzelanie + kary</div>' +
+      '</div>' +
+      '<div class="team-stat team-hide-mobile"><span class="lbl">Bieg</span>' + biegStr + '</div>' +
+      '<div class="team-stat team-hide-mobile"><span class="lbl">OSF</span>' + osfStr + '</div>' +
+      '<div class="team-stat"><span class="lbl">Strzel</span>' + shotStr + '</div>' +
+      '<div class="team-stat team-hide-mobile"><span class="lbl">Elim.</span>' + elimStr + '</div>' +
+      '<div class="' + ptsCls + '"><span class="lbl">Wynik</span>' + ptsHtml + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 // ─── BIEG DRUŻYNOWY (patrol 3-osobowy) — regulamin 11DKPanc ─────
@@ -6196,11 +6268,12 @@ function _renderTeamRunActive() {
   const tabId = active ? active.id.replace('tab-', '') : '';
   if (tabId === 'team-timer') { if (typeof renderTeamTimerView === 'function') renderTeamTimerView(); return; }
   if (tabId === 'team-run')   { if (typeof renderTeamRunList   === 'function') renderTeamRunList();   return; }
-  // Inna zakładka — i tak warto odświeżyć obie cicho dla spójności gdy user wróci
-  if (typeof renderTeamRunList   === 'function') renderTeamRunList();
-  // Klasyfikacje (gdy są w Wynikach)
-  if (typeof renderTeamView      === 'function') renderTeamView();
-  if (typeof renderOverallView   === 'function') renderOverallView();
+  if (tabId === 'results')    { if (typeof renderResultsView   === 'function') renderResultsView();   return; }
+  // Inna zakładka — i tak warto odświeżyć cicho dla spójności gdy user wróci
+  if (typeof renderTeamRunList    === 'function') renderTeamRunList();
+  if (typeof renderTeamView       === 'function') renderTeamView();
+  if (typeof renderTeamRunResults === 'function') renderTeamRunResults();
+  if (typeof renderOverallView    === 'function') renderOverallView();
 }
 
 function ensureTeamRun() {
