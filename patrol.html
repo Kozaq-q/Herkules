@@ -2277,7 +2277,10 @@ function _ptrBuildIndPrintHTML(gender, asFragment) {
   rows.sort((a, b) => {
     if (a.tier !== b.tier) return a.tier - b.tier;
     if (a.tier === 0) {
-      if (a._pts !== b._pts && a._pts !== null && b._pts !== null) return a._pts - b._pts;
+      // Bez pkt (np. brak OSF) → na koniec sklasyfikowanych, nizej niz ktokolwiek z policzonymi pkt
+      if (a._pts === null && b._pts !== null) return 1;
+      if (b._pts === null && a._pts !== null) return -1;
+      if (a._pts !== null && b._pts !== null && a._pts !== b._pts) return a._pts - b._pts;
       const aShot = _shotPointsFromRow(a) || 0;
       const bShot = _shotPointsFromRow(b) || 0;
       if (aShot !== bShot) return bShot - aShot;
@@ -6010,11 +6013,13 @@ function calcPatrolPoints(athlete, row) {
   // OSF — wymagany do klasyfikacji
   const osfSec = (row.osf && !isTimeMarker(row.osf)) ? parseTime(row.osf) : null;
   if (osfSec === null || !Number.isFinite(osfSec) || osfSec <= 0) return null;
-  // Strzelanie — przyjmij 0 jeśli brak (zawodnik wystrzelał ale spudłował)
+  // Strzelanie — WYMAGANE do klasyfikacji. Brak wpisu = niesklasyfikowany.
+  // Zawodnik z 0 trafien musi miec jawnie wpisane 0 (sedzia potwierdza brak punktow).
   const shotPts = _shotPointsFromRow(row);
+  if (shotPts === null || shotPts === undefined) return null;
   const biegPts = row.totalSec;            // 1 sek = 1 pkt karne
   const osfPts  = 450 - 2 * osfSec;
-  const strzPts = (shotPts || 0) * 2;
+  const strzPts = shotPts * 2;
   return Math.round(biegPts - osfPts - strzPts);
 }
 
@@ -6073,7 +6078,10 @@ function renderResultsView() {
       if (a.tier !== b.tier) return a.tier - b.tier;
       // Sklasyfikowani — po punktach
       if (a.tier === 0) {
-        if (a._pts !== b._pts && a._pts !== null && b._pts !== null) return a._pts - b._pts;
+        // Bez pkt (np. brak OSF) → na koniec sklasyfikowanych, nizej niz ktokolwiek z policzonymi pkt
+      if (a._pts === null && b._pts !== null) return 1;
+      if (b._pts === null && a._pts !== null) return -1;
+      if (a._pts !== null && b._pts !== null && a._pts !== b._pts) return a._pts - b._pts;
         // Tie-break 1: lepsze strzelanie (więcej pkt)
         const aShot = _shotPointsFromRow(a) || 0;
         const bShot = _shotPointsFromRow(b) || 0;
