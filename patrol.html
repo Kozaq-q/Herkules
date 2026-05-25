@@ -430,7 +430,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .result-team { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result-time { font-family: var(--font-m); font-size: 14px; font-weight: 700; color: var(--text1); text-align: center; }
 .result-time.muted { color: var(--text3); font-size: 12px; }
-.result-time .lbl { display: block; font-family: var(--font-h); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-weight: 700; }
+.result-row .lbl { display: block; font-family: var(--font-h); font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; font-weight: 700; }
 .result-hits { font-family: var(--font-m); font-size: 14px; font-weight: 700; color: var(--text2); text-align: center; }
 .result-pts { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--orange); text-align: center; }
 .dsq-badge { display: inline-block; font-family: var(--font-h); font-size: 11px; font-weight: 800; padding: 2px 8px; background: rgba(224,85,85,.15); color: var(--red); border: 1px solid rgba(224,85,85,.4); border-radius: 3px; }
@@ -447,15 +447,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .ptr-results-col { min-width: 0; }
 .ptr-results-col-title { font-family: var(--font-h); font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 0 8px; border-bottom: 2px solid var(--border); margin-bottom: 10px; }
-/* W trybie dwukolumnowym kolumny są węższe — chowamy OSF i zwężamy */
-.ptr-results-grid .result-row { grid-template-columns: 38px 1fr 70px 50px 60px; gap: 8px; padding: 8px 10px; }
-.ptr-results-grid .result-row .res-hide-osf { display: none; }
+/* W trybie dwukolumnowym kolumny są węższe — pokazujemy też OSF */
+.ptr-results-grid .result-row { grid-template-columns: 38px 1fr 64px 64px 56px 60px; gap: 6px; padding: 8px 10px; }
 .ptr-results-grid .result-rank { font-size: 18px; }
 .ptr-results-grid .result-name { font-size: 13px; }
 .ptr-results-grid .result-team { font-size: 10px; }
 .ptr-results-grid .result-time { font-size: 13px; }
 .ptr-results-grid .result-hits { font-size: 13px; }
 .ptr-results-grid .result-pts { font-size: 15px; }
+@media (max-width: 1200px) {
+  /* Bardzo wąsko — chowamy OSF aby zachować czytelność Całkowity/Strzel/Pkt */
+  .ptr-results-grid .result-row { grid-template-columns: 38px 1fr 64px 56px 60px; }
+  .ptr-results-grid .result-row .res-hide-osf { display: none; }
+}
 @media (max-width: 900px) {
   .ptr-results-grid { grid-template-columns: 1fr; gap: 22px; }
   .ptr-results-grid .result-row { grid-template-columns: 36px 1fr 64px 60px; }
@@ -7022,12 +7026,13 @@ function calcTeamScore(rows) {
     .sort((a, b) => a.pts - b.pts);
 
   const classified = scoringMen.length;
+  // partialTotal = suma punktow dostepnych top-3 M (nawet gdy classified < 3) — do wyswietlania
+  const topN = scoringMen.slice(0, 3);
+  const partialTotal = topN.length ? topN.reduce((s, x) => s + x.pts, 0) : null;
   if (classified < 3) {
-    return { total: null, classified, scoringCount: classified, men: men.length, women: women.length, dnf, dns, dsq, eligible: false };
+    return { total: null, partialTotal, classified, scoringCount: classified, men: men.length, women: women.length, dnf, dns, dsq, eligible: false, topN };
   }
-  const top3 = scoringMen.slice(0, 3);
-  const total = top3.reduce((s, x) => s + x.pts, 0);
-  return { total, classified, scoringCount: 3, men: men.length, women: women.length, dnf, dns, dsq, eligible: true, top3 };
+  return { total: partialTotal, partialTotal, classified, scoringCount: 3, men: men.length, women: women.length, dnf, dns, dsq, eligible: true, top3: topN, topN };
 }
 
 function renderTeamView() {
@@ -7079,9 +7084,13 @@ function renderTeamView() {
     if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
     const extrasDisp = extras.length ? ' · ' + extras.join(' · ') : '';
     const notEligibleNote = isEligible ? '' :
-      ' <span style="color:var(--orange);font-weight:700;">— niesklasyfikowana (potrzeba 3 sklasyf. M, ma ' + t.score.classified + ')</span>';
-    const pts = isEligible ? t.score.total : '—';
-    return '<div class="team-row ' + rankCls + (isEligible ? '' : ' dsq') + '" style="' + (isEligible ? '' : 'opacity:.55;') + '">' +
+      ' <span style="color:var(--orange);font-weight:700;">— niepełna drużyna (' + t.score.classified + '/3 sklasyf. M)</span>';
+    // Pokazuj punkty nawet dla niepelnej druzyny (partialTotal). Niesklasyfikowane bez ani jednego M -> "—".
+    const ptsVal = isEligible ? t.score.total : t.score.partialTotal;
+    const pts = (ptsVal !== null && ptsVal !== undefined)
+      ? (isEligible ? ptsVal : '<span style="color:var(--text2);">' + ptsVal + '</span><span style="color:var(--orange);font-size:9px;font-weight:700;margin-left:4px;letter-spacing:1px;">CZĘŚCIOWA</span>')
+      : '—';
+    return '<div class="team-row ' + rankCls + (isEligible ? '' : ' dsq') + '" style="' + (isEligible ? '' : 'opacity:.7;') + '">' +
       '<div class="team-rank">' + rankDisp + '</div>' +
       '<div style="min-width:0;">' +
         '<div class="team-name">' + esc(t.name) + notEligibleNote + '</div>' +
