@@ -299,6 +299,27 @@ body.ptr-offline-mode .pair-card.is-just-started { display: none !important; ani
 .ptr-pair-filter button.active .count { color: var(--text2); }
 .ptr-pair-filter-empty { text-align: center; padding: 26px 20px; color: var(--text3); font-size: 12px; background: var(--bg3); border: 1px dashed var(--border2); border-radius: var(--radius); }
 
+/* NOTATKI SĘDZIOWSKIE — dwa stany (puste = na dole, dyskretne / pełne = na górze, akcent) */
+.ptr-notes-card { transition: border-color .2s, background .2s, box-shadow .2s, opacity .2s; }
+.ptr-notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.ptr-notes-icon { font-size: 18px; opacity: .85; }
+.ptr-notes-title { margin: 0; padding: 0; border: none; }
+.ptr-notes-sub { font-size: 11px; color: var(--text3); }
+.ptr-notes-input { resize: vertical; font-size: 14px; line-height: 1.5; width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); padding: 10px 12px; font-family: var(--font-b); min-height: 64px; }
+.ptr-notes-input:focus { border-color: var(--orange); outline: none; }
+/* PUSTE — dyskretne, neutralne, na dole strony */
+.ptr-notes-card.notes-empty { border-left: 3px solid var(--border); background: var(--bg2); opacity: .82; }
+.ptr-notes-card.notes-empty:hover { opacity: 1; }
+.ptr-notes-card.notes-empty .ptr-notes-title { color: var(--text2); font-weight: 600; }
+.ptr-notes-card.notes-empty .ptr-notes-icon { opacity: .5; }
+.ptr-notes-card.notes-empty .ptr-notes-input { background: var(--bg3); }
+/* PEŁNE — akcent pomarańczowy, na górze strony, lekki glow */
+.ptr-notes-card.notes-filled { border-left: 4px solid var(--orange); background: linear-gradient(to right, rgba(232,148,77,.06), var(--bg2) 35%); box-shadow: 0 2px 14px rgba(232,148,77,.10); opacity: 1; }
+.ptr-notes-card.notes-filled .ptr-notes-title { color: var(--orange); }
+.ptr-notes-card.notes-filled .ptr-notes-icon { opacity: 1; }
+.ptr-notes-card.notes-filled .ptr-notes-input { background: rgba(232,148,77,.04); border-color: rgba(232,148,77,.3); color: var(--text1); }
+.ptr-notes-card.notes-filled .ptr-notes-sub::before { content: '● aktywne · '; color: var(--orange); font-weight: 700; }
+
 /* TEAM-RUN EDIT MODE — kontrolki edycji par drużynowych (awaryjne) */
 .team-edit-toggle-on { background: var(--orange) !important; color: #111 !important; border-color: var(--orange) !important; }
 .team-edit-controls { display: none; align-items: center; gap: 4px; flex-wrap: wrap; }
@@ -760,16 +781,19 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
     <!-- KONFIGURACJA -->
     <div class="page active" id="page-setup">
 
-      <!-- 📌 NOTATKI -->
-      <div class="card mb-12" style="border-left:4px solid var(--orange);background:linear-gradient(to right, rgba(76,175,130,.04), var(--bg2) 30%);">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-          <span style="font-size:18px;">📌</span>
-          <div class="card-title" style="margin:0;color:var(--orange);padding:0;border:none;">Notatki sędziowskie</div>
-          <span style="font-size:11px;color:var(--text3);">— widoczne dla całego zespołu</span>
+      <!-- 📌 NOTATKI — slot górny (widoczny gdy notatki niepuste) -->
+      <div id="ptr-notes-top-slot"></div>
+
+      <!-- Karta notatek — pozycja w DOM ustawiana przez _placeNotes() -->
+      <div id="ptr-notes-card" class="card mb-12 ptr-notes-card notes-empty">
+        <div class="ptr-notes-head">
+          <span class="ptr-notes-icon">📌</span>
+          <div class="card-title ptr-notes-title">Notatki sędziowskie</div>
+          <span class="ptr-notes-sub">widoczne dla całego zespołu</span>
         </div>
         <textarea id="ptr-notes" rows="3" placeholder="np. Strzelnica suchy stojąco · start z linii ABC · pogoda słoneczna..."
-          oninput="saveSetup()"
-          style="resize:vertical;font-size:14px;line-height:1.5;width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px 12px;font-family:var(--font-b);min-height:64px;"></textarea>
+          oninput="saveSetup(); _placeNotes();"
+          class="ptr-notes-input"></textarea>
       </div>
 
       <!-- KAFELKI TRYBU/DOSTĘPU — 4 obok siebie, pełna szerokość -->
@@ -1019,6 +1043,9 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
           </div>
         </div>
       </div>
+
+      <!-- 📌 NOTATKI — slot dolny (widoczny gdy notatki puste) -->
+      <div id="ptr-notes-bottom-slot"></div>
     </div>
 
     <!-- ZAWODNICY -->
@@ -2693,6 +2720,20 @@ function saveSetup() {
   save();
 }
 
+// Przenosi karte notatek miedzy gornym (gdy niepuste) a dolnym (gdy puste) slotem
+function _placeNotes() {
+  const card = document.getElementById('ptr-notes-card');
+  if (!card) return;
+  const txt = document.getElementById('ptr-notes')?.value || '';
+  const hasContent = !!txt.trim();
+  const topSlot = document.getElementById('ptr-notes-top-slot');
+  const bottomSlot = document.getElementById('ptr-notes-bottom-slot');
+  card.classList.toggle('notes-filled', hasContent);
+  card.classList.toggle('notes-empty', !hasContent);
+  if (hasContent && topSlot && card.parentNode !== topSlot) topSlot.appendChild(card);
+  else if (!hasContent && bottomSlot && card.parentNode !== bottomSlot) bottomSlot.appendChild(card);
+}
+
 function renderSetupPage() {
   const s = state.setup || {};
   const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
@@ -2702,6 +2743,7 @@ function renderSetupPage() {
   setVal('ptr-date',  s.date  || state.contest?.date  || '');
   setVal('ptr-org',   s.org   || '');
   setVal('ptr-notes', s.notes || '');
+  _placeNotes();
   // Kolor akcentu
   const color = s.accentColor || '#4caf82';
   document.documentElement.style.setProperty('--orange', color);
