@@ -299,6 +299,28 @@ body.ptr-offline-mode .pair-card.is-just-started { display: none !important; ani
 .ptr-pair-filter button.active .count { color: var(--text2); }
 .ptr-pair-filter-empty { text-align: center; padding: 26px 20px; color: var(--text3); font-size: 12px; background: var(--bg3); border: 1px dashed var(--border2); border-radius: var(--radius); }
 
+/* TEAM-RUN EDIT MODE — kontrolki edycji par drużynowych (awaryjne) */
+.team-edit-toggle-on { background: var(--orange) !important; color: #111 !important; border-color: var(--orange) !important; }
+.team-edit-controls { display: none; align-items: center; gap: 4px; flex-wrap: wrap; }
+body.team-run-edit-mode .team-edit-controls { display: inline-flex; }
+.team-edit-controls .ctl-btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 3px 7px; border-radius: var(--radius); cursor: pointer; }
+.team-edit-controls .ctl-btn:hover { background: var(--bg3); color: var(--text1); }
+.team-edit-controls .ctl-btn.danger { color: var(--red); border-color: rgba(224,85,85,.35); }
+.team-edit-controls .ctl-btn.danger:hover { background: rgba(224,85,85,.12); }
+.team-edit-controls .pair-num-input { width: 38px; text-align: center; font-size: 11px; font-family: var(--font-m); padding: 0 2px; line-height: 1.7; background: var(--bg3); border: 1px solid var(--border2); color: var(--text2); border-radius: var(--radius); }
+.team-edit-add-bar { display: none; margin: 12px 0 4px; padding: 10px; border: 1px dashed var(--border2); border-radius: var(--radius); background: var(--bg3); text-align: center; }
+body.team-run-edit-mode .team-edit-add-bar { display: block; }
+.team-edit-add-bar input { background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); padding: 6px 10px; border-radius: var(--radius); font-family: var(--font-b); font-size: 13px; width: 240px; max-width: 60%; margin-right: 6px; }
+/* Swap mode dla drużyn — analog. do swap-mode ind */
+body.team-run-swap-mode .pair-athlete:not(.is-dsq) { cursor: pointer; transition: border-color .15s, background .15s; }
+body.team-run-swap-mode #ptr-team-run-list .pair-athlete:hover { border-color: var(--orange); background: rgba(232,148,77,.06); }
+body.team-run-swap-mode .pair-athlete.team-swap-active { border-color: var(--orange) !important; background: rgba(232,148,77,.12) !important; box-shadow: 0 0 0 2px rgba(232,148,77,.3); }
+body.team-run-swap-mode #ptr-team-run-list .solo-empty-slot { cursor: pointer; }
+body.team-run-swap-mode #ptr-team-run-list .solo-empty-slot:hover { border-color: var(--orange); background: rgba(232,148,77,.08); opacity: 1; }
+.team-edit-team-btn { background: transparent; border: 1px solid var(--border2); color: var(--text3); font-size: 10px; padding: 2px 6px; border-radius: var(--radius); cursor: pointer; margin-left: 4px; }
+.team-edit-team-btn:hover { color: var(--orange); border-color: var(--orange); }
+.team-edit-team-btn.danger:hover { color: var(--red); border-color: rgba(224,85,85,.55); }
+
 /* W trybie offline ukryj integrowany stoper — wpisywanie ręczne i tak działa */
 body.ptr-offline-mode .pair-mini-timer,
 body.ptr-offline-mode .pair-mini-start,
@@ -1109,6 +1131,7 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-primary" onclick="generateTeamRunPairs()" title="Wygeneruj pary drużyn wg wyników indywidualnych — najsłabsi pierwsi">🔑 Generuj pary</button>
             <button class="btn" onclick="clearTeamRunPairs()" title="Wyczyść tylko pary (nie wyniki)" style="font-size:11px;padding:5px 10px;">✕ pary</button>
+            <button class="btn" id="ptr-team-edit-toggle" onclick="toggleTeamRunEditMode()" title="Awaryjne przestawianie drużyn — zmiana kolejności, dodanie nieregulaminowej, zamiana torów, usunięcie z pary" style="font-size:11px;padding:5px 10px;">🔧 Tryb edycji</button>
           </div>
         </div>
         <!-- Filtr widoku: wszystkie / biegnące / skończone / oczekujące -->
@@ -6282,6 +6305,229 @@ function clearTeamRunPairs() {
   _renderTeamRunActive();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// TEAM-RUN EDIT MODE — awaryjna edycja par drużynowych
+// (inspiracja: bieg indywidualny — strzałki ↑↓, swap, L↔P, usuń, dodaj ad-hoc)
+// ═══════════════════════════════════════════════════════════════
+let _teamRunEditMode = false;
+let _teamRunSwapSource = null; // { team, pairKey }
+
+function toggleTeamRunEditMode() {
+  _teamRunEditMode = !_teamRunEditMode;
+  document.body.classList.toggle('team-run-edit-mode', _teamRunEditMode);
+  const btn = document.getElementById('ptr-team-edit-toggle');
+  if (btn) btn.classList.toggle('team-edit-toggle-on', _teamRunEditMode);
+  if (_teamRunEditMode) {
+    _promoteVirtualTeamPairs();  // wszystkie virtual SOLO promote do state.teamRunPairs
+    save();
+  } else {
+    if (_teamRunSwapSource) cancelTeamRunSwap();
+  }
+  renderTeamRunList();
+}
+
+// Wszystkie drużyny "wirtualne SOLO" (te bez wpisu w state.teamRunPairs)
+// są zamieniane w prawdziwe wpisy z kolejnym pairNum — zeby edycja byla spójna.
+function _promoteVirtualTeamPairs() {
+  ensureTeamRun();
+  if (!state.teamRunPairs) state.teamRunPairs = [];
+  const allTeams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))];
+  const teamsWithEntry = Object.keys(state.teamRun || {});
+  const teamSet = new Set([...allTeams, ...teamsWithEntry]);
+  const used = new Set();
+  state.teamRunPairs.forEach(p => { if (p.aTeam) used.add(p.aTeam); if (p.bTeam) used.add(p.bTeam); });
+  const unpaired = [...teamSet].filter(t => !used.has(t)).sort();
+  let nextNum = state.teamRunPairs.reduce((m, p) => Math.max(m, +p.pairNum || 0), 0) + 1;
+  unpaired.forEach(t => {
+    state.teamRunPairs.push({ pairNum: nextNum++, aTeam: t, aLane: 'L', bTeam: null, bLane: null });
+  });
+}
+
+function _findTeamPair(pairKey) {
+  if (!state.teamRunPairs) return null;
+  return state.teamRunPairs.find(p => String(p.pairNum) === String(pairKey)) || null;
+}
+
+function moveTeamRunPair(pairKey, dir) {
+  if (!state.teamRunPairs) return;
+  const pairs = state.teamRunPairs.slice().sort((a, b) => (+a.pairNum) - (+b.pairNum));
+  const idx = pairs.findIndex(p => String(p.pairNum) === String(pairKey));
+  if (idx === -1) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= pairs.length) return;
+  const tmp = pairs[idx].pairNum;
+  pairs[idx].pairNum = pairs[newIdx].pairNum;
+  pairs[newIdx].pairNum = tmp;
+  save();
+  renderTeamRunList();
+}
+
+function jumpTeamRunPairTo(pairKey, toPos) {
+  if (!state.teamRunPairs) return;
+  if (!Number.isFinite(toPos)) { renderTeamRunList(); return; }
+  const pairs = state.teamRunPairs.slice().sort((a, b) => (+a.pairNum) - (+b.pairNum));
+  const max = pairs.length;
+  toPos = Math.max(1, Math.min(max, toPos));
+  const fromIdx = pairs.findIndex(p => String(p.pairNum) === String(pairKey));
+  if (fromIdx === -1) return;
+  const fromPos = pairs[fromIdx].pairNum;
+  if (toPos === fromPos) return;
+  // Renumeracja: usuwam pair z listy, wstawiam na nowym miejscu, renumeruję 1..N
+  const target = pairs.splice(fromIdx, 1)[0];
+  pairs.splice(toPos - 1, 0, target);
+  pairs.forEach((p, i) => { p.pairNum = i + 1; });
+  save();
+  renderTeamRunList();
+}
+
+function swapTeamRunLanes(pairKey) {
+  const p = _findTeamPair(pairKey);
+  if (!p) return;
+  // Zamień A i B (+ tory)
+  const tmpTeam = p.aTeam; const tmpLane = p.aLane;
+  p.aTeam = p.bTeam; p.aLane = p.bLane || (tmpLane === 'L' ? 'P' : 'L');
+  p.bTeam = tmpTeam; p.bLane = tmpLane === 'L' ? 'P' : 'L';
+  // Jeśli aTeam pusty po zamianie — normalizuj (zostaw drużynę w slot a)
+  if (!p.aTeam && p.bTeam) {
+    p.aTeam = p.bTeam; p.aLane = p.bLane;
+    p.bTeam = null; p.bLane = p.aLane === 'L' ? 'P' : 'L';
+  }
+  save();
+  renderTeamRunList();
+}
+
+function removeTeamFromPair(team, pairKey) {
+  const p = _findTeamPair(pairKey);
+  if (!p) return;
+  if (p.aTeam === team) { p.aTeam = null; }
+  else if (p.bTeam === team) { p.bTeam = null; }
+  // Normalizuj: jeśli aTeam pusty a bTeam wypełniony → przesuń
+  if (!p.aTeam && p.bTeam) {
+    p.aTeam = p.bTeam; p.aLane = p.bLane;
+    p.bTeam = null; p.bLane = p.aLane === 'L' ? 'P' : 'L';
+  }
+  // Jeśli para całkiem pusta → usuń i renumeruj
+  if (!p.aTeam && !p.bTeam) {
+    const idx = state.teamRunPairs.indexOf(p);
+    if (idx >= 0) state.teamRunPairs.splice(idx, 1);
+    state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum))
+      .forEach((pp, i) => { pp.pairNum = i + 1; });
+  }
+  save();
+  renderTeamRunList();
+  showToast('✕ Usunięto ' + team + ' z pary', 'info', 1800);
+}
+
+function removeTeamRunPairFull(pairKey) {
+  const p = _findTeamPair(pairKey);
+  if (!p) return;
+  const tA = p.aTeam, tB = p.bTeam;
+  if (!confirm('Usunąć całą parę?\n\n' + (tA || '—') + (tB ? ' vs ' + tB : ' (SOLO)'))) return;
+  const idx = state.teamRunPairs.indexOf(p);
+  if (idx >= 0) state.teamRunPairs.splice(idx, 1);
+  state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum))
+    .forEach((pp, i) => { pp.pairNum = i + 1; });
+  save();
+  renderTeamRunList();
+  showToast('✕ Usunięto parę', 'warning', 1800);
+}
+
+function addAdHocTeamRunPair() {
+  const inp = document.getElementById('ptr-team-edit-new-name');
+  const name = (inp && inp.value || '').trim();
+  if (!name) { showToast('Wpisz nazwę drużyny', 'warning'); return; }
+  if (!state.teamRunPairs) state.teamRunPairs = [];
+  // Czy drużyna istnieje gdzieś już w parach?
+  const exists = state.teamRunPairs.some(p => p.aTeam === name || p.bTeam === name);
+  if (exists) { showToast('Drużyna "' + name + '" już jest w parach', 'warning'); return; }
+  const nextNum = state.teamRunPairs.reduce((m, p) => Math.max(m, +p.pairNum || 0), 0) + 1;
+  state.teamRunPairs.push({ pairNum: nextNum, aTeam: name, aLane: 'L', bTeam: null, bLane: null });
+  ensureTeamRun();
+  if (!state.teamRun[name]) state.teamRun[name] = {};
+  if (inp) inp.value = '';
+  save();
+  renderTeamRunList();
+  showToast('＋ Dodano drużynę: ' + name, 'success', 2000);
+}
+
+// ─── Swap mode (przenoszenie drużyn między parami) ─────────────
+function activateTeamRunSwap(team, pairKey) {
+  if (_teamRunSwapSource && _teamRunSwapSource.team === team && String(_teamRunSwapSource.pairKey) === String(pairKey)) {
+    cancelTeamRunSwap(); return;
+  }
+  _teamRunSwapSource = { team, pairKey: String(pairKey) };
+  document.body.classList.add('team-run-swap-mode');
+  // Pokaż globalny pasek z opisem (reuzyjemy istniejący swap-cancel-bar)
+  const bar = document.getElementById('ptr-swap-cancel-bar');
+  const info = document.getElementById('ptr-swap-cancel-info');
+  if (info) info.innerHTML = '↔ Wybierz z kim zamienić: <strong>' + esc(team) + '</strong> · kliknij inną drużynę lub pusty slot';
+  if (bar) { bar.style.display = 'flex'; bar.querySelector('button').onclick = cancelTeamRunSwap; }
+  document.addEventListener('keydown', _teamRunSwapEscHandler);
+  renderTeamRunList();
+}
+
+function _teamRunSwapEscHandler(e) { if (e.key === 'Escape') cancelTeamRunSwap(); }
+
+function cancelTeamRunSwap() {
+  _teamRunSwapSource = null;
+  document.body.classList.remove('team-run-swap-mode');
+  const bar = document.getElementById('ptr-swap-cancel-bar');
+  if (bar) { bar.style.display = 'none'; bar.querySelector('button').onclick = cancelPtrSwapMode; }
+  document.removeEventListener('keydown', _teamRunSwapEscHandler);
+  renderTeamRunList();
+}
+
+function handleTeamRunTeamClick(team, pairKey) {
+  if (!_teamRunSwapSource) return;
+  if (_teamRunSwapSource.team === team && String(_teamRunSwapSource.pairKey) === String(pairKey)) {
+    cancelTeamRunSwap(); return;
+  }
+  const src = _findTeamPair(_teamRunSwapSource.pairKey);
+  const tgt = _findTeamPair(pairKey);
+  if (!src || !tgt) { cancelTeamRunSwap(); return; }
+  // Zamień drużyny w slotach (tory zostają)
+  const srcSlot = src.aTeam === _teamRunSwapSource.team ? 'a' : 'b';
+  const tgtSlot = tgt.aTeam === team ? 'a' : 'b';
+  if (srcSlot === 'a') src.aTeam = team; else src.bTeam = team;
+  if (tgtSlot === 'a') tgt.aTeam = _teamRunSwapSource.team; else tgt.bTeam = _teamRunSwapSource.team;
+  const sourceTeam = _teamRunSwapSource.team;
+  cancelTeamRunSwap();
+  save();
+  renderTeamRunList();
+  showToast('↔ Zamieniono: ' + sourceTeam + ' ↔ ' + team, 'success');
+}
+
+function handleTeamRunEmptySlotClick(el) {
+  if (!_teamRunSwapSource) return;
+  const pairKey = el.dataset.pairKey;
+  const lane = el.dataset.lane;
+  const src = _findTeamPair(_teamRunSwapSource.pairKey);
+  const tgt = _findTeamPair(pairKey);
+  if (!src || !tgt) { cancelTeamRunSwap(); return; }
+  const samePair = (src === tgt);
+  // Wyczyść z pary źródłowej
+  if (src.aTeam === _teamRunSwapSource.team) src.aTeam = null;
+  else if (src.bTeam === _teamRunSwapSource.team) src.bTeam = null;
+  // Wstaw do toru w parze docelowej
+  if (tgt.aLane === lane || !tgt.aTeam) { tgt.aTeam = _teamRunSwapSource.team; tgt.aLane = lane; }
+  else { tgt.bTeam = _teamRunSwapSource.team; tgt.bLane = lane; }
+  // Normalizuj
+  if (!tgt.aTeam && tgt.bTeam) { tgt.aTeam = tgt.bTeam; tgt.aLane = tgt.bLane; tgt.bTeam = null; tgt.bLane = tgt.aLane === 'L' ? 'P' : 'L'; }
+  if (!samePair && !src.aTeam && src.bTeam) { src.aTeam = src.bTeam; src.aLane = src.bLane; src.bTeam = null; src.bLane = src.aLane === 'L' ? 'P' : 'L'; }
+  // Pusta para źródłowa → usuń + renumeruj
+  if (!samePair && !src.aTeam && !src.bTeam) {
+    const idx = state.teamRunPairs.indexOf(src);
+    if (idx >= 0) state.teamRunPairs.splice(idx, 1);
+    state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum))
+      .forEach((p, i) => { p.pairNum = i + 1; });
+  }
+  const sourceTeam = _teamRunSwapSource.team;
+  cancelTeamRunSwap();
+  save();
+  renderTeamRunList();
+  showToast('→ ' + sourceTeam + ' → Tor ' + lane, 'success');
+}
+
 function clearAllTeamRuns() {
   if (!confirm('Wyczyścić WSZYSTKIE wyniki biegu drużynowego?')) return;
   state.teamRun = {};
@@ -6334,11 +6580,21 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
     }
   }
 
-  return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '" style="' + (dsq ? 'opacity:.65;' : '') + '">' +
+  // Edit-mode kontrolki (↔ swap, ✕ usuń) — widoczne tylko w trybie edycji
+  const editMode = !!(opts && opts.editMode);
+  const isSwapActive = _teamRunSwapSource && _teamRunSwapSource.team === teamName && String(_teamRunSwapSource.pairKey) === String(pairNum);
+  let editBtns = '';
+  if (editMode) {
+    editBtns = '<button class="team-edit-team-btn" onclick="event.stopPropagation();activateTeamRunSwap(\'' + safeT + '\',' + pairKeyArg + ')" title="Zamień z inną drużyną (kliknij potem na cel)">↔</button>' +
+               '<button class="team-edit-team-btn danger" onclick="event.stopPropagation();removeTeamFromPair(\'' + safeT + '\',' + pairKeyArg + ')" title="Usuń tę drużynę z pary">✕</button>';
+  }
+  const pickAttr = editMode ? ' data-team-name="' + esc(teamName) + '" data-pair-key="' + String(pairNum).replace(/"/g,'&quot;') + '" onclick="if(_teamRunSwapSource && !event.target.closest(\'button,input,textarea\')) handleTeamRunTeamClick(\'' + safeT + '\',' + pairKeyArg + ')"' : '';
+  return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + (isSwapActive ? ' team-swap-active' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.65;' : '') + '">' +
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
       '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(teamName) + '</span>' +
       miniTimerHTML +
       miniStopHTML +
+      editBtns +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">Patrol 3-osobowy</div>' +
@@ -6683,9 +6939,25 @@ function renderTeamRunList() {
     const pairKeyArg = JSON.stringify(p.pairNum);
     const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
     const pairAttr = String(p.pairNum).replace(/"/g, '&quot;');
+    const totalPairs = filteredPairs.length;
+    const isFirstP = (typeof p.pairNum === 'number' && p.pairNum === 1) || displayNum === 1;
+    const isLastP = (typeof p.pairNum === 'number' && p.pairNum === (state.teamRunPairs||[]).length) || displayNum === totalPairs;
     html += '<div class="pair-card' + stateCls + (isSolo ? ' solo-runner' : '') + '" data-pair="' + pairAttr + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + displayNum + '</span>';
+    // Kontrolki edycji par (widoczne tylko w trybie edycji)
+    if (!p._virtual) {
+      html += '<span class="team-edit-controls">';
+      html += '<button class="ctl-btn" onclick="moveTeamRunPair(' + pairKeyArg + ',-1)" title="Przesuń wyżej"' + (isFirstP ? ' disabled style="opacity:.3;"' : '') + '>↑</button>';
+      html += '<input class="pair-num-input" type="number" min="1" max="' + ((state.teamRunPairs||[]).length||1) + '" value="' + displayNum + '" title="Wpisz nowy numer i Enter"' +
+        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();jumpTeamRunPairTo(' + pairKeyArg + ',parseInt(this.value));this.blur();}"' +
+        ' onblur="if(parseInt(this.value)!==' + displayNum + ')jumpTeamRunPairTo(' + pairKeyArg + ',parseInt(this.value));"' +
+        ' onclick="event.stopPropagation();this.select();" />';
+      html += '<button class="ctl-btn" onclick="moveTeamRunPair(' + pairKeyArg + ',+1)" title="Przesuń niżej"' + (isLastP ? ' disabled style="opacity:.3;"' : '') + '>↓</button>';
+      html += '<button class="ctl-btn" onclick="swapTeamRunLanes(' + pairKeyArg + ')" title="Zamień tory L↔P">L↔P</button>';
+      html += '<button class="ctl-btn danger" onclick="removeTeamRunPairFull(' + pairKeyArg + ')" title="Usuń całą parę">✕ para</button>';
+      html += '</span>';
+    }
     html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">' + (p._virtual ? 'Drużyna (SOLO)' : 'Para drużyn') + '</span>';
     if (isSolo && !p._virtual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
     // Integrowany stoper: START / RESET / stempel
@@ -6703,12 +6975,27 @@ function renderTeamRunList() {
     }
     html += '</div>';
     html += '<div class="pair-athletes">';
-    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: true, role });
+    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: true, role, editMode: _teamRunEditMode });
     html += '<div class="pair-vs">VS</div>';
-    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: true, role }) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    if (p.bTeam) {
+      html += teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: true, role, editMode: _teamRunEditMode });
+    } else {
+      const emptyLane = (p.aLane === 'L') ? 'P' : 'L';
+      html += '<div class="pair-athlete solo-empty-slot" data-pair-key="' + pairAttr + '" data-lane="' + emptyLane + '" onclick="handleTeamRunEmptySlotClick(this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;" title="Kliknij aby przenieść tu wybraną drużynę (w trybie edycji)">' +
+        '<span class="lane-badge lane-' + emptyLane + '" style="font-size:16px;">' + emptyLane + '</span>' +
+        '<span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span>' +
+      '</div>';
+    }
     html += '</div>';
     html += '</div>';
   });
+  // Pasek dodawania ad-hoc drużyny (widoczny tylko w trybie edycji)
+  html += '<div class="team-edit-add-bar">' +
+    '<div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">＋ Dodaj drużynę (nieregulaminową lub spóźnioną)</div>' +
+    '<input type="text" id="ptr-team-edit-new-name" placeholder="Nazwa drużyny" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addAdHocTeamRunPair();}" />' +
+    '<button class="btn btn-primary" onclick="addAdHocTeamRunPair()" style="padding:6px 14px;font-size:11px;">＋ Dodaj</button>' +
+    '<div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.4;">Nowa drużyna trafia jako SOLO na koniec listy. Można potem przesunąć ↑↓ lub kliknąć ↔ żeby zamienić z inną.</div>' +
+  '</div>';
   list.innerHTML = html;
   // Uruchom ticker (mini-stopery drużynowe)
   if (_timerTickInterval) clearInterval(_timerTickInterval);
