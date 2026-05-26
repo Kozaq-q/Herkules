@@ -242,10 +242,28 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .btn-danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
 
 /* PAIR CARDS */
-.pair-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; transition: border-color .15s, background .15s; border-left: 3px solid var(--border); }
+.pair-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; transition: border-color .15s, background .15s, opacity .15s, box-shadow .25s; border-left: 3px solid var(--border); }
 .pair-card.pair-locked { border-color: var(--orange); background: rgba(76,175,130,.04); }
-.pair-card.is-running { border-left-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.04), var(--bg2) 35%); }
-.pair-card.is-finished { border-left-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.03), var(--bg2) 35%); }
+/* BIEGNIE — wyrazna ramka 6px + tlo + animowany glow + akcent na numerze */
+.pair-card.is-running { border-left: 6px solid var(--orange); background: linear-gradient(to right, rgba(232,148,77,.09), var(--bg2) 40%); box-shadow: 0 0 0 1px rgba(232,148,77,.18), 0 2px 12px rgba(232,148,77,.12); animation: pair-running-glow 2.4s ease-in-out infinite; }
+@keyframes pair-running-glow { 0%, 100% { box-shadow: 0 0 0 1px rgba(232,148,77,.18), 0 2px 12px rgba(232,148,77,.12); } 50% { box-shadow: 0 0 0 2px rgba(232,148,77,.28), 0 4px 18px rgba(232,148,77,.2); } }
+.pair-card.is-running .pair-num { color: var(--orange); }
+.pair-card.is-running::after { content: '▶ BIEGNIE'; position: absolute; top: 0; right: 0; transform: translate(0,0); background: var(--orange); color: #111; font-family: var(--font-h); font-size: 9px; font-weight: 800; letter-spacing: 1.2px; padding: 2px 8px 3px; border-radius: 0 var(--radius) 0 var(--radius); pointer-events: none; }
+.pair-card { position: relative; }
+/* SKONCZONE — zielony 4px lewy + lekko spowalniajaca opacity + zielony numer */
+.pair-card.is-finished { border-left: 4px solid var(--green); background: linear-gradient(to right, rgba(76,175,130,.045), var(--bg2) 40%); opacity: .9; }
+.pair-card.is-finished .pair-num { color: var(--green); }
+.pair-card.is-finished::after { content: '✓ KONIEC'; position: absolute; top: 0; right: 0; background: rgba(76,175,130,.85); color: #fff; font-family: var(--font-h); font-size: 9px; font-weight: 800; letter-spacing: 1.2px; padding: 2px 8px 3px; border-radius: 0 var(--radius) 0 var(--radius); pointer-events: none; }
+/* OCZEKUJE — przygaszone */
+.pair-card.is-idle { opacity: .82; }
+.pair-card.is-idle .pair-num { color: var(--text2); }
+/* WLASNIE WYSTARTOWALA — pulsujaca poswiata przez ~2.5s (sticky w filtrze) */
+.pair-card.is-just-started { box-shadow: 0 0 0 2px rgba(232,148,77,.5), 0 6px 22px rgba(232,148,77,.3) !important; animation: pair-just-started 2.4s ease-out 1, pair-running-glow 2.4s ease-in-out infinite 2.4s; }
+@keyframes pair-just-started { 0% { box-shadow: 0 0 0 6px rgba(232,148,77,.5), 0 10px 30px rgba(232,148,77,.5); } 100% { box-shadow: 0 0 0 2px rgba(232,148,77,.45), 0 6px 20px rgba(232,148,77,.22); } }
+.pair-card.is-just-started::before { content: 'WŁAŚNIE WYSTARTOWAŁA'; position: absolute; top: 50%; left: -3px; transform: translate(0,-50%) rotate(180deg); writing-mode: vertical-rl; font-family: var(--font-h); font-size: 8px; font-weight: 800; letter-spacing: 1.5px; color: var(--orange); background: rgba(232,148,77,.12); padding: 4px 2px; border-radius: 2px; pointer-events: none; }
+body.ptr-offline-mode .pair-card.is-running::after,
+body.ptr-offline-mode .pair-card.is-finished::after,
+body.ptr-offline-mode .pair-card.is-just-started { display: none !important; animation: none !important; box-shadow: none !important; }
 .pair-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .pair-num { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--text1); min-width: 28px; text-align: center; }
 
@@ -3977,6 +3995,7 @@ function drawPairsByKey(gender) {
 // Cała logika parowania w drawPairsByKey (klucz startowy 11DKPanc).
 
 function switchPairsTab(gender) {
+  if (_pairsActiveTab !== gender) _pairsStickyKeys.clear();
   _pairsActiveTab = gender;
   document.getElementById('ptr-pairs-M').style.display = gender === 'M' ? '' : 'none';
   document.getElementById('ptr-pairs-K').style.display = gender === 'K' ? '' : 'none';
@@ -4009,9 +4028,13 @@ function _updateLockAllBtn() {
 
 // Filtr widoku par: 'all' | 'running' | 'finished' | 'idle'
 let _pairsFilter = 'all';
+// Sticky pary — startowane przez sedziego w widoku z filtrem zostaja widoczne mimo zmiany stanu,
+// dopoki user sam nie przelaczy filtra/zakladki. Klucz: 'M_3', 'K_1', ...
+let _pairsStickyKeys = new Set();
 function setPairsFilter(f) {
   if (!['all','running','finished','idle'].includes(f)) f = 'all';
   _pairsFilter = f;
+  _pairsStickyKeys.clear();
   renderPairsView();
 }
 // Klasyfikacja stanu pary indywidualnej (running/finished/idle)
@@ -4086,8 +4109,13 @@ function renderPairsList(containerId, pairs, gender) {
   const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
   const canStart = (role === 'STARTER' || role === 'ADMIN');
   const total = pairs.length;
-  // Filtr wg statusu pary
-  const filtered = pairs.filter(p => _pairsFilter === 'all' ? true : _classifyIndPair(p) === _pairsFilter);
+  // Filtr wg statusu pary + sticky (para wystartowana przez nas zostaje widoczna mimo filtra)
+  const filtered = pairs.filter(p => {
+    if (_pairsFilter === 'all') return true;
+    if (_classifyIndPair(p) === _pairsFilter) return true;
+    if (_pairsStickyKeys.has(p.gender + '_' + p.pairNum)) return true;
+    return false;
+  });
   if (!filtered.length) {
     const lbl = ({running:'biegnących', finished:'skończonych', idle:'oczekujących'})[_pairsFilter] || '';
     el.innerHTML = '<div class="ptr-pair-filter-empty">Brak ' + lbl + ' par w tej kategorii.</div>';
@@ -4103,7 +4131,9 @@ function renderPairsList(containerId, pairs, gender) {
     const aFinMs = _patrolEffectiveFinishMs(p.aId, run);
     const bFinMs = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
     const allFinished = started && aFinMs && bFinMs;
-    const stateCls = !started ? '' : (allFinished ? ' is-finished' : ' is-running');
+    const isSticky = _pairsStickyKeys.has(p.gender + '_' + p.pairNum);
+    const stateCls = !started ? ' is-idle' : (allFinished ? ' is-finished' : ' is-running')
+                   + (isSticky ? ' is-just-started' : '');
     // Czy jakikolwiek czas/DSQ wpisany w parze?
     const hasEntry =
       (p.aId && (state.times?.[p.aId]?.total || state.times?.[p.aId]?.osf || state.times?.[p.aId]?.hits !== undefined || isDsq(p.aId))) ||
@@ -4748,6 +4778,10 @@ function startPair(gender, pairNum) {
       if (state.times?.[id]?.total) delete state.times[id].total;
     });
   }
+  // Sticky: gdy aktywny filtr ukrywalby parę po starcie, zostaw ją widoczną do nast. akcji usera
+  if (_pairsFilter && _pairsFilter !== 'all' && _pairsFilter !== 'running') {
+    _pairsStickyKeys.add(gender + '_' + pairNum);
+  }
   save();
   renderPairsView();
   if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
@@ -4797,6 +4831,10 @@ function stopAthlete(athleteId, gender, pairNum) {
   if (!state.times[athleteId]) state.times[athleteId] = {};
   state.times[athleteId].total = formatRunTime(totalMs);
   state.times[athleteId].totalAt = nowMs();
+  // Sticky: gdy ostatni zawodnik konczy parę w filtrze 'running', para staje się 'finished' i znikneloby — zostaw widoczne
+  if (_pairsFilter && _pairsFilter !== 'all' && _pairsFilter !== 'finished') {
+    _pairsStickyKeys.add(gender + '_' + pairNum);
+  }
   save();
   renderPairsView();
   if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
@@ -6384,6 +6422,10 @@ function startTeamRunPair(pairNum) {
       if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
     });
   }
+  // Sticky: zostaw widoczne w aktualnym filtrze
+  if (_teamRunFilter && _teamRunFilter !== 'all' && _teamRunFilter !== 'running') {
+    _teamRunStickyKeys.add(String(pairNum));
+  }
   save();
   _renderTeamRunActive();
   showToast('▶ Para drużyn ' + pairNum + ' wystartowała', 'success', 1800);
@@ -6429,6 +6471,10 @@ function stopTeamRunTeam(teamName, pairNum) {
   if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
   state.teamRun[teamName].biegSec = biegSec;
   state.teamRun[teamName].biegSecAt = nowMs();
+  // Sticky: para mogla skonczyc i zniknac z filtra 'running'
+  if (_teamRunFilter && _teamRunFilter !== 'all' && _teamRunFilter !== 'finished') {
+    _teamRunStickyKeys.add(String(pairNum));
+  }
   save();
   _renderTeamRunActive();
   showToast('■ STOP ' + teamName + ': ' + _formatTeamSec(biegSec), 'success', 1500);
@@ -6522,11 +6568,13 @@ function bumpTeamRunShot(team, delta) {
   setTeamRunField(team, 'shotPoints', next);
 }
 
-// Filtr widoku biegu drużynowego
+// Filtr widoku biegu drużynowego + sticky (analogicznie do indywidualnego)
 let _teamRunFilter = 'all';
+let _teamRunStickyKeys = new Set();
 function setTeamRunFilter(f) {
   if (!['all','running','finished','idle'].includes(f)) f = 'all';
   _teamRunFilter = f;
+  _teamRunStickyKeys.clear();
   renderTeamRunList();
 }
 function _classifyTeamPair(p) {
@@ -6577,7 +6625,12 @@ function renderTeamRunList() {
   visiblePairs.forEach(p => { counts[_classifyTeamPair(p)]++; });
   _buildPairFilterBar('ptr-team-run-filter', _teamRunFilter, counts, 'setTeamRunFilter');
 
-  const filteredPairs = visiblePairs.filter(p => _teamRunFilter === 'all' ? true : _classifyTeamPair(p) === _teamRunFilter);
+  const filteredPairs = visiblePairs.filter(p => {
+    if (_teamRunFilter === 'all') return true;
+    if (_classifyTeamPair(p) === _teamRunFilter) return true;
+    if (_teamRunStickyKeys.has(String(p.pairNum))) return true;
+    return false;
+  });
 
   const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
   const canStart = (role === 'STARTER' || role === 'ADMIN');
@@ -6604,7 +6657,9 @@ function renderTeamRunList() {
     const aFin = started && run.finishedAt?.[p.aTeam];
     const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
     const allFinished = started && aFin && bFin;
-    const stateCls = !started ? '' : (allFinished ? ' is-finished' : ' is-running');
+    const isSticky = _teamRunStickyKeys.has(String(p.pairNum));
+    const stateCls = (!started ? ' is-idle' : (allFinished ? ' is-finished' : ' is-running'))
+                   + (isSticky ? ' is-just-started' : '');
 
     const pairKeyArg = JSON.stringify(p.pairNum);
     const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
