@@ -321,6 +321,20 @@ body.team-run-swap-mode #ptr-team-run-list .solo-empty-slot:hover { border-color
 .team-edit-team-btn:hover { color: var(--orange); border-color: var(--orange); }
 .team-edit-team-btn.danger:hover { color: var(--red); border-color: rgba(224,85,85,.55); }
 
+/* IND EDIT MODE — analog. do team-edit, w biegu indywidualnym */
+.pair-edit-controls { display: none; align-items: center; gap: 4px; flex-wrap: wrap; }
+body.pairs-edit-mode .pair-edit-controls { display: inline-flex; }
+.pair-edit-controls .ctl-btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 3px 7px; border-radius: var(--radius); cursor: pointer; }
+.pair-edit-controls .ctl-btn:hover { background: var(--bg3); color: var(--text1); }
+.pair-edit-controls .ctl-btn.danger { color: var(--red); border-color: rgba(224,85,85,.35); }
+.pair-edit-controls .ctl-btn.danger:hover { background: rgba(224,85,85,.12); }
+.pair-edit-add-bar { display: none; margin: 12px 0 4px; padding: 10px; border: 1px dashed var(--border2); border-radius: var(--radius); background: var(--bg3); text-align: center; }
+body.pairs-edit-mode .pair-edit-add-bar { display: block; }
+.pair-edit-add-bar select { background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); padding: 6px 10px; border-radius: var(--radius); font-family: var(--font-b); font-size: 13px; width: 240px; max-width: 60%; margin-right: 6px; }
+.pair-edit-athlete-btn { display: none; background: transparent; border: 1px solid rgba(224,85,85,.35); color: var(--red); font-size: 10px; padding: 2px 6px; border-radius: var(--radius); cursor: pointer; margin-left: 4px; }
+.pair-edit-athlete-btn:hover { background: rgba(224,85,85,.12); }
+body.pairs-edit-mode .pair-edit-athlete-btn { display: inline-block; }
+
 /* W trybie offline ukryj integrowany stoper — wpisywanie ręczne i tak działa */
 body.ptr-offline-mode .pair-mini-timer,
 body.ptr-offline-mode .pair-mini-start,
@@ -1101,6 +1115,7 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-primary" onclick="openDrawModal()">⚙ Losuj pary</button>
             <button class="btn" onclick="toggleLockAllPatrolPairs()" id="ptr-lockall-btn" title="Zablokuj / odblokuj wszystkie pary aktywnej płci">🔒</button>
+            <button class="btn" id="ptr-ind-edit-toggle" onclick="togglePairsEditMode()" title="Awaryjna edycja par — usuwanie/dodawanie zawodników, usuwanie par" style="font-size:11px;padding:5px 10px;">🔧 Tryb edycji</button>
           </div>
         </div>
         <div id="ptr-no-pairs-alert" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);">
@@ -4228,6 +4243,10 @@ function renderPairsList(containerId, pairs, gender) {
     }
 
     html += '<button class="lock-btn' + (locked ? ' active' : '') + '" onclick="togglePairLock(\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '" style="margin-left:auto;">' + (locked ? '🔒' : '🔓') + '</button>';
+    // Kontrolki edit mode (✕ usuń parę)
+    html += '<span class="pair-edit-controls" style="margin-left:6px;">';
+    html += '<button class="ctl-btn danger" onclick="removeIndPair(\'' + gender + '\',' + p.pairNum + ')" title="Usuń całą parę">✕ para</button>';
+    html += '</span>';
     html += '</div>';
     html += '<div class="pair-athletes">';
     // Określ tor pustego slotu (jeśli SOLO)
@@ -4240,6 +4259,23 @@ function renderPairsList(containerId, pairs, gender) {
     html += '</div>';
     return html;
   }).join('');
+  // Pasek dodawania zawodnika z listy (tylko edit mode)
+  const usedIds = new Set();
+  (state.pairs || []).forEach(pp => { if (pp.aId) usedIds.add(pp.aId); if (pp.bId) usedIds.add(pp.bId); });
+  const available = (state.athletes || []).filter(a => a.gender === gender && !usedIds.has(a.id))
+    .sort((a, b) => displayName(a).localeCompare(displayName(b)));
+  el.innerHTML += '<div class="pair-edit-add-bar">' +
+    '<div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">＋ Dodaj zawodnika z listy (' + (gender === 'M' ? 'M' : 'K') + ', dostępnych: ' + available.length + ')</div>' +
+    (available.length === 0
+      ? '<div style="font-size:11px;color:var(--text3);line-height:1.5;padding:8px 0;">Wszyscy zawodnicy tej płci są już w parach. Dodaj nowych w zakładce <strong>👥 Zawodnicy</strong>.</div>'
+      : '<select id="ptr-ind-edit-pick-' + gender + '">' +
+          '<option value="">— wybierz zawodnika —</option>' +
+          available.map(a => '<option value="' + a.id + '">' + esc(displayName(a)) + ' (#' + esc(a.bib) + (a.team ? ', ' + esc(a.team) : '') + ')</option>').join('') +
+        '</select>' +
+        '<button class="btn btn-primary" onclick="addExistingIndAthlete(\'' + gender + '\')" style="padding:6px 14px;font-size:11px;">＋ Dodaj jako SOLO</button>' +
+        '<div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.4;">Zawodnik trafia jako SOLO na koniec listy. Klikając ↔ przy zawodniku można go zamienić z innym.</div>'
+    ) +
+  '</div>';
 }
 
 function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
@@ -4299,6 +4335,9 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
   const swapBtn = (pairNum && role === 'ADMIN')
     ? '<button class="swap-trigger-btn" onclick="event.stopPropagation();activatePtrSwap(' + a.id + ',' + pairNum + ',\'' + gender + '\')" title="Zamień zawodnika">↔</button>'
     : '';
+  const removeIndBtn = (pairNum && role === 'ADMIN')
+    ? '<button class="pair-edit-athlete-btn" onclick="event.stopPropagation();removeIndAthleteFromPair(' + a.id + ',\'' + gender + '\',' + pairNum + ')" title="Usuń tego zawodnika z pary">✕</button>'
+    : '';
   return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
     // Nagłówek: nazwisko + bib + mini-stoper + przyciski + lane
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
@@ -4309,6 +4348,7 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
       miniTimerHTML +
       miniStopHTML +
       swapBtn +
+      removeIndBtn +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">' + esc(a.team || '') + '</div>' +
@@ -5532,20 +5572,132 @@ function tickTimers() {
 }
 
 // Przenieś parę o ±1
+// ═══════════════════════════════════════════════════════════════
+// IND EDIT MODE — analog. do team-run (usuwanie par, usuwanie zawodnikow, dodawanie z listy)
+// ═══════════════════════════════════════════════════════════════
+let _pairsEditMode = false;
+function togglePairsEditMode() {
+  _pairsEditMode = !_pairsEditMode;
+  document.body.classList.toggle('pairs-edit-mode', _pairsEditMode);
+  const btn = document.getElementById('ptr-ind-edit-toggle');
+  if (btn) btn.classList.toggle('team-edit-toggle-on', _pairsEditMode);
+  renderPairsView();
+}
+
+function _indPairHasRun(gender, pairNum) {
+  const k = gender + '_' + pairNum;
+  return !!(state.runs && state.runs[k] && state.runs[k].startedAt);
+}
+function _clearIndRun(gender, pairNum) {
+  const k = gender + '_' + pairNum;
+  if (state.runs) delete state.runs[k];
+}
+
+function removeIndPair(gender, pairNum) {
+  const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
+  if (!p) return;
+  const had = _indPairHasRun(gender, pairNum);
+  const msg = 'Usunąć całą parę ' + pairNum + ' (' + gender + ')?' + (had ? '\n\n⚠ Para biegła — czas startu pary zostanie usunięty (czasy zawodników pozostają).' : '');
+  if (!confirm(msg)) return;
+  if (had) _clearIndRun(gender, pairNum);
+  const idx = state.pairs.indexOf(p);
+  if (idx >= 0) state.pairs.splice(idx, 1);
+  // Renumeruj pary tej plci + remap state.runs
+  const gPairs = state.pairs.filter(x => x.gender === gender).sort((a,b) => a.pairNum - b.pairNum);
+  const remap = {};
+  gPairs.forEach((pp, i) => {
+    const newNum = i + 1;
+    if (pp.pairNum !== newNum) remap[pp.pairNum] = newNum;
+    pp.pairNum = newNum;
+  });
+  _remapIndRuns(gender, remap);
+  save();
+  renderPairsView();
+  showToast('✕ Usunięto parę ' + pairNum + ' (' + gender + ')', 'warning', 1800);
+}
+
+function removeIndAthleteFromPair(athleteId, gender, pairNum) {
+  const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
+  if (!p) return;
+  const a = state.athletes.find(x => x.id === athleteId);
+  const aName = a ? displayName(a) : '#' + athleteId;
+  const had = _indPairHasRun(gender, pairNum);
+  const msg = 'Usunąć zawodnika "' + aName + '" z pary ' + pairNum + '?' +
+    (had ? '\n\n⚠ Para biegła — czas startu pary zostanie usunięty (czasy zawodników pozostają).' : '');
+  if (!confirm(msg)) return;
+  if (had) _clearIndRun(gender, pairNum);
+  if (p.aId === athleteId) { p.aId = null; }
+  else if (p.bId === athleteId) { p.bId = null; }
+  // Normalizuj: jesli aId pusty a bId wypelniony → przesun do aId
+  if (!p.aId && p.bId) {
+    p.aId = p.bId; p.aLane = p.bLane || 'L';
+    p.bId = null; p.bLane = p.aLane === 'L' ? 'P' : 'L';
+  }
+  // Jesli para calkiem pusta → usun + renumeruj
+  if (!p.aId && !p.bId) {
+    const removedNum = p.pairNum;
+    const idx = state.pairs.indexOf(p);
+    if (idx >= 0) state.pairs.splice(idx, 1);
+    const gPairs = state.pairs.filter(x => x.gender === gender).sort((a,b) => a.pairNum - b.pairNum);
+    const remap = {};
+    gPairs.forEach((pp, i) => {
+      const newNum = i + 1;
+      if (pp.pairNum !== newNum) remap[pp.pairNum] = newNum;
+      pp.pairNum = newNum;
+    });
+    _remapIndRuns(gender, remap);
+  }
+  save();
+  renderPairsView();
+  showToast('✕ Usunięto ' + aName + ' z pary', 'info', 1800);
+}
+
+function addExistingIndAthlete(gender) {
+  const sel = document.getElementById('ptr-ind-edit-pick-' + gender);
+  const id = sel && sel.value ? parseInt(sel.value) : null;
+  if (!id) { showToast('Wybierz zawodnika z listy', 'warning'); return; }
+  const a = state.athletes.find(x => x.id === id);
+  if (!a) return;
+  // Sprawdź czy już nie w parze
+  const inPair = (state.pairs || []).some(p => p.aId === id || p.bId === id);
+  if (inPair) { showToast('Zawodnik już jest w parze', 'warning'); return; }
+  // Nowa para SOLO na koncu
+  const gPairs = (state.pairs || []).filter(p => p.gender === gender);
+  const nextNum = gPairs.reduce((m, p) => Math.max(m, p.pairNum || 0), 0) + 1;
+  state.pairs.push({ pairNum: nextNum, gender, aId: id, aLane: 'L', bId: null, bLane: 'P' });
+  save();
+  renderPairsView();
+  showToast('＋ Dodano: ' + displayName(a), 'success', 2000);
+}
+
+// Pomocnik: remapuje klucze state.runs po zmianie pairNum w gender.
+// remap: { oldPairNum: newPairNum } (numery, nie klucze)
+function _remapIndRuns(gender, remap) {
+  if (!state.runs || !Object.keys(remap).length) return;
+  const newRuns = {};
+  Object.keys(state.runs).forEach(k => {
+    const m = k.match(/^([MK])_(\d+)$/);
+    if (m && m[1] === gender && remap[m[2]] !== undefined) {
+      newRuns[gender + '_' + remap[m[2]]] = state.runs[k];
+    } else {
+      newRuns[k] = state.runs[k];
+    }
+  });
+  state.runs = newRuns;
+}
+
 function movePtrPair(gender, pairNum, dir) {
   const gPairs = state.pairs.filter(p => p.gender === gender).sort((a,b) => a.pairNum - b.pairNum);
   const idx = gPairs.findIndex(p => p.pairNum === pairNum);
   if (idx === -1) return;
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= gPairs.length) return;
-  // Zamień pairNum w obu parach
-  const otherPair = gPairs[newIdx];
-  const tmp = otherPair.pairNum;
-  // Znajdź w state.pairs i zmień
-  const sp1 = state.pairs.find(p => p === otherPair);
-  const sp2 = state.pairs.find(p => p === gPairs[idx]);
-  sp1.pairNum = sp2.pairNum;
-  sp2.pairNum = tmp;
+  const oldA = gPairs[idx].pairNum;
+  const oldB = gPairs[newIdx].pairNum;
+  gPairs[idx].pairNum = oldB;
+  gPairs[newIdx].pairNum = oldA;
+  // Remap state.runs (zachowaj startedAt/finishedAt zwiazane z parami)
+  _remapIndRuns(gender, { [oldA]: oldB, [oldB]: oldA });
   save();
   renderPairsView();
 }
@@ -5559,21 +5711,22 @@ function jumpPtrPairTo(gender, fromPairNum, toPos) {
   if (toPos === fromPairNum) return;
   const target = gPairs.find(p => p.pairNum === fromPairNum);
   if (!target) return;
+  const remap = {};
   // Shift wszystkich między fromPairNum a toPos
   if (toPos < fromPairNum) {
-    // Przesuwamy do góry — wszystko między toPos a fromPairNum-1 idzie w dół o 1
     gPairs.forEach(p => {
       if (p === target) return;
-      if (p.pairNum >= toPos && p.pairNum < fromPairNum) p.pairNum++;
+      if (p.pairNum >= toPos && p.pairNum < fromPairNum) { remap[p.pairNum] = p.pairNum + 1; p.pairNum++; }
     });
   } else {
-    // Przesuwamy w dół — wszystko między fromPairNum+1 a toPos idzie w górę o 1
     gPairs.forEach(p => {
       if (p === target) return;
-      if (p.pairNum > fromPairNum && p.pairNum <= toPos) p.pairNum--;
+      if (p.pairNum > fromPairNum && p.pairNum <= toPos) { remap[p.pairNum] = p.pairNum - 1; p.pairNum--; }
     });
   }
+  remap[fromPairNum] = toPos;
   target.pairNum = toPos;
+  _remapIndRuns(gender, remap);
   save();
   renderPairsView();
 }
@@ -6339,13 +6492,31 @@ function _promoteVirtualTeamPairs() {
   const unpaired = [...teamSet].filter(t => !used.has(t)).sort();
   let nextNum = state.teamRunPairs.reduce((m, p) => Math.max(m, +p.pairNum || 0), 0) + 1;
   unpaired.forEach(t => {
-    state.teamRunPairs.push({ pairNum: nextNum++, aTeam: t, aLane: 'L', bTeam: null, bLane: null });
+    const newNum = nextNum++;
+    state.teamRunPairs.push({ pairNum: newNum, aTeam: t, aLane: 'L', bTeam: null, bLane: null });
+    // Jesli run istnieje pod kluczem 'solo:<team>' (gdy starter wystartowal virtualną SOLO),
+    // przenies go pod nowy real pairNum, zeby render nie zgubil czasu.
+    const oldKey = 'solo:' + t;
+    if (state.teamRuns && state.teamRuns[oldKey]) {
+      state.teamRuns[newNum] = state.teamRuns[oldKey];
+      delete state.teamRuns[oldKey];
+    }
   });
 }
 
 function _findTeamPair(pairKey) {
   if (!state.teamRunPairs) return null;
   return state.teamRunPairs.find(p => String(p.pairNum) === String(pairKey)) || null;
+}
+
+// Czy ktorakolwiek z par ma uruchomiony stoper (state.teamRuns[pairNum].startedAt)?
+function _teamPairHasRun(pairKey) {
+  return !!(state.teamRuns && state.teamRuns[pairKey] && state.teamRuns[pairKey].startedAt);
+}
+
+// Wyczysc stoper pary (run) — drużynowe biegSec w state.teamRun[team] ZOSTAJE (per drużyna).
+function _clearTeamRunForPair(pairKey) {
+  if (state.teamRuns && state.teamRuns[pairKey]) delete state.teamRuns[pairKey];
 }
 
 function moveTeamRunPair(pairKey, dir) {
@@ -6355,9 +6526,17 @@ function moveTeamRunPair(pairKey, dir) {
   if (idx === -1) return;
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= pairs.length) return;
-  const tmp = pairs[idx].pairNum;
-  pairs[idx].pairNum = pairs[newIdx].pairNum;
-  pairs[newIdx].pairNum = tmp;
+  const oldA = pairs[idx].pairNum;
+  const oldB = pairs[newIdx].pairNum;
+  pairs[idx].pairNum = oldB;
+  pairs[newIdx].pairNum = oldA;
+  // Remapuj klucze state.teamRuns zeby stopery pozostaly zwiazane z parami
+  if (state.teamRuns) {
+    const runA = state.teamRuns[oldA];
+    const runB = state.teamRuns[oldB];
+    if (runA !== undefined) state.teamRuns[oldB] = runA; else delete state.teamRuns[oldB];
+    if (runB !== undefined) state.teamRuns[oldA] = runB; else delete state.teamRuns[oldA];
+  }
   save();
   renderTeamRunList();
 }
@@ -6372,25 +6551,24 @@ function jumpTeamRunPairTo(pairKey, toPos) {
   if (fromIdx === -1) return;
   const fromPos = pairs[fromIdx].pairNum;
   if (toPos === fromPos) return;
-  // Renumeracja: usuwam pair z listy, wstawiam na nowym miejscu, renumeruję 1..N
+  // Renumeracja: usuwam pair z listy, wstawiam na nowym miejscu
   const target = pairs.splice(fromIdx, 1)[0];
   pairs.splice(toPos - 1, 0, target);
-  pairs.forEach((p, i) => { p.pairNum = i + 1; });
-  save();
-  renderTeamRunList();
-}
-
-function swapTeamRunLanes(pairKey) {
-  const p = _findTeamPair(pairKey);
-  if (!p) return;
-  // Zamień A i B (+ tory)
-  const tmpTeam = p.aTeam; const tmpLane = p.aLane;
-  p.aTeam = p.bTeam; p.aLane = p.bLane || (tmpLane === 'L' ? 'P' : 'L');
-  p.bTeam = tmpTeam; p.bLane = tmpLane === 'L' ? 'P' : 'L';
-  // Jeśli aTeam pusty po zamianie — normalizuj (zostaw drużynę w slot a)
-  if (!p.aTeam && p.bTeam) {
-    p.aTeam = p.bTeam; p.aLane = p.bLane;
-    p.bTeam = null; p.bLane = p.aLane === 'L' ? 'P' : 'L';
+  // Renumeruj 1..N + zbuduj remap old->new (przed nadpisaniem p.pairNum)
+  const remap = {};
+  pairs.forEach((p, i) => {
+    const newNum = i + 1;
+    if (p.pairNum !== newNum) remap[p.pairNum] = newNum;
+    p.pairNum = newNum;
+  });
+  // Remap state.teamRuns na nowe klucze
+  if (state.teamRuns && Object.keys(remap).length) {
+    const newRuns = {};
+    Object.keys(state.teamRuns).forEach(k => {
+      const newK = remap[k] !== undefined ? remap[k] : k;
+      newRuns[newK] = state.teamRuns[k];
+    });
+    state.teamRuns = newRuns;
   }
   save();
   renderTeamRunList();
@@ -6399,6 +6577,10 @@ function swapTeamRunLanes(pairKey) {
 function removeTeamFromPair(team, pairKey) {
   const p = _findTeamPair(pairKey);
   if (!p) return;
+  if (_teamPairHasRun(pairKey)) {
+    if (!confirm('Para już biegła. Usunięcie drużyny "' + team + '" zresetuje czas startu pary (czas biegu tej drużyny pozostanie). Kontynuować?')) return;
+    _clearTeamRunForPair(pairKey);
+  }
   if (p.aTeam === team) { p.aTeam = null; }
   else if (p.bTeam === team) { p.bTeam = null; }
   // Normalizuj: jeśli aTeam pusty a bTeam wypełniony → przesuń
@@ -6406,12 +6588,26 @@ function removeTeamFromPair(team, pairKey) {
     p.aTeam = p.bTeam; p.aLane = p.bLane;
     p.bTeam = null; p.bLane = p.aLane === 'L' ? 'P' : 'L';
   }
-  // Jeśli para całkiem pusta → usuń i renumeruj
+  // Jeśli para całkiem pusta → usuń i renumeruj (z remapem state.teamRuns)
   if (!p.aTeam && !p.bTeam) {
+    const removedNum = p.pairNum;
     const idx = state.teamRunPairs.indexOf(p);
     if (idx >= 0) state.teamRunPairs.splice(idx, 1);
-    state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum))
-      .forEach((pp, i) => { pp.pairNum = i + 1; });
+    if (state.teamRuns) delete state.teamRuns[removedNum];
+    const remap = {};
+    state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum)).forEach((pp, i) => {
+      const newNum = i + 1;
+      if (pp.pairNum !== newNum) remap[pp.pairNum] = newNum;
+      pp.pairNum = newNum;
+    });
+    if (state.teamRuns && Object.keys(remap).length) {
+      const newRuns = {};
+      Object.keys(state.teamRuns).forEach(k => {
+        const newK = remap[k] !== undefined ? remap[k] : k;
+        newRuns[newK] = state.teamRuns[k];
+      });
+      state.teamRuns = newRuns;
+    }
   }
   save();
   renderTeamRunList();
@@ -6422,32 +6618,47 @@ function removeTeamRunPairFull(pairKey) {
   const p = _findTeamPair(pairKey);
   if (!p) return;
   const tA = p.aTeam, tB = p.bTeam;
-  if (!confirm('Usunąć całą parę?\n\n' + (tA || '—') + (tB ? ' vs ' + tB : ' (SOLO)'))) return;
+  const hadRun = _teamPairHasRun(pairKey);
+  const msg = 'Usunąć całą parę?\n\n' + (tA || '—') + (tB ? ' vs ' + tB : ' (SOLO)') +
+    (hadRun ? '\n\n⚠ Para biegła — czas startu pary zostanie usunięty (czasy biegu drużyn pozostają).' : '');
+  if (!confirm(msg)) return;
+  const removedNum = p.pairNum;
   const idx = state.teamRunPairs.indexOf(p);
   if (idx >= 0) state.teamRunPairs.splice(idx, 1);
-  state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum))
-    .forEach((pp, i) => { pp.pairNum = i + 1; });
+  if (state.teamRuns) delete state.teamRuns[removedNum];
+  const remap = {};
+  state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum)).forEach((pp, i) => {
+    const newNum = i + 1;
+    if (pp.pairNum !== newNum) remap[pp.pairNum] = newNum;
+    pp.pairNum = newNum;
+  });
+  if (state.teamRuns && Object.keys(remap).length) {
+    const newRuns = {};
+    Object.keys(state.teamRuns).forEach(k => {
+      const newK = remap[k] !== undefined ? remap[k] : k;
+      newRuns[newK] = state.teamRuns[k];
+    });
+    state.teamRuns = newRuns;
+  }
   save();
   renderTeamRunList();
   showToast('✕ Usunięto parę', 'warning', 1800);
 }
 
-function addAdHocTeamRunPair() {
-  const inp = document.getElementById('ptr-team-edit-new-name');
-  const name = (inp && inp.value || '').trim();
-  if (!name) { showToast('Wpisz nazwę drużyny', 'warning'); return; }
+function addExistingTeamRunPair() {
+  const sel = document.getElementById('ptr-team-edit-pick');
+  const name = sel && sel.value ? sel.value.trim() : '';
+  if (!name) { showToast('Wybierz drużynę z listy', 'warning'); return; }
   if (!state.teamRunPairs) state.teamRunPairs = [];
-  // Czy drużyna istnieje gdzieś już w parach?
   const exists = state.teamRunPairs.some(p => p.aTeam === name || p.bTeam === name);
   if (exists) { showToast('Drużyna "' + name + '" już jest w parach', 'warning'); return; }
   const nextNum = state.teamRunPairs.reduce((m, p) => Math.max(m, +p.pairNum || 0), 0) + 1;
   state.teamRunPairs.push({ pairNum: nextNum, aTeam: name, aLane: 'L', bTeam: null, bLane: null });
   ensureTeamRun();
   if (!state.teamRun[name]) state.teamRun[name] = {};
-  if (inp) inp.value = '';
   save();
   renderTeamRunList();
-  showToast('＋ Dodano drużynę: ' + name, 'success', 2000);
+  showToast('＋ Dodano: ' + name, 'success', 2000);
 }
 
 // ─── Swap mode (przenoszenie drużyn między parami) ─────────────
@@ -6485,6 +6696,13 @@ function handleTeamRunTeamClick(team, pairKey) {
   const src = _findTeamPair(_teamRunSwapSource.pairKey);
   const tgt = _findTeamPair(pairKey);
   if (!src || !tgt) { cancelTeamRunSwap(); return; }
+  const srcHasRun = _teamPairHasRun(src.pairNum);
+  const tgtHasRun = (src.pairNum !== tgt.pairNum) && _teamPairHasRun(tgt.pairNum);
+  if (srcHasRun || tgtHasRun) {
+    if (!confirm('Zamiana dotyka pary która już biegła — czas startu tej pary zostanie usunięty (czasy biegu drużyn pozostają). Kontynuować?')) return;
+    if (srcHasRun) _clearTeamRunForPair(src.pairNum);
+    if (tgtHasRun) _clearTeamRunForPair(tgt.pairNum);
+  }
   // Zamień drużyny w slotach (tory zostają)
   const srcSlot = src.aTeam === _teamRunSwapSource.team ? 'a' : 'b';
   const tgtSlot = tgt.aTeam === team ? 'a' : 'b';
@@ -6505,6 +6723,13 @@ function handleTeamRunEmptySlotClick(el) {
   const tgt = _findTeamPair(pairKey);
   if (!src || !tgt) { cancelTeamRunSwap(); return; }
   const samePair = (src === tgt);
+  const srcHasRun = _teamPairHasRun(src.pairNum);
+  const tgtHasRun = !samePair && _teamPairHasRun(tgt.pairNum);
+  if (srcHasRun || tgtHasRun) {
+    if (!confirm('Operacja dotyka pary która już biegła — czas startu pary zostanie usunięty (czasy biegu drużyn pozostają). Kontynuować?')) return;
+    if (srcHasRun) _clearTeamRunForPair(src.pairNum);
+    if (tgtHasRun) _clearTeamRunForPair(tgt.pairNum);
+  }
   // Wyczyść z pary źródłowej
   if (src.aTeam === _teamRunSwapSource.team) src.aTeam = null;
   else if (src.bTeam === _teamRunSwapSource.team) src.bTeam = null;
@@ -6514,12 +6739,26 @@ function handleTeamRunEmptySlotClick(el) {
   // Normalizuj
   if (!tgt.aTeam && tgt.bTeam) { tgt.aTeam = tgt.bTeam; tgt.aLane = tgt.bLane; tgt.bTeam = null; tgt.bLane = tgt.aLane === 'L' ? 'P' : 'L'; }
   if (!samePair && !src.aTeam && src.bTeam) { src.aTeam = src.bTeam; src.aLane = src.bLane; src.bTeam = null; src.bLane = src.aLane === 'L' ? 'P' : 'L'; }
-  // Pusta para źródłowa → usuń + renumeruj
+  // Pusta para źródłowa → usuń + renumeruj (z remapem state.teamRuns)
   if (!samePair && !src.aTeam && !src.bTeam) {
+    const removedNum = src.pairNum;
     const idx = state.teamRunPairs.indexOf(src);
     if (idx >= 0) state.teamRunPairs.splice(idx, 1);
-    state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum))
-      .forEach((p, i) => { p.pairNum = i + 1; });
+    if (state.teamRuns) delete state.teamRuns[removedNum];
+    const remap = {};
+    state.teamRunPairs.sort((a, b) => (+a.pairNum) - (+b.pairNum)).forEach((p, i) => {
+      const newNum = i + 1;
+      if (p.pairNum !== newNum) remap[p.pairNum] = newNum;
+      p.pairNum = newNum;
+    });
+    if (state.teamRuns && Object.keys(remap).length) {
+      const newRuns = {};
+      Object.keys(state.teamRuns).forEach(k => {
+        const newK = remap[k] !== undefined ? remap[k] : k;
+        newRuns[newK] = state.teamRuns[k];
+      });
+      state.teamRuns = newRuns;
+    }
   }
   const sourceTeam = _teamRunSwapSource.team;
   cancelTeamRunSwap();
@@ -6954,7 +7193,6 @@ function renderTeamRunList() {
         ' onblur="if(parseInt(this.value)!==' + displayNum + ')jumpTeamRunPairTo(' + pairKeyArg + ',parseInt(this.value));"' +
         ' onclick="event.stopPropagation();this.select();" />';
       html += '<button class="ctl-btn" onclick="moveTeamRunPair(' + pairKeyArg + ',+1)" title="Przesuń niżej"' + (isLastP ? ' disabled style="opacity:.3;"' : '') + '>↓</button>';
-      html += '<button class="ctl-btn" onclick="swapTeamRunLanes(' + pairKeyArg + ')" title="Zamień tory L↔P">L↔P</button>';
       html += '<button class="ctl-btn danger" onclick="removeTeamRunPairFull(' + pairKeyArg + ')" title="Usuń całą parę">✕ para</button>';
       html += '</span>';
     }
@@ -6989,13 +7227,27 @@ function renderTeamRunList() {
     html += '</div>';
     html += '</div>';
   });
-  // Pasek dodawania ad-hoc drużyny (widoczny tylko w trybie edycji)
+  // Pasek dodawania istniejącej drużyny (widoczny tylko w trybie edycji)
+  // Lista dostępnych = drużyny z zakładki Zawodnicy które nie są w żadnej parze
+  const allTeamsFromAthletes = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))];
+  const teamsWithEntryAll = Object.keys(state.teamRun || {});
+  const allKnownTeams = new Set([...allTeamsFromAthletes, ...teamsWithEntryAll]);
+  const usedInPairs = new Set();
+  (state.teamRunPairs || []).forEach(p => { if (p.aTeam) usedInPairs.add(p.aTeam); if (p.bTeam) usedInPairs.add(p.bTeam); });
+  const availableTeams = [...allKnownTeams].filter(t => !usedInPairs.has(t)).sort();
   html += '<div class="team-edit-add-bar">' +
-    '<div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">＋ Dodaj drużynę (nieregulaminową lub spóźnioną)</div>' +
-    '<input type="text" id="ptr-team-edit-new-name" placeholder="Nazwa drużyny" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addAdHocTeamRunPair();}" />' +
-    '<button class="btn btn-primary" onclick="addAdHocTeamRunPair()" style="padding:6px 14px;font-size:11px;">＋ Dodaj</button>' +
-    '<div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.4;">Nowa drużyna trafia jako SOLO na koniec listy. Można potem przesunąć ↑↓ lub kliknąć ↔ żeby zamienić z inną.</div>' +
-  '</div>';
+    '<div style="font-family:var(--font-h);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">＋ Dodaj drużynę z listy (dostępne: ' + availableTeams.length + ')</div>';
+  if (availableTeams.length === 0) {
+    html += '<div style="font-size:11px;color:var(--text3);line-height:1.5;padding:8px 0;">Wszystkie znane drużyny są już w parach. Aby dodać nową — dopisz zawodników z tą drużyną w zakładce <strong>👥 Zawodnicy</strong>.</div>';
+  } else {
+    html += '<select id="ptr-team-edit-pick" style="background:var(--bg2);border:1px solid var(--border2);color:var(--text1);padding:6px 10px;border-radius:var(--radius);font-family:var(--font-b);font-size:13px;width:240px;max-width:60%;margin-right:6px;">' +
+      '<option value="">— wybierz drużynę —</option>' +
+      availableTeams.map(t => '<option value="' + esc(t).replace(/"/g,'&quot;') + '">' + esc(t) + '</option>').join('') +
+    '</select>';
+    html += '<button class="btn btn-primary" onclick="addExistingTeamRunPair()" style="padding:6px 14px;font-size:11px;">＋ Dodaj jako SOLO</button>';
+    html += '<div style="font-size:10px;color:var(--text3);margin-top:6px;line-height:1.4;">Wybrana drużyna trafia jako SOLO na koniec listy. Można potem przesunąć ↑↓ lub kliknąć ↔ żeby zamienić z inną.</div>';
+  }
+  html += '</div>';
   list.innerHTML = html;
   // Uruchom ticker (mini-stopery drużynowe)
   if (_timerTickInterval) clearInterval(_timerTickInterval);
