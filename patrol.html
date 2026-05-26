@@ -792,7 +792,8 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
           <span class="ptr-notes-sub">widoczne dla całego zespołu</span>
         </div>
         <textarea id="ptr-notes" rows="3" placeholder="np. Strzelnica suchy stojąco · start z linii ABC · pogoda słoneczna..."
-          oninput="saveSetup(); _placeNotes();"
+          oninput="saveSetup();"
+          onblur="_placeNotes();"
           class="ptr-notes-input"></textarea>
       </div>
 
