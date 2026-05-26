@@ -718,16 +718,16 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
 
       <!-- KAFELKI TRYBU/DOSTĘPU — 4 obok siebie, pełna szerokość -->
       <div class="ptr-tiles-row mb-12">
-        <!-- 1. Tryb offline (online ↔ offline toggle) — kontener wokół żeby pomieścić "?" -->
+        <!-- 1. Tryb pomiaru (stoper w panelu ↔ stoper fizyczny) -->
         <div style="position:relative;">
           <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('offline')" title="Co to robi?">?</button>
           <div class="ptr-help-popover" id="ptr-help-offline">
-            <strong>Tryb działania.</strong> Domyślnie <strong>ONLINE</strong> — wszystkie urządzenia liczą czas razem, sędziowie używają synchronizowanego stopera w panelu. Przełącz na <strong>OFFLINE</strong> gdy sieć jest niestabilna — stoper się wyłączy, mierzcie fizycznymi stoperami i wpiszcie czasy ręcznie w „Pary".
+            <strong>Tryb pomiaru czasu.</strong> Domyślnie <strong>STOPER W PANELU</strong> — sędziowie startują parę przyciskiem w aplikacji i zatrzymują meta, czas jest synchronizowany między urządzeniami. Przełącz na <strong>STOPER FIZYCZNY</strong> gdy chcecie mierzyć ręcznymi stoperami i wpisywać czasy z palca — przyciski START/STOP w kartach par znikają, sędziowie wpisują OSF i Łączny ręcznie. <em>Uwaga:</em> oba tryby normalnie wysyłają dane przez sieć — to NIE jest tryb bez internetu.
           </div>
-          <button id="ptr-tile-offline" onclick="toggleOfflineMode()" class="ptr-mode-tile" style="width:100%;" title="Kliknij żeby przełączyć">
-            <span class="ptr-mode-icon">🌐</span>
-            <span class="ptr-mode-label">ONLINE</span>
-            <span class="ptr-mode-sub">stoper synchronizowany</span>
+          <button id="ptr-tile-offline" onclick="toggleOfflineMode()" class="ptr-mode-tile" style="width:100%;" title="Kliknij żeby przełączyć tryb pomiaru">
+            <span class="ptr-mode-icon">⏱</span>
+            <span class="ptr-mode-label">STOPER W PANELU</span>
+            <span class="ptr-mode-sub">sync między urządzeniami</span>
           </button>
         </div>
         <!-- 2. Sędzia startu (rozwijany w pionie, w swojej kolumnie) -->
@@ -1019,9 +1019,9 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
     <div class="page" id="page-pairs">
       <!-- Banner offline mode -->
       <div id="offline-banner" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.45);border-left:4px solid var(--orange);border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;line-height:1.5;">
-        <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">🔌 Tryb offline aktywny</div>
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">📋 Tryb pomiaru ręcznego</div>
         <div style="font-size:12px;color:var(--text2);">
-          Synchronizowany stoper wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie poniżej do kafelków OSF i Łącznie. Zapisy lokalne synchronizują się z chmurą gdy sieć wróci.
+          Stoper w panelu wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie ręcznie do kafelków OSF i Łączny. Dane normalnie synchronizują się przez sieć między urządzeniami.
         </div>
       </div>
 
@@ -1078,9 +1078,9 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
     <!-- 🛡 BIEG DRUŻYNOWY — wpisywanie wyników + zintegrowany stoper (online) -->
     <div class="page" id="page-team-run">
       <div id="team-offline-banner" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.45);border-left:4px solid var(--orange);border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;line-height:1.5;">
-        <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">🔌 Tryb offline aktywny</div>
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">📋 Tryb pomiaru ręcznego</div>
         <div style="font-size:12px;color:var(--text2);">
-          Stoper drużynowy wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie poniżej w polach Bieg / OSF / Strzelanie.
+          Stoper w panelu wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie ręcznie w polach Bieg / OSF / Strzelanie. Dane normalnie synchronizują się przez sieć między urządzeniami.
         </div>
       </div>
       <div class="card mb-12">
@@ -2757,7 +2757,7 @@ function toggleOfflineMode() {
   state.cfg.offlineMode = !state.cfg.offlineMode;
   saveImmediate();
   _applyOfflineMode();
-  showToast(state.cfg.offlineMode ? '🔌 Tryb offline włączony — używaj fizycznych stoperów' : '🌐 Tryb online — stoper synchronizowany dostępny', 'warning', 3500);
+  showToast(state.cfg.offlineMode ? '📋 Tryb pomiaru ręcznego — używaj fizycznych stoperów i wpisuj czasy ręcznie' : '⏱ Stoper w panelu aktywny — sędziowie startują i zatrzymują w aplikacji', 'warning', 3500);
 }
 
 function _applyOfflineMode() {
@@ -2777,14 +2777,14 @@ function _applyOfflineMode() {
     const sub = tile.querySelector('.ptr-mode-sub');
     if (offline) {
       tile.classList.add('active-offline');
-      if (icon)  icon.textContent  = '🔌';
-      if (label) label.textContent = 'OFFLINE';
-      if (sub)   sub.textContent   = 'fizyczne stopery, czasy ręcznie';
+      if (icon)  icon.textContent  = '📋';
+      if (label) label.textContent = 'STOPER FIZYCZNY';
+      if (sub)   sub.textContent   = 'czasy wpisywane ręcznie';
     } else {
       tile.classList.remove('active-offline');
-      if (icon)  icon.textContent  = '🌐';
-      if (label) label.textContent = 'ONLINE';
-      if (sub)   sub.textContent   = 'stoper synchronizowany';
+      if (icon)  icon.textContent  = '⏱';
+      if (label) label.textContent = 'STOPER W PANELU';
+      if (sub)   sub.textContent   = 'sync między urządzeniami';
     }
   }
 }
