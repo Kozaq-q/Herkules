@@ -3995,7 +3995,7 @@ function drawPairsByKey(gender) {
 // Cała logika parowania w drawPairsByKey (klucz startowy 11DKPanc).
 
 function switchPairsTab(gender) {
-  if (_pairsActiveTab !== gender) _pairsStickyKeys.clear();
+  if (_pairsActiveTab !== gender) { _pairsStickyKeys.clear(); _pairsJustStartedKey = null; }
   _pairsActiveTab = gender;
   document.getElementById('ptr-pairs-M').style.display = gender === 'M' ? '' : 'none';
   document.getElementById('ptr-pairs-K').style.display = gender === 'K' ? '' : 'none';
@@ -4028,13 +4028,16 @@ function _updateLockAllBtn() {
 
 // Filtr widoku par: 'all' | 'running' | 'finished' | 'idle'
 let _pairsFilter = 'all';
-// Sticky pary — startowane przez sedziego w widoku z filtrem zostaja widoczne mimo zmiany stanu,
-// dopoki user sam nie przelaczy filtra/zakladki. Klucz: 'M_3', 'K_1', ...
+// Sticky pary — startowane/stopowane w aktualnym filtrze zostaja widoczne mimo zmiany stanu
+// (zapobiega "znikaniu spod palca"). Klucz: 'M_3', 'K_1', ...
 let _pairsStickyKeys = new Set();
+// "Wlasnie wystartowala" — tylko OSTATNIO wystartowana para; kazda kolejna akcja czyści
+let _pairsJustStartedKey = null;
 function setPairsFilter(f) {
   if (!['all','running','finished','idle'].includes(f)) f = 'all';
   _pairsFilter = f;
   _pairsStickyKeys.clear();
+  _pairsJustStartedKey = null;
   renderPairsView();
 }
 // Klasyfikacja stanu pary indywidualnej (running/finished/idle)
@@ -4131,9 +4134,10 @@ function renderPairsList(containerId, pairs, gender) {
     const aFinMs = _patrolEffectiveFinishMs(p.aId, run);
     const bFinMs = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
     const allFinished = started && aFinMs && bFinMs;
-    const isSticky = _pairsStickyKeys.has(p.gender + '_' + p.pairNum);
-    const stateCls = !started ? ' is-idle' : (allFinished ? ' is-finished' : ' is-running')
-                   + (isSticky ? ' is-just-started' : '');
+    const pairKey = p.gender + '_' + p.pairNum;
+    const isJustStarted = (_pairsJustStartedKey === pairKey);
+    const stateCls = (!started ? ' is-idle' : (allFinished ? ' is-finished' : ' is-running'))
+                   + (isJustStarted ? ' is-just-started' : '');
     // Czy jakikolwiek czas/DSQ wpisany w parze?
     const hasEntry =
       (p.aId && (state.times?.[p.aId]?.total || state.times?.[p.aId]?.osf || state.times?.[p.aId]?.hits !== undefined || isDsq(p.aId))) ||
@@ -4782,6 +4786,8 @@ function startPair(gender, pairNum) {
   if (_pairsFilter && _pairsFilter !== 'all' && _pairsFilter !== 'running') {
     _pairsStickyKeys.add(gender + '_' + pairNum);
   }
+  // "Wlasnie wystartowala" marker — tylko TA para; nadpisuje poprzedni
+  _pairsJustStartedKey = gender + '_' + pairNum;
   save();
   renderPairsView();
   if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
@@ -4797,6 +4803,7 @@ function resetPair(gender, pairNum) {
       if (state.times?.[id]?.total) delete state.times[id].total;
     });
   }
+  _pairsJustStartedKey = null;
   save();
   renderPairsView();
   if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
@@ -4819,6 +4826,7 @@ function stopAthlete(athleteId, gender, pairNum) {
     delete run.finishedAt[athleteId];
     if (state.times?.[athleteId]?.total) delete state.times[athleteId].total;
     if (state.times?.[athleteId]) state.times[athleteId].totalAt = nowMs(); // tombstone
+    _pairsJustStartedKey = null;
     save();
     renderPairsView();
     if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
@@ -4835,6 +4843,8 @@ function stopAthlete(athleteId, gender, pairNum) {
   if (_pairsFilter && _pairsFilter !== 'all' && _pairsFilter !== 'finished') {
     _pairsStickyKeys.add(gender + '_' + pairNum);
   }
+  // Kolejna akcja — czyść marker "własnie wystartowala"
+  _pairsJustStartedKey = null;
   save();
   renderPairsView();
   if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
@@ -6426,6 +6436,7 @@ function startTeamRunPair(pairNum) {
   if (_teamRunFilter && _teamRunFilter !== 'all' && _teamRunFilter !== 'running') {
     _teamRunStickyKeys.add(String(pairNum));
   }
+  _teamRunJustStartedKey = String(pairNum);
   save();
   _renderTeamRunActive();
   showToast('▶ Para drużyn ' + pairNum + ' wystartowała', 'success', 1800);
@@ -6441,6 +6452,7 @@ function resetTeamRunPair(pairNum) {
       if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
     });
   }
+  _teamRunJustStartedKey = null;
   save();
   _renderTeamRunActive();
   showToast('↺ Reset pary drużyn ' + pairNum, 'info', 1500);
@@ -6459,6 +6471,7 @@ function stopTeamRunTeam(teamName, pairNum) {
       delete state.teamRun[teamName].biegSec;
       state.teamRun[teamName].biegSecAt = nowMs();
     }
+    _teamRunJustStartedKey = null;
     save();
     _renderTeamRunActive();
     showToast('↺ Cofnięto stop ' + teamName, 'info', 1500);
@@ -6475,6 +6488,8 @@ function stopTeamRunTeam(teamName, pairNum) {
   if (_teamRunFilter && _teamRunFilter !== 'all' && _teamRunFilter !== 'finished') {
     _teamRunStickyKeys.add(String(pairNum));
   }
+  // Kolejna akcja — czyść marker "własnie wystartowala"
+  _teamRunJustStartedKey = null;
   save();
   _renderTeamRunActive();
   showToast('■ STOP ' + teamName + ': ' + _formatTeamSec(biegSec), 'success', 1500);
@@ -6571,10 +6586,12 @@ function bumpTeamRunShot(team, delta) {
 // Filtr widoku biegu drużynowego + sticky (analogicznie do indywidualnego)
 let _teamRunFilter = 'all';
 let _teamRunStickyKeys = new Set();
+let _teamRunJustStartedKey = null;
 function setTeamRunFilter(f) {
   if (!['all','running','finished','idle'].includes(f)) f = 'all';
   _teamRunFilter = f;
   _teamRunStickyKeys.clear();
+  _teamRunJustStartedKey = null;
   renderTeamRunList();
 }
 function _classifyTeamPair(p) {
@@ -6657,9 +6674,9 @@ function renderTeamRunList() {
     const aFin = started && run.finishedAt?.[p.aTeam];
     const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
     const allFinished = started && aFin && bFin;
-    const isSticky = _teamRunStickyKeys.has(String(p.pairNum));
+    const isJustStarted = (_teamRunJustStartedKey === String(p.pairNum));
     const stateCls = (!started ? ' is-idle' : (allFinished ? ' is-finished' : ' is-running'))
-                   + (isSticky ? ' is-just-started' : '');
+                   + (isJustStarted ? ' is-just-started' : '');
 
     const pairKeyArg = JSON.stringify(p.pairNum);
     const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
