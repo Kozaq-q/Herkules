@@ -74,8 +74,12 @@ button { font:inherit; cursor:pointer; }
 .tile.m .label { color:var(--male); }
 .tile.k { border-color:rgba(224,96,176,.35); }
 .tile.k .label { color:var(--female); }
-.tile.team { border-color:rgba(240,144,80,.35); grid-column:1 / -1; }
+.tile.team { border-color:rgba(240,144,80,.35); }
 .tile.team .label { color:var(--orange); }
+.tile.teamrun { border-color:rgba(96,168,232,.35); }
+.tile.teamrun .label { color:#60a8e8; }
+.tile.overall { border-color:rgba(232,212,77,.5); background:rgba(232,212,77,.04); grid-column:1 / -1; }
+.tile.overall .label { color:var(--accent); }
 /* progress indicator na kafelku — kropka i licznik */
 .tile-progress { display:flex; gap:4px; align-items:center; margin-top:4px; font-family:var(--font-m); font-size:10px; color:var(--text3); }
 .tile-progress .dot { width:6px; height:6px; border-radius:50%; background:var(--text3); }
@@ -268,13 +272,16 @@ const urlKey = URL_PARAMS.get('key') || '';
 
 function ensureStateDefaults() {
   if (!state) return;
-  if (!state.athletes) state.athletes = [];
-  if (!state.pairs)    state.pairs = [];
-  if (!state.times)    state.times = {};
-  if (!state.disq)     state.disq = {};
-  if (!state.runs)     state.runs = {};
-  if (!state.cfg)      state.cfg = {};
-  if (!state.setup)    state.setup = {};
+  if (!state.athletes)    state.athletes = [];
+  if (!state.pairs)       state.pairs = [];
+  if (!state.times)       state.times = {};
+  if (!state.disq)        state.disq = {};
+  if (!state.runs)        state.runs = {};
+  if (!state.cfg)         state.cfg = {};
+  if (!state.setup)       state.setup = {};
+  if (!state.teamRun)     state.teamRun = {};
+  if (!state.teamRunPairs) state.teamRunPairs = [];
+  if (!state.teamRuns)    state.teamRuns = {};
 }
 
 async function loadState() {
@@ -471,6 +478,36 @@ function formatRunTime(ms) {
   return m + ':' + sStr;
 }
 function getRun(g, n) { return state.runs?.[g + '_' + n] || null; }
+// Format/parse float seconds dla biegu drużynowego (m:ss.SS)
+function _formatTeamSec(sec) {
+  if (sec == null || sec === '') return '';
+  const n = parseFloat(sec);
+  if (!Number.isFinite(n)) return '';
+  const m = Math.floor(n / 60);
+  const s = n - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+// Punkty biegu drużynowego (regulamin 11DKPanc): biegSec − (480−2×osfSec) − strzel×2 + eliminowani×100
+function calcTeamRunPoints(tr) {
+  if (!tr) return null;
+  if (tr.dsq) return null;
+  const biegSec = parseFloat(tr.biegSec);
+  const osfSec  = parseFloat(tr.osfSec);
+  if (!Number.isFinite(biegSec) || biegSec <= 0) return null;
+  if (!Number.isFinite(osfSec)  || osfSec <= 0)  return null;
+  const shotPts = parseInt(tr.shotPoints) || 0;
+  const elim    = parseInt(tr.eliminated) || 0;
+  return Math.round(biegSec - (480 - 2 * osfSec) - shotPts * 2 + elim * 100);
+}
+// Suma top 3 M dla drużyny w biegu ind. (klasyfikacja zespołowa); zwraca null gdy <3 sklasyfikowanych M
+function getTeamIndTop3M(teamName) {
+  const rows = (state.athletes || [])
+    .filter(a => a.gender === 'M' && (a.team || '').trim() === teamName)
+    .map(buildRow);
+  const scoringMen = rows.filter(r => r.points !== null && !r.dsq).sort((a, b) => a.points - b.points);
+  if (scoringMen.length < 3) return null;
+  return scoringMen.slice(0, 3).reduce((s, r) => s + r.points, 0);
+}
 function effectiveFinishMs(id, run) {
   if (!id || !run) return null;
   if (run.finishedAt && run.finishedAt[id]) return run.finishedAt[id];
@@ -553,7 +590,9 @@ function renderMenus() {
     rg.innerHTML =
       tileHTML('result', 'ind', 'M', 'm', '♂', 'Mężczyźni') +
       tileHTML('result', 'ind', 'K', 'k', '♀', 'Kobiety') +
-      tileHTML('result', 'team', null, 'team', '🛡', 'Drużynowa');
+      tileHTML('result', 'team', null, 'team', '🛡', 'Drużynowa (top 3 M)') +
+      tileHTML('result', 'teamrun', null, 'teamrun', '🏃', 'Bieg drużynowy') +
+      tileHTML('result', 'overall', null, 'overall', '🏆', 'Generalna');
   }
 }
 
@@ -562,8 +601,10 @@ function renderDetail() {
   if (!_currentDetail) return;
   const { kind, key, gender } = _currentDetail;
   document.getElementById('detail-filter').innerHTML = '';
-  if (kind === 'list')   { renderListPairs(gender); return; }
-  if (key === 'team')    { renderTeamClassification(); return; }
+  if (kind === 'list')    { renderListPairs(gender); return; }
+  if (key === 'team')     { renderTeamClassification(); return; }
+  if (key === 'teamrun')  { renderTeamRunResults(); return; }
+  if (key === 'overall')  { renderOverallClassification(); return; }
   renderRanking(gender);
 }
 
@@ -810,6 +851,121 @@ function renderTeamClassification() {
       '<div class="klas-pos ' + posCls + '">' + medal + '</div>' +
       '<div class="klas-info"><div class="klas-name">' + esc(t.name) + '</div><div class="klas-detail">' + esc(detail) + '</div></div>' +
       '<div><div class="klas-score">' + t.total + '</div><div class="klas-score-lbl">pkt</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+// ════════════ BIEG DRUŻYNOWY (patrol 3-osobowy) ════════════
+function renderTeamRunResults() {
+  document.getElementById('detail-title').textContent = 'Bieg drużynowy';
+  // Lista drużyn — z teamRun (wpisy) + drużyn ze state.athletes (na wypadek braku wpisu)
+  const allTeams = new Set();
+  (state.athletes || []).forEach(a => { const t = (a.team||'').trim(); if (t) allTeams.add(t); });
+  Object.keys(state.teamRun || {}).forEach(t => { if (t) allTeams.add(t); });
+  const rows = [...allTeams].map(name => {
+    const tr = (state.teamRun || {})[name] || {};
+    const pts = calcTeamRunPoints(tr);
+    return { name, tr, pts };
+  }).filter(r => {
+    // Pokaż tylko drużyny z jakimkolwiek wpisem (czas/OSF/strzel/elim/DSQ)
+    return r.tr.biegSec || r.tr.osfSec || r.tr.shotPoints !== undefined || r.tr.eliminated || r.tr.dsq;
+  });
+  // Sortuj: sklasyfikowane (pts != null) wg pts ASC, niesklasyfikowane potem, DSQ na dół
+  rows.sort((a, b) => {
+    const aTier = a.tr.dsq ? 2 : (a.pts === null ? 1 : 0);
+    const bTier = b.tr.dsq ? 2 : (b.pts === null ? 1 : 0);
+    if (aTier !== bTier) return aTier - bTier;
+    if (aTier === 0) return a.pts - b.pts;
+    return a.name.localeCompare(b.name);
+  });
+  document.getElementById('detail-count').textContent = rows.length ? (rows.length + ' drużyn') : '';
+  if (!rows.length) {
+    document.getElementById('detail-body').innerHTML = '<div class="empty"><div class="emoji">🏃</div><div class="msg2">Brak wpisanych wyników biegu drużynowego.</div></div>';
+    return;
+  }
+  let rank = 1;
+  document.getElementById('detail-body').innerHTML = rows.map(r => {
+    const eligible = !r.tr.dsq && r.pts !== null;
+    const myRank = eligible ? rank++ : null;
+    const cls = ['klas-row'];
+    let medal;
+    if (r.tr.dsq) { cls.push('dsq'); medal = 'DSQ'; }
+    else if (myRank === 1) { cls.push('p1'); medal = '🥇'; }
+    else if (myRank === 2) { cls.push('p2'); medal = '🥈'; }
+    else if (myRank === 3) { cls.push('p3'); medal = '🥉'; }
+    else if (myRank) medal = myRank;
+    else medal = '—';
+    const posCls = (myRank > 3 || !myRank || r.tr.dsq) ? 'num' : '';
+    const parts = [];
+    if (r.tr.biegSec) parts.push('Bieg ' + _formatTeamSec(r.tr.biegSec));
+    if (r.tr.osfSec)  parts.push('OSF ' + _formatTeamSec(r.tr.osfSec));
+    if (r.tr.shotPoints !== undefined && r.tr.shotPoints !== null) parts.push('Strzel ' + r.tr.shotPoints + '/150');
+    if (r.tr.eliminated) parts.push('Elim ' + r.tr.eliminated + ' (+' + (r.tr.eliminated * 100) + ')');
+    const detail = parts.length ? parts.join(' · ') : '—';
+    const scoreVal = r.tr.dsq ? 'DSQ' : (r.pts !== null ? r.pts : '—');
+    const scoreLbl = r.tr.dsq ? '' : (r.pts !== null ? 'pkt' : 'niepełne');
+    return '<div class="' + cls.join(' ') + '">' +
+      '<div class="klas-pos ' + posCls + '">' + medal + '</div>' +
+      '<div class="klas-info"><div class="klas-name">' + esc(r.name) + '</div><div class="klas-detail">' + esc(detail) + '</div></div>' +
+      '<div><div class="klas-score">' + scoreVal + '</div><div class="klas-score-lbl">' + scoreLbl + '</div></div>' +
+    '</div>';
+  }).join('');
+}
+
+// ════════════ KLASYFIKACJA GENERALNA (ind. top 3 M + bieg drużynowy) ════════════
+// Regulamin 11DKPanc: drużyna bez biegu drużynowego dostaje +1200 pkt karnych ("600 wyjściowych podwojonych")
+function renderOverallClassification() {
+  document.getElementById('detail-title').textContent = 'Klasyfikacja generalna';
+  // Zbierz wszystkie drużyny które mają ≥3 M sklasyfikowanych ind. LUB mają wpis w teamRun
+  const allTeams = new Set();
+  (state.athletes || []).forEach(a => { const t = (a.team||'').trim(); if (t) allTeams.add(t); });
+  Object.keys(state.teamRun || {}).forEach(t => { if (t) allTeams.add(t); });
+  const PENALTY_NO_TEAM_RUN = 1200;
+  const rows = [...allTeams].map(name => {
+    const indPts = getTeamIndTop3M(name);  // null gdy <3 M sklasyfikowanych
+    const tr = (state.teamRun || {})[name] || {};
+    const trPts = calcTeamRunPoints(tr);   // null gdy niepelne / DSQ
+    return { name, indPts, trPts, trDsq: !!tr.dsq };
+  }).filter(r => r.indPts !== null || r.trPts !== null || r.trDsq);
+  // Eligible = ma ind. top 3 M (bo bez tego nie ma fundamentu). Bieg druzynowy: jesli brak → +1200 pkt karne.
+  const ranked = rows.map(r => {
+    if (r.indPts === null) return { ...r, total: null, eligible: false };
+    const trEffective = (r.trPts !== null) ? r.trPts : PENALTY_NO_TEAM_RUN;
+    return { ...r, total: r.indPts + trEffective, eligible: true, noTeamRun: r.trPts === null };
+  });
+  ranked.sort((a, b) => {
+    if (a.eligible !== b.eligible) return a.eligible ? -1 : 1;
+    if (a.eligible) return a.total - b.total; // tie-break: niższy wynik biegu drużynowego (przyjmijmy nieświadomy regulamin)
+    return a.name.localeCompare(b.name);
+  });
+  document.getElementById('detail-count').textContent = ranked.length ? (ranked.length + ' drużyn') : '';
+  if (!ranked.length) {
+    document.getElementById('detail-body').innerHTML = '<div class="empty"><div class="emoji">🏆</div><div class="msg2">Brak drużyn sklasyfikowanych — potrzebne min. 3 sklasyfikowanych M w biegu ind.</div></div>';
+    return;
+  }
+  let rank = 1;
+  document.getElementById('detail-body').innerHTML = ranked.map(r => {
+    const myRank = r.eligible ? rank++ : null;
+    const cls = ['klas-row'];
+    let medal;
+    if (myRank === 1) { cls.push('p1'); medal = '🥇'; }
+    else if (myRank === 2) { cls.push('p2'); medal = '🥈'; }
+    else if (myRank === 3) { cls.push('p3'); medal = '🥉'; }
+    else if (myRank) medal = myRank;
+    else medal = '—';
+    const posCls = (!myRank || myRank > 3) ? 'num' : '';
+    const detailParts = [];
+    if (r.indPts !== null) detailParts.push('Ind. ' + r.indPts);
+    else detailParts.push('Ind. <3 M');
+    if (r.trPts !== null) detailParts.push('Bieg ' + r.trPts);
+    else if (r.trDsq)     detailParts.push('Bieg DSQ');
+    else                  detailParts.push('Bieg — (+' + PENALTY_NO_TEAM_RUN + ' karny)');
+    const detail = detailParts.join(' · ');
+    const scoreVal = r.total !== null ? r.total : '—';
+    return '<div class="' + cls.join(' ') + '">' +
+      '<div class="klas-pos ' + posCls + '">' + medal + '</div>' +
+      '<div class="klas-info"><div class="klas-name">' + esc(r.name) + '</div><div class="klas-detail">' + detail + '</div></div>' +
+      '<div><div class="klas-score">' + scoreVal + '</div><div class="klas-score-lbl">' + (r.eligible ? 'suma' : 'niepełna') + '</div></div>' +
     '</div>';
   }).join('');
 }
