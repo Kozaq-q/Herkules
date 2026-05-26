@@ -177,15 +177,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-tiles-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 @media (max-width: 1100px) { .ptr-tiles-row { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px)  { .ptr-tiles-row { grid-template-columns: 1fr; } }
-.ptr-mode-tile { aspect-ratio: 1 / 1; min-height: 100px; background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-align: center; transition: all .15s; font-family: var(--font-b); }
+.ptr-mode-tile { aspect-ratio: 1 / 1; min-height: 100px; background: var(--bg2); border: 2px solid var(--border); border-radius: 10px; cursor: pointer; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-align: center; transition: all .15s; font-family: var(--font-b); color: var(--text1); }
 .ptr-mode-tile:hover { border-color: var(--text3); background: var(--bg3); }
+.ptr-mode-tile:not(.active-offline) { border-color: rgba(76,175,130,.45); background: linear-gradient(135deg, rgba(76,175,130,.08), rgba(76,175,130,.02)); }
+.ptr-mode-tile:not(.active-offline):hover { border-color: var(--green); background: linear-gradient(135deg, rgba(76,175,130,.14), rgba(76,175,130,.04)); }
 .ptr-mode-tile.active-offline { border-color: var(--orange); background: linear-gradient(135deg, rgba(232,148,77,.15), rgba(232,148,77,.04)); box-shadow: 0 2px 14px rgba(232,148,77,.18); }
 .ptr-mode-tile.active-offline .ptr-mode-label { color: var(--orange); }
 .ptr-mode-tile.placeholder { opacity: .5; cursor: default; border-style: dashed; }
 .ptr-mode-tile.placeholder:hover { border-color: var(--border); background: var(--bg2); }
 .ptr-mode-icon { font-size: 28px; line-height: 1; }
-.ptr-mode-label { font-family: var(--font-h); font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--green); }
-.ptr-mode-sub { font-size: 10px; color: var(--text3); line-height: 1.25; padding: 0 4px; }
+.ptr-mode-label { font-family: var(--font-h); font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--green); line-height: 1.15; }
+.ptr-mode-sub { font-size: 10px; color: var(--text2); line-height: 1.3; padding: 0 4px; }
 .ptr-mode-tile:not(.active-offline) .ptr-mode-label { color: var(--green); }
 
 /* Sędzia startu / Status — rozwijane kafelki (zostają w swojej kolumnie) */
@@ -740,7 +742,7 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
         <div style="position:relative;">
           <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('offline')" title="Co to robi?">?</button>
           <div class="ptr-help-popover" id="ptr-help-offline">
-            <strong>Tryb pomiaru czasu.</strong> Domyślnie <strong>STOPER W PANELU</strong> — sędziowie startują parę przyciskiem w aplikacji i zatrzymują meta, czas jest synchronizowany między urządzeniami. Przełącz na <strong>STOPER FIZYCZNY</strong> gdy chcecie mierzyć ręcznymi stoperami i wpisywać czasy z palca — przyciski START/STOP w kartach par znikają, sędziowie wpisują OSF i Łączny ręcznie. <em>Uwaga:</em> oba tryby normalnie wysyłają dane przez sieć — to NIE jest tryb bez internetu.
+            <strong>STOPER W PANELU</strong> — przyciski START/STOP w apce, czas sync na żywo (potrzebny stabilny internet u wszystkich sędziów). <strong>STOPER FIZYCZNY</strong> — mierzcie ręcznymi stoperami i wpisujcie czasy ręcznie. Dobry też gdy któryś sędzia ma słaby internet: jego wpisy zapiszą się lokalnie i zsynchronizują gdy sieć wróci.
           </div>
           <button id="ptr-tile-offline" onclick="toggleOfflineMode()" class="ptr-mode-tile" style="width:100%;" title="Kliknij żeby przełączyć tryb pomiaru">
             <span class="ptr-mode-icon">⏱</span>
