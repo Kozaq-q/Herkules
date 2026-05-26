@@ -5340,15 +5340,23 @@ function _scrollAndHighlight(selectors) {
 // ─── B) TOAST detection: ktoś wystartował parę ─────────────────
 const _ptrPrevRunStarted     = {}; // {key: startedAt} — poprzednie znane statusy (ind)
 const _ptrPrevTeamRunStarted = {}; // {key: startedAt} — poprzednie znane statusy (drużyny)
+// Pierwsze wywolanie po reload — tylko inicjalizuj snapshot, BEZ toastów (inaczej wszystkie istniejace starty zostalyby uznane za "wlasnie wystartowane")
+let _ptrPrevInitialized = false;
+// Maksymalny wiek startu, ktory emituje toast (świeży start = recently — wszystko starsze ignorujemy nawet po init)
+const _PTR_TOAST_FRESH_MS = 30 * 1000;
 function _checkPairStartTransitions() {
   if (!state) return;
   const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'META';
+  const initRun = !_ptrPrevInitialized;
   // Indywidualne
   Object.keys(state.runs || {}).forEach(key => {
     const r = state.runs[key];
     const prevStart = _ptrPrevRunStarted[key];
     const nowStart = r && r.startedAt;
-    if (nowStart && !prevStart) {
+    // Pierwsze wywolanie po reload — pomin emisje toastow (tylko zapis snapshotu)
+    // Albo: start jest stary (> 30s) — ignoruj jako historyczny
+    const isFresh = nowStart && (Date.now() - nowStart) < _PTR_TOAST_FRESH_MS;
+    if (nowStart && !prevStart && !initRun && isFresh) {
       const recentlyStartedSelf = (Date.now() - nowStart) < 2000 && (role === 'STARTER' || role === 'ADMIN');
       if (!recentlyStartedSelf) {
         const [gender, pairNumStr] = key.split('_');
@@ -5368,7 +5376,8 @@ function _checkPairStartTransitions() {
     const r = state.teamRuns[key];
     const prevStart = _ptrPrevTeamRunStarted[key];
     const nowStart = r && r.startedAt;
-    if (nowStart && !prevStart) {
+    const isFresh = nowStart && (Date.now() - nowStart) < _PTR_TOAST_FRESH_MS;
+    if (nowStart && !prevStart && !initRun && isFresh) {
       const recentlyStartedSelf = (Date.now() - nowStart) < 2000 && (role === 'STARTER' || role === 'ADMIN');
       if (!recentlyStartedSelf) {
         const p = (state.teamRunPairs || []).find(x => String(x.pairNum) === String(key));
@@ -5388,6 +5397,7 @@ function _checkPairStartTransitions() {
     }
     _ptrPrevTeamRunStarted[key] = nowStart || 0;
   });
+  _ptrPrevInitialized = true;
 }
 
 // Krótki pip — Web Audio API
