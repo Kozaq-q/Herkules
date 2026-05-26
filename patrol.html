@@ -242,10 +242,54 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .btn-danger:hover { background: var(--red); color: #fff; border-color: var(--red); }
 
 /* PAIR CARDS */
-.pair-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; transition: border-color .15s; }
+.pair-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; transition: border-color .15s, background .15s; border-left: 3px solid var(--border); }
 .pair-card.pair-locked { border-color: var(--orange); background: rgba(76,175,130,.04); }
-.pair-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pair-card.is-running { border-left-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.04), var(--bg2) 35%); }
+.pair-card.is-finished { border-left-color: var(--green); background: linear-gradient(to right, rgba(76,175,130,.03), var(--bg2) 35%); }
+.pair-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .pair-num { font-family: var(--font-h); font-size: 18px; font-weight: 800; color: var(--text1); min-width: 28px; text-align: center; }
+
+/* Mini-stoper + przyciski START/STOP integrowane w karty par */
+.pair-mini-timer { display: inline-block; font-family: var(--font-m); font-size: 11px; font-weight: 600; color: var(--orange); margin-left: 6px; min-width: 48px; letter-spacing: .5px; font-variant-numeric: tabular-nums; }
+.pair-mini-timer.is-finished { color: var(--green); }
+.pair-mini-timer.is-idle { color: var(--text3); opacity: .55; }
+.pair-mini-start { background: transparent; border: 1px solid rgba(232,148,77,.55); color: var(--orange); font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 3px 10px; border-radius: var(--radius); cursor: pointer; transition: background .12s, color .12s; }
+.pair-mini-start:hover { background: rgba(232,148,77,.12); }
+.pair-mini-reset { background: transparent; border: 1px solid var(--border2); color: var(--text3); font-size: 10px; padding: 3px 8px; border-radius: var(--radius); cursor: pointer; }
+.pair-mini-reset:hover { background: var(--bg3); color: var(--text2); }
+.pair-mini-stop { background: transparent; border: 1px solid rgba(224,85,85,.5); color: var(--red); font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: var(--radius); cursor: pointer; opacity: .9; }
+.pair-mini-stop:hover { background: rgba(224,85,85,.12); opacity: 1; }
+.pair-mini-undo { background: transparent; border: 1px solid var(--border2); color: var(--text3); font-size: 10px; padding: 3px 7px; border-radius: var(--radius); cursor: pointer; }
+.pair-mini-undo:hover { color: var(--text2); background: var(--bg3); }
+.pair-chip-auto { background: transparent; border: 1px solid var(--border2); color: var(--orange); font-family: var(--font-m); font-size: 10px; padding: 2px 7px; border-radius: var(--radius); cursor: pointer; white-space: nowrap; line-height: 1.5; }
+.pair-chip-auto:hover { background: rgba(232,148,77,.06); }
+.pair-chip-auto.is-imminent { border-color: rgba(232,148,77,.5); background: rgba(232,148,77,.08); }
+.pair-chip-auto.is-past { border-color: rgba(224,85,85,.5); color: var(--red); }
+.pair-chip-auto.is-readonly { cursor: default; }
+.pair-chip-countdown { font-family: var(--font-m); font-size: 10px; color: var(--orange); white-space: nowrap; }
+.pair-chip-countdown.is-imminent { color: var(--red); font-weight: 700; }
+.pair-start-stamp { font-family: var(--font-m); font-size: 10px; color: var(--text3); white-space: nowrap; }
+
+/* Filtr widoku par (Wszystkie/Biegnące/Skończone/Oczekujące) */
+.ptr-pair-filter { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 12px 0; }
+.ptr-pair-filter button { background: transparent; border: 1px solid var(--border2); color: var(--text3); font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 5px 12px; border-radius: var(--radius); cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
+.ptr-pair-filter button:hover { color: var(--text1); }
+.ptr-pair-filter button.active { background: var(--bg3); color: var(--text1); border-color: var(--text2); }
+.ptr-pair-filter button .count { color: var(--text3); font-weight: 400; margin-left: 5px; font-size: 9px; }
+.ptr-pair-filter button.active .count { color: var(--text2); }
+.ptr-pair-filter-empty { text-align: center; padding: 26px 20px; color: var(--text3); font-size: 12px; background: var(--bg3); border: 1px dashed var(--border2); border-radius: var(--radius); }
+
+/* W trybie offline ukryj integrowany stoper — wpisywanie ręczne i tak działa */
+body.ptr-offline-mode .pair-mini-timer,
+body.ptr-offline-mode .pair-mini-start,
+body.ptr-offline-mode .pair-mini-reset,
+body.ptr-offline-mode .pair-mini-stop,
+body.ptr-offline-mode .pair-mini-undo,
+body.ptr-offline-mode .pair-chip-auto,
+body.ptr-offline-mode .pair-chip-countdown,
+body.ptr-offline-mode .pair-start-stamp { display: none !important; }
+body.ptr-offline-mode .pair-card.is-running,
+body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-left-color: var(--border); }
 .pair-athletes { display: flex; gap: 10px; align-items: stretch; }
 .pair-athlete { flex: 1; background: var(--bg3); border-radius: var(--radius); padding: 8px 10px; border: 1px solid var(--border); }
 .pair-vs { display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 14px; font-weight: 800; letter-spacing: 2px; color: var(--text3); padding: 0 8px; flex-shrink: 0; }
@@ -646,10 +690,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
   <nav class="nav">
     <button class="nav-tab active" onclick="showTab('setup')" id="tab-setup">⚙ Konfiguracja</button>
     <button class="nav-tab" onclick="showTab('athletes')" id="tab-athletes">👥 Zawodnicy</button>
-    <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🎲 Pary / wpisywanie</button>
-    <button class="nav-tab" onclick="showTab('timer')" id="tab-timer">⏱ Stoper</button>
-    <button class="nav-tab" onclick="showTab('team-run')" id="tab-team-run">🏃 Pary drużyn</button>
-    <button class="nav-tab" onclick="showTab('team-timer')" id="tab-team-timer">⏱ Stoper drużyn</button>
+    <button class="nav-tab" onclick="showTab('pairs')" id="tab-pairs">🏃 Bieg indywidualny</button>
+    <button class="nav-tab" onclick="showTab('team-run')" id="tab-team-run">🛡 Bieg drużynowy</button>
     <button class="nav-tab" onclick="showTab('results')" id="tab-results">🏆 Wyniki</button>
   </nav>
 
@@ -911,6 +953,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
               <div style="border-top:1px solid var(--border);padding-top:12px;">
                 <div style="font-size:11px;color:var(--orange);margin-bottom:10px;">⚠ Operacje destrukcyjne:</div>
                 <div style="display:flex;flex-direction:column;gap:6px;">
+                  <button class="btn" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;text-align:left;" onclick="emergencyResetRunning()" title="Zatrzymaj i zresetuj wszystkie biegnące pary (awaryjne)">↺ Awaryjny reset biegnących par</button>
                   <button class="btn" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;text-align:left;" onclick="resetAllTimes()">↺ Usuń wszystkie wyniki</button>
                   <button class="btn" style="color:var(--orange);border-color:rgba(232,148,77,.35);justify-content:flex-start;text-align:left;" onclick="clearAllAthletes()">🗑 Wyczyść listę zawodników</button>
                   <button class="btn" style="color:var(--red);border-color:rgba(224,85,85,.35);justify-content:flex-start;text-align:left;" onclick="resetAll()">⚠ Reset wszystkich danych</button>
@@ -981,57 +1024,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           Synchronizowany stoper wyłączony. Mierzcie czasy <strong>fizycznymi stoperami</strong> i wpisujcie poniżej do kafelków OSF i Łącznie. Zapisy lokalne synchronizują się z chmurą gdy sieć wróci.
         </div>
       </div>
-      <div class="card mb-12">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🎲 Pary biegu patrolowego</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="openDrawModal()">⚙ Losuj pary</button>
-            <button class="btn" onclick="toggleLockAllPatrolPairs()" id="ptr-lockall-btn" title="Zablokuj / odblokuj wszystkie pary aktywnej płci">🔒</button>
-          </div>
-        </div>
-        <div id="ptr-no-pairs-alert" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);">
-          Brak par. Kliknij <strong>⚙ Losuj pary</strong> aby wygenerować.
-        </div>
-        <div id="ptr-tabs" style="display:none;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);">
-          <button id="ptr-tab-M" onclick="switchPairsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
-          <button id="ptr-tab-K" onclick="switchPairsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
-        </div>
-        <div id="ptr-pairs-M"></div>
-        <div id="ptr-pairs-K" style="display:none;"></div>
-      </div>
-    </div>
 
-    <!-- STOPER -->
-    <div class="page" id="page-timer">
-      <!-- Pasek roli -->
-      <div class="card mb-12" style="padding:14px 18px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div style="font-family:var(--font-h);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);">Twoja rola:</div>
-            <div style="display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:3px;">
-              <button id="role-btn-STARTER" onclick="setPtrRole('STARTER')" class="role-btn">🎬 Starter</button>
-              <button id="role-btn-OSF" onclick="setPtrRole('OSF')" class="role-btn">🏃 OSF</button>
-              <button id="role-btn-META" onclick="setPtrRole('META')" class="role-btn">🎯 Meta</button>
-              <button id="role-btn-ADMIN" onclick="setPtrRole('ADMIN')" class="role-btn">👑 Admin</button>
-            </div>
-            <div style="font-size:11px;color:var(--text3);line-height:1.4;" id="role-desc">—</div>
-          </div>
-          <div id="timer-start-link-hint" style="font-size:11px;color:var(--text3);line-height:1.4;">
-            Sędzia startu: użyj osobnej aplikacji (link w Ustawieniach zaawansowanych)
-          </div>
-        </div>
-      </div>
-
-      <!-- 🎬 KAFELEK AUTO-START — tylko STARTER i ADMIN -->
+      <!-- 🎬 KAFELEK AUTO-START — tylko STARTER i ADMIN; sterowane wcześniej z zakładki Stoper, teraz tutaj -->
       <div class="card mb-12" id="auto-start-card" style="display:none;background:linear-gradient(to right, rgba(232,148,77,.04), var(--bg2) 30%);border-left:4px solid var(--orange);padding:10px 16px;">
-        <!-- Pasek zwiniętej karty (zawsze widoczny) -->
         <button id="auto-start-toggle" onclick="toggleAutoStartCard()" style="width:100%;background:none;border:none;display:flex;align-items:center;gap:10px;cursor:pointer;padding:0;text-align:left;color:var(--text2);">
           <span style="font-size:16px;">⏰</span>
           <span style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);">Auto-start harmonogram</span>
           <span style="font-size:11px;color:var(--text3);flex:1;">— ustaw godzinę i interwał startów</span>
           <span id="auto-start-arrow" style="font-size:12px;color:var(--text3);">▶</span>
         </button>
-        <!-- Rozwinięta zawartość -->
         <div id="auto-start-body" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
           <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
             <div>
@@ -1047,30 +1048,34 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
           </div>
           <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">
             Pierwsza para o <strong id="auto-start-preview-first">10:00:00</strong>, każda kolejna co <strong id="auto-start-preview-interval">60</strong> s.
-            Można potem zmienić godzinę konkretnej pary klikając ✏ przy niej.
+            Można potem zmienić godzinę konkretnej pary klikając ⏰ przy niej.
           </div>
         </div>
       </div>
 
-      <!-- Taby M / K + akcja awaryjna -->
-      <div id="timer-tabs-row" style="display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;border-bottom:2px solid var(--border);padding-bottom:0;flex-wrap:wrap;">
-        <div style="display:flex;gap:4px;">
-          <button id="timer-tab-M" onclick="switchTimerTab('M')" class="timer-tab" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
-          <button id="timer-tab-K" onclick="switchTimerTab('K')" class="timer-tab" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+      <div class="card mb-12">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Bieg indywidualny</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="openDrawModal()">⚙ Losuj pary</button>
+            <button class="btn" onclick="toggleLockAllPatrolPairs()" id="ptr-lockall-btn" title="Zablokuj / odblokuj wszystkie pary aktywnej płci">🔒</button>
+          </div>
         </div>
-        <button id="timer-emergency-reset" onclick="emergencyResetRunning()" style="display:none;background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;font-family:var(--font-h);letter-spacing:1px;text-transform:lowercase;padding:4px 10px;cursor:pointer;" title="Zatrzymaj i zresetuj wszystkie biegnące pary (awaryjne)">↺ reset biegnących</button>
+        <div id="ptr-no-pairs-alert" style="display:none;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;color:var(--text3);">
+          Brak par. Kliknij <strong>⚙ Losuj pary</strong> aby wygenerować.
+        </div>
+        <div id="ptr-tabs" style="display:none;gap:4px;margin-bottom:14px;border-bottom:2px solid var(--border);">
+          <button id="ptr-tab-M" onclick="switchPairsTab('M')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid var(--male);background:rgba(91,155,213,.1);color:var(--male);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♂ Mężczyźni</button>
+          <button id="ptr-tab-K" onclick="switchPairsTab('K')" style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;">♀ Kobiety</button>
+        </div>
+        <!-- Filtr widoku: wszystkie / biegnące / skończone / oczekujące -->
+        <div id="ptr-pairs-filter" class="ptr-pair-filter" style="display:none;"></div>
+        <div id="ptr-pairs-M"></div>
+        <div id="ptr-pairs-K" style="display:none;"></div>
       </div>
-
-      <div id="timer-empty" style="display:none;text-align:center;padding:50px 20px;color:var(--text3);border:1px dashed var(--border);border-radius:var(--radius);">
-        <div style="font-size:40px;opacity:.4;margin-bottom:10px;">🎲</div>
-        <div style="font-family:var(--font-h);font-size:16px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:6px;">Brak par</div>
-        <div style="font-size:12px;">Najpierw wylosuj pary w zakładce <strong>🎲 Pary / wpisywanie</strong>.</div>
-      </div>
-
-      <div id="timer-list"></div>
     </div>
 
-    <!-- 🏃 PARY DRUŻYN / wpisywanie — działa OFFLINE (manualne wpisywanie czasów) -->
+    <!-- 🛡 BIEG DRUŻYNOWY — wpisywanie wyników + zintegrowany stoper (online) -->
     <div class="page" id="page-team-run">
       <div id="team-offline-banner" style="display:none;background:rgba(232,148,77,.08);border:1px solid rgba(232,148,77,.45);border-left:4px solid var(--orange);border-radius:var(--radius);padding:12px 16px;margin-bottom:12px;line-height:1.5;">
         <div style="font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1px;color:var(--orange);margin-bottom:4px;">🔌 Tryb offline aktywny</div>
@@ -1080,34 +1085,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
       </div>
       <div class="card mb-12">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🏃 Pary drużyn / wpisywanie</div>
+          <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Bieg drużynowy</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-primary" onclick="generateTeamRunPairs()" title="Wygeneruj pary drużyn wg wyników indywidualnych — najsłabsi pierwsi">🔑 Generuj pary</button>
             <button class="btn" onclick="clearTeamRunPairs()" title="Wyczyść tylko pary (nie wyniki)" style="font-size:11px;padding:5px 10px;">✕ pary</button>
           </div>
         </div>
+        <!-- Filtr widoku: wszystkie / biegnące / skończone / oczekujące -->
+        <div id="ptr-team-run-filter" class="ptr-pair-filter" style="display:none;"></div>
         <div id="ptr-team-run-list"></div>
-      </div>
-    </div>
-
-    <!-- ⏱ STOPER DRUŻYNOWY — działa TYLKO ONLINE (synchronizowany) -->
-    <div class="page" id="page-team-timer">
-      <div class="card mb-12">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">⏱ Stoper drużynowy</div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;">
-            🌐 Wymaga połączenia · sync między urządzeniami
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
-          START pary uruchamia stoper. STOP dla każdej drużyny zapisuje czas biegu (wg roli). Wszystkie urządzenia widzą ten sam czas.
-        </div>
-        <div id="ptr-team-timer-empty" style="display:none;text-align:center;padding:50px 20px;color:var(--text3);border:1px dashed var(--border);border-radius:var(--radius);">
-          <div style="font-size:40px;opacity:.4;margin-bottom:10px;">🎲</div>
-          <div style="font-family:var(--font-h);font-size:16px;text-transform:uppercase;letter-spacing:2px;color:var(--text2);margin-bottom:6px;">Brak drużyn</div>
-          <div style="font-size:12px;">Najpierw dodaj zawodników z drużynami w zakładce <strong>👥 Zawodnicy</strong>.</div>
-        </div>
-        <div id="ptr-team-timer-list"></div>
       </div>
     </div>
 
@@ -1934,9 +1920,7 @@ function _applyRemoteStateNow(stateJson) {
       if (tabId === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
       else if (tabId === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); updateAthleteStats(); }
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
-      else if (tabId === 'timer' && typeof renderTimerView === 'function') renderTimerView();
       else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
-      else if (tabId === 'team-timer' && typeof renderTeamTimerView === 'function') renderTeamTimerView();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     // B) Wykryj nowy start pary od innego sędziego — toast + pip
@@ -1969,9 +1953,7 @@ function showTab(id) {
     if (id === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
     else if (id === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); if (typeof updateAthleteStats === 'function') updateAthleteStats(); }
     else if (id === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
-    else if (id === 'timer' && typeof renderTimerView === 'function') renderTimerView();
     else if (id === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
-    else if (id === 'team-timer' && typeof renderTeamTimerView === 'function') renderTeamTimerView();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
   // Odśwież sticky banner "BIEGNIE TERAZ" — widoczny tylko na zakładkach Pary/Stoper
@@ -2780,19 +2762,9 @@ function toggleOfflineMode() {
 
 function _applyOfflineMode() {
   const offline = !!(state.cfg && state.cfg.offlineMode);
-  // Pokaż/ukryj zakładkę Stoper (ind) i Stoper drużynowy
-  const tabTimer = document.getElementById('tab-timer');
-  if (tabTimer) tabTimer.style.display = offline ? 'none' : '';
-  const tabTeamTimer = document.getElementById('tab-team-timer');
-  if (tabTeamTimer) tabTeamTimer.style.display = offline ? 'none' : '';
-  // Jeśli aktualnie jesteśmy w stoperze a właśnie włączono offline → przerzuć do Pary
-  if (offline && document.getElementById('page-timer')?.classList.contains('active')) {
-    showTab('pairs');
-  }
-  if (offline && document.getElementById('page-team-timer')?.classList.contains('active')) {
-    showTab('team-run');
-  }
-  // Pokaż/ukryj banner w zakładkach Pary (ind) i Pary drużyn
+  // Body class — CSS ukrywa integrowany stoper w kartach par
+  document.body.classList.toggle('ptr-offline-mode', offline);
+  // Pokaż/ukryj banner w zakładkach Bieg indywidualny / Bieg drużynowy
   const banner = document.getElementById('offline-banner');
   if (banner) banner.style.display = offline ? 'block' : 'none';
   const tBanner = document.getElementById('team-offline-banner');
@@ -3998,7 +3970,6 @@ function drawPairsByKey(gender) {
   state.pairs = [...otherGenderPairs, ...combined];
   save();
   renderPairsView();
-  if (typeof renderTimerView === 'function') renderTimerView();
   showToast('🔑 Wygenerowano klucz startowy: ' + combined.length + ' par', 'success', 2500);
 }
 
@@ -4036,33 +4007,103 @@ function _updateLockAllBtn() {
   btn.style.borderColor = allLocked ? 'rgba(76,175,130,.4)' : 'var(--border2)';
 }
 
+// Filtr widoku par: 'all' | 'running' | 'finished' | 'idle'
+let _pairsFilter = 'all';
+function setPairsFilter(f) {
+  if (!['all','running','finished','idle'].includes(f)) f = 'all';
+  _pairsFilter = f;
+  renderPairsView();
+}
+// Klasyfikacja stanu pary indywidualnej (running/finished/idle)
+function _classifyIndPair(p) {
+  const run = getRun(p.gender, p.pairNum);
+  if (!run || !run.startedAt) return 'idle';
+  const aFin = _patrolEffectiveFinishMs(p.aId, run);
+  const bFin = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
+  if (aFin && bFin) return 'finished';
+  return 'running';
+}
+function _buildPairFilterBar(containerId, filter, counts, setFnName) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const total = counts.all || 0;
+  if (!total) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
+  const items = [
+    ['all',      'Wszystkie',   counts.all],
+    ['running',  'Biegnące',    counts.running],
+    ['finished', 'Skończone',   counts.finished],
+    ['idle',     'Oczekujące',  counts.idle],
+  ];
+  el.innerHTML = items.map(([k, label, n]) =>
+    '<button class="' + (filter === k ? 'active' : '') + '" onclick="' + setFnName + '(\'' + k + '\')" type="button">' +
+      esc(label) + '<span class="count">' + n + '</span>' +
+    '</button>'
+  ).join('');
+}
+
 function renderPairsView() {
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  // Kafelek auto-start widoczny tylko dla STARTER / ADMIN
+  const autoStartCard = document.getElementById('auto-start-card');
+  if (autoStartCard) autoStartCard.style.display = (role === 'STARTER' || role === 'ADMIN') ? '' : 'none';
+  // Update podglądu w kafelku auto-start
+  const f = document.getElementById('auto-start-first');
+  const i = document.getElementById('auto-start-interval');
+  const pf = document.getElementById('auto-start-preview-first');
+  const pi = document.getElementById('auto-start-preview-interval');
+  if (f && pf) pf.textContent = f.value;
+  if (i && pi) pi.textContent = i.value;
   const hasPairs = state.pairs.length > 0;
   document.getElementById('ptr-no-pairs-alert').style.display = hasPairs ? 'none' : 'block';
   document.getElementById('ptr-tabs').style.display = hasPairs ? 'flex' : 'none';
   const mPairs = state.pairs.filter(p => p.gender === 'M').sort((a,b) => a.pairNum - b.pairNum);
   const kPairs = state.pairs.filter(p => p.gender === 'K').sort((a,b) => a.pairNum - b.pairNum);
-  renderPairsList('ptr-pairs-M', mPairs, 'M');
-  renderPairsList('ptr-pairs-K', kPairs, 'K');
   // Aktywna zakładka (domyślnie M, ale jeśli nie ma M to K)
-  if (!hasPairs) return;
   const hasM = mPairs.length > 0;
   const hasK = kPairs.length > 0;
   if (_pairsActiveTab === 'M' && !hasM && hasK) _pairsActiveTab = 'K';
   if (_pairsActiveTab === 'K' && !hasK && hasM) _pairsActiveTab = 'M';
+  const activePairs = (_pairsActiveTab === 'M') ? mPairs : kPairs;
+  // Liczniki dla filtra (per aktywna płeć)
+  const counts = { all: activePairs.length, running: 0, finished: 0, idle: 0 };
+  activePairs.forEach(p => { counts[_classifyIndPair(p)]++; });
+  _buildPairFilterBar('ptr-pairs-filter', _pairsFilter, counts, 'setPairsFilter');
+  renderPairsList('ptr-pairs-M', mPairs, 'M');
+  renderPairsList('ptr-pairs-K', kPairs, 'K');
+  if (!hasPairs) return;
   switchPairsTab(_pairsActiveTab);
+  // Uruchom ticker (mini-stoper w kartach par)
+  if (_timerTickInterval) clearInterval(_timerTickInterval);
+  _timerTickInterval = setInterval(tickTimers, 100);
+  tickTimers();
 }
 
 function renderPairsList(containerId, pairs, gender) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!pairs.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Brak par tej płci.</div>'; return; }
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const canStart = (role === 'STARTER' || role === 'ADMIN');
   const total = pairs.length;
-  el.innerHTML = pairs.map((p, idx) => {
+  // Filtr wg statusu pary
+  const filtered = pairs.filter(p => _pairsFilter === 'all' ? true : _classifyIndPair(p) === _pairsFilter);
+  if (!filtered.length) {
+    const lbl = ({running:'biegnących', finished:'skończonych', idle:'oczekujących'})[_pairsFilter] || '';
+    el.innerHTML = '<div class="ptr-pair-filter-empty">Brak ' + lbl + ' par w tej kategorii.</div>';
+    return;
+  }
+  el.innerHTML = filtered.map((p, idx) => {
     const isFirstP = p.pairNum === 1;
     const isLastP = p.pairNum === total;
     const isSolo = !p.aId || !p.bId;
     const locked = isPairLocked(gender, p.pairNum);
+    const run = getRun(gender, p.pairNum);
+    const started = !!(run && run.startedAt);
+    const aFinMs = _patrolEffectiveFinishMs(p.aId, run);
+    const bFinMs = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
+    const allFinished = started && aFinMs && bFinMs;
+    const stateCls = !started ? '' : (allFinished ? ' is-finished' : ' is-running');
     // Czy jakikolwiek czas/DSQ wpisany w parze?
     const hasEntry =
       (p.aId && (state.times?.[p.aId]?.total || state.times?.[p.aId]?.osf || state.times?.[p.aId]?.hits !== undefined || isDsq(p.aId))) ||
@@ -4074,8 +4115,9 @@ function renderPairsList(containerId, pairs, gender) {
     const rightId = aIsL ? p.bId : p.aId;
     const leftAth  = leftId  ? state.athletes.find(x => x.id === leftId) : null;
     const rightAth = rightId ? state.athletes.find(x => x.id === rightId) : null;
+    const runCtx = { run, started, allFinished, role };
 
-    let html = '<div class="pair-card' + (locked ? ' pair-locked' : '') + (isSolo ? ' solo-runner' : '') + '" data-pair="' + p.pairNum + '" data-gender="' + gender + '">';
+    let html = '<div class="pair-card' + stateCls + (locked ? ' pair-locked' : '') + (isSolo ? ' solo-runner' : '') + '" data-pair="' + p.pairNum + '" data-gender="' + gender + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + p.pairNum + '</span>';
     // Strzałki ↑↓ + input numeru pozycji
@@ -4095,22 +4137,53 @@ function renderPairsList(containerId, pairs, gender) {
     html += '</div>';
     if (hasEntry) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+
+    // Integrowany stoper: START / RESET / chip auto-start / stempel
+    const scheduledAt = run && run.scheduledStartAt;
+    if (!started) {
+      if (canStart) {
+        html += '<button class="pair-mini-start" onclick="startPair(\'' + gender + '\',' + p.pairNum + ')" title="Start tej pary">▶ Start</button>';
+      }
+      if (scheduledAt) {
+        const past = scheduledAt < Date.now();
+        const chipCls = 'pair-chip-auto' + (past ? ' is-past' : '') + (canStart ? '' : ' is-readonly');
+        const chipClick = canStart ? ('onclick="editPairStartTime(\'' + gender + '\',' + p.pairNum + ')"') : '';
+        html += '<span class="' + chipCls + '" ' + chipClick + ' data-pair-sched="' + gender + '_' + p.pairNum + '" title="Auto-start o ' + formatClockTime(scheduledAt) + '">⏰ ' + formatClockTime(scheduledAt) + '</span>';
+        html += '<span class="pair-chip-countdown" data-pair-countdown="' + gender + '_' + p.pairNum + '"></span>';
+        if (canStart) {
+          html += '<button class="pair-mini-reset" onclick="setScheduledStart(\'' + gender + '\',' + p.pairNum + ',\'\')" title="Usuń auto-start">✕</button>';
+        }
+      } else if (canStart) {
+        html += '<button class="pair-chip-auto" onclick="editPairStartTime(\'' + gender + '\',' + p.pairNum + ')" title="Ustaw godzinę auto-startu">⏰ ustaw</button>';
+      }
+    } else {
+      // Wystartowana — pokaż stempel startu + przyciski reset/falstart
+      html += '<span class="pair-start-stamp">od <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong></span>';
+      if (canStart) {
+        if (allFinished) {
+          html += '<button class="pair-mini-reset" onclick="resetPair(\'' + gender + '\',' + p.pairNum + ')" title="Reset całej pary (rzadko potrzebne)">↺ reset</button>';
+        } else {
+          html += '<button class="pair-mini-reset" onclick="resetPair(\'' + gender + '\',' + p.pairNum + ')" title="Reset / falstart">↺ falstart</button>';
+        }
+      }
+    }
+
     html += '<button class="lock-btn' + (locked ? ' active' : '') + '" onclick="togglePairLock(\'' + gender + '\',' + p.pairNum + ')" title="' + (locked ? 'Odblokuj parę' : 'Zablokuj parę') + '" style="margin-left:auto;">' + (locked ? '🔒' : '🔓') + '</button>';
     html += '</div>';
     html += '<div class="pair-athletes">';
     // Określ tor pustego slotu (jeśli SOLO)
     const emptyLane = (leftAth ? 'P' : 'L');
     const soloEmptySlot = '<div class="pair-athlete solo-empty-slot" data-pair-num="' + p.pairNum + '" data-gender="' + gender + '" data-lane="' + emptyLane + '" onclick="handlePtrEmptySlotClick(this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;cursor:pointer;" title="Kliknij aby przenieść tu zaznaczonego zawodnika"><span class="lane-badge lane-' + emptyLane + '" style="font-size:16px;">' + emptyLane + '</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
-    html += leftAth ? athleteCardHTML(leftAth, 'L', p.pairNum, gender) : soloEmptySlot;
+    html += leftAth ? athleteCardHTML(leftAth, 'L', p.pairNum, gender, runCtx) : soloEmptySlot;
     html += '<div class="pair-vs">VS</div>';
-    html += rightAth ? athleteCardHTML(rightAth, 'P', p.pairNum, gender) : soloEmptySlot;
+    html += rightAth ? athleteCardHTML(rightAth, 'P', p.pairNum, gender, runCtx) : soloEmptySlot;
     html += '</div>';
     html += '</div>';
     return html;
   }).join('');
 }
 
-function athleteCardHTML(a, lane, pairNum, gender) {
+function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
   if (!a) return '<div class="pair-athlete"><div class="pair-athlete-name" style="color:var(--text3);">—</div></div>';
   const dsq = isDsq(a.id);
   const total = getPatrolTime(a.id, 'total');
@@ -4123,7 +4196,7 @@ function athleteCardHTML(a, lane, pairNum, gender) {
   const totalIsMarker = isTimeMarker(total);
   const osfIsMarker = isTimeMarker(osf);
   // Uprawnienia per rola
-  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const role = (runCtx && runCtx.role) || ((typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN');
   const canEditOsf   = role === 'ADMIN' || role === 'OSF';
   const canEditTotal = role === 'ADMIN' || role === 'META';
   const canEditHits  = role === 'ADMIN' || role === 'META';
@@ -4132,6 +4205,35 @@ function athleteCardHTML(a, lane, pairNum, gender) {
   const totalDisabled = dsq || !canEditTotal;
   const hitsDisabled  = dsq || !canEditHits;
   const dsqDisabled   = !canEditDsq;
+  // Stan biegu pary (do mini-stopera i przycisku STOP)
+  const run = runCtx && runCtx.run;
+  const started = !!(runCtx && runCtx.started);
+  const athleteFinishedAtMs = run && run.finishedAt && run.finishedAt[a.id];
+  const hasTotal = !!(total && !totalIsMarker);
+  const athleteDone = hasTotal || !!athleteFinishedAtMs;
+  // Mini-stoper przy nazwisku — pokaż gdy zawodnik biegnie (para wystartowana, on nieskończony)
+  let miniTimerHTML = '';
+  if (started) {
+    if (athleteDone) {
+      // Pokaż finalny czas (lub jeśli marker — tylko marker w dotychczasowym polu Łączny zostaje)
+      if (hasTotal) {
+        miniTimerHTML = '<span class="pair-mini-timer is-finished" title="Wynik końcowy">' + esc(total) + '</span>';
+      }
+    } else if (!dsq) {
+      miniTimerHTML = '<span class="pair-mini-timer" data-athlete-mini-timer="' + a.id + '" data-pair="' + gender + '_' + pairNum + '">0.00</span>';
+    }
+  }
+  // Mini-STOP przy nazwisku — gdy para biegnie, zawodnik niezakończony, rola pozwala
+  let miniStopHTML = '';
+  if (started && !athleteDone && canEditTotal && !dsq) {
+    miniStopHTML = '<button class="pair-mini-stop" onclick="event.stopPropagation();stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" title="Stop META">■ STOP</button>';
+  } else if (started && hasTotal && !athleteFinishedAtMs && canEditTotal) {
+    // Total wpisany ręcznie — pozwól cofnąć
+    miniStopHTML = '';
+  } else if (started && athleteFinishedAtMs && canEditTotal) {
+    // Auto-stop — można cofnąć
+    miniStopHTML = '<button class="pair-mini-undo" onclick="event.stopPropagation();stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" title="Cofnij stop">↺</button>';
+  }
   const pickAttr = pairNum
     ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + gender + '" onclick="handlePtrAthleteClick(this)"'
     : '';
@@ -4139,12 +4241,14 @@ function athleteCardHTML(a, lane, pairNum, gender) {
     ? '<button class="swap-trigger-btn" onclick="event.stopPropagation();activatePtrSwap(' + a.id + ',' + pairNum + ',\'' + gender + '\')" title="Zamień zawodnika">↔</button>'
     : '';
   return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
-    // Nagłówek: nazwisko + bib + przycisk swap + lane
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+    // Nagłówek: nazwisko + bib + mini-stoper + przyciski + lane
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
       '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) +
         (a.pk ? ' <span class="pk-badge" style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '') +
         ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:3px;">#' + esc(a.bib) + '</span>' +
       '</span>' +
+      miniTimerHTML +
+      miniStopHTML +
       swapBtn +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
@@ -4223,7 +4327,6 @@ function setShotPoints(id, val) {
   }
   save();
   renderPairsView();
-  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
 }
 
 // LEGACY: stara funkcja dla pole "hits" (0-5 trafień). Zostawiamy dla kompatybilności
@@ -4236,7 +4339,6 @@ function setHits(id, n) {
   else state.times[id].hits = n;
   save();
   renderPairsView();
-  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
 }
 
 // Liczba dziesiątek (tie-break) — opcjonalne pole
@@ -4253,7 +4355,6 @@ function setTens(id, val) {
   }
   save();
   renderPairsView();
-  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
 }
 
 // Toggle dziesiątek: klik na aktywny kafelek = wyczyść; inaczej ustaw.
@@ -4300,7 +4401,6 @@ function setPtrRole(r) {
   if (!PTR_ROLES[r]) return;
   localStorage.setItem('ptr_role_' + SLOT_ID, r);
   _updateRoleChip();
-  if (typeof renderTimerView === 'function') renderTimerView();
   if (typeof renderPairsView === 'function') renderPairsView();
   showToast('Tryb: ' + PTR_ROLES[r].label, 'info', 1500);
 }
@@ -4432,7 +4532,7 @@ function generateAutoStartSchedule() {
     state.runs[k].scheduledStartAt = firstTs + idx * intervalSec * 1000;
   });
   saveImmediate();
-  renderTimerView();
+  renderPairsView();
   showToast('⏰ Wygenerowano harmonogram dla ' + pairs.length + ' par (' + firstStr + ' co ' + intervalSec + 's)', 'success', 3500);
 }
 
@@ -4449,7 +4549,7 @@ function clearAutoStartSchedule() {
     }
   }
   saveImmediate();
-  renderTimerView();
+  renderPairsView();
   showToast('✕ Wyczyszczono harmonogram (' + cleared + ' par)', 'info', 2000);
 }
 
@@ -4561,7 +4661,7 @@ function confirmPairTimeClear() {
   }
   _ptrPairTimeClose();
   saveImmediate();
-  renderTimerView();
+  renderPairsView();
   showToast('✕ Wyczyszczono auto-start pary ' + pairNum, 'info', 1800);
 }
 
@@ -4581,7 +4681,7 @@ function confirmPairTimeSave() {
   const label = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
   _ptrPairTimeClose();
   saveImmediate();
-  renderTimerView();
+  renderPairsView();
   showToast('⏰ Para ' + pairNum + ' o ' + label, 'success', 1800);
 }
 
@@ -4606,7 +4706,7 @@ function setScheduledStart(gender, pairNum, value) {
     else showToast('⏰ Auto-start za ' + secLeft + 's', 'success', 1800);
   }
   saveImmediate();
-  renderTimerView();
+  renderPairsView();
 }
 
 // Sprawdza scheduledStartAt par i automatycznie startuje gdy nadejdzie czas.
@@ -4625,7 +4725,7 @@ function checkScheduledStarts() {
   }
   if (changed) {
     save();
-    renderTimerView();
+    renderPairsView();
     showToast('▶ Auto-start: para wystartowała', 'success', 2000);
   }
 }
@@ -4649,7 +4749,8 @@ function startPair(gender, pairNum) {
     });
   }
   save();
-  renderTimerView();
+  renderPairsView();
+  if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
   showToast('▶ Para ' + pairNum + ' (' + gender + ') wystartowała', 'success', 1800);
 }
 
@@ -4663,7 +4764,8 @@ function resetPair(gender, pairNum) {
     });
   }
   save();
-  renderTimerView();
+  renderPairsView();
+  if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
   showToast('↺ Reset pary ' + pairNum, 'warning', 2000);
 }
 
@@ -4684,7 +4786,8 @@ function stopAthlete(athleteId, gender, pairNum) {
     if (state.times?.[athleteId]?.total) delete state.times[athleteId].total;
     if (state.times?.[athleteId]) state.times[athleteId].totalAt = nowMs(); // tombstone
     save();
-    renderTimerView();
+    renderPairsView();
+    if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
     showToast('↺ Cofnięto stop', 'info', 1500);
     return;
   }
@@ -4695,7 +4798,8 @@ function stopAthlete(athleteId, gender, pairNum) {
   state.times[athleteId].total = formatRunTime(totalMs);
   state.times[athleteId].totalAt = nowMs();
   save();
-  renderTimerView();
+  renderPairsView();
+  if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
   showToast('■ Stop: ' + formatRunTime(totalMs), 'success', 1500);
 }
 
@@ -4721,89 +4825,6 @@ function formatClockTime(ms) {
 // === RENDER ===
 let _timerTickInterval = null;
 
-function renderTimerView() {
-  const role = getPtrRole();
-  // Podświetl aktywny przycisk roli
-  PTR_ROLE_ORDER.forEach(r => {
-    const btn = document.getElementById('role-btn-' + r);
-    if (btn) btn.classList.toggle('active', r === role);
-  });
-  const desc = document.getElementById('role-desc');
-  if (desc) desc.textContent = PTR_ROLES[role].desc;
-  // Kafelek Auto-start widoczny tylko dla STARTER i ADMIN
-  const autoStartCard = document.getElementById('auto-start-card');
-  if (autoStartCard) autoStartCard.style.display = (role === 'STARTER' || role === 'ADMIN') ? '' : 'none';
-  // Update podglądu w kafelku
-  const f = document.getElementById('auto-start-first');
-  const i = document.getElementById('auto-start-interval');
-  const pf = document.getElementById('auto-start-preview-first');
-  const pi = document.getElementById('auto-start-preview-interval');
-  if (f && pf) pf.textContent = f.value;
-  if (i && pi) pi.textContent = i.value;
-
-  const pairs = (state.pairs || []).slice().sort((a, b) => {
-    if (a.gender !== b.gender) return a.gender.localeCompare(b.gender);
-    return a.pairNum - b.pairNum;
-  });
-
-  const emptyEl = document.getElementById('timer-empty');
-  const listEl = document.getElementById('timer-list');
-  const tabsRow = document.getElementById('timer-tabs-row');
-  if (!pairs.length) {
-    if (emptyEl) emptyEl.style.display = 'block';
-    if (listEl) listEl.innerHTML = '';
-    if (tabsRow) tabsRow.style.display = 'none';
-    return;
-  }
-  if (emptyEl) emptyEl.style.display = 'none';
-  if (!listEl) return;
-
-  // Pokaż taby gdy są pary obu płci, w przeciwnym razie tylko jedna sekcja
-  const hasM = pairs.some(p => p.gender === 'M');
-  const hasK = pairs.some(p => p.gender === 'K');
-  if (tabsRow) {
-    tabsRow.style.display = (hasM || hasK) ? 'flex' : 'none';
-    document.getElementById('timer-tab-M').style.display = hasM ? '' : 'none';
-    document.getElementById('timer-tab-K').style.display = hasK ? '' : 'none';
-  }
-  // Wybór płci — domyślnie M jeśli istnieje, else K
-  if (_timerTab === 'M' && !hasM && hasK) _timerTab = 'K';
-  if (_timerTab === 'K' && !hasK && hasM) _timerTab = 'M';
-  _applyTimerTabStyle();
-
-  // Akcja awaryjna — widoczna gdy są pary biegnące i rola pozwala
-  const runningCount = pairs.filter(p => {
-    const r = getRun(p.gender, p.pairNum);
-    return r && r.startedAt && !((r.finishedAt && p.aId && r.finishedAt[p.aId]) && (!p.bId || (r.finishedAt && r.finishedAt[p.bId])));
-  }).length;
-  const emergencyBtn = document.getElementById('timer-emergency-reset');
-  if (emergencyBtn) emergencyBtn.style.display = (runningCount > 0 && (role === 'STARTER' || role === 'ADMIN')) ? '' : 'none';
-
-  // Filtruj wg aktywnej zakładki
-  const visiblePairs = pairs.filter(p => p.gender === _timerTab);
-  listEl.innerHTML = visiblePairs.map(p => renderTimerPairHTML(p, role)).join('');
-
-  // Restart ticker
-  if (_timerTickInterval) clearInterval(_timerTickInterval);
-  _timerTickInterval = setInterval(tickTimers, 100);
-  tickTimers();
-}
-
-let _timerTab = 'M';
-function switchTimerTab(g) {
-  _timerTab = g;
-  renderTimerView();
-}
-function _applyTimerTabStyle() {
-  const tM = document.getElementById('timer-tab-M');
-  const tK = document.getElementById('timer-tab-K');
-  if (!tM || !tK) return;
-  const activeStyle = c => 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid ' + c + ';background:rgba(255,255,255,.05);color:' + c + ';cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
-  const inactiveStyle = 'font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:7px 18px;border:none;border-bottom:3px solid transparent;background:transparent;color:var(--text3);cursor:pointer;border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-2px;';
-  tM.style.cssText = _timerTab === 'M' ? activeStyle('var(--male)') : inactiveStyle;
-  tK.style.cssText = _timerTab === 'K' ? activeStyle('var(--female)') : inactiveStyle;
-}
-
 // Awaryjny reset wszystkich biegnących par — wymaga wpisania "RESET"
 function emergencyResetRunning() {
   const pairs = (state.pairs || []);
@@ -4826,241 +4847,10 @@ function emergencyResetRunning() {
     });
   });
   save();
-  renderTimerView();
+  renderPairsView();
   showToast('↺ Zresetowano ' + running.length + ' biegnącą/ych parę/par', 'warning', 3000);
 }
 
-function renderTimerPairHTML(p, role) {
-  const gender = p.gender;
-  const pairNum = p.pairNum;
-  const run = getRun(gender, pairNum);
-  const started = !!(run && run.startedAt);
-  // Zawodnik jest "skończony" jeśli ma finishedAt z auto-stop LUB ma wpisany total ręcznie
-  function getEffectiveFinishedAt(id) {
-    if (!id) return null;
-    if (started && run.finishedAt && run.finishedAt[id]) return run.finishedAt[id];
-    // Ręczny czas META — przelicz na fakt że zawodnik skończył
-    const t = state.times?.[id]?.total;
-    if (started && t && !isTimeMarker(t)) {
-      const sec = parseTime(t);
-      if (Number.isFinite(sec) && sec > 0 && sec !== Infinity) {
-        return run.startedAt + sec * 1000;
-      }
-    }
-    return null;
-  }
-  const aFinishedAt = getEffectiveFinishedAt(p.aId);
-  const bFinishedAt = getEffectiveFinishedAt(p.bId);
-  const aFinished = !!aFinishedAt;
-  const bFinished = p.bId ? !!bFinishedAt : true;
-  const allFinished = started && aFinished && bFinished;
-
-  let statusCls, statusTxt;
-  if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
-  else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
-  else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
-
-  const a = p.aId ? state.athletes.find(x => x.id === p.aId) : null;
-  const b = p.bId ? state.athletes.find(x => x.id === p.bId) : null;
-
-  // Header z numerem, statusem, czasem
-  let head = '<div class="timer-pair-head">';
-  head += '<div class="timer-pair-label">';
-  head += '<span class="timer-pair-num">' + pairNum + '</span>';
-  head += '<span class="timer-pair-gender">' + (gender === 'M' ? '♂' : '♀') + '</span>';
-  head += '<span class="timer-pair-status ' + statusCls + '">' + statusTxt + '</span>';
-  if (started) {
-    let stamp = 'start <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong>';
-    if (allFinished) {
-      const finishMs = Math.max(aFinishedAt || 0, bFinishedAt || 0);
-      if (finishMs > 0) stamp += ' <span style="opacity:.4;margin:0 3px;">·</span> koniec <strong style="color:var(--green);font-weight:700;">' + formatClockTime(finishMs) + '</strong>';
-    }
-    head += '<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">' + stamp + '</span>';
-  }
-  head += '</div>';
-  // Lecący czas (lub końcowy)
-  let displayMs;
-  if (allFinished) {
-    // Pokaż czas ostatniego zawodnika (z auto-stop lub z ręcznego total)
-    const last = Math.max(aFinishedAt || 0, bFinishedAt || 0);
-    displayMs = last - run.startedAt;
-    head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '" data-finished="1">' + formatRunTime(displayMs) + '</div>';
-  } else if (started) {
-    head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '">0.00</div>';
-  } else if (run && run.scheduledStartAt) {
-    // Czeka na auto-start — countdown
-    head += '<div class="timer-display" data-timer-pair="' + gender + '_' + pairNum + '" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
-  } else {
-    head += '<div class="timer-display" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
-  }
-  head += '</div>';
-
-  // Pasek akcji: Start/Reset + info o auto-starcie
-  let actionsBar = '';
-  const canStartReset = (role === 'STARTER' || role === 'ADMIN');
-  const scheduledAt = run && run.scheduledStartAt;
-  // Status auto-startu obok (widoczny też dla META/OSF — info)
-  let scheduledInfo = '';
-  if (scheduledAt && !started) {
-    const secLeft = Math.round((scheduledAt - Date.now()) / 1000);
-    const past = secLeft < 0;
-    scheduledInfo = '<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:' + (past ? 'var(--red)' : 'var(--orange)') + ';font-family:var(--font-m);">' +
-      '⏰ <strong>Auto-start: ' + formatClockTime(scheduledAt) + '</strong>' +
-      (canStartReset ? ' <button onclick="editPairStartTime(\'' + gender + '\',' + pairNum + ')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);font-size:10px;padding:2px 7px;cursor:pointer;margin-left:4px;">✏ zmień</button>' : '') +
-      (canStartReset ? ' <button onclick="setScheduledStart(\'' + gender + '\',' + pairNum + ',\'\')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;padding:2px 7px;cursor:pointer;">✕</button>' : '') +
-      '</div>';
-  } else if (!started && canStartReset && !scheduledAt) {
-    // Pozwól ustawić auto-start dla pojedynczej pary
-    scheduledInfo = '<button onclick="editPairStartTime(\'' + gender + '\',' + pairNum + ')" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-size:10px;padding:4px 9px;cursor:pointer;font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;">⏰ Ustaw godzinę startu</button>';
-  }
-  if (canStartReset || scheduledInfo) {
-    actionsBar = '<div class="timer-actions-bar" style="flex-wrap:wrap;">';
-    if (canStartReset) {
-      if (!started) {
-        actionsBar += '<button class="btn-timer btn-timer-start" onclick="startPair(\'' + gender + '\',' + pairNum + ')">▶ START</button>';
-      } else if (allFinished) {
-        // Para skończyła — reset rzadko potrzebny, więc mały i szary
-        actionsBar += '<button class="btn-timer btn-timer-reset-small" onclick="resetPair(\'' + gender + '\',' + pairNum + ')" title="Reset całej pary (rzadko potrzebne)">↺ reset</button>';
-      } else {
-        actionsBar += '<button class="btn-timer btn-timer-reset" onclick="resetPair(\'' + gender + '\',' + pairNum + ')">↺ RESET (falstart)</button>';
-      }
-    }
-    actionsBar += scheduledInfo;
-    actionsBar += '</div>';
-  }
-
-  // Karty zawodników
-  let athletes = '<div class="timer-athletes">';
-  athletes += renderTimerAthleteHTML(a, p.aId, gender, pairNum, run, role, 'L');
-  athletes += renderTimerAthleteHTML(b, p.bId, gender, pairNum, run, role, 'P');
-  athletes += '</div>';
-
-  const cardCls = 'timer-pair-card' + (allFinished ? ' finished' : (started ? ' running' : ''));
-  return '<div class="' + cardCls + '">' + head + actionsBar + athletes + '</div>';
-}
-
-function renderTimerAthleteHTML(a, athleteId, gender, pairNum, run, role, lane) {
-  if (!a) {
-    return '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak zawodnika ' + lane + '</div>';
-  }
-  const dsq = isDsq(a.id);
-  const started = !!(run && run.startedAt);
-  const finished = !!(started && run.finishedAt && run.finishedAt[a.id]);
-  const total = getPatrolTime(a.id, 'total');
-  const osf = getPatrolTime(a.id, 'osf');
-  const hits = state.times?.[a.id]?.hits;            // legacy 0-5
-  const shotPoints = state.times?.[a.id]?.shotPoints; // 0-50 pkt na tarczy
-  const tens = state.times?.[a.id]?.tens;             // 0-5 dziesiątek (tie-break)
-
-  let timeDisplay;
-  if (total) {
-    // Czas mety wpisany ręcznie lub auto-zapisany — pokaż go jako finalny
-    timeDisplay = '<div class="timer-athlete-time finished">' + esc(total) + '</div>';
-  } else if (started) {
-    timeDisplay = '<div class="timer-athlete-time" data-timer-athlete="' + a.id + '" data-pair="' + gender + '_' + pairNum + '" data-running="1">0.00</div>';
-  } else {
-    timeDisplay = '<div class="timer-athlete-time idle">—</div>';
-  }
-
-  // META + ADMIN — przycisk STOP (szybkie auto-zatrzymanie) + pole ręcznego wpisywania czasu mety
-  let stopBtn = '';
-  let totalInput = '';
-  const canEditTotal = role === 'META' || role === 'ADMIN';
-  if (canEditTotal && started) {
-    if (total) {
-      // Już jest czas — pokaż "Cofnij stop" (toggle off zerując czas)
-      stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" style="font-size:11px;padding:6px 12px;margin-top:8px;">↺ Cofnij stop</button>';
-    } else if (!dsq) {
-      stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" style="margin-top:8px;">■ STOP META</button>';
-    }
-  }
-  if (canEditTotal) {
-    // Pole ręcznego wpisywania (zawsze widoczne — backup gdy Stop był niedokładny)
-    totalInput = '<div class="timer-osf-input-row" style="margin-top:8px;">' +
-      '<span class="timer-osf-label" style="color:var(--green);">🏁 Czas mety</span>' +
-      '<input type="text" class="timer-osf-input" value="' + esc(total) + '" placeholder="0:00.00 / DNF (ręcznie)"' +
-        ' data-id="' + a.id + '" data-field="total"' +
-        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-        ' style="background:rgba(76,175,130,.06);border-color:rgba(76,175,130,.35);"' +
-        ' title="Wpisz ręcznie jeśli auto-stop był nieprecyzyjny"' +
-        (dsq ? ' disabled' : '') + ' />' +
-      '</div>';
-  }
-
-  // Pole OSF — TYLKO OSF + ADMIN. Reszta widzi wartość read-only.
-  let osfInput;
-  if (role === 'OSF' || role === 'ADMIN') {
-    osfInput = '<div class="timer-osf-input-row">' +
-      '<span class="timer-osf-label">⏱ OSF</span>' +
-      '<input type="text" class="timer-osf-input" value="' + esc(osf) + '" placeholder="0:00.00"' +
-        ' data-id="' + a.id + '" data-field="osf"' +
-        ' oninput="saveTimeField(this)" onblur="commitTimeField(this)" onkeydown="handleTimeKey(event,this)"' +
-        (dsq ? ' disabled' : '') + ' />' +
-      '</div>';
-  } else {
-    osfInput = '<div class="timer-osf-input-row">' +
-      '<span class="timer-osf-label">⏱ OSF</span>' +
-      '<span style="flex:1;font-family:var(--font-m);font-size:13px;color:' + (osf ? 'var(--male)' : 'var(--text3)') + ';padding:5px 8px;background:rgba(91,155,213,.04);border:1px dashed rgba(91,155,213,.25);border-radius:var(--radius);" title="Tylko OSF/Admin może wpisać">' + (osf ? esc(osf) : '— (wpisze OSF)') + '</span>' +
-      '</div>';
-  }
-
-  // STRZELANIE — punkty na tarczy (0-50). META + ADMIN edycja, reszta read-only.
-  const shotEff = (shotPoints !== undefined && shotPoints !== null) ? shotPoints :
-                  (hits !== undefined ? (hits * 10) : undefined);
-  let hitsRow = '';
-  if (role === 'META' || role === 'ADMIN') {
-    hitsRow =
-      '<div style="margin-top:8px;">' +
-        '<div style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-50)</div>' +
-        '<div class="ptr-shot-row compact">' +
-          '<input class="ptr-shot-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50"' +
-            ' onchange="setShotPoints(' + a.id + ', this.value)"' +
-            ' onblur="setShotPoints(' + a.id + ', this.value)"' +
-            ' title="Suma punktów na tarczy"' +
-            (dsq ? ' disabled' : '') + ' />' +
-          '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',-1)"' + (dsq ? ' disabled' : '') + ' title="−1 (start od 50 jeśli puste)">−</button>' +
-          '<button class="ptr-shot-btn" onclick="bumpShotPoints(' + a.id + ',+1)"' + (dsq ? ' disabled' : '') + ' title="+1 (start od 50 jeśli puste)">+</button>' +
-          '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',-5)"' + (dsq ? ' disabled' : '') + ' title="−5">−5</button>' +
-          '<button class="ptr-shot-btn small" onclick="bumpShotPoints(' + a.id + ',+5)"' + (dsq ? ' disabled' : '') + ' title="+5">+5</button>' +
-        '</div>' +
-      '</div>' +
-      // Dziesiątki — kafelki 0..5
-      '<div style="margin-top:6px;">' +
-        '<div style="font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:3px;">×10 (tie-break)</div>' +
-        '<div class="ptr-tens-row">' +
-          [0,1,2,3,4,5].map(n =>
-            '<button class="ptr-tens-btn' + (tens === n ? ' active' : '') + '" onclick="toggleTens(' + a.id + ',' + n + ')"' + (dsq ? ' disabled' : '') + ' title="' + n + ' dziesiątek">' + n + '</button>'
-          ).join('') +
-        '</div>' +
-      '</div>';
-  } else if (shotEff !== undefined) {
-    hitsRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Strzelanie: <strong style="color:var(--text1);">' + shotEff + '/50 pkt</strong>' +
-      (tens !== undefined ? ' (' + tens + '×10)' : '') + '</div>';
-  }
-
-  // DSQ — META + ADMIN
-  let dsqBtn = '';
-  if (role === 'META' || role === 'ADMIN') {
-    dsqBtn = '<button onclick="toggleDsq(' + a.id + ')" style="margin-top:8px;font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 10px;border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';cursor:pointer;">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>';
-  }
-
-  const finishedState = !!total;
-  const cls = 'timer-athlete' + (finishedState ? ' finished' : '') + (dsq ? ' dsq' : '');
-  return '<div class="' + cls + '">' +
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div class="timer-athlete-name">' + esc(displayName(a)) + ' <span style="font-family:var(--font-m);font-size:11px;color:var(--text3);font-weight:400;">#' + esc(a.bib) + '</span> <span class="lane-badge lane-' + lane + '" style="margin-left:4px;">' + lane + '</span></div>' +
-        '<div class="timer-athlete-meta">' + esc(a.team || '') + '</div>' +
-      '</div>' +
-    '</div>' +
-    timeDisplay +
-    stopBtn +
-    totalInput +
-    osfInput +
-    hitsRow +
-    dsqBtn +
-  '</div>';
-}
 
 // Ticker: aktualizuje tylko teksty lecących liczników (nie cały DOM)
 // Pomocnik: efektywny czas zakończenia (auto-stop LUB ręczny total). Używany w tickTimers.
@@ -5612,6 +5402,60 @@ function tickTimers() {
   // Tikaj zegary biegu drużynowego + sprawdź auto-starty drużyn
   if (typeof checkScheduledTeamRunStarts === 'function') checkScheduledTeamRunStarts();
   if (typeof _tickTeamRunTimers === 'function') _tickTeamRunTimers();
+  // Mini-stopery zintegrowane w karty par (Bieg indywidualny)
+  document.querySelectorAll('.pair-mini-timer[data-athlete-mini-timer]').forEach(el => {
+    const athleteId = parseInt(el.dataset.athleteMiniTimer);
+    const pairKey = el.dataset.pair;
+    if (!athleteId || !pairKey) return;
+    const [gender, pairNumStr] = pairKey.split('_');
+    const pairNum = parseInt(pairNumStr);
+    const run = getRun(gender, pairNum);
+    if (!run || !run.startedAt) { el.textContent = '—'; el.classList.add('is-idle'); return; }
+    // Jeśli zawodnik skończył (auto lub ręczny total) → zamroź na wyniku
+    const fin = _patrolEffectiveFinishMs(athleteId, run);
+    if (fin) {
+      el.textContent = formatRunTime(fin - run.startedAt);
+      el.classList.add('is-finished');
+      el.classList.remove('is-idle');
+      return;
+    }
+    el.classList.remove('is-finished', 'is-idle');
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
+  // Mini-stopery zintegrowane w karty par drużynowych
+  document.querySelectorAll('.pair-mini-timer[data-team-mini-timer]').forEach(el => {
+    const raw = el.dataset.teamMiniTimer || '';
+    const splitIdx = raw.lastIndexOf('|');
+    if (splitIdx < 0) return;
+    const teamName = raw.slice(0, splitIdx);
+    const pairNum = _parsePairKey(raw.slice(splitIdx + 1));
+    const run = getTeamRunPair(pairNum);
+    if (!run || !run.startedAt) { el.textContent = '—'; el.classList.add('is-idle'); return; }
+    if (run.finishedAt?.[teamName]) {
+      const finalSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 10) / 100;
+      el.textContent = _formatTeamSec(finalSec);
+      el.classList.add('is-finished');
+      el.classList.remove('is-idle');
+      return;
+    }
+    el.classList.remove('is-finished', 'is-idle');
+    el.textContent = formatRunTime(nowMs() - run.startedAt);
+  });
+  // Countdown chipa auto-startu w karcie pary
+  const nowWall = Date.now();
+  document.querySelectorAll('.pair-chip-countdown[data-pair-countdown]').forEach(el => {
+    const [gender, pairNumStr] = el.dataset.pairCountdown.split('_');
+    const pairNum = parseInt(pairNumStr);
+    const run = getRun(gender, pairNum);
+    const sched = run && run.scheduledStartAt;
+    if (!sched || (run && run.startedAt)) { el.textContent = ''; el.classList.remove('is-imminent'); return; }
+    const left = sched - nowWall;
+    if (left <= 0) { el.textContent = 'start...'; el.classList.add('is-imminent'); return; }
+    if (left > 60 * 1000) { el.textContent = ''; el.classList.remove('is-imminent'); return; }
+    const sec = Math.ceil(left / 1000);
+    el.textContent = '-' + (sec >= 60 ? Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0') : sec + 's');
+    if (sec <= 10) el.classList.add('is-imminent'); else el.classList.remove('is-imminent');
+  });
 }
 
 // Przenieś parę o ±1
@@ -5898,14 +5742,8 @@ function commitTimeField(input) {
 // Robi rerender TYLKO nieaktywnej zakładki (active zakładka się sama rerenderuje
 // gdy potrzeba, a tutaj zwykle wywoływane przez onblur który już zostawia focus).
 function _rerenderTimerAndPairs() {
-  const active = document.querySelector('.nav-tab.active')?.id || '';
-  if (active === 'tab-pairs') {
-    // Stoper się odświeży gdy user tam wejdzie
-  } else if (active === 'tab-timer') {
-    // Pary się odświeżą gdy user tam wejdzie
-  }
-  // Tutaj nie rerenderujemy aktywnej zakładki żeby nie zniknął focus z inputa.
-  // Sync między widokami nastąpi gdy user przełączy zakładkę (showTab woła render).
+  // No-op (stoper jest teraz zintegrowany w karty par; nieaktywna zakładka i tak
+  // odświeży się gdy user tam wejdzie przez showTab).
 }
 
 function handleTimeKey(e, input) {
@@ -5929,7 +5767,6 @@ function toggleDsq(id) {
   save();
   // Natychmiastowe przerenderowanie zakładki Pary (gdzie są inputy + przycisk DSQ)
   renderPairsView();
-  if (document.getElementById('page-timer')?.classList.contains('active')) renderTimerView();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6269,7 +6106,6 @@ function _parseTeamSec(str) {
 function _renderTeamRunActive() {
   const active = document.querySelector('.nav-tab.active');
   const tabId = active ? active.id.replace('tab-', '') : '';
-  if (tabId === 'team-timer') { if (typeof renderTeamTimerView === 'function') renderTeamTimerView(); return; }
   if (tabId === 'team-run')   { if (typeof renderTeamRunList   === 'function') renderTeamRunList();   return; }
   if (tabId === 'results')    { if (typeof renderResultsView   === 'function') renderResultsView();   return; }
   // Inna zakładka — i tak warto odświeżyć cicho dla spójności gdy user wróci
@@ -6422,7 +6258,7 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
   const tr = (state.teamRun || {})[teamName] || {};
   const dsq = !!tr.dsq;
   const biegStr = (tr.biegSec != null && tr.biegSec !== '') ? _formatTeamSec(tr.biegSec) : '';
-  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const role = (opts && opts.role) || ((typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN');
   const canEdit = role === 'ADMIN' || role === 'META';
   const disabled = dsq || !canEdit;
   const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -6434,29 +6270,28 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
   const teamFinished = !!(started && run.finishedAt?.[teamName]);
   const pairKeyArg = JSON.stringify(pairNum); // może być stringiem 'solo:T' lub liczbą
   const pairAttr = String(pairNum == null ? '' : pairNum).replace(/"/g,'&quot;');
-  // Stop/Live timer integration: META/ADMIN może klikać STOP gdy para wystartowała
-  let stopBtnHTML = '';
-  let liveTimerHTML = '';
+  // Mini-stoper przy nazwie drużyny + mini-STOP/UNDO (gdy stoper aktywny dla tej pary)
+  let miniTimerHTML = '';
+  let miniStopHTML = '';
   if (showStoper && started && pairNum != null) {
     if (teamFinished) {
-      const teamSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 1000);
-      liveTimerHTML = '<div class="timer-athlete-time finished" style="margin-top:6px;text-align:center;font-family:var(--font-m);font-size:18px;font-weight:800;color:var(--green);">' + Math.floor(teamSec/60) + ':' + String(teamSec%60).padStart(2,'0') + ' <span style="font-size:10px;color:var(--text3);">(stoper)</span></div>';
-      if (canEdit) stopBtnHTML = '<button onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="margin-top:6px;width:100%;padding:6px;font-family:var(--font-h);font-size:11px;font-weight:700;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg3);color:var(--text3);cursor:pointer;">↺ Cofnij stop</button>';
-    } else {
-      liveTimerHTML = '<div class="timer-athlete-time" data-team-timer="' + safeT + '|' + pairAttr + '" data-running="1" style="margin-top:6px;text-align:center;font-family:var(--font-m);font-size:20px;font-weight:800;color:var(--orange);">0.00</div>';
-      if (canEdit) stopBtnHTML = '<button onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="margin-top:6px;width:100%;padding:8px;font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border:none;border-radius:var(--radius);background:var(--red);color:#fff;cursor:pointer;">■ STOP META</button>';
+      const finalSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 10) / 100;
+      miniTimerHTML = '<span class="pair-mini-timer is-finished" title="Czas biegu (stoper)">' + _formatTeamSec(finalSec) + '</span>';
+      if (canEdit) miniStopHTML = '<button class="pair-mini-undo" onclick="event.stopPropagation();stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" title="Cofnij stop">↺</button>';
+    } else if (!dsq) {
+      miniTimerHTML = '<span class="pair-mini-timer" data-team-mini-timer="' + safeT + '|' + pairAttr + '">0.00</span>';
+      if (canEdit) miniStopHTML = '<button class="pair-mini-stop" onclick="event.stopPropagation();stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" title="Stop META — czas biegu tej drużyny">■ STOP</button>';
     }
   }
 
   return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '" style="' + (dsq ? 'opacity:.65;' : '') + '">' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
       '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(teamName) + '</span>' +
+      miniTimerHTML +
+      miniStopHTML +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">Patrol 3-osobowy</div>' +
-    // Live timer + STOP button (gdy stoper aktywny dla tej pary)
-    liveTimerHTML +
-    stopBtnHTML +
     // OSF + Bieg (czas) — kafelki obok siebie jak w ind.
     '<div class="ptr-times-row">' +
       '<div class="ptr-time-tile ptr-time-osf' + (disabled ? ' dsq' : '') + '">' +
@@ -6687,6 +6522,22 @@ function bumpTeamRunShot(team, delta) {
   setTeamRunField(team, 'shotPoints', next);
 }
 
+// Filtr widoku biegu drużynowego
+let _teamRunFilter = 'all';
+function setTeamRunFilter(f) {
+  if (!['all','running','finished','idle'].includes(f)) f = 'all';
+  _teamRunFilter = f;
+  renderTeamRunList();
+}
+function _classifyTeamPair(p) {
+  const run = getTeamRunPair(p.pairNum);
+  if (!run || !run.startedAt) return 'idle';
+  const aFin = run.finishedAt?.[p.aTeam];
+  const bFin = p.bTeam ? run.finishedAt?.[p.bTeam] : true;
+  if (aFin && bFin) return 'finished';
+  return 'running';
+}
+
 function renderTeamRunList() {
   const list = document.getElementById('ptr-team-run-list');
   if (!list) return;
@@ -6695,317 +6546,100 @@ function renderTeamRunList() {
   const teamsWithEntry = Object.keys(state.teamRun || {});
   const teamSet = new Set([...allTeams, ...teamsWithEntry]);
 
+  // Filtr — placeholder ukryty gdy brak drużyn
+  _buildPairFilterBar('ptr-team-run-filter', _teamRunFilter, { all: 0, running: 0, finished: 0, idle: 0 }, 'setTeamRunFilter');
+
   if (!teamSet.size) {
     list.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--text3);font-size:13px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak drużyn. Dodaj zawodników z drużynami lub kliknij <strong>"＋ Dodaj wszystkie drużyny"</strong> poniżej.</div>';
     return;
   }
 
-  // Drużyny wg par. Jeśli nie ma wygenerowanych par, twórz wirtualne SOLO
-  // dla każdej drużyny — żeby stoper działał wszędzie. Pairy generowane
-  // automatycznie zapisują się jako pairKey = 'solo:' + teamName w state.teamRuns.
+  // Drużyny wg par. Jeśli nie ma wygenerowanych par, twórz wirtualne SOLO.
   const realPairs = state.teamRunPairs || [];
   const realUsedTeams = new Set();
   realPairs.forEach(p => { if (p.aTeam) realUsedTeams.add(p.aTeam); if (p.bTeam) realUsedTeams.add(p.bTeam); });
   const unpaired = [...teamSet].sort().filter(t => !realUsedTeams.has(t));
-  // Lista do renderowania: prawdziwe pary + virtual SOLO dla pozostałych drużyn
   const pairs = realPairs.slice();
   let virtualStart = pairs.length;
   unpaired.forEach(t => {
     virtualStart++;
     pairs.push({
-      pairNum: 'solo:' + t,           // klucz unikalny dla state.teamRuns
-      _displayNum: virtualStart,       // wyświetlany numer
+      pairNum: 'solo:' + t,
+      _displayNum: virtualStart,
       _virtual: true,
       aTeam: t, aLane: 'L', bTeam: null, bLane: null
     });
   });
 
-  const usedTeams = new Set();
+  // Liczniki dla filtra (wszystkie pary które mają aTeam)
+  const visiblePairs = pairs.filter(p => p.aTeam);
+  const counts = { all: visiblePairs.length, running: 0, finished: 0, idle: 0 };
+  visiblePairs.forEach(p => { counts[_classifyTeamPair(p)]++; });
+  _buildPairFilterBar('ptr-team-run-filter', _teamRunFilter, counts, 'setTeamRunFilter');
+
+  const filteredPairs = visiblePairs.filter(p => _teamRunFilter === 'all' ? true : _classifyTeamPair(p) === _teamRunFilter);
+
+  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
+  const canStart = (role === 'STARTER' || role === 'ADMIN');
+
   let html = '';
-  // (Pary drużyn / wpisywanie — bez stopera, działa offline)
-  // Banner zachęcający do kliknięcia "Generuj pary" gdy pary nie zostały utworzone
   if (!realPairs.length && unpaired.length >= 2) {
     html += '<div style="background:rgba(232,212,77,.06);border:1px solid rgba(232,212,77,.35);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.5;">' +
       '💡 Pary drużyn nie zostały wygenerowane. ' +
       'Kliknij <strong>"🔑 Generuj pary"</strong> aby utworzyć pary startowe wg klucza regulaminowego (najsłabsi z indywidualnego startują pierwsi).' +
     '</div>';
   }
-  pairs.forEach(p => {
-    if (!p.aTeam) return;
+
+  if (!filteredPairs.length) {
+    const lbl = ({running:'biegnących', finished:'skończonych', idle:'oczekujących'})[_teamRunFilter] || '';
+    html += '<div class="ptr-pair-filter-empty">Brak ' + lbl + ' par w tej kategorii.</div>';
+    list.innerHTML = html;
+    return;
+  }
+
+  filteredPairs.forEach(p => {
     const isSolo = !p.bTeam;
-    usedTeams.add(p.aTeam);
-    if (p.bTeam) usedTeams.add(p.bTeam);
     const run = getTeamRunPair(p.pairNum);
     const started = !!(run && run.startedAt);
     const aFin = started && run.finishedAt?.[p.aTeam];
     const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
     const allFinished = started && aFin && bFin;
-    let statusCls, statusTxt;
-    if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
-    else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
-    else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
+    const stateCls = !started ? '' : (allFinished ? ' is-finished' : ' is-running');
 
-    // pairKey może być stringiem ('solo:TeamName') lub liczbą — wrap w JSON dla onclick
     const pairKeyArg = JSON.stringify(p.pairNum);
     const displayNum = p._displayNum != null ? p._displayNum : p.pairNum;
     const pairAttr = String(p.pairNum).replace(/"/g, '&quot;');
-    // Pary drużyn — bez stopera (offline-friendly), prostszy nagłówek (jak w pairs view ind.)
-    html += '<div class="pair-card' + (isSolo ? ' solo-runner' : '') + '" data-pair="' + pairAttr + '">';
+    html += '<div class="pair-card' + stateCls + (isSolo ? ' solo-runner' : '') + '" data-pair="' + pairAttr + '">';
     html += '<div class="pair-header">';
     html += '<span class="pair-num">' + displayNum + '</span>';
     html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">' + (p._virtual ? 'Drużyna (SOLO)' : 'Para drużyn') + '</span>';
     if (isSolo && !p._virtual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
+    // Integrowany stoper: START / RESET / stempel
+    if (!started) {
+      if (canStart) {
+        html += '<button class="pair-mini-start" onclick="startTeamRunPair(' + pairKeyArg + ')" title="Start tej pary drużyn">▶ Start</button>';
+      }
+    } else {
+      html += '<span class="pair-start-stamp">od <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong></span>';
+      if (canStart) {
+        const lbl = allFinished ? '↺ reset' : '↺ falstart';
+        const ttl = allFinished ? 'Reset całej pary' : 'Reset / falstart';
+        html += '<button class="pair-mini-reset" onclick="resetTeamRunPair(' + pairKeyArg + ')" title="' + ttl + '">' + lbl + '</button>';
+      }
+    }
     html += '</div>';
     html += '<div class="pair-athletes">';
-    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: false });
+    html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: true, role });
     html += '<div class="pair-vs">VS</div>';
-    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: false }) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
+    html += p.bTeam ? teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: true, role }) : '<div class="pair-athlete solo-empty-slot" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;"><span class="lane-badge lane-P" style="font-size:16px;">P</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
     html += '</div>';
     html += '</div>';
   });
-  // (Niesparowane drużyny obsłużone wyżej jako virtualne SOLO pary)
   list.innerHTML = html;
-}
-
-// ─── STOPER DRUŻYNOWY (zakładka osobna, ONLINE only) ────────────
-// Identyczny layout jak renderTimerView (timer-pair-card, timer-athlete, btn-timer-*)
-function renderTeamTimerView() {
-  const list = document.getElementById('ptr-team-timer-list');
-  const empty = document.getElementById('ptr-team-timer-empty');
-  if (!list) return;
-  ensureTeamRun();
-  const allTeams = [...new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean))].sort();
-  const teamsWithEntry = Object.keys(state.teamRun || {});
-  const teamSet = new Set([...allTeams, ...teamsWithEntry]);
-  if (!teamSet.size) {
-    if (empty) empty.style.display = 'block';
-    list.innerHTML = '';
-    return;
-  }
-  if (empty) empty.style.display = 'none';
-
-  const realPairs = state.teamRunPairs || [];
-  const realUsedTeams = new Set();
-  realPairs.forEach(p => { if (p.aTeam) realUsedTeams.add(p.aTeam); if (p.bTeam) realUsedTeams.add(p.bTeam); });
-  const unpaired = [...teamSet].sort().filter(t => !realUsedTeams.has(t));
-  const pairs = realPairs.slice();
-  let virtualStart = pairs.length;
-  unpaired.forEach(t => {
-    virtualStart++;
-    pairs.push({ pairNum: 'solo:' + t, _displayNum: virtualStart, _virtual: true, aTeam: t, aLane: 'L', bTeam: null, bLane: null });
-  });
-
-  const role = (typeof getPtrRole === 'function') ? getPtrRole() : 'ADMIN';
-  let html = pairs.map(p => renderTeamTimerPairHTML(p, role)).join('');
-  list.innerHTML = html;
-
-  // Restart ticker (timer-display[data-team-pair] obsłużony w tickTimers → _tickTeamRunTimers)
+  // Uruchom ticker (mini-stopery drużynowe)
   if (_timerTickInterval) clearInterval(_timerTickInterval);
   _timerTickInterval = setInterval(tickTimers, 100);
   tickTimers();
-}
-
-// Karta pary drużyn w stoperze — analog. do renderTimerPairHTML w indywidualnym
-function renderTeamTimerPairHTML(p, role) {
-  const pairNum = p.pairNum;
-  const isSolo = !p.bTeam;
-  const run = getTeamRunPair(pairNum);
-  const started = !!(run && run.startedAt);
-  const aFin = started && run.finishedAt?.[p.aTeam];
-  const bFin = p.bTeam ? (started && run.finishedAt?.[p.bTeam]) : true;
-  const allFinished = started && aFin && (bFin || !p.bTeam);
-
-  let statusCls, statusTxt;
-  if (allFinished) { statusCls = 'finished'; statusTxt = '✓ Skończona'; }
-  else if (started) { statusCls = 'running'; statusTxt = '▶ Biegnie'; }
-  else { statusCls = 'idle'; statusTxt = '○ Oczekuje'; }
-
-  const pairKeyArg = JSON.stringify(pairNum);
-  const displayNum = p._displayNum != null ? p._displayNum : pairNum;
-  const pairAttr = String(pairNum).replace(/"/g, '&quot;');
-
-  // Header — taki sam jak w timer-pair-head indywidualnym
-  let head = '<div class="timer-pair-head">';
-  head += '<div class="timer-pair-label">';
-  head += '<span class="timer-pair-num">' + displayNum + '</span>';
-  head += '<span class="timer-pair-gender">🛡</span>';
-  head += '<span class="timer-pair-status ' + statusCls + '">' + statusTxt + '</span>';
-  if (started) {
-    let stamp = 'start <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong>';
-    if (allFinished) {
-      const finishMs = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
-      if (finishMs > 0) stamp += ' <span style="opacity:.4;margin:0 3px;">·</span> koniec <strong style="color:var(--green);font-weight:700;">' + formatClockTime(finishMs) + '</strong>';
-    }
-    head += '<span style="font-family:var(--font-m);font-size:11px;color:var(--text3);">' + stamp + '</span>';
-  }
-  if (isSolo && !p._virtual) head += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
-  head += '</div>';
-  // Big timer
-  if (allFinished) {
-    const last = Math.max(aFin || 0, bFin === true ? 0 : (bFin || 0));
-    head += '<div class="timer-display" data-team-pair="' + pairAttr + '" data-finished="1">' + formatRunTime(last - run.startedAt) + '</div>';
-  } else if (started) {
-    head += '<div class="timer-display" data-team-pair="' + pairAttr + '">0.00</div>';
-  } else {
-    head += '<div class="timer-display" style="color:var(--text3);font-weight:400;font-size:24px;">—</div>';
-  }
-  head += '</div>';
-
-  // Pasek akcji START/RESET (STARTER/ADMIN)
-  let actionsBar = '';
-  const canStartReset = (role === 'STARTER' || role === 'ADMIN');
-  if (canStartReset) {
-    actionsBar = '<div class="timer-actions-bar" style="flex-wrap:wrap;">';
-    if (!started) {
-      actionsBar += '<button class="btn-timer btn-timer-start" onclick="startTeamRunPair(' + pairKeyArg + ')">▶ START</button>';
-    } else if (allFinished) {
-      actionsBar += '<button class="btn-timer btn-timer-reset-small" onclick="resetTeamRunPair(' + pairKeyArg + ')" title="Reset całej pary (rzadko potrzebne)">↺ reset</button>';
-    } else {
-      actionsBar += '<button class="btn-timer btn-timer-reset" onclick="resetTeamRunPair(' + pairKeyArg + ')">↺ RESET (falstart)</button>';
-    }
-    actionsBar += '</div>';
-  }
-
-  // Karty drużyn (jak timer-athlete w indywidualnym)
-  let teams = '<div class="timer-athletes">';
-  teams += teamTimerAthleteHTML(p.aTeam, p.aLane || 'L', pairNum, run, role);
-  if (p.bTeam) {
-    teams += teamTimerAthleteHTML(p.bTeam, p.bLane || 'P', pairNum, run, role);
-  } else {
-    teams += '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak drużyny P</div>';
-  }
-  teams += '</div>';
-
-  const cardCls = 'timer-pair-card' + (allFinished ? ' finished' : (started ? ' running' : ''));
-  return '<div class="' + cardCls + '">' + head + actionsBar + teams + '</div>';
-}
-
-// Karta drużyny w stoperze — analog. do renderTimerAthleteHTML w indywidualnym.
-// Pełen zestaw: live timer, STOP META, ręczny Bieg, OSF (rola OSF), Strzelanie ± , ×10, DSQ.
-function teamTimerAthleteHTML(teamName, lane, pairNum, run, role) {
-  if (!teamName) {
-    return '<div class="timer-athlete" style="opacity:.4;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">SOLO — brak drużyny ' + lane + '</div>';
-  }
-  const started = !!(run && run.startedAt);
-  const teamFinished = !!(started && run.finishedAt?.[teamName]);
-  const tr = (state.teamRun || {})[teamName] || {};
-  const dsq = !!tr.dsq;
-  const pairKeyArg = JSON.stringify(pairNum);
-  const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  const pairAttr = String(pairNum).replace(/"/g,'&quot;');
-
-  // Uprawnienia per rola (jak w indywidualnym)
-  const canStop      = role === 'META' || role === 'ADMIN';
-  const canEditTotal = role === 'META' || role === 'ADMIN';
-  const canEditOsf   = role === 'OSF'  || role === 'ADMIN';
-  const canEditHits  = role === 'META' || role === 'ADMIN';
-  const canEditDsq   = role === 'META' || role === 'ADMIN';
-
-  // Live time per drużyna (lub finished z biegSec)
-  const biegStr = (tr.biegSec != null && tr.biegSec !== '') ? _formatTeamSec(tr.biegSec) : '';
-  let timeDisplay;
-  if (biegStr) {
-    timeDisplay = '<div class="timer-athlete-time finished">' + esc(biegStr) + '</div>';
-  } else if (started) {
-    timeDisplay = '<div class="timer-athlete-time" data-team-timer="' + safeT + '|' + pairAttr + '" data-running="1">0.00</div>';
-  } else {
-    timeDisplay = '<div class="timer-athlete-time idle">—</div>';
-  }
-
-  // STOP META button
-  let stopBtn = '';
-  if (canStop && started) {
-    if (biegStr) {
-      stopBtn = '<button class="btn-timer btn-timer-undo" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="font-size:11px;padding:6px 12px;margin-top:8px;">↺ Cofnij stop</button>';
-    } else if (!dsq) {
-      stopBtn = '<button class="btn-timer btn-timer-stop" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" style="margin-top:8px;">■ STOP META</button>';
-    }
-  }
-
-  // Pole ręcznego BIEGu (backup gdy auto-stop był niedokładny)
-  let totalInput = '';
-  if (canEditTotal) {
-    totalInput = '<div class="timer-osf-input-row" style="margin-top:8px;">' +
-      '<span class="timer-osf-label" style="color:var(--green);">🏁 Bieg drużyny</span>' +
-      '<input type="text" class="timer-osf-input" value="' + esc(biegStr) + '" placeholder="m:ss.SS (ręcznie)"' +
-        ' onchange="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)"' +
-        ' onblur="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)"' +
-        ' style="background:rgba(76,175,130,.06);border-color:rgba(76,175,130,.35);"' +
-        ' title="Wpisz ręcznie jeśli auto-stop był nieprecyzyjny"' +
-        (dsq ? ' disabled' : '') + ' />' +
-    '</div>';
-  }
-
-  // OSF — tylko OSF/ADMIN, reszta read-only
-  let osfInput;
-  const osfDisp = (tr.osfSec != null && tr.osfSec !== '') ? tr.osfSec : '';
-  if (canEditOsf) {
-    osfInput = '<div class="timer-osf-input-row">' +
-      '<span class="timer-osf-label">⏱ OSF (s)</span>' +
-      '<input type="number" min="0" max="3600" step="0.01" class="timer-osf-input" value="' + esc(String(osfDisp)) + '" placeholder="np. 95"' +
-        ' onchange="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)"' +
-        ' onblur="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)"' +
-        (dsq ? ' disabled' : '') + ' />' +
-    '</div>';
-  } else {
-    osfInput = '<div class="timer-osf-input-row">' +
-      '<span class="timer-osf-label">⏱ OSF (s)</span>' +
-      '<span style="flex:1;font-family:var(--font-m);font-size:13px;color:' + (osfDisp ? 'var(--male)' : 'var(--text3)') + ';padding:5px 8px;background:rgba(91,155,213,.04);border:1px dashed rgba(91,155,213,.25);border-radius:var(--radius);" title="Tylko OSF/Admin może wpisać">' + (osfDisp ? esc(String(osfDisp)) : '— (wpisze OSF)') + '</span>' +
-    '</div>';
-  }
-
-  // Strzelanie (0-150 pkt) z input + kafelkami ±
-  let shotRow = '';
-  const shotVal = (tr.shotPoints !== undefined && tr.shotPoints !== null) ? tr.shotPoints : '';
-  if (canEditHits) {
-    shotRow =
-      '<div style="margin-top:8px;">' +
-        '<div style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-150)</div>' +
-        '<div class="ptr-shot-row compact">' +
-          '<input class="ptr-shot-input" type="number" min="0" max="150" step="1" value="' + esc(String(shotVal)) + '" placeholder="0-150"' +
-            ' onchange="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)"' +
-            ' onblur="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)"' +
-            (dsq ? ' disabled' : '') + ' />' +
-          '<button class="ptr-shot-btn" onclick="bumpTeamRunShot(\'' + safeT + '\',-1)"' + (dsq ? ' disabled' : '') + ' title="−1">−</button>' +
-          '<button class="ptr-shot-btn" onclick="bumpTeamRunShot(\'' + safeT + '\',+1)"' + (dsq ? ' disabled' : '') + ' title="+1">+</button>' +
-          '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',-10)"' + (dsq ? ' disabled' : '') + ' title="−10">−10</button>' +
-          '<button class="ptr-shot-btn small" onclick="bumpTeamRunShot(\'' + safeT + '\',+10)"' + (dsq ? ' disabled' : '') + ' title="+10">+10</button>' +
-        '</div>' +
-      '</div>' +
-      // ×10 (tens) jako mały input
-      '<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">' +
-        '<span class="timer-osf-label" style="font-size:9px;color:var(--text3);">×10 (tie-break)</span>' +
-        '<input type="number" min="0" max="15" step="1" value="' + (tr.tens !== undefined ? tr.tens : '') + '" placeholder="0-15"' +
-          ' onchange="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
-          ' onblur="setTeamRunField(\'' + safeT + '\',\'tens\',this.value)"' +
-          ' style="width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:4px 6px;font-family:var(--font-m);font-size:12px;text-align:center;"' +
-          (dsq ? ' disabled' : '') + ' />' +
-      '</div>';
-  } else if (shotVal !== '') {
-    shotRow = '<div style="font-size:11px;color:var(--text3);margin-top:8px;">Strzelanie: <strong style="color:var(--text1);">' + shotVal + '/150 pkt</strong></div>';
-  }
-
-  // DSQ button
-  let dsqBtn = '';
-  if (canEditDsq) {
-    dsqBtn = '<button onclick="toggleTeamRunDsq(\'' + safeT + '\')" style="margin-top:8px;font-family:var(--font-h);font-size:10px;font-weight:700;padding:4px 10px;border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';border-radius:var(--radius);background:' + (dsq ? 'rgba(224,85,85,.12)' : 'transparent') + ';color:' + (dsq ? 'var(--red)' : 'var(--text3)') + ';cursor:pointer;">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>';
-  }
-
-  const cls = 'timer-athlete' + (biegStr ? ' finished' : '') + (dsq ? ' dsq' : '');
-  return '<div class="' + cls + '">' +
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div class="timer-athlete-name">' + esc(teamName) + ' <span class="lane-badge lane-' + lane + '" style="margin-left:4px;">' + lane + '</span></div>' +
-        '<div class="timer-athlete-meta">Patrol 3-osobowy</div>' +
-      '</div>' +
-    '</div>' +
-    timeDisplay +
-    stopBtn +
-    totalInput +
-    osfInput +
-    shotRow +
-    dsqBtn +
-  '</div>';
 }
 
 // ─── KLASYFIKACJA GENERALNA (ind. M top 3 + bieg drużynowy) ─────
@@ -7231,9 +6865,7 @@ async function boot() {
     if (tabId === 'setup') renderSetupPage();
     else if (tabId === 'athletes') { renderAthletes(); updateAthleteStats(); }
     else if (tabId === 'pairs') renderPairsView();
-    else if (tabId === 'timer') renderTimerView();
     else if (tabId === 'team-run') renderTeamRunList();
-    else if (tabId === 'team-timer') renderTeamTimerView();
     else if (tabId === 'results') renderResultsView();
   }
   startRealtimeSync();
