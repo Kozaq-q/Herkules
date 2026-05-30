@@ -4567,7 +4567,9 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
       '</div>' +
     '</div>' +
     // Dolna belka: DSQ po prawej
-    '<div style="display:flex;justify-content:flex-end;margin-top:6px;">' +
+    // Stopka: WYNIK (gdy wszystkie pola wpisane) + DSQ po prawej
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);">' +
+      _athleteScoreHTML(a, dsq) +
       '<button onclick="toggleDsq(' + a.id + ')"' +
         ' style="font-family:var(--font-h);font-size:10px;font-weight:700;padding:3px 8px;' +
         'border:1px solid ' + (dsq ? 'rgba(224,85,85,.6)' : 'var(--border2)') + ';' +
@@ -4580,6 +4582,43 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
         (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
     '</div>' +
   '</div>';
+}
+
+// Renderuje pasek wyniku zawodnika (lewa strona stopki karty).
+// Pokazuje "Wynik: X pkt" gdy wszystkie wymagane pola są wpisane (czas biegu + OSF + strzelanie),
+// "DSQ" gdy zdyskwalifikowany, lub dyskretne "—" + hint co brakuje.
+function _athleteScoreHTML(a, dsq) {
+  if (dsq) {
+    return '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Wynik: ' +
+      '<span style="background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.4);padding:1px 6px;border-radius:3px;font-family:var(--font-h);font-size:11px;font-weight:800;">DSQ</span>' +
+    '</span>';
+  }
+  const row = _patrolBuildRow(a);
+  // Marker (DNF/DNS) → pokaż marker bez wyniku
+  if (row.marker) {
+    return '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Wynik: ' +
+      '<span style="color:var(--text2);font-family:var(--font-h);font-weight:800;">' + row.marker + '</span>' +
+    '</span>';
+  }
+  const pts = calcPatrolPoints(a, row);
+  if (pts === null) {
+    // Czego brakuje?
+    const missing = [];
+    if (!Number.isFinite(row.totalSec) || row.totalSec === Infinity) missing.push('🏃');
+    const osfSec = (row.osf && !isTimeMarker(row.osf)) ? parseTime(row.osf) : null;
+    if (osfSec === null || !Number.isFinite(osfSec) || osfSec <= 0) missing.push('⏱');
+    const shotPts = _shotPointsFromRow(row);
+    if (shotPts === null || shotPts === undefined) missing.push('🎯');
+    const hint = missing.length ? ('brakuje: ' + missing.join(' ')) : 'brak wszystkich danych';
+    return '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;" title="' + hint + '">Wynik: ' +
+      '<span style="color:var(--text3);opacity:.7;">—</span>' +
+      ' <span style="font-size:9px;opacity:.55;text-transform:none;letter-spacing:.5px;">(' + hint + ')</span>' +
+    '</span>';
+  }
+  // Pełny wynik
+  return '<span style="font-family:var(--font-h);font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">Wynik: ' +
+    '<strong style="color:var(--accent);font-family:var(--font-m);font-size:15px;font-weight:800;letter-spacing:.3px;">' + pts + ' pkt</strong>' +
+  '</span>';
 }
 
 // Buduje rząd kafelków OSF + Łączny dla zawodnika.
