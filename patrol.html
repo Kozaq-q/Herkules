@@ -1989,6 +1989,7 @@ function _scheduleRetry() {
 async function saveToSupabase() {
   if (_isSaving) { scheduleSave(); return; }
   _isSaving = true;
+  let saveOk = false;
   try {
     const now = new Date().toISOString();
     const tag = SESSION_ID + '_' + Date.now();
@@ -2006,6 +2007,7 @@ async function saveToSupabase() {
       showSyncStatus('pending');
     } else {
       // Sukces — wyczyść flagę pending
+      saveOk = true;
       if (_pendingSaveSince > 0) {
         const offlineDurSec = Math.round((Date.now() - _pendingSaveSince) / 1000);
         showToast('✓ Zsynchronizowano z chmurą po ' + offlineDurSec + 's (' + _retryCount + ' prób)', 'success', 3000);
@@ -2022,7 +2024,19 @@ async function saveToSupabase() {
     _scheduleRetry();
     showSyncStatus('pending');
   }
-  finally { _isSaving = false; }
+  finally {
+    _isSaving = false;
+    // Race-fix: po skutecznym save nasz echo wraca przez realtime — odrzucamy zalegające
+    // odłozone remote (są starsze i mogą wycofać nasze właśnie zapisane zmiany).
+    if (saveOk) {
+      _pendingRemoteApply = null;
+    } else if (_pendingRemoteApply && _saveTimer == null) {
+      // Save padł, ale jest jakiś deferred remote — zastosuj (best-effort, user widzi update innych sędziów)
+      const json = _pendingRemoteApply;
+      _pendingRemoteApply = null;
+      _applyRemoteStateNowInternal(json);
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2190,6 +2204,41 @@ function mergeTimesPerField(local, incoming) {
   }
 }
 
+// Per-key merge stoperów: state.runs[k] = {startedAt, finishedAt: {id: ms}, scheduledStartAt}
+// Cel: gdy stary remote dojdzie po naszym START/STOP, nie wycofa świeższych timestampów.
+// Rule per pole: max(local, remote). Dla finishedAt — union per athlete-id (max ms).
+// Limitacja: nie obsługuje undo (delete) — to wymaga tombstones, dla typowego workflow nie jest problem.
+function _mergeRunsPerKey(localRuns, incomingRuns) {
+  const allKeys = new Set([...Object.keys(localRuns || {}), ...Object.keys(incomingRuns || {})]);
+  const out = {};
+  for (const k of allKeys) {
+    const L = (localRuns || {})[k];
+    const R = (incomingRuns || {})[k];
+    if (!L && !R) continue;
+    if (!L) { out[k] = R; continue; }
+    if (!R) { out[k] = L; continue; }
+    // Oba obecne — merge per-pole
+    const merged = {};
+    const startedAt = Math.max(L.startedAt || 0, R.startedAt || 0);
+    if (startedAt) merged.startedAt = startedAt;
+    const schedAt = Math.max(L.scheduledStartAt || 0, R.scheduledStartAt || 0);
+    if (schedAt) merged.scheduledStartAt = schedAt;
+    // finishedAt: union per id (max ms) — sędzia A stopuje L, sędzia B stopuje P → oba zachowane
+    const finL = L.finishedAt || {};
+    const finR = R.finishedAt || {};
+    const finOut = {};
+    const finKeys = new Set([...Object.keys(finL), ...Object.keys(finR)]);
+    finKeys.forEach(id => {
+      const v = Math.max(finL[id] || 0, finR[id] || 0);
+      if (v) finOut[id] = v;
+    });
+    if (Object.keys(finOut).length) merged.finishedAt = finOut;
+    else if (L.finishedAt || R.finishedAt) merged.finishedAt = {};
+    out[k] = merged;
+  }
+  return out;
+}
+
 function mergeDisqPerId(localDisq, localDisqAt, remoteDisq, remoteDisqAt) {
   // Mutuje `localDisq` i `localDisqAt` żeby zawierały merged values
   const allIds = new Set([...Object.keys(localDisq), ...Object.keys(remoteDisq)]);
@@ -2214,7 +2263,19 @@ function mergeDisqPerId(localDisq, localDisqAt, remoteDisq, remoteDisqAt) {
   Object.assign(localDisqAt, outAt);
 }
 
+// Race-condition mitigation: gdy mamy lokalne kliknięcia w toku (debounced save +300ms),
+// odkładamy aplikowanie zdalnego stanu do momentu po naszym save. Bez tego szybkie
+// kliki START/STOP żądają by remote (jeszcze nieaktualny) nadpisał nasz finishedAt[id].
+let _pendingRemoteApply = null;
 function _applyRemoteStateNow(stateJson) {
+  // Mamy lokalną zmianę w toku? Odkładamy remote do po-save.
+  if (_saveTimer != null || _isSaving) {
+    _pendingRemoteApply = stateJson; // zostawiamy TYLKO ostatni - starsze i tak nieaktualne
+    return;
+  }
+  _applyRemoteStateNowInternal(stateJson);
+}
+function _applyRemoteStateNowInternal(stateJson) {
   try {
     const incoming = JSON.parse(stateJson);
     if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
@@ -2230,6 +2291,14 @@ function _applyRemoteStateNow(stateJson) {
       // Wynik scalania zapisz z powrotem do incoming
       incoming.disq = state.disq;
       incoming.disqAt = state.disqAt;
+    }
+    // Per-key merge stoperow (state.runs / state.teamRuns) — defense in depth
+    // przed wycofywaniem swieżych klikow START/STOP gdy zalegajacy remote nadejdzie z opóźnieniem.
+    if (state && state.runs) {
+      incoming.runs = _mergeRunsPerKey(state.runs, incoming.runs || {});
+    }
+    if (state && state.teamRuns) {
+      incoming.teamRuns = _mergeRunsPerKey(state.teamRuns, incoming.teamRuns || {});
     }
     state = incoming;
     ensureStateDefaults();
