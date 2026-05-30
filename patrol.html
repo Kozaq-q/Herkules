@@ -378,8 +378,14 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
   align-self: stretch;
   min-height: 110px;
 }
+/* Stan po starcie: 2 guziki STOP obok siebie (L po lewej, P po prawej) */
+.pair-center-action.has-stops {
+  flex-direction: row;
+  flex: 0 0 224px;
+}
 @media (max-width: 720px) {
   .pair-center-action { flex: 0 0 104px; }
+  .pair-center-action.has-stops { flex: 0 0 184px; }
 }
 /* Wielki, kwadratowy guzik START */
 .pair-start-btn {
@@ -4528,8 +4534,8 @@ function indPairCenterActionHTML(gender, pairNum, leftAth, rightAth, run, starte
         '</button>' +
       '</div>';
   }
-  // Para wystartowana — 2 guziki STOP (lub 1 jeśli SOLO)
-  let html = fallback + '<div class="pair-center-action">';
+  // Para wystartowana — 2 guziki STOP obok siebie (L po lewej, P po prawej)
+  let html = fallback + '<div class="pair-center-action has-stops">';
   html += _indStopBtnHTML(leftAth, 'L', gender, pairNum, run, canEditTotal);
   html += _indStopBtnHTML(rightAth, 'P', gender, pairNum, run, canEditTotal);
   html += '</div>';
@@ -7072,7 +7078,7 @@ function teamPairCenterActionHTML(aTeam, aLane, bTeam, bLane, pairNum, run, star
         '</button>' +
       '</div>';
   }
-  let html = fallback + '<div class="pair-center-action">';
+  let html = fallback + '<div class="pair-center-action has-stops">';
   html += _teamStopBtnHTML(aTeam, aLane, pairNum, pairKeyArg, run, canEdit);
   html += _teamStopBtnHTML(bTeam, bLane, pairNum, pairKeyArg, run, canEdit);
   html += '</div>';
