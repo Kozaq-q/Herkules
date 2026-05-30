@@ -290,13 +290,57 @@ body.ptr-offline-mode .pair-card.is-just-started { display: none !important; ani
 .pair-chip-countdown.is-imminent { color: var(--red); font-weight: 700; }
 .pair-start-stamp { font-family: var(--font-m); font-size: 10px; color: var(--text3); white-space: nowrap; }
 
-/* Filtr widoku par (Wszystkie/Biegnące/Skończone/Oczekujące) */
-.ptr-pair-filter { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 12px 0; }
-.ptr-pair-filter button { background: transparent; border: 1px solid var(--border2); color: var(--text3); font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; padding: 5px 12px; border-radius: var(--radius); cursor: pointer; transition: background .12s, color .12s, border-color .12s; }
-.ptr-pair-filter button:hover { color: var(--text1); }
-.ptr-pair-filter button.active { background: var(--bg3); color: var(--text1); border-color: var(--text2); }
-.ptr-pair-filter button .count { color: var(--text3); font-weight: 400; margin-left: 5px; font-size: 9px; }
-.ptr-pair-filter button.active .count { color: var(--text2); }
+/* Filtr widoku par (Wszystkie/Biegnące/Skończone/Oczekujące) — segmented control */
+.ptr-pair-filter {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin: 0 0 16px 0; padding: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.ptr-pair-filter button {
+  flex: 1 1 130px; min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text3);
+  font-family: var(--font-h); font-size: 12px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase;
+  padding: 11px 14px; min-height: 44px;
+  border-radius: var(--radius); cursor: pointer;
+  transition: background .14s, color .14s, border-color .14s, box-shadow .14s;
+  position: relative;
+}
+.ptr-pair-filter button:hover { color: var(--text1); background: var(--bg2); }
+.ptr-pair-filter button.active { background: var(--bg2); color: var(--text1); border-color: var(--orange); box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(232,148,77,.10); }
+.ptr-pair-filter button:active { transform: scale(.98); }
+/* Ikonki + akcent kolorystyczny per kategoria */
+.ptr-pair-filter button .flt-glyph { display: inline-flex; font-size: 13px; line-height: 1; opacity: .85; }
+.ptr-pair-filter button[data-filter="all"] .flt-glyph { color: var(--text2); }
+.ptr-pair-filter button[data-filter="running"] .flt-glyph { color: var(--orange); }
+.ptr-pair-filter button[data-filter="finished"] .flt-glyph { color: var(--green); }
+.ptr-pair-filter button[data-filter="idle"] .flt-glyph { color: var(--text3); }
+.ptr-pair-filter button.active[data-filter="all"] { border-color: var(--text2); }
+.ptr-pair-filter button.active[data-filter="running"] { border-color: var(--orange); box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(232,148,77,.18); }
+.ptr-pair-filter button.active[data-filter="finished"] { border-color: var(--green); box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(76,175,130,.18); }
+.ptr-pair-filter button.active[data-filter="idle"] { border-color: var(--text3); }
+/* Licznik — chip */
+.ptr-pair-filter button .count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 22px; padding: 0 7px;
+  background: var(--bg4); color: var(--text2);
+  font-family: var(--font-m); font-size: 11px; font-weight: 800;
+  border-radius: 11px; border: 1px solid var(--border2);
+  letter-spacing: 0;
+}
+.ptr-pair-filter button.active[data-filter="all"] .count { background: var(--text2); color: var(--bg1); border-color: var(--text2); }
+.ptr-pair-filter button.active[data-filter="running"] .count { background: var(--orange); color: #111; border-color: var(--orange); }
+.ptr-pair-filter button.active[data-filter="finished"] .count { background: var(--green); color: #fff; border-color: var(--green); }
+.ptr-pair-filter button.active[data-filter="idle"] .count { background: var(--text3); color: var(--bg1); border-color: var(--text3); }
+@media (max-width: 720px) {
+  .ptr-pair-filter { gap: 3px; padding: 3px; }
+  .ptr-pair-filter button { font-size: 11px; padding: 10px 6px; letter-spacing: 1px; min-height: 42px; flex-basis: 90px; }
+  .ptr-pair-filter button .count { min-width: 20px; height: 20px; font-size: 10px; padding: 0 5px; }
+  .ptr-pair-filter button .flt-glyph { font-size: 11px; }
+}
 .ptr-pair-filter-empty { text-align: center; padding: 26px 20px; color: var(--text3); font-size: 12px; background: var(--bg3); border: 1px dashed var(--border2); border-radius: var(--radius); }
 
 /* NOTATKI SĘDZIOWSKIE — dwa stany (puste = na dole, dyskretne / pełne = na górze, akcent) */
@@ -4307,7 +4351,17 @@ function _updateLockAllBtn() {
 }
 
 // Filtr widoku par: 'all' | 'running' | 'finished' | 'idle'
-let _pairsFilter = 'all';
+// Klucze localStorage do zapamietywania filtrow miedzy odswiezeniami strony
+const _PAIRS_FILTER_LS = 'patrol_pairs_filter_' + SLOT_ID;
+const _TEAM_RUN_FILTER_LS = 'patrol_team_run_filter_' + SLOT_ID;
+function _loadFilter(lsKey) {
+  try {
+    const v = localStorage.getItem(lsKey);
+    if (['all','running','finished','idle'].includes(v)) return v;
+  } catch (e) {}
+  return 'all';
+}
+let _pairsFilter = _loadFilter(_PAIRS_FILTER_LS);
 // Sticky pary — startowane/stopowane w aktualnym filtrze zostaja widoczne mimo zmiany stanu
 // (zapobiega "znikaniu spod palca"). Klucz: 'M_3', 'K_1', ...
 let _pairsStickyKeys = new Set();
@@ -4318,6 +4372,7 @@ function setPairsFilter(f) {
   _pairsFilter = f;
   _pairsStickyKeys.clear();
   _pairsJustStartedKey = null;
+  try { localStorage.setItem(_PAIRS_FILTER_LS, f); } catch (e) {}
   renderPairsView();
 }
 // Klasyfikacja stanu pary indywidualnej (running/finished/idle)
@@ -4358,14 +4413,16 @@ function _buildPairFilterBar(containerId, filter, counts, setFnName) {
   if (!total) { el.style.display = 'none'; el.innerHTML = ''; return; }
   el.style.display = 'flex';
   const items = [
-    ['all',      'Wszystkie',   counts.all],
-    ['running',  'Biegnące',    counts.running],
-    ['finished', 'Skończone',   counts.finished],
-    ['idle',     'Oczekujące',  counts.idle],
+    ['all',      '☰', 'Wszystkie',   counts.all],
+    ['running',  '▶', 'Biegnące',    counts.running],
+    ['finished', '✓', 'Skończone',   counts.finished],
+    ['idle',     '◌', 'Oczekujące',  counts.idle],
   ];
-  el.innerHTML = items.map(([k, label, n]) =>
-    '<button class="' + (filter === k ? 'active' : '') + '" onclick="' + setFnName + '(\'' + k + '\')" type="button">' +
-      esc(label) + '<span class="count">' + n + '</span>' +
+  el.innerHTML = items.map(([k, glyph, label, n]) =>
+    '<button class="' + (filter === k ? 'active' : '') + '" data-filter="' + k + '" onclick="' + setFnName + '(\'' + k + '\')" type="button">' +
+      '<span class="flt-glyph">' + glyph + '</span>' +
+      '<span class="flt-lbl">' + esc(label) + '</span>' +
+      '<span class="count">' + n + '</span>' +
     '</button>'
   ).join('');
 }
@@ -7702,7 +7759,7 @@ function bumpTeamRunShot(team, delta) {
 }
 
 // Filtr widoku biegu drużynowego + sticky (analogicznie do indywidualnego)
-let _teamRunFilter = 'all';
+let _teamRunFilter = _loadFilter(_TEAM_RUN_FILTER_LS);
 let _teamRunStickyKeys = new Set();
 let _teamRunJustStartedKey = null;
 function setTeamRunFilter(f) {
@@ -7710,6 +7767,7 @@ function setTeamRunFilter(f) {
   _teamRunFilter = f;
   _teamRunStickyKeys.clear();
   _teamRunJustStartedKey = null;
+  try { localStorage.setItem(_TEAM_RUN_FILTER_LS, f); } catch (e) {}
   renderTeamRunList();
 }
 function _classifyTeamPair(p) {
