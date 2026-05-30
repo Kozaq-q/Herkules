@@ -4602,9 +4602,10 @@ function _singleTimeTileHTML(a, field, val, isMarker, disabled, canEdit, role, l
   const altCount = alts.length;
   const historyKey = a.id + '|' + field;
   const isOpen = _openTimeHistory.has(historyKey);
-  // Badge źródła — tylko gdy wartość ustawiona
+  // Badge źródła — tylko gdy wartość ustawiona.
+  // OSF zawsze wpisuje sędzia ręcznie (nie ma auto-stopera), więc badge nieinformacyjny — pomijamy.
   let srcBadge = '';
-  if (val && !isMarker) {
+  if (val && !isMarker && field !== 'osf') {
     if (source === 'stopwatch') {
       srcBadge = '<span class="time-source-badge stopwatch" title="Wpisane automatycznie przez stoper">⏱</span>';
     } else {
