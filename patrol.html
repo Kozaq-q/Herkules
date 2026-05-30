@@ -6532,6 +6532,202 @@ function saveTimeField(input) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// HISTORIA CZASÓW DRUŻYNOWYCH — analog. do indywidualnych, na state.teamRun[name]
+// Pola objęte: biegSec (m:ss.SS), osfSec (sekundy). Source: 'manual'|'stopwatch'.
+// ═══════════════════════════════════════════════════════════════════════
+const TEAM_RUN_HISTORY_FIELDS = ['biegSec', 'osfSec'];
+const TEAM_RUN_FIELDS_WITH_SOURCE = ['biegSec']; // osfSec zawsze recznie - bez source
+const TEAM_RUN_HISTORY_LIMIT = 10;
+let _openTeamRunHistory = new Set(); // klucze: teamName + '|' + field
+
+function _pushTeamRunAlt(teamName, field, oldVal, oldAt, oldSource) {
+  if (oldVal === undefined || oldVal === null || oldVal === '') return;
+  if (!TEAM_RUN_HISTORY_FIELDS.includes(field)) return;
+  if (!state.teamRun) state.teamRun = {};
+  if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
+  const altsKey = field + 'Alts';
+  if (!Array.isArray(state.teamRun[teamName][altsKey])) state.teamRun[teamName][altsKey] = [];
+  const alts = state.teamRun[teamName][altsKey];
+  const src = oldSource || 'manual';
+  const last = alts[alts.length - 1];
+  if (last && last.value === oldVal && (last.source || 'manual') === src) return;
+  alts.push({ value: oldVal, at: oldAt || nowMs(), source: src });
+  if (alts.length > TEAM_RUN_HISTORY_LIMIT) alts.splice(0, alts.length - TEAM_RUN_HISTORY_LIMIT);
+  state.teamRun[teamName][altsKey + 'At'] = nowMs();
+}
+
+// Ustaw wartość pola czasu druzynowego z backupem starej do alts.
+function _setTeamRunFieldWithBackup(teamName, field, newVal, source) {
+  if (!state.teamRun) state.teamRun = {};
+  if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
+  const tr = state.teamRun[teamName];
+  const oldVal = tr[field];
+  const oldAt = tr[field + 'At'];
+  const oldSource = tr[field + 'Source'];
+  if ((oldVal !== undefined && oldVal !== null && oldVal !== '') && oldVal !== newVal) {
+    _pushTeamRunAlt(teamName, field, oldVal, oldAt, oldSource);
+  }
+  tr[field + 'At'] = nowMs();
+  if (newVal === '' || newVal === undefined || newVal === null) {
+    delete tr[field];
+    delete tr[field + 'Source'];
+  } else {
+    tr[field] = newVal;
+    if (TEAM_RUN_FIELDS_WITH_SOURCE.includes(field)) tr[field + 'Source'] = source || 'manual';
+  }
+}
+
+function selectTeamRunAlt(teamName, field, altIndex) {
+  const tr = state.teamRun?.[teamName];
+  if (!tr) return;
+  const altsKey = field + 'Alts';
+  const alts = tr[altsKey];
+  if (!Array.isArray(alts) || altIndex < 0 || altIndex >= alts.length) return;
+  const chosen = alts[altIndex];
+  const curVal = tr[field];
+  const curSource = tr[field + 'Source'] || 'manual';
+  const curAt = tr[field + 'At'] || nowMs();
+  alts.splice(altIndex, 1);
+  if (curVal !== undefined && curVal !== null && curVal !== '') {
+    alts.push({ value: curVal, at: curAt, source: curSource });
+    if (alts.length > TEAM_RUN_HISTORY_LIMIT) alts.splice(0, alts.length - TEAM_RUN_HISTORY_LIMIT);
+  }
+  tr[field] = chosen.value;
+  if (TEAM_RUN_FIELDS_WITH_SOURCE.includes(field)) tr[field + 'Source'] = chosen.source || 'manual';
+  tr[field + 'At'] = nowMs();
+  tr[altsKey + 'At'] = nowMs();
+  save();
+  _renderTeamRunActive();
+  renderTeamView();
+  renderOverallView();
+  const disp = (field === 'biegSec') ? _formatTeamSec(chosen.value) : String(chosen.value);
+  showToast('Wybrano zapisany czas: ' + disp, 'success', 2000);
+}
+
+function deleteTeamRunAlt(teamName, field, altIndex) {
+  const tr = state.teamRun?.[teamName];
+  if (!tr) return;
+  const altsKey = field + 'Alts';
+  const alts = tr[altsKey];
+  if (!Array.isArray(alts) || altIndex < 0 || altIndex >= alts.length) return;
+  const v = alts[altIndex].value;
+  const disp = (field === 'biegSec') ? _formatTeamSec(v) : String(v);
+  if (!confirm('Usunąć zapisany czas ' + disp + ' z historii drużyny ' + teamName + '? (akcji nie da się cofnąć)')) return;
+  alts.splice(altIndex, 1);
+  tr[altsKey + 'At'] = nowMs();
+  save();
+  _renderTeamRunActive();
+}
+
+function toggleTeamRunHistory(teamName, field) {
+  const key = teamName + '|' + field;
+  if (_openTeamRunHistory.has(key)) _openTeamRunHistory.delete(key);
+  else _openTeamRunHistory.add(key);
+  _renderTeamRunActive();
+}
+
+// onfocus inputa drużynowego czasu — zapamiętaj wartość sprzed edycji (do backupu na commit)
+function captureTeamRunFieldPrior(input) {
+  const teamName = input.dataset.team;
+  const field = input.dataset.field; // 'biegSec' lub 'osfSec' (UWAGA: dla biegStr używamy biegSec)
+  const tr = state.teamRun?.[teamName] || {};
+  const curVal = tr[field];
+  input.dataset.editPrior = (curVal === undefined || curVal === null) ? '' : String(curVal);
+  input.dataset.editPriorSrc = tr[field + 'Source'] || 'manual';
+  input.dataset.editPriorAt = String(tr[field + 'At'] || 0);
+}
+
+// onblur OSF/Bieg — parsuj, porównaj z prior, backupuj jeśli się zmieniło.
+// field: 'osfSec' (number) lub 'biegStr' → konwertuje do biegSec (float).
+function commitTeamRunTimeField(input) {
+  const teamName = input.dataset.team;
+  const uiField = input.dataset.uiField || input.dataset.field; // 'osfSec' lub 'biegStr'
+  const realField = (uiField === 'biegStr') ? 'biegSec' : uiField;
+  const raw = (input.value || '').trim();
+  // Parsuj nową wartość
+  let newVal = null;
+  if (raw) {
+    if (realField === 'biegSec') {
+      const sec = _parseTeamSec(raw);
+      if (sec !== null && Number.isFinite(sec) && sec >= 0) newVal = sec;
+    } else if (realField === 'osfSec') {
+      const n = parseFloat(raw.replace(',', '.'));
+      if (Number.isFinite(n) && n >= 0) newVal = n;
+    }
+  }
+  // Prior z dataset (captured on focus)
+  const priorRaw = input.dataset.editPrior;
+  const priorSrc = input.dataset.editPriorSrc || 'manual';
+  const priorAt  = parseInt(input.dataset.editPriorAt) || null;
+  delete input.dataset.editPrior;
+  delete input.dataset.editPriorSrc;
+  delete input.dataset.editPriorAt;
+  // Backup jeśli się zmieniło (prior istniał i jest różny od nowego)
+  if (priorRaw !== '' && priorRaw !== undefined) {
+    const priorVal = parseFloat(priorRaw);
+    if (Number.isFinite(priorVal) && priorVal !== newVal) {
+      _pushTeamRunAlt(teamName, realField, priorVal, priorAt, priorSrc);
+    }
+  }
+  if (!state.teamRun) state.teamRun = {};
+  if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
+  state.teamRun[teamName][realField + 'At'] = nowMs();
+  if (newVal === null) {
+    delete state.teamRun[teamName][realField];
+    delete state.teamRun[teamName][realField + 'Source'];
+  } else {
+    state.teamRun[teamName][realField] = newVal;
+    if (TEAM_RUN_FIELDS_WITH_SOURCE.includes(realField)) state.teamRun[teamName][realField + 'Source'] = 'manual';
+  }
+  save();
+  _renderTeamRunActive();
+  renderTeamView();
+  renderOverallView();
+}
+
+function _renderTeamRunHistoryDropdown(teamName, field, currentVal, currentSource) {
+  const tr = state.teamRun?.[teamName] || {};
+  const alts = Array.isArray(tr[field + 'Alts']) ? tr[field + 'Alts'].slice() : [];
+  alts.sort((a, b) => (b.at || 0) - (a.at || 0));
+  const curAt = tr[field + 'At'];
+  const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const fmt = (v) => (field === 'biegSec') ? _formatTeamSec(v) : (v + ' s');
+  let html = '<div class="time-history-dropdown">';
+  html += '<div class="time-history-dropdown-hint">Wybierz aktywny czas:</div>';
+  if (currentVal !== undefined && currentVal !== null && currentVal !== '') {
+    const srcCls = (currentSource === 'stopwatch') ? 'stopwatch' : 'manual';
+    const srcLbl = (currentSource === 'stopwatch') ? '⏱ stoper' : '✎ ręczny';
+    const showSrc = (field === 'biegSec'); // OSF zawsze ręcznie — bez badge'a
+    html += '<div class="time-history-entry active" title="Aktywny czas — liczy się do wyniku">' +
+      '<span class="hist-radio"></span>' +
+      '<span class="hist-val">' + esc(fmt(currentVal)) + '</span>' +
+      (showSrc ? '<span class="hist-src ' + srcCls + '">' + srcLbl + '</span>' : '') +
+      '<span class="hist-time">' + esc(_formatHistTime(curAt)) + '</span>' +
+    '</div>';
+  }
+  if (alts.length === 0 && (currentVal === undefined || currentVal === null || currentVal === '')) {
+    html += '<div class="time-history-empty">Brak zapisanych wartości.</div>';
+  } else if (alts.length === 0) {
+    html += '<div class="time-history-empty">Brak alternatywnych wpisów (jeszcze nic nie zostało nadpisane).</div>';
+  }
+  const showSrcRow = (field === 'biegSec');
+  alts.forEach((alt) => {
+    const origIdx = (tr[field + 'Alts'] || []).indexOf(alt);
+    const srcCls = (alt.source === 'stopwatch') ? 'stopwatch' : 'manual';
+    const srcLbl = (alt.source === 'stopwatch') ? '⏱ stoper' : '✎ ręczny';
+    html += '<div class="time-history-entry" onclick="selectTeamRunAlt(\'' + safeT + '\',\'' + field + '\',' + origIdx + ')" title="Kliknij aby ustawić jako aktywny">' +
+      '<span class="hist-radio"></span>' +
+      '<span class="hist-val">' + esc(fmt(alt.value)) + '</span>' +
+      (showSrcRow ? '<span class="hist-src ' + srcCls + '">' + srcLbl + '</span>' : '') +
+      '<span class="hist-time">' + esc(_formatHistTime(alt.at)) + '</span>' +
+      '<button class="hist-del" onclick="event.stopPropagation();deleteTeamRunAlt(\'' + safeT + '\',\'' + field + '\',' + origIdx + ')" title="Usuń ten zapis z historii">×</button>' +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 function commitTimeField(input) {
   const id = parseInt(input.dataset.id);
   const field = input.dataset.field;
@@ -7428,25 +7624,20 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
       '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:700;">' + esc(teamName) + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">Patrol 3-osobowy</div>' +
-    // OSF + Bieg (czas) — kafelki obok siebie jak w ind.
-    '<div class="ptr-times-row">' +
-      '<div class="ptr-time-tile ptr-time-osf' + (disabled ? ' dsq' : '') + '">' +
-        '<div class="ptr-time-lbl">⏱ OSF (s)' + (!canEdit ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
-        '<input class="ptr-time-input" type="number" min="0" max="3600" value="' + (tr.osfSec || '') + '" placeholder="np. 95"' +
-          ' onchange="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'osfSec\',this.value)"' +
-          (disabled ? ' disabled' : '') + ' />' +
-      '</div>' +
-      '<div class="ptr-time-tile ptr-time-total' + (disabled ? ' dsq' : '') + '">' +
-        '<div class="ptr-time-lbl">🏃 Bieg (m:ss)' + (!canEdit ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '') + '</div>' +
-        '<input class="ptr-time-input" type="text" value="' + esc(biegStr) + '" placeholder="np. 9:30"' +
-          ' onchange="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'biegStr\',this.value)"' +
-          (disabled ? ' disabled' : '') + ' />' +
-      '</div>' +
-    '</div>' +
-    // Strzelanie (0-150) z input + kafelkami ±1 / ±10
-    '<div style="margin-top:8px;">' +
-      '<div class="ptr-time-lbl" style="color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-150 pkt, suma 3 zaw.)' + (!canEdit ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') + '</div>' +
-      '<div class="ptr-shot-row">' +
+    // OSF + Bieg (czas) — kafelki z historią + badge'm źródła (jak w ind.)
+    _teamRunTimeTilesHTML(teamName, tr, biegStr, disabled, canEdit, role) +
+    // Strzelanie (0-150) z input + kafelkami ±1 / ±10.
+    // Czerwone podświetlenie gdy drużyna ma wpisany czas biegu a strzelanie puste — przypomina sędziemu.
+    (function(){
+      const hasBieg = (tr.biegSec != null && tr.biegSec !== '');
+      const shotEmpty = (tr.shotPoints === undefined || tr.shotPoints === null || tr.shotPoints === '');
+      const shotNeeded = hasBieg && shotEmpty && !dsq;
+      return '<div style="margin-top:8px;">' +
+        '<div class="ptr-time-lbl' + (shotNeeded ? ' ptr-shot-needed-label' : '') + '" style="' + (shotNeeded ? '' : 'color:var(--orange);') + 'margin-bottom:4px;">🎯 Strzelanie (0-150 pkt, suma 3 zaw.)' + (!canEdit ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') +
+          (shotNeeded ? '<span class="ptr-shot-needed-badge" title="Drużyna dobiegła — wpisz wynik strzelania (0 też jest wynikiem)">‼ wpisz wynik</span>' : '') +
+        '</div>' +
+        '<div class="ptr-shot-row' + (shotNeeded ? ' ptr-shot-needed-row' : '') + '">';
+    })() +
         '<input class="ptr-shot-input" type="number" min="0" max="150" step="1" value="' + (tr.shotPoints !== undefined ? tr.shotPoints : '') + '" placeholder="0-150"' +
           ' onchange="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)" onblur="setTeamRunField(\'' + safeT + '\',\'shotPoints\',this.value)"' +
           (disabled ? ' disabled' : '') + ' />' +
@@ -7493,6 +7684,64 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
         ' title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj drużynę') + '">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
     '</div>' +
   '</div>';
+}
+
+// Rząd kafelków OSF + Bieg dla drużyny — z badge'm źródła (tylko biegSec) i historią czasów.
+// OSF: zawsze ręcznie wpisywane przez sędziego (bez badge'a źródła).
+// Bieg: ze stopera lub ręcznie (badge ✎/⏱).
+function _teamRunTimeTilesHTML(teamName, tr, biegStr, disabled, canEdit, role) {
+  return '<div class="ptr-times-row">' +
+    _singleTeamRunTimeTileHTML(teamName, 'osfSec', tr.osfSec, '', disabled, canEdit, role, '⏱ OSF (s)', 'np. 95', 'number') +
+    _singleTeamRunTimeTileHTML(teamName, 'biegStr', biegStr, tr.biegSecSource, disabled, canEdit, role, '🏃 Bieg (m:ss)', 'np. 9:30', 'text') +
+  '</div>';
+}
+
+function _singleTeamRunTimeTileHTML(teamName, uiField, val, source, disabled, canEdit, role, label, placeholder, inputType) {
+  // uiField: 'osfSec' (number) lub 'biegStr' (text → biegSec)
+  const realField = (uiField === 'biegStr') ? 'biegSec' : uiField;
+  const tileCls = (realField === 'osfSec') ? 'ptr-time-osf' : 'ptr-time-total';
+  const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const tr = (state.teamRun || {})[teamName] || {};
+  const alts = Array.isArray(tr[realField + 'Alts']) ? tr[realField + 'Alts'] : [];
+  const altCount = alts.length;
+  const historyKey = teamName + '|' + realField;
+  const isOpen = _openTeamRunHistory.has(historyKey);
+  // Badge źródła — tylko biegSec ma sens (osfSec zawsze recznie).
+  let srcBadge = '';
+  if (val !== '' && val != null && realField === 'biegSec') {
+    if (source === 'stopwatch') {
+      srcBadge = '<span class="time-source-badge stopwatch" title="Wpisane automatycznie przez stoper">⏱</span>';
+    } else {
+      srcBadge = '<span class="time-source-badge manual" title="Wpisane ręcznie">✎</span>';
+    }
+  }
+  // Przycisk historii — tylko gdy alts.length > 0
+  let histBtn = '';
+  if (altCount > 0) {
+    histBtn = '<button class="time-history-btn' + (isOpen ? ' is-open' : '') + '" onclick="toggleTeamRunHistory(\'' + safeT + '\',\'' + realField + '\')" title="Historia czasów — kliknij by rozwinąć">' +
+      '<span class="hist-icon">📜</span><span class="hist-count">' + altCount + '</span>' +
+    '</button>';
+  }
+  const roleHint = (!canEdit ? ' <span style="opacity:.6;font-size:8px;">(' + role + ')</span>' : '');
+  const dispVal = (val === undefined || val === null) ? '' : String(val);
+  let html = '<div class="ptr-time-tile ' + tileCls + (disabled ? ' dsq' : '') + '">' +
+    '<div class="ptr-time-lbl-row">' +
+      '<div class="ptr-time-lbl">' + label + roleHint + srcBadge + '</div>' +
+      (histBtn ? '<div class="ptr-time-lbl-actions">' + histBtn + '</div>' : '') +
+    '</div>' +
+    '<input class="ptr-time-input" type="' + inputType + '"' +
+      (inputType === 'number' ? ' min="0" max="3600"' : '') +
+      ' value="' + esc(dispVal) + '" placeholder="' + placeholder + '"' +
+      ' data-team="' + esc(teamName) + '" data-field="' + realField + '" data-ui-field="' + uiField + '"' +
+      ' onfocus="captureTeamRunFieldPrior(this)"' +
+      ' onblur="commitTeamRunTimeField(this)"' +
+      ' onchange="commitTeamRunTimeField(this)"' +
+      (disabled ? ' disabled' : '') + ' />';
+  if (isOpen) {
+    html += _renderTeamRunHistoryDropdown(teamName, realField, tr[realField], tr[realField + 'Source']);
+  }
+  html += '</div>';
+  return html;
 }
 
 // Centralna kolumna akcji dla pary drużynowej (analog. do indPairCenterActionHTML)
@@ -7578,11 +7827,11 @@ function startTeamRunPair(pairNum) {
     if (!confirm('Para drużyn ' + pairNum + ' już biegnie. Reset i start od nowa? (Falstart)')) return;
   }
   state.teamRuns[pairNum] = { startedAt: nowMs(), finishedAt: {} };
-  // Wyczyść biegSec drużyn w tej parze (jeśli były wpisane wcześniej)
+  // Wyczyść biegSec drużyn w tej parze — stara wartość trafia do alts (do odzysku jeśli start przez pomyłkę).
   const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
   if (p) {
     [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
-      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
+      if (state.teamRun?.[t]?.biegSec != null) _setTeamRunFieldWithBackup(t, 'biegSec', null, null);
     });
   }
   // Sticky: zostaw widoczne w aktualnym filtrze
@@ -7597,12 +7846,12 @@ function startTeamRunPair(pairNum) {
 
 function resetTeamRunPair(pairNum) {
   if (!state.teamRuns?.[pairNum]) return;
-  if (!confirm('Reset stopera pary drużyn ' + pairNum + '? Czasy biegu zostaną usunięte.')) return;
+  if (!confirm('Reset stopera pary drużyn ' + pairNum + '? Czasy biegu trafią do historii (można je przywrócić rozwijając kafelek czasu).')) return;
   delete state.teamRuns[pairNum];
   const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
   if (p) {
     [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
-      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
+      if (state.teamRun?.[t]?.biegSec != null) _setTeamRunFieldWithBackup(t, 'biegSec', null, null);
     });
   }
   _teamRunJustStartedKey = null;
@@ -7618,11 +7867,10 @@ function stopTeamRunTeam(teamName, pairNum) {
   }
   if (!run.finishedAt) run.finishedAt = {};
   if (run.finishedAt[teamName]) {
-    // Cofnij stop
+    // Cofnij stop — stara wartość biegSec do alts (do odzysku jeśli ktoś cofnął przez pomyłkę)
     delete run.finishedAt[teamName];
-    if (state.teamRun?.[teamName]?.biegSec) {
-      delete state.teamRun[teamName].biegSec;
-      state.teamRun[teamName].biegSecAt = nowMs();
+    if (state.teamRun?.[teamName]?.biegSec != null) {
+      _setTeamRunFieldWithBackup(teamName, 'biegSec', null, null);
     }
     _teamRunJustStartedKey = null;
     save();
@@ -7631,12 +7879,10 @@ function stopTeamRunTeam(teamName, pairNum) {
     return;
   }
   run.finishedAt[teamName] = nowMs();
-  // Setne sekundy (float) — analogiczne do indywidualnego total
+  // Setne sekundy (float) — analogiczne do indywidualnego total.
+  // Backup poprzedniej wartości (jeśli była — np. wpisana ręcznie wcześniej) zanim ją nadpiszemy.
   const biegSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 10) / 100;
-  if (!state.teamRun) state.teamRun = {};
-  if (!state.teamRun[teamName]) state.teamRun[teamName] = {};
-  state.teamRun[teamName].biegSec = biegSec;
-  state.teamRun[teamName].biegSecAt = nowMs();
+  _setTeamRunFieldWithBackup(teamName, 'biegSec', biegSec, 'stopwatch');
   // Sticky: para mogla skonczyc i zniknac z filtra 'running'
   if (_teamRunFilter && _teamRunFilter !== 'all' && _teamRunFilter !== 'finished') {
     _teamRunStickyKeys.add(String(pairNum));
