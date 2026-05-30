@@ -371,6 +371,92 @@ body.ptr-offline-mode .pair-card.is-finished { background: var(--bg2); border-le
 .pair-athlete { flex: 1; background: var(--bg3); border-radius: var(--radius); padding: 8px 10px; border: 1px solid var(--border); }
 .pair-vs { display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 14px; font-weight: 800; letter-spacing: 2px; color: var(--text3); padding: 0 8px; flex-shrink: 0; }
 
+/* CENTRALNA KOLUMNA AKCJI (START / STOP) — między dwoma zawodnikami */
+.pair-center-action {
+  display: flex; flex-direction: column; gap: 6px;
+  flex: 0 0 132px;
+  align-self: stretch;
+  min-height: 110px;
+}
+@media (max-width: 720px) {
+  .pair-center-action { flex: 0 0 104px; }
+}
+/* Wielki, kwadratowy guzik START */
+.pair-start-btn {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: linear-gradient(180deg, rgba(76,175,130,.20), rgba(76,175,130,.06));
+  border: 2px solid var(--orange);
+  border-radius: var(--radius);
+  color: var(--orange);
+  font-family: var(--font-h); font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .15s, background .15s;
+  box-shadow: 0 2px 10px rgba(76,175,130,.18), inset 0 1px 0 rgba(255,255,255,.04);
+  padding: 8px;
+  position: relative;
+  min-height: 96px;
+}
+.pair-start-btn:hover { background: linear-gradient(180deg, rgba(76,175,130,.32), rgba(76,175,130,.14)); box-shadow: 0 4px 18px rgba(76,175,130,.32), inset 0 1px 0 rgba(255,255,255,.06); transform: translateY(-1px); }
+.pair-start-btn:active { transform: translateY(0); box-shadow: 0 1px 6px rgba(76,175,130,.28); }
+.pair-start-btn .start-glyph { font-size: 28px; line-height: 1; }
+.pair-start-btn .start-lbl { font-size: 14px; letter-spacing: 3px; }
+.pair-start-btn .start-sub { font-size: 9px; opacity: .65; letter-spacing: 1.8px; font-weight: 600; }
+.pair-start-btn[disabled] { cursor: not-allowed; opacity: .35; transform: none; box-shadow: none; }
+.pair-start-btn[disabled]:hover { transform: none; box-shadow: none; background: linear-gradient(180deg, rgba(76,175,130,.10), rgba(76,175,130,.03)); }
+
+/* Dwa kwadratowe guziki STOP (jeden na zawodnika) */
+.pair-stop-btn {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: rgba(224,85,85,.10);
+  border: 2px solid var(--red);
+  border-radius: var(--radius);
+  color: var(--red);
+  font-family: var(--font-h); font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .15s, background .15s;
+  padding: 6px 4px;
+  position: relative;
+  min-height: 50px;
+}
+.pair-stop-btn:hover { background: rgba(224,85,85,.22); box-shadow: 0 3px 14px rgba(224,85,85,.35); transform: translateY(-1px); }
+.pair-stop-btn:active { transform: translateY(0); }
+.pair-stop-btn .stop-lane { font-family: var(--font-h); font-size: 10px; letter-spacing: 2px; opacity: .85; display: inline-flex; align-items: center; gap: 5px; }
+.pair-stop-btn .stop-lane-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.pair-stop-btn.lane-L .stop-lane-dot { background: var(--male); box-shadow: 0 0 0 2px rgba(91,155,213,.25); }
+.pair-stop-btn.lane-P .stop-lane-dot { background: var(--female); box-shadow: 0 0 0 2px rgba(213,123,155,.25); }
+.pair-stop-btn .stop-time { font-family: var(--font-m); font-size: 17px; font-weight: 800; letter-spacing: .5px; font-variant-numeric: tabular-nums; line-height: 1; }
+.pair-stop-btn .stop-action { font-size: 10px; letter-spacing: 1.8px; opacity: .9; }
+
+/* Stan ukończony — zielony, klik = undo */
+.pair-stop-btn.done { background: rgba(76,175,130,.10); border-color: var(--green); color: var(--green); box-shadow: none; }
+.pair-stop-btn.done:hover { background: rgba(76,175,130,.20); box-shadow: 0 2px 12px rgba(76,175,130,.28); }
+.pair-stop-btn.done .stop-time { color: var(--green); }
+
+/* Stan pusty (SOLO — pusty tor) */
+.pair-stop-btn.empty { background: transparent; border: 1px dashed var(--border2); color: var(--text3); cursor: default; opacity: .5; box-shadow: none; }
+.pair-stop-btn.empty:hover { transform: none; box-shadow: none; background: transparent; }
+.pair-stop-btn.empty .stop-time { font-size: 10px; opacity: .6; }
+
+/* DSQ — guzik wyszarzony, niewybieralny */
+.pair-stop-btn.dsq { background: transparent; border: 1px dashed rgba(224,85,85,.35); color: var(--red); cursor: default; opacity: .5; box-shadow: none; }
+.pair-stop-btn.dsq:hover { transform: none; box-shadow: none; }
+
+/* W trybie offline ukryj centralną akcję — sędzia wpisuje czas ręcznie z fotokomórki/stopera */
+body.ptr-offline-mode .pair-center-action { display: none; }
+body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
+.pair-vs-fallback { display: none; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 14px; font-weight: 800; letter-spacing: 2px; color: var(--text3); padding: 0 8px; flex-shrink: 0; flex: 0 0 40px; align-self: stretch; }
+
+/* Wycentrowanie nazwisk — lewy zawodnik nazwiskiem do prawej (środek), prawy zawodnikiem do lewej (środek) */
+.pair-athlete.lane-side-L .pair-athlete-head { flex-direction: row-reverse; }
+.pair-athlete.lane-side-L .pair-athlete-head .pair-athlete-name { text-align: right; }
+.pair-athlete.lane-side-L .pair-athlete-meta { text-align: right; }
+.pair-athlete.lane-side-P .pair-athlete-head .pair-athlete-name { text-align: left; }
+.pair-athlete.lane-side-P .pair-athlete-meta { text-align: left; }
+
 /* SWAP MODE */
 .swap-mode .pair-athlete { cursor: pointer; transition: border-color .15s, background .15s; }
 .swap-mode .pair-athlete:hover { border-color: var(--orange); background: rgba(232,148,77,.06); }
@@ -4255,12 +4341,9 @@ function renderPairsList(containerId, pairs, gender) {
     if (hasEntry) html += '<span style="font-size:10px;font-weight:600;color:var(--green);font-family:var(--font-m);">✓ zapisano</span>';
     if (isSolo) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
 
-    // Integrowany stoper: START / RESET / chip auto-start / stempel
+    // Integrowany stoper: RESET / chip auto-start / stempel (sam START siedzi w centralnej kolumnie)
     const scheduledAt = run && run.scheduledStartAt;
     if (!started) {
-      if (canStart) {
-        html += '<button class="pair-mini-start" onclick="startPair(\'' + gender + '\',' + p.pairNum + ')" title="Start tej pary">▶ Start</button>';
-      }
       if (scheduledAt) {
         const past = scheduledAt < Date.now();
         const chipCls = 'pair-chip-auto' + (past ? ' is-past' : '') + (canStart ? '' : ' is-readonly');
@@ -4296,7 +4379,8 @@ function renderPairsList(containerId, pairs, gender) {
     const emptyLane = (leftAth ? 'P' : 'L');
     const soloEmptySlot = '<div class="pair-athlete solo-empty-slot" data-pair-num="' + p.pairNum + '" data-gender="' + gender + '" data-lane="' + emptyLane + '" onclick="handlePtrEmptySlotClick(this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;cursor:pointer;" title="Kliknij aby przenieść tu zaznaczonego zawodnika"><span class="lane-badge lane-' + emptyLane + '" style="font-size:16px;">' + emptyLane + '</span><span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span></div>';
     html += leftAth ? athleteCardHTML(leftAth, 'L', p.pairNum, gender, runCtx) : soloEmptySlot;
-    html += '<div class="pair-vs">VS</div>';
+    // Centralna kolumna akcji (START albo 2x STOP)
+    html += indPairCenterActionHTML(gender, p.pairNum, leftAth, rightAth, run, started, canStart, role);
     html += rightAth ? athleteCardHTML(rightAth, 'P', p.pairNum, gender, runCtx) : soloEmptySlot;
     html += '</div>';
     html += '</div>';
@@ -4343,35 +4427,6 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
   const totalDisabled = dsq || !canEditTotal;
   const hitsDisabled  = dsq || !canEditHits;
   const dsqDisabled   = !canEditDsq;
-  // Stan biegu pary (do mini-stopera i przycisku STOP)
-  const run = runCtx && runCtx.run;
-  const started = !!(runCtx && runCtx.started);
-  const athleteFinishedAtMs = run && run.finishedAt && run.finishedAt[a.id];
-  const hasTotal = !!(total && !totalIsMarker);
-  const athleteDone = hasTotal || !!athleteFinishedAtMs;
-  // Mini-stoper przy nazwisku — pokaż gdy zawodnik biegnie (para wystartowana, on nieskończony)
-  let miniTimerHTML = '';
-  if (started) {
-    if (athleteDone) {
-      // Pokaż finalny czas (lub jeśli marker — tylko marker w dotychczasowym polu Łączny zostaje)
-      if (hasTotal) {
-        miniTimerHTML = '<span class="pair-mini-timer is-finished" title="Wynik końcowy">' + esc(total) + '</span>';
-      }
-    } else if (!dsq) {
-      miniTimerHTML = '<span class="pair-mini-timer" data-athlete-mini-timer="' + a.id + '" data-pair="' + gender + '_' + pairNum + '">0.00</span>';
-    }
-  }
-  // Mini-STOP przy nazwisku — gdy para biegnie, zawodnik niezakończony, rola pozwala
-  let miniStopHTML = '';
-  if (started && !athleteDone && canEditTotal && !dsq) {
-    miniStopHTML = '<button class="pair-mini-stop" onclick="event.stopPropagation();stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" title="Stop META">■ STOP</button>';
-  } else if (started && hasTotal && !athleteFinishedAtMs && canEditTotal) {
-    // Total wpisany ręcznie — pozwól cofnąć
-    miniStopHTML = '';
-  } else if (started && athleteFinishedAtMs && canEditTotal) {
-    // Auto-stop — można cofnąć
-    miniStopHTML = '<button class="pair-mini-undo" onclick="event.stopPropagation();stopAthlete(' + a.id + ',\'' + gender + '\',' + pairNum + ')" title="Cofnij stop">↺</button>';
-  }
   const pickAttr = pairNum
     ? ' data-athlete-id="' + a.id + '" data-pair-num="' + pairNum + '" data-gender="' + gender + '" onclick="handlePtrAthleteClick(this)"'
     : '';
@@ -4381,18 +4436,18 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
   const removeIndBtn = (pairNum && role === 'ADMIN')
     ? '<button class="pair-edit-athlete-btn" onclick="event.stopPropagation();removeIndAthleteFromPair(' + a.id + ',\'' + gender + '\',' + pairNum + ')" title="Usuń tego zawodnika z pary">✕</button>'
     : '';
-  return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
-    // Nagłówek: nazwisko + bib + mini-stoper + przyciski + lane
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
-      '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(displayName(a)) +
+  // Mirror layout: L → nazwisko przy prawej krawędzi (środek strony), P → przy lewej
+  const laneSideCls = ' lane-side-' + lane;
+  return '<div class="pair-athlete' + laneSideCls + (dsq ? ' is-dsq' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.6;' : '') + '">' +
+    // Nagłówek: lane | nazwisko (rozszerza się; mirror w CSS) | swap/remove
+    '<div class="pair-athlete-head" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
+      '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
+      swapBtn +
+      removeIndBtn +
+      '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:700;">' + esc(displayName(a)) +
         (a.pk ? ' <span class="pk-badge" style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '') +
         ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:3px;">#' + esc(a.bib) + '</span>' +
       '</span>' +
-      miniTimerHTML +
-      miniStopHTML +
-      swapBtn +
-      removeIndBtn +
-      '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">' + esc(a.team || '') + '</div>' +
     // Dwa kafelki czasów — OSF (lewo, niebieski) i Łączny (prawo, zielony)
@@ -4450,6 +4505,77 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
         (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
     '</div>' +
   '</div>';
+}
+
+// Centralna kolumna z guzikiem START (przed startem) lub 2× STOP (po starcie).
+// Wycentrowana między dwoma zawodnikami. Duża, łatwa do trafienia.
+// W trybie offline (STOPER FIZYCZNY) zostaje ukryta — sędzia wpisuje czas ręcznie.
+function indPairCenterActionHTML(gender, pairNum, leftAth, rightAth, run, started, canStart, role) {
+  const canEditTotal = role === 'ADMIN' || role === 'META';
+  // Fallback "VS" widoczne tylko w trybie offline (centralna kolumna ukryta przez CSS)
+  let fallback = '<div class="pair-vs-fallback">VS</div>';
+  if (!started) {
+    if (!canStart) {
+      // Rola bez prawa startu — pokaż neutralny placeholder
+      return fallback + '<div class="pair-center-action"><div class="pair-start-btn" disabled style="cursor:not-allowed;opacity:.4;"><span class="start-glyph">▶</span><span class="start-lbl">START</span><span class="start-sub">' + role + '</span></div></div>';
+    }
+    return fallback +
+      '<div class="pair-center-action">' +
+        '<button type="button" class="pair-start-btn" onclick="startPair(\'' + gender + '\',' + pairNum + ')" title="Start tej pary">' +
+          '<span class="start-glyph">▶</span>' +
+          '<span class="start-lbl">START</span>' +
+          '<span class="start-sub">para</span>' +
+        '</button>' +
+      '</div>';
+  }
+  // Para wystartowana — 2 guziki STOP (lub 1 jeśli SOLO)
+  let html = fallback + '<div class="pair-center-action">';
+  html += _indStopBtnHTML(leftAth, 'L', gender, pairNum, run, canEditTotal);
+  html += _indStopBtnHTML(rightAth, 'P', gender, pairNum, run, canEditTotal);
+  html += '</div>';
+  return html;
+}
+function _indStopBtnHTML(ath, lane, gender, pairNum, run, canEditTotal) {
+  if (!ath) {
+    // SOLO — pusty slot tej strony
+    return '<div class="pair-stop-btn empty"><span class="stop-lane"><span class="stop-lane-dot" style="background:var(--border2);box-shadow:none;"></span>' + lane + '</span><span class="stop-time">SOLO</span></div>';
+  }
+  const dsq = isDsq(ath.id);
+  if (dsq) {
+    return '<div class="pair-stop-btn dsq lane-' + lane + '" title="Dyskwalifikacja"><span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + '</span><span class="stop-time">DSQ</span></div>';
+  }
+  const total = getPatrolTime(ath.id, 'total');
+  const totalIsMarker = isTimeMarker(total);
+  const hasTotal = !!(total && !totalIsMarker);
+  const athleteFinishedAtMs = run && run.finishedAt && run.finishedAt[ath.id];
+  const athleteDone = hasTotal || !!athleteFinishedAtMs;
+  if (athleteDone) {
+    const displayTime = hasTotal ? esc(total) : '—';
+    if (canEditTotal) {
+      return '<button type="button" class="pair-stop-btn done lane-' + lane + '" onclick="stopAthlete(' + ath.id + ',\'' + gender + '\',' + pairNum + ')" title="Cofnij stop (' + esc(displayName(ath)) + ')">' +
+        '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + ' ✓</span>' +
+        '<span class="stop-time">' + displayTime + '</span>' +
+        '<span class="stop-action">↺ cofnij</span>' +
+      '</button>';
+    }
+    return '<div class="pair-stop-btn done lane-' + lane + '">' +
+      '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + ' ✓</span>' +
+      '<span class="stop-time">' + displayTime + '</span>' +
+    '</div>';
+  }
+  // W trakcie biegu
+  if (!canEditTotal) {
+    return '<div class="pair-stop-btn lane-' + lane + '" style="cursor:not-allowed;opacity:.45;">' +
+      '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + '</span>' +
+      '<span class="stop-time" data-athlete-stop-timer="' + ath.id + '" data-pair="' + gender + '_' + pairNum + '">0:00.00</span>' +
+      '<span class="stop-action">' + 'tylko meta' + '</span>' +
+    '</div>';
+  }
+  return '<button type="button" class="pair-stop-btn lane-' + lane + '" onclick="stopAthlete(' + ath.id + ',\'' + gender + '\',' + pairNum + ')" title="STOP META — ' + esc(displayName(ath)) + '">' +
+    '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + '</span>' +
+    '<span class="stop-time" data-athlete-stop-timer="' + ath.id + '" data-pair="' + gender + '_' + pairNum + '">0:00.00</span>' +
+    '<span class="stop-action">■ STOP</span>' +
+  '</button>';
 }
 
 // Ustawianie punktów strzelania (0-50 pkt na tarczy — 5 strzałów × max 10 pkt).
@@ -5568,43 +5694,33 @@ function tickTimers() {
   // Tikaj zegary biegu drużynowego + sprawdź auto-starty drużyn
   if (typeof checkScheduledTeamRunStarts === 'function') checkScheduledTeamRunStarts();
   if (typeof _tickTeamRunTimers === 'function') _tickTeamRunTimers();
-  // Mini-stopery zintegrowane w karty par (Bieg indywidualny)
-  document.querySelectorAll('.pair-mini-timer[data-athlete-mini-timer]').forEach(el => {
-    const athleteId = parseInt(el.dataset.athleteMiniTimer);
+  // Live-timer wewnątrz centralnych guzików STOP (Bieg indywidualny)
+  document.querySelectorAll('[data-athlete-stop-timer]').forEach(el => {
+    const athleteId = parseInt(el.dataset.athleteStopTimer);
     const pairKey = el.dataset.pair;
     if (!athleteId || !pairKey) return;
     const [gender, pairNumStr] = pairKey.split('_');
     const pairNum = parseInt(pairNumStr);
     const run = getRun(gender, pairNum);
-    if (!run || !run.startedAt) { el.textContent = '—'; el.classList.add('is-idle'); return; }
-    // Jeśli zawodnik skończył (auto lub ręczny total) → zamroź na wyniku
+    if (!run || !run.startedAt) { el.textContent = '0:00.00'; return; }
     const fin = _patrolEffectiveFinishMs(athleteId, run);
-    if (fin) {
-      el.textContent = formatRunTime(fin - run.startedAt);
-      el.classList.add('is-finished');
-      el.classList.remove('is-idle');
-      return;
-    }
-    el.classList.remove('is-finished', 'is-idle');
+    if (fin) { el.textContent = formatRunTime(fin - run.startedAt); return; }
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
-  // Mini-stopery zintegrowane w karty par drużynowych
-  document.querySelectorAll('.pair-mini-timer[data-team-mini-timer]').forEach(el => {
-    const raw = el.dataset.teamMiniTimer || '';
+  // Live-timer wewnątrz centralnych guzików STOP (Bieg drużynowy)
+  document.querySelectorAll('[data-team-stop-timer]').forEach(el => {
+    const raw = el.dataset.teamStopTimer || '';
     const splitIdx = raw.lastIndexOf('|');
     if (splitIdx < 0) return;
     const teamName = raw.slice(0, splitIdx);
     const pairNum = _parsePairKey(raw.slice(splitIdx + 1));
     const run = getTeamRunPair(pairNum);
-    if (!run || !run.startedAt) { el.textContent = '—'; el.classList.add('is-idle'); return; }
+    if (!run || !run.startedAt) { el.textContent = '0:00.00'; return; }
     if (run.finishedAt?.[teamName]) {
       const finalSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 10) / 100;
       el.textContent = _formatTeamSec(finalSec);
-      el.classList.add('is-finished');
-      el.classList.remove('is-idle');
       return;
     }
-    el.classList.remove('is-finished', 'is-idle');
     el.textContent = formatRunTime(nowMs() - run.startedAt);
   });
   // Countdown chipa auto-startu w karcie pary
@@ -6853,41 +6969,22 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
   const pts = calcTeamRunPoints(tr);
   const ptsDisp = dsq ? '<span style="background:rgba(224,85,85,.15);color:var(--red);border:1px solid rgba(224,85,85,.4);padding:1px 6px;border-radius:3px;font-family:var(--font-h);font-size:11px;font-weight:800;">DSQ</span>'
                       : (pts === null ? '<span style="color:var(--text3);">—</span>' : '<strong style="color:var(--accent);font-family:var(--font-m);">' + pts + ' pkt</strong>');
-  // Stoper drużynowy: status tej drużyny
-  const started = !!(run && run.startedAt);
-  const teamFinished = !!(started && run.finishedAt?.[teamName]);
-  const pairKeyArg = JSON.stringify(pairNum); // może być stringiem 'solo:T' lub liczbą
-  const pairAttr = String(pairNum == null ? '' : pairNum).replace(/"/g,'&quot;');
-  // Mini-stoper przy nazwie drużyny + mini-STOP/UNDO (gdy stoper aktywny dla tej pary)
-  let miniTimerHTML = '';
-  let miniStopHTML = '';
-  if (showStoper && started && pairNum != null) {
-    if (teamFinished) {
-      const finalSec = Math.round((run.finishedAt[teamName] - run.startedAt) / 10) / 100;
-      miniTimerHTML = '<span class="pair-mini-timer is-finished" title="Czas biegu (stoper)">' + _formatTeamSec(finalSec) + '</span>';
-      if (canEdit) miniStopHTML = '<button class="pair-mini-undo" onclick="event.stopPropagation();stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" title="Cofnij stop">↺</button>';
-    } else if (!dsq) {
-      miniTimerHTML = '<span class="pair-mini-timer" data-team-mini-timer="' + safeT + '|' + pairAttr + '">0.00</span>';
-      if (canEdit) miniStopHTML = '<button class="pair-mini-stop" onclick="event.stopPropagation();stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" title="Stop META — czas biegu tej drużyny">■ STOP</button>';
-    }
-  }
-
   // Edit-mode kontrolki (↔ swap, ✕ usuń) — widoczne tylko w trybie edycji
   const editMode = !!(opts && opts.editMode);
   const isSwapActive = _teamRunSwapSource && _teamRunSwapSource.team === teamName && String(_teamRunSwapSource.pairKey) === String(pairNum);
+  const pairKeyArg = JSON.stringify(pairNum); // może być stringiem 'solo:T' lub liczbą
   let editBtns = '';
   if (editMode) {
     editBtns = '<button class="team-edit-team-btn" onclick="event.stopPropagation();activateTeamRunSwap(\'' + safeT + '\',' + pairKeyArg + ')" title="Zamień z inną drużyną (kliknij potem na cel)">↔</button>' +
                '<button class="team-edit-team-btn danger" onclick="event.stopPropagation();removeTeamFromPair(\'' + safeT + '\',' + pairKeyArg + ')" title="Usuń tę drużynę z pary">✕</button>';
   }
   const pickAttr = editMode ? ' data-team-name="' + esc(teamName) + '" data-pair-key="' + String(pairNum).replace(/"/g,'&quot;') + '" onclick="if(_teamRunSwapSource && !event.target.closest(\'button,input,textarea\')) handleTeamRunTeamClick(\'' + safeT + '\',' + pairKeyArg + ')"' : '';
-  return '<div class="pair-athlete' + (dsq ? ' is-dsq' : '') + (isSwapActive ? ' team-swap-active' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.65;' : '') + '">' +
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
-      '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(teamName) + '</span>' +
-      miniTimerHTML +
-      miniStopHTML +
-      editBtns +
+  const laneSideCls = ' lane-side-' + lane;
+  return '<div class="pair-athlete' + laneSideCls + (dsq ? ' is-dsq' : '') + (isSwapActive ? ' team-swap-active' : '') + '"' + pickAttr + ' style="' + (dsq ? 'opacity:.65;' : '') + '">' +
+    '<div class="pair-athlete-head" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap;">' +
       '<span class="lane-badge lane-' + lane + '" style="flex-shrink:0;">' + lane + '</span>' +
+      editBtns +
+      '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:700;">' + esc(teamName) + '</span>' +
     '</div>' +
     '<div class="pair-athlete-meta" style="margin-bottom:8px;">Patrol 3-osobowy</div>' +
     // OSF + Bieg (czas) — kafelki obok siebie jak w ind.
@@ -6955,6 +7052,71 @@ function teamRunCardHTML(teamName, lane, pairNum, run, opts) {
         ' title="' + (dsq ? 'Cofnij DSQ' : 'Dyskwalifikuj drużynę') + '">' + (dsq ? '✕ DSQ' : 'DSQ') + '</button>' +
     '</div>' +
   '</div>';
+}
+
+// Centralna kolumna akcji dla pary drużynowej (analog. do indPairCenterActionHTML)
+function teamPairCenterActionHTML(aTeam, aLane, bTeam, bLane, pairNum, run, started, canStart, role) {
+  const canEdit = role === 'ADMIN' || role === 'META';
+  const pairKeyArg = JSON.stringify(pairNum);
+  let fallback = '<div class="pair-vs-fallback">VS</div>';
+  if (!started) {
+    if (!canStart) {
+      return fallback + '<div class="pair-center-action"><div class="pair-start-btn" disabled style="cursor:not-allowed;opacity:.4;"><span class="start-glyph">▶</span><span class="start-lbl">START</span><span class="start-sub">' + role + '</span></div></div>';
+    }
+    return fallback +
+      '<div class="pair-center-action">' +
+        '<button type="button" class="pair-start-btn" onclick="startTeamRunPair(' + pairKeyArg + ')" title="Start tej pary drużyn">' +
+          '<span class="start-glyph">▶</span>' +
+          '<span class="start-lbl">START</span>' +
+          '<span class="start-sub">drużyny</span>' +
+        '</button>' +
+      '</div>';
+  }
+  let html = fallback + '<div class="pair-center-action">';
+  html += _teamStopBtnHTML(aTeam, aLane, pairNum, pairKeyArg, run, canEdit);
+  html += _teamStopBtnHTML(bTeam, bLane, pairNum, pairKeyArg, run, canEdit);
+  html += '</div>';
+  return html;
+}
+function _teamStopBtnHTML(teamName, lane, pairNum, pairKeyArg, run, canEdit) {
+  if (!teamName) {
+    return '<div class="pair-stop-btn empty"><span class="stop-lane"><span class="stop-lane-dot" style="background:var(--border2);box-shadow:none;"></span>' + lane + '</span><span class="stop-time">SOLO</span></div>';
+  }
+  const tr = (state.teamRun || {})[teamName] || {};
+  const dsq = !!tr.dsq;
+  const safeT = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  if (dsq) {
+    return '<div class="pair-stop-btn dsq lane-' + lane + '"><span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + '</span><span class="stop-time">DSQ</span></div>';
+  }
+  const teamFinishedMs = run && run.finishedAt && run.finishedAt[teamName];
+  const pairAttr = String(pairNum == null ? '' : pairNum).replace(/"/g,'&quot;');
+  if (teamFinishedMs) {
+    const finalSec = Math.round((teamFinishedMs - run.startedAt) / 10) / 100;
+    const disp = _formatTeamSec(finalSec);
+    if (canEdit) {
+      return '<button type="button" class="pair-stop-btn done lane-' + lane + '" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" title="Cofnij stop (' + esc(teamName) + ')">' +
+        '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + ' ✓</span>' +
+        '<span class="stop-time">' + disp + '</span>' +
+        '<span class="stop-action">↺ cofnij</span>' +
+      '</button>';
+    }
+    return '<div class="pair-stop-btn done lane-' + lane + '">' +
+      '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + ' ✓</span>' +
+      '<span class="stop-time">' + disp + '</span>' +
+    '</div>';
+  }
+  if (!canEdit) {
+    return '<div class="pair-stop-btn lane-' + lane + '" style="cursor:not-allowed;opacity:.45;">' +
+      '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + '</span>' +
+      '<span class="stop-time" data-team-stop-timer="' + safeT + '|' + pairAttr + '">0:00.00</span>' +
+      '<span class="stop-action">tylko meta</span>' +
+    '</div>';
+  }
+  return '<button type="button" class="pair-stop-btn lane-' + lane + '" onclick="stopTeamRunTeam(\'' + safeT + '\',' + pairKeyArg + ')" title="STOP META — ' + esc(teamName) + '">' +
+    '<span class="stop-lane"><span class="stop-lane-dot"></span>' + lane + '</span>' +
+    '<span class="stop-time" data-team-stop-timer="' + safeT + '|' + pairAttr + '">0:00.00</span>' +
+    '<span class="stop-action">■ STOP</span>' +
+  '</button>';
 }
 
 // Toggle ×10 dla drużyny (klik na aktywny = wyczyść)
@@ -7251,12 +7413,8 @@ function renderTeamRunList() {
     }
     html += '<span style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-left:8px;">' + (p._virtual ? 'Drużyna (SOLO)' : 'Para drużyn') + '</span>';
     if (isSolo && !p._virtual) html += '<span style="font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:rgba(232,212,77,.1);border:1px solid rgba(232,212,77,.25);padding:2px 7px;border-radius:2px;margin-left:6px;">SOLO</span>';
-    // Integrowany stoper: START / RESET / stempel
-    if (!started) {
-      if (canStart) {
-        html += '<button class="pair-mini-start" onclick="startTeamRunPair(' + pairKeyArg + ')" title="Start tej pary drużyn">▶ Start</button>';
-      }
-    } else {
+    // Integrowany stoper: RESET / stempel (START siedzi w centralnej kolumnie między drużynami)
+    if (started) {
       html += '<span class="pair-start-stamp">od <strong style="color:var(--text2);font-weight:700;">' + formatClockTime(run.startedAt) + '</strong></span>';
       if (canStart) {
         const lbl = allFinished ? '↺ reset' : '↺ falstart';
@@ -7267,11 +7425,12 @@ function renderTeamRunList() {
     html += '</div>';
     html += '<div class="pair-athletes">';
     html += teamRunCardHTML(p.aTeam, p.aLane || 'L', p.pairNum, run, { showStoper: true, role, editMode: _teamRunEditMode });
-    html += '<div class="pair-vs">VS</div>';
+    // Centralna kolumna akcji (START dla całej pary albo 2x STOP per drużyna)
+    const emptyLane = (p.aLane === 'L') ? 'P' : 'L';
+    html += teamPairCenterActionHTML(p.aTeam, p.aLane || 'L', p.bTeam, p.bLane || emptyLane, p.pairNum, run, started, canStart, role);
     if (p.bTeam) {
       html += teamRunCardHTML(p.bTeam, p.bLane || 'P', p.pairNum, run, { showStoper: true, role, editMode: _teamRunEditMode });
     } else {
-      const emptyLane = (p.aLane === 'L') ? 'P' : 'L';
       html += '<div class="pair-athlete solo-empty-slot" data-pair-key="' + pairAttr + '" data-lane="' + emptyLane + '" onclick="handleTeamRunEmptySlotClick(this)" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;border:1px dashed var(--border2);border-radius:var(--radius);background:transparent;opacity:.5;" title="Kliknij aby przenieść tu wybraną drużynę (w trybie edycji)">' +
         '<span class="lane-badge lane-' + emptyLane + '" style="font-size:16px;">' + emptyLane + '</span>' +
         '<span style="font-size:10px;color:var(--text3);">pusty tor (SOLO)</span>' +
