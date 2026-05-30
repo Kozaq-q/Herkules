@@ -343,6 +343,16 @@ body.ptr-offline-mode .pair-card.is-just-started { display: none !important; ani
 }
 .ptr-pair-filter-empty { text-align: center; padding: 26px 20px; color: var(--text3); font-size: 12px; background: var(--bg3); border: 1px dashed var(--border2); border-radius: var(--radius); }
 
+/* Wariant dla zakładki Wyniki — większe ikony, kolory per kategoria */
+.ptr-results-cat button[data-cat="ind"] .flt-glyph { color: var(--male); }
+.ptr-results-cat button[data-cat="team"] .flt-glyph { color: var(--orange); }
+.ptr-results-cat button[data-cat="team-run"] .flt-glyph { color: #60a8e8; }
+.ptr-results-cat button[data-cat="overall"] .flt-glyph { color: var(--accent); }
+.ptr-results-cat button.active[data-cat="ind"]      { border-color: var(--male); box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(91,155,213,.18); }
+.ptr-results-cat button.active[data-cat="team"]     { border-color: var(--orange); box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(232,148,77,.18); }
+.ptr-results-cat button.active[data-cat="team-run"] { border-color: #60a8e8; box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(96,168,232,.18); }
+.ptr-results-cat button.active[data-cat="overall"]  { border-color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.30), inset 0 0 0 1px rgba(232,212,77,.22); }
+
 /* NOTATKI SĘDZIOWSKIE — dwa stany (puste = na dole, dyskretne / pełne = na górze, akcent) */
 .ptr-notes-card { transition: border-color .2s, background .2s, box-shadow .2s, opacity .2s; }
 .ptr-notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -1431,7 +1441,16 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         </div>
       </div>
 
-      <div class="card mb-12">
+      <!-- Przełącznik kategorii wyników (analog. do filtra par) -->
+      <div id="ptr-results-cat" class="ptr-pair-filter ptr-results-cat" style="margin-bottom:12px;"></div>
+
+      <!-- Placeholder gdy wybrana kategoria nie ma danych -->
+      <div id="ptr-results-cat-empty" class="card mb-12" style="display:none;text-align:center;padding:48px 24px;color:var(--text3);">
+        <div style="font-family:var(--font-h);font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Brak wyników</div>
+        <div style="font-size:12px;line-height:1.6;">W tej kategorii nie ma jeszcze wpisanych wyników.<br>Wpisz czasy w zakładce <strong>🏃 Bieg indywidualny</strong> lub <strong>🛡 Bieg drużynowy</strong>.</div>
+      </div>
+
+      <div class="card mb-12" id="ptr-ind-card">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
           <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Wyniki</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;" title="Wzór: czas_biegu(s) − pkt_OSF − pkt_strzelanie. pkt_OSF = 450 − 2×czas_OSF(s). pkt_strzelanie = pkt_tarcza × 2.">
@@ -4423,6 +4442,7 @@ function _updateLockAllBtn() {
 // Klucze localStorage do zapamietywania filtrow miedzy odswiezeniami strony
 const _PAIRS_FILTER_LS = 'patrol_pairs_filter_' + SLOT_ID;
 const _TEAM_RUN_FILTER_LS = 'patrol_team_run_filter_' + SLOT_ID;
+const _RESULTS_CAT_LS = 'patrol_results_cat_' + SLOT_ID;
 function _loadFilter(lsKey) {
   try {
     const v = localStorage.getItem(lsKey);
@@ -7090,6 +7110,9 @@ function renderResultsView() {
   const hasAny = allM.length > 0 || allK.length > 0;
   document.getElementById('ptr-results-no-data').style.display = hasAny ? 'none' : 'block';
   document.getElementById('ptr-results-grid').style.display = hasAny ? 'grid' : 'none';
+  // Adnotacja dla przelacznika kategorii (czy ind. ma dane)
+  const indCard = document.getElementById('ptr-ind-card');
+  if (indCard) indCard.dataset.hasData = hasAny ? '1' : '0';
   // Liczniki przy nagłówkach
   const cM = document.getElementById('ptr-results-count-M');
   const cK = document.getElementById('ptr-results-count-K');
@@ -7102,6 +7125,8 @@ function renderResultsView() {
   renderTeamView();
   if (typeof renderTeamRunResults === 'function') renderTeamRunResults();
   if (typeof renderOverallView === 'function') renderOverallView();
+  // Po wszystkich sub-renderach: zastosuj widocznosc wedlug wybranej kategorii
+  if (typeof _applyResultsCategoryVisibility === 'function') _applyResultsCategoryVisibility();
 }
 
 // ─── BIEG DRUŻYNOWY — karta wynikow na zakladce Wyniki ──────────
@@ -7118,7 +7143,8 @@ function renderTeamRunResults() {
     const hasAny = !!(tr.biegSec || tr.osfSec || tr.shotPoints !== undefined || tr.eliminated || tr.dsq);
     return { name, tr, pts, dsq: !!tr.dsq, hasAny };
   }).filter(r => r.hasAny);
-  if (!rows.length) { card.style.display = 'none'; return; }
+  if (!rows.length) { card.dataset.hasData = '0'; card.style.display = 'none'; return; }
+  card.dataset.hasData = '1';
   card.style.display = '';
   // Sortuj: sklasyfikowane (pts != null && !dsq) na gorze po pts ASC; potem DSQ; potem niepelne (pts == null)
   const _trTier = r => r.dsq ? 3 : (r.pts != null ? 1 : 2);
@@ -8072,6 +8098,81 @@ function _classifyTeamPair(p) {
   return 'running';
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// Wyniki — przełącznik kategorii (ind. / drużynowa / bieg drużynowy / generalna)
+// ═══════════════════════════════════════════════════════════════════════
+const _RESULTS_CATS = ['ind', 'team', 'team-run', 'overall'];
+function _loadResultsCat() {
+  try {
+    const v = localStorage.getItem(_RESULTS_CAT_LS);
+    if (_RESULTS_CATS.includes(v)) return v;
+  } catch (e) {}
+  return 'ind';
+}
+let _resultsCategory = _loadResultsCat();
+
+function setResultsCategory(cat) {
+  if (!_RESULTS_CATS.includes(cat)) cat = 'ind';
+  _resultsCategory = cat;
+  try { localStorage.setItem(_RESULTS_CAT_LS, cat); } catch (e) {}
+  _applyResultsCategoryVisibility();
+}
+
+// Pasek przełącznika kategorii — buduje analogicznie do _buildPairFilterBar
+function _buildResultsCatBar() {
+  const el = document.getElementById('ptr-results-cat');
+  if (!el) return;
+  el.style.display = 'flex';
+  // Sprawdz czy w kazdej kategorii sa dane — adnotacja na guziku
+  const indHas = !!(document.getElementById('ptr-ind-card') && document.getElementById('ptr-results-grid') &&
+                    document.getElementById('ptr-results-grid').style.display !== 'none');
+  const teamHas = document.getElementById('ptr-team-card') && document.getElementById('ptr-team-card').dataset.hasData === '1';
+  const teamRunHas = document.getElementById('ptr-teamrun-card') && document.getElementById('ptr-teamrun-card').dataset.hasData === '1';
+  const overallHas = document.getElementById('ptr-overall-card') && document.getElementById('ptr-overall-card').dataset.hasData === '1';
+  const items = [
+    ['ind',      '♂♀', 'Indywidualne',   indHas],
+    ['team',     '🛡',  'Drużynowa',      teamHas],
+    ['team-run', '🏃', 'Bieg drużynowy', teamRunHas],
+    ['overall',  '🏆', 'Generalna',      overallHas],
+  ];
+  el.innerHTML = items.map(([k, glyph, label, hasData]) =>
+    '<button class="' + (_resultsCategory === k ? 'active' : '') + '" data-cat="' + k + '" data-filter="' + k + '" onclick="setResultsCategory(\'' + k + '\')" type="button">' +
+      '<span class="flt-glyph">' + glyph + '</span>' +
+      '<span class="flt-lbl">' + esc(label) + '</span>' +
+      (hasData ? '' : '<span class="count" title="Brak danych">—</span>') +
+    '</button>'
+  ).join('');
+}
+
+// Pokazuje wybraną kategorię, ukrywa pozostałe. Gdy wybrana nie ma danych — placeholder.
+function _applyResultsCategoryVisibility() {
+  const cards = {
+    'ind':      document.getElementById('ptr-ind-card'),
+    'team':     document.getElementById('ptr-team-card'),
+    'team-run': document.getElementById('ptr-teamrun-card'),
+    'overall':  document.getElementById('ptr-overall-card'),
+  };
+  const empty = document.getElementById('ptr-results-cat-empty');
+  const sel = _resultsCategory;
+  // Ustaw widoczność każdej karty
+  Object.entries(cards).forEach(([k, card]) => {
+    if (!card) return;
+    card.style.display = (k === sel) ? '' : 'none';
+  });
+  // Placeholder zewnętrzny — tylko dla kategorii team/team-run/overall gdy brak danych.
+  // ind. ma własny wewnętrzny ptr-results-no-data, więc dla niego nie pokazujemy zewnętrznego.
+  const selCard = cards[sel];
+  let extEmpty = false;
+  if (sel !== 'ind' && selCard) {
+    const hasData = selCard.dataset.hasData === '1';
+    extEmpty = !hasData;
+    if (!hasData) selCard.style.display = 'none';
+  }
+  if (empty) empty.style.display = extEmpty ? '' : 'none';
+  // Odśwież pasek (zeby badge "brak danych" na guzikach był aktualny)
+  _buildResultsCatBar();
+}
+
 function renderTeamRunList() {
   const list = document.getElementById('ptr-team-run-list');
   if (!list) return;
@@ -8264,7 +8365,8 @@ function renderOverallView() {
   });
 
   const eligible = teams.filter(t => t.eligible);
-  if (!eligible.length) { card.style.display = 'none'; return; }
+  if (!eligible.length) { card.dataset.hasData = '0'; card.style.display = 'none'; return; }
+  card.dataset.hasData = '1';
   card.style.display = '';
   // Sortuj: po overallTotal rosnąco; tie-break: po pkt biegu drużynowego (niższy lepiej)
   eligible.sort((a, b) => {
@@ -8361,9 +8463,11 @@ function renderTeamView() {
   }).filter(t => t.anyResult);
 
   if (!teams.length) {
+    card.dataset.hasData = '0';
     card.style.display = 'none';
     return;
   }
+  card.dataset.hasData = '1';
   card.style.display = '';
   // Sortuj:
   // 1) wiecej sklasyfikowanych M -> ZAWSZE wyzej (3 > 2 > 1 > 0)
