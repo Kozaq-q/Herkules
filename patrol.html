@@ -4392,9 +4392,9 @@ function _buildPairFilterBar(containerId, filter, counts, setFnName) {
   el.style.display = 'flex';
   const items = [
     ['all',      '☰', 'Wszystkie',   counts.all],
+    ['idle',     '◌', 'Oczekujące',  counts.idle],
     ['running',  '▶', 'Biegnące',    counts.running],
     ['finished', '✓', 'Skończone',   counts.finished],
-    ['idle',     '◌', 'Oczekujące',  counts.idle],
   ];
   el.innerHTML = items.map(([k, glyph, label, n]) =>
     '<button class="' + (filter === k ? 'active' : '') + '" data-filter="' + k + '" onclick="' + setFnName + '(\'' + k + '\')" type="button">' +
