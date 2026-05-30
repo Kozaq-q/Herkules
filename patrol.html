@@ -4379,32 +4379,10 @@ function setPairsFilter(f) {
 function _classifyIndPair(p) {
   const run = getRun(p.gender, p.pairNum);
   if (!run || !run.startedAt) return 'idle';
-  const aFinPhys = _patrolEffectiveFinishMs(p.aId, run);
-  const bFinPhys = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
-  if (!aFinPhys || !bFinPhys) return 'running';
-  // Fizycznie oboje dobiegli — sprawdz czy maja wpisane strzelanie (lub DSQ / marker).
-  // Bez strzelania para zostaje w "Biegnacych" zeby sedzia nie zapomniał.
-  const aDone = _athleteFullyScored(p.aId);
-  const bDone = p.bId ? _athleteFullyScored(p.bId) : true;
-  if (aDone && bDone) return 'finished';
+  const aFin = _patrolEffectiveFinishMs(p.aId, run);
+  const bFin = p.bId ? _patrolEffectiveFinishMs(p.bId, run) : true;
+  if (aFin && bFin) return 'finished';
   return 'running';
-}
-// Zawodnik "w pełni rozliczony" do klasyfikacji pary:
-// - DSQ → tak (nic więcej nie potrzeba)
-// - DNF/DNS marker w 'total' → tak (regulamin tego wymaga)
-// - ma 'total' oraz wpisane 'shotPoints' (lub legacy 'hits') → tak
-// - inaczej → nie (gating: brak strzelania trzyma parę w 'running')
-function _athleteFullyScored(id) {
-  if (!id) return true;
-  if (typeof isDsq === 'function' && isDsq(id)) return true;
-  const total = state.times?.[id]?.total;
-  if (typeof isTimeMarker === 'function' && isTimeMarker(total)) return true;
-  if (!total) return false; // jeszcze brak czasu — i tak nie skończył
-  const sp = state.times?.[id]?.shotPoints;
-  const hits = state.times?.[id]?.hits;
-  const hasShot = (sp !== undefined && sp !== null && sp !== '') ||
-                  (hits !== undefined && hits !== null && hits !== '');
-  return hasShot;
 }
 function _buildPairFilterBar(containerId, filter, counts, setFnName) {
   const el = document.getElementById(containerId);
@@ -7773,21 +7751,10 @@ function setTeamRunFilter(f) {
 function _classifyTeamPair(p) {
   const run = getTeamRunPair(p.pairNum);
   if (!run || !run.startedAt) return 'idle';
-  const aFinPhys = run.finishedAt?.[p.aTeam];
-  const bFinPhys = p.bTeam ? run.finishedAt?.[p.bTeam] : true;
-  if (!aFinPhys || !bFinPhys) return 'running';
-  // Fizycznie oboje dobiegli — sprawdz strzelanie zespolowe (0-150)
-  const aDone = _teamFullyScored(p.aTeam);
-  const bDone = p.bTeam ? _teamFullyScored(p.bTeam) : true;
-  if (aDone && bDone) return 'finished';
+  const aFin = run.finishedAt?.[p.aTeam];
+  const bFin = p.bTeam ? run.finishedAt?.[p.bTeam] : true;
+  if (aFin && bFin) return 'finished';
   return 'running';
-}
-function _teamFullyScored(teamName) {
-  if (!teamName) return true;
-  const tr = (state.teamRun || {})[teamName] || {};
-  if (tr.dsq) return true;
-  const sp = tr.shotPoints;
-  return (sp !== undefined && sp !== null && sp !== '');
 }
 
 function renderTeamRunList() {
