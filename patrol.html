@@ -555,6 +555,27 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
 .ptr-shot-input::-webkit-inner-spin-button, .ptr-shot-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .ptr-shot-input[type=number] { -moz-appearance: textfield; }
 
+/* Czerwone podświetlenie kafelka strzelania gdy zawodnik dobiegł a strzelanie nie wpisane —
+   przypomnienie sędziemu (znika jak tylko wpisze cokolwiek, nawet 0) */
+.ptr-shot-needed-label { color: var(--red) !important; animation: shot-needed-pulse 1.6s ease-in-out infinite; }
+.ptr-shot-needed-row .ptr-shot-input { background: rgba(224,85,85,.10); border-color: var(--red); color: var(--red); animation: shot-needed-pulse 1.6s ease-in-out infinite; }
+.ptr-shot-needed-row .ptr-shot-input::placeholder { color: rgba(224,85,85,.65); font-weight: 800; }
+.ptr-shot-needed-row .ptr-shot-input:focus { background: rgba(224,85,85,.16); border-color: var(--red); animation: none; }
+.ptr-shot-needed-row .ptr-shot-input:focus + .ptr-shot-btn { animation: none; }
+@keyframes shot-needed-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224,85,85,.0); }
+  50%      { box-shadow: 0 0 0 3px rgba(224,85,85,.18); }
+}
+.ptr-shot-needed-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--font-h); font-size: 9px; font-weight: 800;
+  letter-spacing: 1px; padding: 1px 6px 2px; margin-left: 6px;
+  background: rgba(224,85,85,.15); color: var(--red);
+  border: 1px solid rgba(224,85,85,.50); border-radius: 2px;
+  line-height: 1; vertical-align: middle;
+  animation: shot-needed-pulse 1.6s ease-in-out infinite;
+}
+
 /* Dziesiątki — kafelkowy wybór 0..5 */
 .ptr-tens-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 4px; }
 .ptr-tens-btn { background: var(--bg3); border: 1.5px solid var(--border2); border-radius: var(--radius); color: var(--text3); font-family: var(--font-h); font-size: 13px; font-weight: 800; padding: 6px 0; cursor: pointer; transition: all .1s; line-height: 1; }
@@ -4543,9 +4564,18 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
     // Dwa kafelki czasów — OSF (lewo, niebieski) i Łączny (prawo, zielony)
     _athleteTimeTilesHTML(a, osf, total, osfIsMarker, totalIsMarker, osfDisabled, totalDisabled, canEditOsf, canEditTotal, role) +
     // 🎯 Strzelanie (0-50): input + kafelki ±1 / ±5. Domyślna wartość strzałek = 50.
-    '<div style="margin-top:8px;">' +
-      '<div class="ptr-time-lbl" style="color:var(--orange);margin-bottom:4px;">🎯 Strzelanie (0-50 pkt)' + (!canEditHits ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') + '</div>' +
-      '<div class="ptr-shot-row">' +
+    // Gdy zawodnik dobiegł (total wpisany, nie marker, nie DSQ) a strzelanie puste — czerwone podświetlenie
+    // jako przypomnienie sędziemu (znika gdy wpisze cokolwiek, nawet 0).
+    (function(){
+      const hasTotal = !!(total && !totalIsMarker);
+      const shotEmpty = (shotEff === undefined || shotEff === null || shotEff === '');
+      const shotNeeded = hasTotal && shotEmpty && !dsq;
+      return '<div style="margin-top:8px;">' +
+        '<div class="ptr-time-lbl' + (shotNeeded ? ' ptr-shot-needed-label' : '') + '" style="' + (shotNeeded ? '' : 'color:var(--orange);') + 'margin-bottom:4px;">🎯 Strzelanie (0-50 pkt)' + (!canEditHits ? ' <span style="opacity:.6;font-size:9px;">(' + role + ')</span>' : '') +
+          (shotNeeded ? '<span class="ptr-shot-needed-badge" title="Zawodnik dobiegł — wpisz wynik strzelania (0 też jest wynikiem)">‼ wpisz wynik</span>' : '') +
+        '</div>' +
+        '<div class="ptr-shot-row' + (shotNeeded ? ' ptr-shot-needed-row' : '') + '">';
+    })() +
         '<input class="ptr-shot-input" type="number" min="0" max="50" step="1" value="' + (shotEff !== undefined ? shotEff : '') + '" placeholder="0-50"' +
           ' onchange="setShotPoints(' + a.id + ', this.value)"' +
           ' onblur="setShotPoints(' + a.id + ', this.value)"' +
