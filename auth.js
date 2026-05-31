@@ -352,14 +352,17 @@ window.MSS_AUTH = (function() {
   }
 
   // ─── Watchdog: okresowe sprawdzenie czy konto wciaz aktywne ──
-  // Co 30s pobieramy swiezy profil z mss_users. Jezeli active=false lub
-  // rekord zniknal -> banner + wymuszone wylogowanie po 6s.
+  // Co 5s pobieramy swiezy profil z mss_users.
+  // Jezeli active=false lub rekord zniknal -> blokujacy banner.
+  // Jezeli pozniej active=true -> auto-przywrocenie (banner znika).
+  // Watchdog DZIALA caly czas (nawet podczas dezaktywacji) zeby
+  // wykryc reaktywacje.
   let _watchdogTimer = null;
-  let _wasInactive = false;
+  const WATCHDOG_INTERVAL_MS = 5000;
 
   function _startWatchdog() {
     if (_watchdogTimer) return;
-    _watchdogTimer = setInterval(_watchdogTick, 30000);
+    _watchdogTimer = setInterval(_watchdogTick, WATCHDOG_INTERVAL_MS);
   }
 
   function _stopWatchdog() {
@@ -377,36 +380,40 @@ window.MSS_AUTH = (function() {
         .eq('id', _user.id)
         .maybeSingle();
       if (error) {
-        // Sieciowy/offline — nie reagujemy
+        // Sieciowy/offline — nie reagujemy (zostaw biezacy stan)
         return;
       }
       if (!data) {
-        // Rekord usuniety
-        _onAccountInactive('Twoje konto zostalo usuniete');
+        // Rekord usuniety — bezpieczne tylko wymuszone wylogowanie
+        // (usuniecia konta nie da sie cofnac, recover niemozliwy)
+        _onAccountDeleted();
         return;
       }
       if (!data.active) {
-        _onAccountInactive('Twoje konto zostalo dezaktywowane');
+        // Pokaz banner (lub aktualizuj), watchdog dalej kreci sie zeby
+        // wykryc reaktywacje
+        _showDeactivatedBanner('Twoje konto zostalo dezaktywowane');
         return;
       }
-      // Update profile (rola moze sie zmienic)
+      // Aktywne — jezeli wczesniej byl banner, zdejmij + wyemituj event
+      const wasShowingBanner = !!document.getElementById('mss-auth-deactivated');
       _profile = data;
       _cacheProfile(data);
+      if (wasShowingBanner) {
+        _hideDeactivatedBanner();
+        window.dispatchEvent(new CustomEvent('mss-auth-reactivated', {
+          detail: { profile: _profile }
+        }));
+      }
     } catch (_) {}
   }
 
-  function _onAccountInactive(message) {
-    if (_wasInactive) return; // juz pokazujemy banner
-    _wasInactive = true;
+  function _onAccountDeleted() {
     _stopWatchdog();
-    _showDeactivatedBanner(message);
-    // Auto-wylogowanie po 6 sekundach (czas na przeczytanie)
-    setTimeout(() => {
-      signOut();
-    }, 6000);
+    _showDeactivatedBanner('Twoje konto zostalo usuniete', true);
   }
 
-  function _showDeactivatedBanner(message) {
+  function _showDeactivatedBanner(message, isDeleted) {
     let el = document.getElementById('mss-auth-deactivated');
     if (!el) {
       el = document.createElement('div');
@@ -414,15 +421,30 @@ window.MSS_AUTH = (function() {
       el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,15,15,.95);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Barlow,sans-serif;';
       document.body.appendChild(el);
     }
+    // Tresci sa identyczne (poza dodatkiem info dla deleted), wiec sprawdzimy czy juz takie sa
+    // (zeby nie przepisywac DOM-u co 5s)
+    const expectedSig = (isDeleted ? 'deleted' : 'inactive') + '|' + message;
+    if (el.dataset.sig === expectedSig) return;
+    el.dataset.sig = expectedSig;
+
+    const recoveryInfo = isDeleted
+      ? '<div style="color:#8a9898;font-size:11px;font-family:JetBrains Mono,monospace;margin-top:14px;">Konto skasowane bezpowrotnie. Skontaktuj sie z administratorem.</div>'
+      : '<div style="color:#8a9898;font-size:11px;font-family:JetBrains Mono,monospace;margin-top:14px;">Jezeli administrator wlaczy Twoje konto ponownie, ten ekran znikie automatycznie.</div>';
+
     el.innerHTML =
       '<div style="background:#141717;border:2px solid #e05555;border-radius:12px;padding:32px;max-width:480px;text-align:center;box-shadow:0 8px 40px rgba(224,85,85,.4);">' +
         '<div style="font-size:48px;margin-bottom:12px;">🚫</div>' +
         '<div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:1.5px;color:#e05555;text-transform:uppercase;margin-bottom:14px;">Brak dostepu</div>' +
         '<div style="color:#f0f2f2;font-size:15px;line-height:1.6;margin-bottom:18px;">' + message + '</div>' +
-        '<div style="color:#8a9898;font-size:12px;font-family:JetBrains Mono,monospace;margin-bottom:24px;">Wszystkie niezapisane zmiany NIE zostana zachowane.<br>Skontaktuj sie z administratorem zawodow.</div>' +
-        '<button onclick="MSS_AUTH.signOut()" style="background:#e8d44d;color:#111;border:none;padding:12px 28px;font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border-radius:4px;cursor:pointer;">Wyloguj teraz</button>' +
-        '<div style="color:#8a9898;font-size:11px;font-family:JetBrains Mono,monospace;margin-top:14px;">Auto-wylogowanie za 6 sekund...</div>' +
+        '<div style="color:#8a9898;font-size:12px;font-family:JetBrains Mono,monospace;margin-bottom:24px;">Niezapisane zmiany NIE zostana zachowane.<br>Skontaktuj sie z administratorem zawodow.</div>' +
+        '<button onclick="MSS_AUTH.signOut()" style="background:#e8d44d;color:#111;border:none;padding:12px 28px;font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border-radius:4px;cursor:pointer;">Zaloguj ponownie</button>' +
+        recoveryInfo +
       '</div>';
+  }
+
+  function _hideDeactivatedBanner() {
+    const el = document.getElementById('mss-auth-deactivated');
+    if (el) el.remove();
   }
 
   async function init() {
