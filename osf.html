@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <style>
 :root {
   --bg:      #0d0f0f;
@@ -2094,16 +2095,7 @@ tr:last-child > td { border-bottom: none; }
 <div id="toast-container"></div>
 
 <script>
-// ─── SESSION GUARD ───
-(function() {
-  const ok  = sessionStorage.getItem('herkules_session') === 'ok';
-  const exp = parseInt(sessionStorage.getItem('herkules_session_exp') || '0');
-  if (!ok || Date.now() > exp) {
-    sessionStorage.removeItem('herkules_session');
-    sessionStorage.removeItem('herkules_session_exp');
-    window.location.replace('start.html');
-  }
-})();
+// ─── SESSION GUARD ─── (zarzadzany przez MSS_AUTH/auth.js — patrz BOOT na koncu)
 // ═══════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════
@@ -2220,15 +2212,13 @@ function TEAM_MIN_VAL() { return state.setup && state.setup.teamMin ? state.setu
 // SUPABASE — synchronizacja między urządzeniami
 // ═══════════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+// SUPABASE_KEY zostawione TYLKO dla beforeunload sendBeacon (nie da rady auth-header)
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
-const SESSION_ID   = Math.random().toString(36).slice(2); // unikalny ID tej sesji
+const SESSION_ID   = Math.random().toString(36).slice(2);
 
-let _supabaseClient = null;
+// Klient Supabase deleguje do MSS_AUTH (wspolna sesja JWT)
 function getSupabase() {
-  if (!_supabaseClient) {
-    _supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  }
-  return _supabaseClient;
+  return MSS_AUTH.getSupabase();
 }
 
 // ── SYNC — zapis do Supabase ──────────────────────────────────────────
@@ -11040,6 +11030,15 @@ function _doImportRows(rows) {
       '</div>';
     return false;
   };
+
+  // ─── Gate auth: czekamy az MSS_AUTH ustali sesje ──
+  if (typeof MSS_AUTH === 'undefined') return;
+  const authOk = await MSS_AUTH.init();
+  if (!authOk) {
+    // Niezalogowany — overlay MSS_AUTH widoczny. Po loginie strona przeladuje.
+    return;
+  }
+
   document.getElementById('ws-date').valueAsDate = new Date();
 
   // 1. Wczytaj z localStorage (szybki cache)
@@ -11077,6 +11076,11 @@ function _doImportRows(rows) {
   hideLoading();
   document.getElementById('welcome-screen').style.display = 'flex';
 })();
+
+// Po loginie przeladuj strone zeby boot IIFE wystartowal z auth tokenem
+window.addEventListener('mss-auth-signed-in', () => {
+  location.reload();
+});
 </script>
 </body>
 </html>

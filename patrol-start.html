@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <style>
 :root {
   --bg:      #0d0f0f;
@@ -345,11 +346,11 @@ const STORAGE_KEY = SLOT_ID;
 // SUPABASE
 // ═══════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+// SUPABASE_KEY zostaje TYLKO dla fetch z apikey (server clock probe)
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
-let _sb = null;
+// Klient deleguje do MSS_AUTH (wspolna sesja JWT)
 function getDB() {
-  if (!_sb) _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  return _sb;
+  return MSS_AUTH.getSupabase();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1650,6 +1651,13 @@ async function boot() {
     showSplashError('Brak klucza', 'Twój link nie zawiera klucza dostępu. Poproś sędziego głównego o pełny link.');
     return;
   }
+  // Auth gate — sedzia startu musi byc zalogowany do MSS
+  if (typeof MSS_AUTH === 'undefined') return;
+  const authOk = await MSS_AUTH.init();
+  if (!authOk) {
+    // Overlay MSS_AUTH widoczny; po loginie strona przeladuje
+    return;
+  }
   // Sync zegar zaraz
   syncServerClock();
   setInterval(syncServerClock, 60000);
@@ -1672,6 +1680,11 @@ async function boot() {
 }
 
 boot();
+
+// Po loginie przeladuj zeby boot wystartowal z auth tokenem
+window.addEventListener('mss-auth-signed-in', () => {
+  location.reload();
+});
 </script>
 </body>
 </html>

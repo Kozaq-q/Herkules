@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════
@@ -570,9 +571,11 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 #ranking-search-wrap { margin-bottom: 12px; }
 
 /* ═══════════════════════════════════════════════════════
-   GLOBAL AUTH OVERLAY
+   GLOBAL AUTH OVERLAY — LEGACY (zastąpiony przez MSS_AUTH/auth.js)
 ═══════════════════════════════════════════════════════ */
-#auth-overlay {
+#auth-overlay { display: none !important; }
+/* CSS-y starego overlay zostawione na wszelki wypadek (nieaktywne): */
+#auth-overlay-OLD-IGNORE {
   position: fixed;
   inset: 0;
   z-index: 99999;
@@ -1539,69 +1542,23 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 <script>
 
-// ─── HERKULES SESSION GUARD ───
-(function() {
-  const ok  = sessionStorage.getItem('herkules_session') === 'ok';
-  const exp = parseInt(sessionStorage.getItem('herkules_session_exp') || '0');
-  if (!ok || Date.now() > exp) {
-    sessionStorage.removeItem('herkules_session');
-    sessionStorage.removeItem('herkules_session_exp');
-    window.location.replace('start.html');
-  }
-})();
+// ─── SESSION GUARD ─── (zarządzany przez MSS_AUTH/auth.js — patrz BOOT na koncu)
 
 // ════════════════════════════════════════════════════════════
-// GLOBAL AUTH — Bramka logowania
-// Hasła przechowywane w Supabase (tabela: auth_config)
-// Sesja 8h w sessionStorage
+// GLOBAL AUTH — przerobione na shim do MSS_AUTH (auth.js / Supabase Auth)
+// Stary system (hashe SHA-256 w auth_config) usuniety. Role admin/judge
+// teraz pochodza z mss_users.role (admin/judge).
 // ════════════════════════════════════════════════════════════
 
-// Domyślne hashe SHA-256 (fallback gdy Supabase niedostępny)
-// admin: "admin2025", judge: "sedzia2025"
-const AUTH_DEFAULTS = {
-  admin: 'f2dbeac01286a77db30e2b4e73e0c44d6bd2e07528b8c9f4d48c965b17a4db99',
-  judge: '9bca72b15c40a882bd36a5c0a6b16c07ceaa668e2e4a42a3d6e1a7c27e0c5b31'
-};
+let _sessionRole = null; // 'admin' lub 'judge' — z MSS_AUTH.getProfile().role
 
-let _authRole = 'judge'; // selekcja roli w UI
-let _sessionRole = null; // aktywna rola (po zalogowaniu)
-let _authPasswords = null; // hashe wczytane z Supabase
-
-// Klucze sessionStorage
-const AUTH_SESSION_KEY  = 'mss_auth_session';
-const AUTH_EXPIRY_KEY   = 'mss_auth_expiry';
-const AUTH_ROLE_KEY     = 'mss_auth_role';
-
-// ── Sprawdź czy sesja jest aktywna ──
-function authCheckSession() {
-  try {
-    const token  = sessionStorage.getItem(AUTH_SESSION_KEY);
-    const expiry = parseInt(sessionStorage.getItem(AUTH_EXPIRY_KEY) || '0');
-    const role   = sessionStorage.getItem(AUTH_ROLE_KEY);
-    if (token === 'ok' && expiry > Date.now() && (role === 'admin' || role === 'judge')) {
-      _sessionRole = role;
-      return true;
-    }
-  } catch(e) {}
-  return false;
-}
-
-// ── Zapisz sesję (8h) ──
-function authSaveSession(role) {
-  _sessionRole = role;
-  const expiry = Date.now() + 12 * 60 * 60 * 1000;
-  sessionStorage.setItem(AUTH_SESSION_KEY, 'ok');
-  sessionStorage.setItem(AUTH_EXPIRY_KEY, String(expiry));
-  sessionStorage.setItem(AUTH_ROLE_KEY, role);
-}
-
-// ── Wyloguj ──
+// Wyloguj
 function authLogout() {
-  sessionStorage.removeItem(AUTH_SESSION_KEY);
-  sessionStorage.removeItem(AUTH_EXPIRY_KEY);
-  sessionStorage.removeItem(AUTH_ROLE_KEY);
-  _sessionRole = null;
-  location.reload();
+  if (typeof MSS_AUTH !== 'undefined') {
+    MSS_AUTH.signOut();
+  } else {
+    location.reload();
+  }
 }
 
 // ── Zakończ zawody i wróć do panelu ──
@@ -1633,65 +1590,10 @@ function finishContest() {
   window.location.href = 'start.html';
 }
 
-// ── Selekcja roli w UI ──
-function authSelectRole(role, btn) {
-  _authRole = role;
-  document.querySelectorAll('.auth-role-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-}
-
-// ── Załaduj hashe z Supabase ──
-async function authLoadPasswords() {
-  try {
-    const db = getSupabase();
-    const { data, error } = await db
-      .from('auth_config')
-      .select('role, password_hash');
-    if (error || !data || !data.length) return null;
-    const map = {};
-    data.forEach(row => { map[row.role] = row.password_hash; });
-    return map;
-  } catch(e) {
-    return null;
-  }
-}
-
-// ── Logowanie ──
-async function authLogin() {
-  const input = document.getElementById('auth-password-input');
-  const errEl = document.getElementById('auth-error');
-  const btn   = document.querySelector('.auth-btn');
-  if (!input) return;
-
-  btn.textContent = '⏳ Sprawdzanie...';
-  btn.disabled = true;
-  errEl.style.display = 'none';
-
-  const hash = await sha256(input.value);
-
-  if (!_authPasswords) {
-    _authPasswords = await authLoadPasswords();
-  }
-
-  const passwords = _authPasswords || AUTH_DEFAULTS;
-  const expectedHash = passwords[_authRole];
-
-  if (expectedHash && hash === expectedHash) {
-    authSaveSession(_authRole);
-    document.getElementById('auth-overlay').style.display = 'none';
-    applyRoleRestrictions(_sessionRole);
-    toast(_authRole === 'admin' ? '🛡 Zalogowano jako Admin' : '👮 Zalogowano jako Sędzia');
-    updateAuthBadge();
-  } else {
-    errEl.style.display = 'block';
-    input.value = '';
-    input.focus();
-    setTimeout(() => { errEl.style.display = 'none'; }, 3000);
-  }
-
-  btn.textContent = '🔓 Zaloguj';
-  btn.disabled = false;
-}
+// Stubs - stary system, niedluzej uzywany (zostawiamy na wypadek wywolan z UI)
+function authSelectRole() { /* noop - role z MSS_AUTH */ }
+async function authLoadPasswords() { return null; }
+async function authLogin() { /* noop - MSS_AUTH ma wlasny overlay */ }
 
 // ── Zastosuj ograniczenia roli ──
 function applyRoleRestrictions(role) {
@@ -1710,115 +1612,61 @@ function applyRoleRestrictions(role) {
   }
 }
 
-// ── Badge roli w headerze ──
+// Badge roli w headerze
 function updateAuthBadge() {
   const el = document.getElementById('auth-role-badge');
   if (!el || !_sessionRole) return;
+  const prof = (typeof MSS_AUTH !== 'undefined') ? MSS_AUTH.getProfile() : null;
+  const name = prof ? (prof.display_name || prof.email.split('@')[0]) : '';
   if (_sessionRole === 'admin') {
-    el.innerHTML = '<span class="auth-role-badge admin">🛡 Admin</span>';
+    el.innerHTML = '<span class="auth-role-badge admin">🛡 ' + (name ? name + ' · ' : '') + 'Admin</span>';
   } else {
-    el.innerHTML = '<span class="auth-role-badge judge">👮 Sędzia</span>';
+    el.innerHTML = '<span class="auth-role-badge judge">👮 ' + (name ? name + ' · ' : '') + 'Sędzia</span>';
   }
   el.style.display = 'inline-flex';
 }
 
-// ── Panel zmiany haseł (tylko admin) ──
+// Panel zmiany hasel (legacy modal) - zmiana wlasnego hasla przez Supabase Auth
 function openAuthAdminPanel() {
-  // Wyczyść pola
+  const modal = document.getElementById('modal-change-passwords');
+  if (!modal) return alert('Modal zmiany hasel niedostepny w tej wersji.');
   ['auth-current-admin','auth-new-admin','auth-new-judge'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  const err = document.getElementById('auth-current-error');
-  if (err) err.style.display = 'none';
-  // Otwórz modal
-  document.getElementById('modal-change-passwords').classList.add('open');
-  setTimeout(() => {
-    const cur = document.getElementById('auth-current-admin');
-    if (cur) cur.focus();
-  }, 100);
+  modal.classList.add('open');
 }
 
 async function authSavePasswords() {
-  const currentPwd = document.getElementById('auth-current-admin').value;
-  const adminPwd   = document.getElementById('auth-new-admin').value.trim();
-  const judgePwd   = document.getElementById('auth-new-judge').value.trim();
-  const errEl      = document.getElementById('auth-current-error');
-
-  if (!currentPwd) {
-    errEl.textContent = '✗ Wpisz aktualne hasło admina';
-    errEl.style.display = 'block';
-    document.getElementById('auth-current-admin').focus();
+  const adminPwd = (document.getElementById('auth-new-admin') || {}).value || '';
+  const errEl = document.getElementById('auth-current-error');
+  if (!adminPwd || adminPwd.length < 8) {
+    if (errEl) { errEl.textContent = 'Nowe haslo min. 8 znakow'; errEl.style.display = 'block'; }
     return;
-  }
-
-  if (!_authPasswords) _authPasswords = await authLoadPasswords();
-  const passwords = _authPasswords || AUTH_DEFAULTS;
-  const currentHash = await sha256(currentPwd);
-  if (currentHash !== passwords['admin']) {
-    errEl.textContent = '✗ Nieprawiłowe aktualne hasło';
-    errEl.style.display = 'block';
-    document.getElementById('auth-current-admin').value = '';
-    document.getElementById('auth-current-admin').focus();
-    setTimeout(() => { errEl.style.display = 'none'; }, 3000);
-    return;
-  }
-  errEl.style.display = 'none';
-
-  if (!adminPwd && !judgePwd) return toast('Wpisz co najmniej jedno nowe hasło');
-
-  const db = getSupabase();
-  const updates = [];
-  if (adminPwd) {
-    const h = await sha256(adminPwd);
-    updates.push(db.from('auth_config').upsert({ role:'admin', password_hash: h }, { onConflict:'role' }));
-  }
-  if (judgePwd) {
-    const h = await sha256(judgePwd);
-    updates.push(db.from('auth_config').upsert({ role:'judge', password_hash: h }, { onConflict:'role' }));
   }
   try {
-    await Promise.all(updates);
-    _authPasswords = null;
-    toast('✓ Hasła zapisane w Supabase');
-    document.getElementById('auth-current-admin').value = '';
-    document.getElementById('auth-new-admin').value = '';
-    document.getElementById('auth-new-judge').value = '';
+    const sb = MSS_AUTH.getSupabase();
+    const { error } = await sb.auth.updateUser({ password: adminPwd });
+    if (error) throw error;
+    toast('✓ Twoje haslo zmienione w Supabase Auth');
     closeModal('modal-change-passwords');
   } catch(e) {
-    toast('Błąd zapisu: ' + e.message);
+    if (errEl) { errEl.textContent = 'Blad: ' + e.message; errEl.style.display = 'block'; }
   }
 }
 
-// ── Init auth (wywoływany na starcie) ──
-function authInit() {
-  // Jeśli zalogowano przez panel Herkules — auto-login jako admin
-  const herkOk  = sessionStorage.getItem('herkules_session') === 'ok';
-  const herkExp = parseInt(sessionStorage.getItem('herkules_session_exp') || '0');
-  if (herkOk && Date.now() < herkExp) {
-    authSaveSession('admin');
-  }
-
-  if (authCheckSession()) {
-    // Sesja aktywna — ukryj overlay
-    const overlay = document.getElementById('auth-overlay');
-    if (overlay) overlay.style.display = 'none';
+// Init auth — czeka na MSS_AUTH, ustawia _sessionRole z profilu
+async function authInit() {
+  if (typeof MSS_AUTH === 'undefined') return;
+  // MSS_AUTH.init() jest juz wywolane w BOOT na koncu pliku — tu tylko odczyt
+  const prof = MSS_AUTH.getProfile();
+  if (prof && prof.active) {
+    _sessionRole = (prof.role === 'admin') ? 'admin' : 'judge';
+    // Ukryj stary overlay (na wypadek gdyby istnial w DOM)
+    const oldOverlay = document.getElementById('auth-overlay');
+    if (oldOverlay) oldOverlay.style.display = 'none';
     applyRoleRestrictions(_sessionRole);
     updateAuthBadge();
-    // Prefetch haseł w tle
-    authLoadPasswords().then(p => { if (p) _authPasswords = p; });
-  } else {
-    // Pokaż overlay — blokuje całą aplikację
-    const overlay = document.getElementById('auth-overlay');
-    if (overlay) {
-      overlay.style.display = 'flex';
-      setTimeout(() => {
-        const inp = document.getElementById('auth-password-input');
-        if (inp) inp.focus();
-      }, 100);
-    }
-    // Prefetch haseł z Supabase żeby login był szybszy
-    authLoadPasswords().then(p => { if (p) _authPasswords = p; });
   }
 }
 
@@ -1914,12 +1762,9 @@ function cancelPassword() {
   _pwdPendingCallback = null;
 }
 
-let _supabase = null;
+// Klient Supabase deleguje do MSS_AUTH (wspolna sesja JWT dla auth + danych)
 function getSupabase() {
-  if (!_supabase) {
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  }
-  return _supabase;
+  return MSS_AUTH.getSupabase();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -5662,6 +5507,15 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
 // INICJALIZACJA SUPABASE — nadpisuje stan po załadowaniu z chmury
 // ════════════════════════════════════════════════════════════
 (async function initSupabase() {
+  // Czekaj az MSS_AUTH ustali sesje (gate calej apki)
+  if (typeof MSS_AUTH === 'undefined') return;
+  const ok = await MSS_AUTH.init();
+  if (!ok) {
+    // Niezalogowany — MSS_AUTH pokazuje overlay; po loginie obsluga w listenerze ponizej
+    return;
+  }
+  // Zalogowany — ustaw _sessionRole i ograniczenia roli
+  try { await authInit(); } catch(_) {}
   // Pokaż banner ładowania
   const banner = document.createElement('div');
   banner.id = 'sync-banner';
@@ -6456,6 +6310,14 @@ function applyStartList(rows) {
 
   toast(`✓ Dodano ${athletesAdded} zawodników${teamsCreated ? ', '+teamsCreated+' drużyn' : ''}`);
 }
+
+// ────────────────────────────────────────────────────────────
+// MSS_AUTH integration — po loginie przeladuj strone zeby IIFE
+// (initSupabase + setup + scoreTables) zaladowaly sie z auth tokenem
+// ────────────────────────────────────────────────────────────
+window.addEventListener('mss-auth-signed-in', () => {
+  location.reload();
+});
 
 </script>
 </body>
