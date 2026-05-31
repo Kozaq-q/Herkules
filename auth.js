@@ -252,6 +252,13 @@ window.MSS_AUTH = (function() {
         detail: { user: _user, profile: _profile }
       }));
     } catch (e) {
+      // Specjalny przypadek: konto zalogowane ale nieaktywne -
+      // signIn juz pokazal banner pelnoekranowy, my chowamy overlay
+      if (e && e.__inactive) {
+        _hideOverlay();
+        pwEl.value = '';
+        return; // banner przejmuje kontrole
+      }
       const msg = (e && e.message) || 'Błąd logowania';
       // przyjazne komunikaty
       if (/invalid login|invalid_credentials|invalid_grant/i.test(msg)) {
@@ -324,15 +331,19 @@ window.MSS_AUTH = (function() {
     _user = data.user;
     await _loadProfile();
     if (!_profile) {
+      // Konto bez rekordu w mss_users — twardy blok, wyloguj
       await sb.auth.signOut();
       _user = null;
       throw new Error('Konto nie ma uprawnień do MSS. Skontaktuj się z adminem.');
     }
     if (!_profile.active) {
-      await sb.auth.signOut();
-      _user = null;
-      _profile = null;
-      throw new Error('Konto zostało dezaktywowane.');
+      // Konto dezaktywowane — NIE wylogowuj, pokaz banner z auto-recovery
+      // (watchdog wykryje gdy admin wlaczy konto i schowa banner sam)
+      _showDeactivatedBanner('Twoje konto zostalo dezaktywowane');
+      _startWatchdog();
+      const e = new Error('inactive');
+      e.__inactive = true;
+      throw e;
     }
     _startWatchdog(); // monitorowanie po zalogowaniu
     return _profile;
@@ -397,6 +408,7 @@ window.MSS_AUTH = (function() {
       }
       // Aktywne — jezeli wczesniej byl banner, zdejmij + wyemituj event
       const wasShowingBanner = !!document.getElementById('mss-auth-deactivated');
+      const wasProfileActive = _profile && _profile.active;
       _profile = data;
       _cacheProfile(data);
       if (wasShowingBanner) {
@@ -404,6 +416,13 @@ window.MSS_AUTH = (function() {
         window.dispatchEvent(new CustomEvent('mss-auth-reactivated', {
           detail: { profile: _profile }
         }));
+        // Jezeli wczesniej profile.active byl false (czyli reaktywacja),
+        // wyemituj tez signed-in zeby strony ktore czekaja na boot wystartowaly
+        if (!wasProfileActive) {
+          window.dispatchEvent(new CustomEvent('mss-auth-signed-in', {
+            detail: { user: _user, profile: _profile }
+          }));
+        }
       }
     } catch (_) {}
   }
