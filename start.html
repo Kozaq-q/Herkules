@@ -191,6 +191,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent); backgrou
       <span id="sync-label">—</span>
     </div>
     <div class="header-date" id="header-date"></div>
+    <button class="hdr-btn" id="btn-judges" onclick="openJudgesPanel()" style="display:none;">👥 Sędziowie</button>
     <button class="hdr-btn" onclick="openChangePassword()">⚙ Hasło</button>
     <button class="hdr-btn" onclick="doLogout()">⏻ Wyloguj</button>
   </div>
@@ -279,6 +280,61 @@ input:focus, select:focus { outline: none; border-color: var(--accent); backgrou
     <div class="modal-footer">
       <button class="btn" onclick="closePasswordModal()">Anuluj</button>
       <button class="btn btn-primary" onclick="savePassword()">Zapisz hasło</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SĘDZIOWIE (panel admin) -->
+<div class="modal-overlay" id="modal-judges">
+  <div class="modal" style="max-width:760px;width:92vw;">
+    <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>👥 Sędziowie</span>
+      <button class="btn btn-primary btn-sm" onclick="openAddJudgeForm()">+ Dodaj sędziego</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">
+      Konta sędziów z dostępem do MSS. Dezaktywowani nie mogą się zalogować ani zapisywać do bazy.
+    </div>
+
+    <!-- Formularz dodawania (toggle) -->
+    <div id="judges-add-form" style="display:none;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+      <div style="font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;">+ Nowy sędzia</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;">
+          <label>Email / login</label>
+          <input type="email" id="judge-email" placeholder="np. sedzia1@mss.local" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 12px;font-family:var(--font-m);" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Imię i nazwisko</label>
+          <input type="text" id="judge-name" placeholder="np. Jan Kowalski" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 12px;font-family:var(--font-b);" />
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;">
+          <label>Hasło tymczasowe</label>
+          <input type="text" id="judge-password" placeholder="min. 8 znaków" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 12px;font-family:var(--font-m);" />
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Rola</label>
+          <select id="judge-role" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:8px 12px;font-family:var(--font-b);">
+            <option value="judge">Sędzia</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <div id="judges-add-err" style="color:var(--red);font-size:12px;font-family:var(--font-m);min-height:16px;margin-bottom:8px;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn" onclick="cancelAddJudgeForm()">Anuluj</button>
+        <button class="btn btn-primary" id="judges-add-submit" onclick="submitAddJudge()">Utwórz konto</button>
+      </div>
+    </div>
+
+    <!-- Lista sedziow -->
+    <div id="judges-list" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);max-height:60vh;overflow-y:auto;">
+      <div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-m);font-size:12px;">Ładowanie...</div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:14px;">
+      <button class="btn" onclick="closeJudgesPanel()">Zamknij</button>
     </div>
   </div>
 </div>
@@ -424,6 +480,195 @@ async function savePassword() {
   } catch (e) {
     err.textContent = 'Błąd: ' + (e.message || 'nie udało się zmienić hasła');
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL SĘDZIOWIE (admin-only) — wywołuje Edge Function admin-users
+// ═══════════════════════════════════════════════════════════════
+
+async function _callAdminFn(payload) {
+  const sb = MSS_AUTH.getSupabase();
+  const { data, error } = await sb.functions.invoke('admin-users', { body: payload });
+  if (error) {
+    // Probojemy wyciagnac komunikat z body Response
+    let msg = error.message || 'Bład Edge Function';
+    if (error.context && error.context.json) {
+      try {
+        const j = await error.context.json();
+        if (j && j.error) msg = j.error;
+      } catch(_) {}
+    }
+    throw new Error(msg);
+  }
+  if (data && data.ok === false) throw new Error(data.error || 'Bład');
+  return data;
+}
+
+function openJudgesPanel() {
+  document.getElementById('modal-judges').classList.add('open');
+  cancelAddJudgeForm();
+  refreshJudgesList();
+}
+
+function closeJudgesPanel() {
+  document.getElementById('modal-judges').classList.remove('open');
+}
+
+function openAddJudgeForm() {
+  document.getElementById('judge-email').value = '';
+  document.getElementById('judge-name').value = '';
+  document.getElementById('judge-password').value = _generateTempPassword();
+  document.getElementById('judge-role').value = 'judge';
+  document.getElementById('judges-add-err').textContent = '';
+  document.getElementById('judges-add-form').style.display = 'block';
+  setTimeout(() => document.getElementById('judge-email').focus(), 50);
+}
+
+function cancelAddJudgeForm() {
+  document.getElementById('judges-add-form').style.display = 'none';
+}
+
+function _generateTempPassword() {
+  // Czytelne tymczasowe hasło, 12 znaków, bez ambigous (0,O,I,l)
+  const cs = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const ls = 'abcdefghjkmnpqrstuvwxyz';
+  const ds = '23456789';
+  const sy = '!@#$';
+  const pick = (s) => s[Math.floor(Math.random() * s.length)];
+  let pw = '';
+  pw += pick(cs);
+  for (let i=0; i<5; i++) pw += pick(ls);
+  for (let i=0; i<3; i++) pw += pick(ds);
+  for (let i=0; i<2; i++) pw += pick(cs+ls);
+  pw += pick(sy);
+  // shuffle
+  return pw.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+async function submitAddJudge() {
+  const email = document.getElementById('judge-email').value.trim().toLowerCase();
+  const name  = document.getElementById('judge-name').value.trim();
+  const pw    = document.getElementById('judge-password').value;
+  const role  = document.getElementById('judge-role').value;
+  const err   = document.getElementById('judges-add-err');
+  const btn   = document.getElementById('judges-add-submit');
+
+  err.textContent = '';
+
+  if (!email || !email.includes('@')) { err.textContent = 'Podaj email (lub login@mss.local)'; return; }
+  if (pw.length < 8) { err.textContent = 'Hasło min. 8 znaków'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Tworzenie...';
+
+  try {
+    await _callAdminFn({ action: 'create', email, password: pw, display_name: name, role });
+    // Pokaz potwierdzenie z hasłem żeby admin mógł je przekazać sędziemu
+    alert(
+      '✓ Konto utworzone\n\n' +
+      'Email/login: ' + email + '\n' +
+      'Hasło: ' + pw + '\n\n' +
+      'Przekaż te dane sędziemu. Po pierwszym logowaniu może je zmienić w ⚙ Hasło.'
+    );
+    cancelAddJudgeForm();
+    refreshJudgesList();
+  } catch (e) {
+    err.textContent = 'Błąd: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Utwórz konto';
+  }
+}
+
+async function refreshJudgesList() {
+  const listEl = document.getElementById('judges-list');
+  listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-family:var(--font-m);font-size:12px;">Ładowanie...</div>';
+
+  try {
+    const res = await _callAdminFn({ action: 'list' });
+    const users = (res && res.users) || [];
+    if (users.length === 0) {
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">Brak sędziów</div>';
+      return;
+    }
+    const me = MSS_AUTH.getUser ? MSS_AUTH.getUser() : null;
+    const myId = me ? me.id : null;
+
+    listEl.innerHTML = users.map(u => {
+      const isMe = (u.id === myId);
+      const roleBadge = u.role === 'admin'
+        ? '<span style="background:rgba(232,212,77,.15);color:var(--accent);font-family:var(--font-h);font-size:9px;font-weight:800;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;border:1px solid rgba(232,212,77,.4);">ADMIN</span>'
+        : '<span style="background:var(--bg3);color:var(--text2);font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;border:1px solid var(--border);">SĘDZIA</span>';
+      const activeBadge = u.active
+        ? '<span style="color:var(--green);font-size:11px;">● aktywny</span>'
+        : '<span style="color:var(--red);font-size:11px;">● wyłączony</span>';
+      const meBadge = isMe ? '<span style="color:var(--accent);font-family:var(--font-m);font-size:10px;margin-left:6px;">(Ty)</span>' : '';
+
+      // Akcje (samego siebie nie można dezaktywować ani usunąć)
+      const safeId = u.id.replace(/'/g, "\\'");
+      const actions = [];
+      if (!isMe) {
+        if (u.active) actions.push('<button class="btn btn-sm" onclick="toggleJudgeActive(\'' + safeId + '\', false)">Wyłącz</button>');
+        else actions.push('<button class="btn btn-sm btn-primary" onclick="toggleJudgeActive(\'' + safeId + '\', true)">Włącz</button>');
+      }
+      actions.push('<button class="btn btn-sm" onclick="resetJudgePassword(\'' + safeId + '\', \'' + esc(u.email) + '\')">Reset hasła</button>');
+      if (!isMe) {
+        actions.push('<button class="btn btn-sm btn-danger" onclick="deleteJudgeConfirm(\'' + safeId + '\', \'' + esc(u.email) + '\')">Usuń</button>');
+      }
+
+      return '<div style="display:grid;grid-template-columns:1fr auto;gap:12px;padding:14px;border-bottom:1px solid var(--border);align-items:center;">' +
+        '<div>' +
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+            roleBadge +
+            '<span style="font-weight:600;color:var(--text1);">' + esc(u.display_name || u.email.split('@')[0]) + '</span>' +
+            meBadge +
+          '</div>' +
+          '<div style="font-family:var(--font-m);font-size:11px;color:var(--text3);">' + esc(u.email) + ' · ' + activeBadge + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + actions.join('') + '</div>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red);">Błąd: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function toggleJudgeActive(id, active) {
+  try {
+    await _callAdminFn({ action: 'setActive', id, active });
+    refreshJudgesList();
+  } catch (e) {
+    alert('Błąd: ' + e.message);
+  }
+}
+
+async function resetJudgePassword(id, email) {
+  const np = prompt('Reset hasła dla:\n' + email + '\n\nNowe hasło (min. 8 znaków):', _generateTempPassword());
+  if (!np) return;
+  if (np.length < 8) return alert('Hasło min. 8 znaków');
+  try {
+    await _callAdminFn({ action: 'updatePassword', id, password: np });
+    alert('✓ Hasło zmienione\n\nEmail: ' + email + '\nNowe hasło: ' + np + '\n\nPrzekaż sędziemu.');
+  } catch (e) {
+    alert('Błąd: ' + e.message);
+  }
+}
+
+async function deleteJudgeConfirm(id, email) {
+  if (!confirm('Usunąć konto sędziego:\n' + email + '\n\nTa operacja jest NIEODWRACALNA.')) return;
+  try {
+    await _callAdminFn({ action: 'delete', id });
+    refreshJudgesList();
+  } catch (e) {
+    alert('Błąd: ' + e.message);
+  }
+}
+
+// Helper esc (jeśli nie istnieje globalnie)
+if (typeof window.esc === 'undefined') {
+  window.esc = function(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -644,6 +889,11 @@ function showApp() {
       if (el) {
         const role = prof.role === 'admin' ? '<span style="color:var(--accent);font-weight:700;">ADMIN</span>' : 'sędzia';
         el.innerHTML = '👤 ' + (prof.display_name || prof.email) + ' · ' + role;
+      }
+      // Przycisk Sedziowie tylko dla admina
+      const judgesBtn = document.getElementById('btn-judges');
+      if (judgesBtn) {
+        judgesBtn.style.display = (prof.role === 'admin') ? '' : 'none';
       }
     }
   } catch (e) { /* noop */ }
