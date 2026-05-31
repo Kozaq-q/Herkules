@@ -334,6 +334,7 @@ window.MSS_AUTH = (function() {
       _profile = null;
       throw new Error('Konto zostało dezaktywowane.');
     }
+    _startWatchdog(); // monitorowanie po zalogowaniu
     return _profile;
   }
 
@@ -350,6 +351,80 @@ window.MSS_AUTH = (function() {
     location.reload();
   }
 
+  // ─── Watchdog: okresowe sprawdzenie czy konto wciaz aktywne ──
+  // Co 30s pobieramy swiezy profil z mss_users. Jezeli active=false lub
+  // rekord zniknal -> banner + wymuszone wylogowanie po 6s.
+  let _watchdogTimer = null;
+  let _wasInactive = false;
+
+  function _startWatchdog() {
+    if (_watchdogTimer) return;
+    _watchdogTimer = setInterval(_watchdogTick, 30000);
+  }
+
+  function _stopWatchdog() {
+    if (_watchdogTimer) clearInterval(_watchdogTimer);
+    _watchdogTimer = null;
+  }
+
+  async function _watchdogTick() {
+    if (!_user) return;
+    try {
+      const sb = getSupabase();
+      const { data, error } = await sb
+        .from('mss_users')
+        .select('id, active, role, display_name, email')
+        .eq('id', _user.id)
+        .maybeSingle();
+      if (error) {
+        // Sieciowy/offline — nie reagujemy
+        return;
+      }
+      if (!data) {
+        // Rekord usuniety
+        _onAccountInactive('Twoje konto zostalo usuniete');
+        return;
+      }
+      if (!data.active) {
+        _onAccountInactive('Twoje konto zostalo dezaktywowane');
+        return;
+      }
+      // Update profile (rola moze sie zmienic)
+      _profile = data;
+      _cacheProfile(data);
+    } catch (_) {}
+  }
+
+  function _onAccountInactive(message) {
+    if (_wasInactive) return; // juz pokazujemy banner
+    _wasInactive = true;
+    _stopWatchdog();
+    _showDeactivatedBanner(message);
+    // Auto-wylogowanie po 6 sekundach (czas na przeczytanie)
+    setTimeout(() => {
+      signOut();
+    }, 6000);
+  }
+
+  function _showDeactivatedBanner(message) {
+    let el = document.getElementById('mss-auth-deactivated');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'mss-auth-deactivated';
+      el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(13,15,15,.95);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Barlow,sans-serif;';
+      document.body.appendChild(el);
+    }
+    el.innerHTML =
+      '<div style="background:#141717;border:2px solid #e05555;border-radius:12px;padding:32px;max-width:480px;text-align:center;box-shadow:0 8px 40px rgba(224,85,85,.4);">' +
+        '<div style="font-size:48px;margin-bottom:12px;">🚫</div>' +
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:1.5px;color:#e05555;text-transform:uppercase;margin-bottom:14px;">Brak dostepu</div>' +
+        '<div style="color:#f0f2f2;font-size:15px;line-height:1.6;margin-bottom:18px;">' + message + '</div>' +
+        '<div style="color:#8a9898;font-size:12px;font-family:JetBrains Mono,monospace;margin-bottom:24px;">Wszystkie niezapisane zmiany NIE zostana zachowane.<br>Skontaktuj sie z administratorem zawodow.</div>' +
+        '<button onclick="MSS_AUTH.signOut()" style="background:#e8d44d;color:#111;border:none;padding:12px 28px;font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border-radius:4px;cursor:pointer;">Wyloguj teraz</button>' +
+        '<div style="color:#8a9898;font-size:11px;font-family:JetBrains Mono,monospace;margin-top:14px;">Auto-wylogowanie za 6 sekund...</div>' +
+      '</div>';
+  }
+
   async function init() {
     if (_initPromise) return _initPromise;
     _initPromise = (async () => {
@@ -362,6 +437,7 @@ window.MSS_AUTH = (function() {
         if (event === 'SIGNED_OUT') {
           _user = null;
           _profile = null;
+          _stopWatchdog();
           _showOverlay();
           window.dispatchEvent(new CustomEvent('mss-auth-signed-out'));
         } else if (event === 'TOKEN_REFRESHED' && session) {
@@ -379,6 +455,7 @@ window.MSS_AUTH = (function() {
         if (_profile && _profile.active) {
           _hideOverlay();
           _initialized = true;
+          _startWatchdog(); // monitorowanie dezaktywacji
           return true;
         }
         // Sesja jest, ale user dezaktywowany lub brak rekordu — wyloguj
