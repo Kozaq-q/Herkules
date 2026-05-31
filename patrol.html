@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
 <style>
 :root {
   --bg:      #0d0f0f;
@@ -1655,14 +1656,15 @@ if (!SLOT_ID) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SUPABASE
+// SUPABASE — uzywamy klienta z MSS_AUTH (auth.js) zeby zachowac
+// te sama sesje (token JWT) dla auth i operacji na danych.
 // ═══════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+// SUPABASE_KEY zostaje TYLKO dla legacy sendBeacon na beforeunload,
+// gdzie potrzeba bezpośredniego URL+apikey (bez auth, action wymaga RLS=anon)
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
-let _sb = null;
 function getSupabase() {
-  if (!_sb) _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  return _sb;
+  return MSS_AUTH.getSupabase();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2385,6 +2387,36 @@ function renderHeader() {
   if (headerEl) {
     headerEl.textContent = [name, city, date].filter(Boolean).join(' · ') || 'Bieg patrolowy';
   }
+}
+
+// Chip zalogowanego sedziego w naglowku (auth.js / MSS_AUTH)
+function _renderAuthChip() {
+  if (typeof MSS_AUTH === 'undefined') return;
+  try {
+    const prof = MSS_AUTH.getProfile && MSS_AUTH.getProfile();
+    const right = document.querySelector('.header-right');
+    if (!right) return;
+    let el = document.getElementById('mss-auth-chip');
+    if (!el) {
+      el = document.createElement('button');
+      el.id = 'mss-auth-chip';
+      el.title = 'Twoje konto · kliknij aby wylogować';
+      el.style.cssText = 'background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;';
+      el.onclick = () => {
+        if (confirm('Wylogować się z MSS?')) MSS_AUTH.signOut();
+      };
+      // Wstaw na początku header-right (przed innymi chipami)
+      right.insertBefore(el, right.firstChild);
+    }
+    if (prof) {
+      const roleLabel = prof.role === 'admin'
+        ? '<span style="color:var(--accent);font-weight:700;">ADMIN</span>'
+        : 'sędzia';
+      el.innerHTML = '👤 ' + (prof.display_name || prof.email.split('@')[0]) + ' · ' + roleLabel;
+    } else {
+      el.innerHTML = '👤 ?';
+    }
+  } catch (e) { /* noop */ }
 }
 
 function showSyncStatus(s) {
@@ -8530,6 +8562,8 @@ async function boot() {
   document.getElementById('loading-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   renderHeader();
+  // 3a. Pokaz chip zalogowanego sedziego w naglowku
+  _renderAuthChip();
   // 4. Wczytaj zakładkę gdzie sędzia był ostatnio + wyrenderuj jej zawartość
   const savedTab = localStorage.getItem('patrol_tab_' + SLOT_ID);
   if (savedTab && document.getElementById('page-' + savedTab)) showTab(savedTab);
@@ -8578,13 +8612,50 @@ window.addEventListener('beforeunload', () => {
   clearTimeout(_saveTimer);
   if (state._writerTag) {
     try {
+      // Najlepszy effort: sendBeacon z aktualnym tokenem auth (jezeli jest)
+      // Jak token wygasl albo brak sesji — to i tak ten zapis padnie po RLS.
+      let authHeader = 'Bearer ' + SUPABASE_KEY;
+      try {
+        const tokRaw = localStorage.getItem('mss-auth-token');
+        if (tokRaw) {
+          const tok = JSON.parse(tokRaw);
+          if (tok && tok.access_token) authHeader = 'Bearer ' + tok.access_token;
+        }
+      } catch(_) {}
       const payload = JSON.stringify({ slot_id: STORAGE_KEY, state_json: JSON.stringify(state), updated_at: new Date().toISOString() });
-      navigator.sendBeacon(SUPABASE_URL + '/rest/v1/patrol_state', new Blob([payload], { type: 'application/json' }));
+      // sendBeacon nie wspiera custom headers — fallback do fetch z keepalive
+      try {
+        fetch(SUPABASE_URL + '/rest/v1/patrol_state', {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: authHeader,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: payload,
+          keepalive: true,
+        });
+      } catch(_) {
+        navigator.sendBeacon(SUPABASE_URL + '/rest/v1/patrol_state', new Blob([payload], { type: 'application/json' }));
+      }
     } catch(e) {}
   }
 });
 
-boot();
+// BOOT — czekamy az MSS_AUTH ustali sesje, dopiero potem startujemy patrol
+MSS_AUTH.init().then(ok => {
+  if (ok) {
+    boot();
+  }
+  // jezeli !ok → overlay logowania widoczny, boot wystartuje po loginie
+}).catch(e => {
+  console.error('[BOOT] MSS_AUTH.init nie wykonalo sie:', e);
+});
+
+window.addEventListener('mss-auth-signed-in', () => {
+  boot();
+});
 </script>
 </body>
 </html>

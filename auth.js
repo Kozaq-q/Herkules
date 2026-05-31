@@ -269,9 +269,31 @@ window.MSS_AUTH = (function() {
     }
   }
 
-  // ─── Profile loader ───────────────────────────────────────────
+  // ─── Profile loader (z cache offline) ────────────────────────
+  const PROFILE_CACHE_KEY = 'mss-auth-profile-cache';
+
+  function _restoreCachedProfile() {
+    try {
+      const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (_user && obj && obj.id === _user.id) {
+        _profile = obj;
+        return obj;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function _cacheProfile(p) {
+    try {
+      if (p) localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(p));
+      else localStorage.removeItem(PROFILE_CACHE_KEY);
+    } catch (_) {}
+  }
+
   async function _loadProfile() {
-    if (!_user) { _profile = null; return null; }
+    if (!_user) { _profile = null; _cacheProfile(null); return null; }
     try {
       const sb = getSupabase();
       const { data, error } = await sb
@@ -281,15 +303,16 @@ window.MSS_AUTH = (function() {
         .maybeSingle();
       if (error) {
         console.warn('[MSS_AUTH] loadProfile error', error);
-        _profile = null;
-        return null;
+        // Sieciowy blad/timeout: nie kasuj cache, zostaw stale (offline)
+        return _profile;
       }
       _profile = data || null;
+      _cacheProfile(_profile);
       return _profile;
     } catch (e) {
-      console.warn('[MSS_AUTH] loadProfile exception', e);
-      _profile = null;
-      return null;
+      console.warn('[MSS_AUTH] loadProfile exception (sieciowy?)', e);
+      // Tez nie kasuj cache
+      return _profile;
     }
   }
 
@@ -323,6 +346,7 @@ window.MSS_AUTH = (function() {
     }
     _user = null;
     _profile = null;
+    _cacheProfile(null);
     location.reload();
   }
 
@@ -349,17 +373,26 @@ window.MSS_AUTH = (function() {
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         _user = session.user;
+        // Najpierw probuj cache (dla offline) — i tak _loadProfile go odswiezy
+        _restoreCachedProfile();
         await _loadProfile();
         if (_profile && _profile.active) {
           _hideOverlay();
           _initialized = true;
           return true;
         }
-        // Sesja jest, ale user nie ma uprawnień (np. dezaktywowany) — wyloguj
-        if (!_profile || !_profile.active) {
+        // Sesja jest, ale user dezaktywowany lub brak rekordu — wyloguj
+        // (tylko jak udalo sie pobrac profil; offline z _profile=null zostaw)
+        if (_profile && !_profile.active) {
           await sb.auth.signOut();
           _user = null;
           _profile = null;
+          _cacheProfile(null);
+        } else if (!_profile) {
+          // Profil nieznany (online + brak rekordu LUB offline+brak cache)
+          // — bezpieczniej wylogowac
+          await sb.auth.signOut();
+          _user = null;
         }
       }
 
