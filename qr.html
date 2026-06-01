@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>Plakat QR — MSS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<style>
+  @page { size: A4; margin: 0; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #111; background: #fff;
+    min-height: 100vh;
+  }
+
+  /* Pasek z przyciskami nad plakatem (poza drukiem) */
+  .toolbar {
+    position: fixed; top: 16px; right: 16px; z-index: 100;
+    display: flex; gap: 8px;
+  }
+  .toolbar .btn {
+    background: #111; color: #fff; border: none;
+    padding: 10px 18px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    cursor: pointer; border-radius: 4px;
+  }
+  .toolbar .btn.sec { background: #fff; color: #111; border: 1px solid #ccc; }
+  .toolbar .btn:hover { opacity: .9; }
+
+  /* Sam plakat */
+  .poster {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 70px 60px 60px;
+    text-align: center;
+    /* Subtelna ramka tylko na ekranie - na druku znika */
+    border: 1px solid #e8e8e8;
+    background: #fff;
+  }
+
+  /* Naglowek z logo MSS */
+  .brand {
+    margin-bottom: 28px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+  }
+  .brand-hex { line-height: 1; }
+  .brand-name {
+    font-size: 10px; letter-spacing: 5px;
+    text-transform: uppercase; color: #555;
+    font-weight: 600;
+  }
+
+  /* Glowne 'WYNIKI NA ZYWO' - eleganckie z duzym spacingiem */
+  .heading {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 42px; font-weight: 400;
+    letter-spacing: 6px; text-transform: uppercase;
+    margin: 0 0 18px;
+    line-height: 1.1;
+  }
+
+  /* Nazwa zawodow */
+  .event-name {
+    font-size: 17px; color: #222;
+    font-weight: 500;
+    margin: 0 0 6px;
+    line-height: 1.35;
+    max-width: 520px; margin-left: auto; margin-right: auto;
+  }
+  .event-meta {
+    font-size: 11px; color: #777;
+    letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 38px;
+    font-weight: 500;
+  }
+  .event-meta .sep { opacity: .4; margin: 0 8px; }
+
+  /* Divider geometryczny */
+  .divider {
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px; margin: 0 auto 38px;
+  }
+  .divider .line { width: 60px; height: 1px; background: #000; opacity: .35; }
+  .divider .dot {
+    width: 6px; height: 6px; background: #000;
+    transform: rotate(45deg);
+  }
+
+  /* QR */
+  .qr-wrap {
+    display: inline-block;
+    padding: 16px;
+    border: 1px solid #ddd;
+    margin: 0 auto 40px;
+    background: #fff;
+  }
+  .qr-wrap canvas {
+    display: block; width: 260px; height: 260px;
+  }
+
+  /* Sekcja instrukcji */
+  .how-title {
+    font-size: 10px; letter-spacing: 5px;
+    text-transform: uppercase; color: #555;
+    font-weight: 700;
+    margin-bottom: 22px;
+  }
+  .steps {
+    list-style: none; padding: 0; margin: 0 auto 24px;
+    display: flex; flex-direction: column; gap: 14px;
+    max-width: 380px;
+    text-align: left;
+  }
+  .step {
+    display: flex; align-items: flex-start; gap: 16px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border: 1.5px solid #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif;
+    font-size: 14px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-text {
+    font-size: 14px; color: #222;
+    line-height: 1.45; padding-top: 3px;
+  }
+  .step-text strong { font-weight: 700; }
+
+  .note {
+    font-size: 11px; color: #666;
+    font-style: italic;
+    margin-bottom: 38px; line-height: 1.5;
+    max-width: 380px; margin-left: auto; margin-right: auto;
+  }
+
+  /* URL fallback */
+  .url-section {
+    border-top: 1px solid #ddd;
+    padding-top: 22px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .url-label {
+    font-size: 10px; letter-spacing: 3px;
+    text-transform: uppercase; color: #888;
+    margin-bottom: 10px; font-weight: 600;
+  }
+  .url {
+    font-family: 'Menlo', 'Courier New', monospace;
+    font-size: 13px; color: #000;
+    word-break: break-all; line-height: 1.45;
+  }
+
+  /* Stopka — drobna nutka */
+  .footer {
+    margin-top: 38px;
+    font-size: 9px; letter-spacing: 3px;
+    text-transform: uppercase; color: #aaa;
+  }
+
+  /* Print: zdejmij ramke i przyciski, zmniejsz padding */
+  @media print {
+    .toolbar { display: none !important; }
+    .poster {
+      border: none;
+      padding: 30px 24px;
+      max-width: 100%;
+    }
+    body { background: #fff; }
+  }
+
+  /* Mobile preview */
+  @media (max-width: 600px) {
+    .poster { padding: 40px 20px; }
+    .heading { font-size: 30px; letter-spacing: 4px; }
+    .qr-wrap canvas { width: 220px; height: 220px; }
+    .url { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button class="btn" onclick="window.print()">🖨 Drukuj</button>
+  <button class="btn sec" onclick="window.close()">Zamknij</button>
+</div>
+
+<div class="poster" id="poster">
+  <header class="brand">
+    <div class="brand-hex">
+      <svg viewBox="0 0 32 32" width="32" height="32">
+        <polygon points="16,2.5 28.12,9.5 28.12,22.5 16,29.5 3.88,22.5 3.88,9.5"
+                 fill="none" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="brand-name">Military Sports System</div>
+  </header>
+
+  <h1 class="heading">Wyniki na żywo</h1>
+  <div class="event-name" id="event-name">—</div>
+  <div class="event-meta" id="event-meta"></div>
+
+  <div class="divider">
+    <div class="line"></div>
+    <div class="dot"></div>
+    <div class="line"></div>
+  </div>
+
+  <div class="qr-wrap">
+    <canvas id="qr-canvas"></canvas>
+  </div>
+
+  <div class="how-title">Jak zobaczyć wyniki</div>
+
+  <ol class="steps">
+    <li class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Otwórz <strong>aparat</strong> w swoim telefonie</div>
+    </li>
+    <li class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Skieruj go na <strong>kod QR powyżej</strong></div>
+    </li>
+    <li class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Kliknij <strong>powiadomienie z linkiem</strong></div>
+    </li>
+  </ol>
+
+  <div class="note">
+    Bez potrzeby instalowania aplikacji.<br>
+    Działa na każdym współczesnym smartfonie z Android lub iOS.
+  </div>
+
+  <div class="url-section">
+    <div class="url-label">Lub wpisz w przeglądarce</div>
+    <div class="url" id="url-text">—</div>
+  </div>
+
+  <div class="footer">militarysportsystem.pl</div>
+</div>
+
+<script>
+function _esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function _formatDate(d) {
+  if (!d) return '';
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[3] + '.' + m[2] + '.' + m[1];
+  return d;
+}
+
+(function() {
+  const params = new URLSearchParams(location.search);
+  const u = params.get('u') || '';          // URL do zakodowania w QR
+  const n = params.get('n') || 'Zawody';     // nazwa
+  const c = params.get('c') || '';            // miasto
+  const d = params.get('d') || '';            // data
+  const autoPrint = params.get('print') !== '0'; // domyslnie tak
+
+  // Nazwa
+  document.getElementById('event-name').textContent = n;
+
+  // Meta: miasto + data
+  const metaEl = document.getElementById('event-meta');
+  const parts = [];
+  if (c) parts.push('<span>' + _esc(c) + '</span>');
+  const df = _formatDate(d);
+  if (df) parts.push('<span>' + _esc(df) + '</span>');
+  metaEl.innerHTML = parts.join('<span class="sep">·</span>');
+
+  // URL
+  document.getElementById('url-text').textContent = u;
+
+  // QR
+  if (u && typeof QRious !== 'undefined') {
+    try {
+      new QRious({
+        element: document.getElementById('qr-canvas'),
+        value: u,
+        size: 520,         // wysoka rozdzielczosc dla druku (skala przez CSS)
+        background: '#fff',
+        foreground: '#000',
+        level: 'M',
+      });
+    } catch(e) { console.warn('QR error', e); }
+  }
+
+  // Auto-print po krotkim opoznieniu (zeby canvas zdazyl sie wyrenderowac)
+  if (autoPrint) {
+    setTimeout(function() { window.print(); }, 400);
+  }
+})();
+</script>
+</body>
+</html>
