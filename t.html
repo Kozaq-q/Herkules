@@ -64,28 +64,79 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .tab-live.err .dot { background: var(--red); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 
-/* TABS */
-.tab-tabs { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; gap: 4px; overflow-x: auto; position: sticky; top: 51px; z-index: 99; -webkit-overflow-scrolling: touch; }
-.tab-tabs::-webkit-scrollbar { display: none; }
-.tab-tab {
-  background: transparent; border: none; color: var(--text3);
+/* TILE MENU (kategorie jako kafelki) */
+.tile-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  max-width: 720px; margin: 0 auto;
+}
+.cat-tile {
+  background: var(--bg2); border: 2px solid var(--border2);
+  border-radius: 14px; padding: 28px 18px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; color: var(--text1); text-align: center;
+  cursor: pointer; transition: transform .12s, border-color .15s, background .15s;
+  min-height: 130px; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.cat-tile:hover { transform: translateY(-2px); background: var(--bg3); }
+.cat-tile:active { transform: scale(.98); }
+.cat-tile .cat-icon { font-size: 38px; line-height: 1; margin-bottom: 4px; }
+.cat-tile .cat-label {
+  font-family: var(--font-h); font-size: 17px; font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.15;
+}
+.cat-tile .cat-sub {
+  font-family: var(--font-m); font-size: 11px; color: var(--text3);
+  letter-spacing: .5px; margin-top: 4px;
+}
+.cat-tile.cat-m { border-color: rgba(91,155,213,.4); }
+.cat-tile.cat-m .cat-label { color: var(--male); }
+.cat-tile.cat-k { border-color: rgba(216,120,164,.4); }
+.cat-tile.cat-k .cat-label { color: var(--female); }
+.cat-tile.cat-team { border-color: rgba(232,148,77,.4); }
+.cat-tile.cat-team .cat-label { color: var(--orange); }
+.cat-tile.cat-trun { border-color: rgba(96,168,232,.4); }
+.cat-tile.cat-trun .cat-label { color: #60a8e8; }
+.cat-tile.cat-overall {
+  grid-column: 1 / -1;
+  border-color: rgba(232,212,77,.5);
+  background: linear-gradient(135deg, rgba(232,212,77,.06), rgba(232,212,77,.02));
+  min-height: 90px; padding: 18px 18px;
+}
+.cat-tile.cat-overall .cat-label { color: var(--accent); }
+.cat-tile.cat-overall .cat-icon { font-size: 32px; }
+@media (min-width: 900px) {
+  .tile-grid { grid-template-columns: repeat(4, 1fr); max-width: 1120px; gap: 18px; }
+  .cat-tile { padding: 32px 16px; min-height: 150px; }
+  .cat-tile .cat-icon { font-size: 46px; }
+  .cat-tile .cat-label { font-size: 19px; }
+  .cat-tile.cat-overall { grid-column: 1 / -1; min-height: 100px; padding: 22px; }
+}
+
+/* BACK button na detail view */
+.detail-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 8px; color: var(--text2);
   font-family: var(--font-h); font-size: 12px; font-weight: 700;
   letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 12px 14px; cursor: pointer; white-space: nowrap;
-  position: relative; transition: color .15s;
-  border-bottom: 3px solid transparent;
+  padding: 10px 16px; cursor: pointer; margin-bottom: 16px;
+  transition: background .12s, color .12s, border-color .12s;
 }
-.tab-tab:hover { color: var(--text2); }
-.tab-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab-tab-cat-m { color: var(--male); }
-.tab-tab-cat-m.active { border-bottom-color: var(--male); }
-.tab-tab-cat-k { color: var(--female); }
-.tab-tab-cat-k.active { border-bottom-color: var(--female); }
-.tab-tab-cat-team { color: var(--orange); }
-.tab-tab-cat-team.active { border-bottom-color: var(--orange); }
-.tab-tab-cat-trun { color: #60a8e8; }
-.tab-tab-cat-trun.active { border-bottom-color: #60a8e8; }
-.tab-tab-cat-overall { color: var(--accent); }
+.detail-back:hover { background: var(--bg3); color: var(--text1); border-color: var(--border2); }
+.detail-back .arrow { font-size: 14px; }
+
+.detail-title {
+  font-family: var(--font-h); font-size: 22px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.detail-title.cat-m-color { color: var(--male); }
+.detail-title.cat-k-color { color: var(--female); }
+.detail-title.cat-team-color { color: var(--orange); }
+.detail-title.cat-trun-color { color: #60a8e8; }
+.detail-title.cat-overall-color { color: var(--accent); }
+.detail-subtitle { font-size: 12px; color: var(--text3); margin-bottom: 18px; font-family: var(--font-m); letter-spacing: .5px; }
 
 /* MAIN */
 .tab-main { padding: 16px 12px 60px; max-width: 980px; margin: 0 auto; }
@@ -187,8 +238,6 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   <div class="tab-live" id="live"><span class="dot"></span><span id="live-lbl">…</span></div>
 </header>
 
-<nav class="tab-tabs" id="tabs" style="display:none;"></nav>
-
 <main class="tab-main" id="main">
   <div class="loading">Ładowanie…</div>
 </main>
@@ -236,7 +285,7 @@ let _slotMeta = null;    // parsed slot_json
 let _competitionType = null; // 'patrol' | 'osf' | 'wielobój'
 let _state = null;       // state_json parsed (z patrol_state / osf_state / app_state)
 let _refreshTimer = null;
-let _activeTab = null;
+let _activeTab; // undefined = jeszcze nieustawione, null = menu kafelkowe, string = wybrana kategoria
 
 function setLive(status) {
   const el = document.getElementById('live');
@@ -1044,23 +1093,23 @@ function renderWielobojTeam() {
 // ═══════════════════════════════════════════════════════════════
 
 const PATROL_TABS = [
-  { id: 'm',       label: '♂ Mężczyźni',  cls: 'tab-tab-cat-m',       render: () => renderPatrolIndividual('M') },
-  { id: 'k',       label: '♀ Kobiety',    cls: 'tab-tab-cat-k',       render: () => renderPatrolIndividual('K') },
-  { id: 'team',    label: '🛡 Drużynowa',  cls: 'tab-tab-cat-team',    render: () => renderPatrolTeam() },
-  { id: 'trun',    label: '🏃 Bieg dr.',   cls: 'tab-tab-cat-trun',    render: () => renderPatrolTeamRun() },
-  { id: 'overall', label: '🏆 Generalna', cls: 'tab-tab-cat-overall', render: () => renderPatrolOverall() },
+  { id: 'm',       label: 'Mężczyźni',  icon: '♂', cls: 'cat-m',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('M') },
+  { id: 'k',       label: 'Kobiety',    icon: '♀', cls: 'cat-k',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('K') },
+  { id: 'team',    label: 'Drużynowa',  icon: '🛡', cls: 'cat-team',    sub: 'Suma 3 najlepszych M',     render: () => renderPatrolTeam() },
+  { id: 'trun',    label: 'Bieg drużynowy', icon: '🏃', cls: 'cat-trun', sub: '3-osobowy patrol',         render: () => renderPatrolTeamRun() },
+  { id: 'overall', label: 'Generalna',  icon: '🏆', cls: 'cat-overall', sub: 'Indywidualna + bieg drużynowy', render: () => renderPatrolOverall() },
 ];
 
 const OSF_TABS = [
-  { id: 'm',    label: '♂ Mężczyźni', cls: 'tab-tab-cat-m',    render: () => renderOsfIndividual('M') },
-  { id: 'k',    label: '♀ Kobiety',   cls: 'tab-tab-cat-k',    render: () => renderOsfIndividual('K') },
-  { id: 'team', label: '🛡 Drużynowa', cls: 'tab-tab-cat-team', render: () => renderOsfTeam() },
+  { id: 'm',    label: 'Mężczyźni', icon: '♂', cls: 'cat-m',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('M') },
+  { id: 'k',    label: 'Kobiety',   icon: '♀', cls: 'cat-k',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('K') },
+  { id: 'team', label: 'Drużynowa', icon: '🛡', cls: 'cat-team', sub: 'Suma 3 najlepszych z drużyny', render: () => renderOsfTeam() },
 ];
 
 const WIELOBOJ_TABS = [
-  { id: 'm',    label: '♂ Mężczyźni', cls: 'tab-tab-cat-m',    render: () => renderWielobojIndividual('M') },
-  { id: 'k',    label: '♀ Kobiety',   cls: 'tab-tab-cat-k',    render: () => renderWielobojIndividual('K') },
-  { id: 'team', label: '🛡 Drużynowa', cls: 'tab-tab-cat-team', render: () => renderWielobojTeam() },
+  { id: 'm',    label: 'Mężczyźni', icon: '♂', cls: 'cat-m',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('M') },
+  { id: 'k',    label: 'Kobiety',   icon: '♀', cls: 'cat-k',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('K') },
+  { id: 'team', label: 'Drużynowa', icon: '🛡', cls: 'cat-team', sub: 'Top 5 M + top 3 K',  render: () => renderWielobojTeam() },
 ];
 
 function _getTabsForType() {
@@ -1077,32 +1126,58 @@ function _getDefaultTab() {
   return null;
 }
 
-function buildTabs(tabs) {
-  const el = document.getElementById('tabs');
-  el.style.display = '';
-  el.innerHTML = tabs.map(t =>
-    '<button class="tab-tab ' + t.cls + (t.id === _activeTab ? ' active' : '') + '" onclick="setTab(\'' + t.id + '\')">' + t.label + '</button>'
-  ).join('');
+// _activeTab: null = menu kafelkowe (lista kategorii), inaczej id wybranej kategorii
+function showTileMenu() {
+  _activeTab = null;
+  try { localStorage.setItem('tablica_tab_' + (URL_SLOT || ''), ''); } catch (_) {}
+  renderTileMenu();
 }
 
 function setTab(id) {
   _activeTab = id;
   try { localStorage.setItem('tablica_tab_' + (URL_SLOT || ''), id); } catch (_) {}
-  renderActiveView();
+  renderDetail();
 }
 
 function renderActiveView() {
+  if (_activeTab) renderDetail();
+  else renderTileMenu();
+}
+
+function renderTileMenu() {
   const tabs = _getTabsForType();
   if (!tabs.length) {
     document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów</div>';
     return;
   }
-  document.querySelectorAll('.tab-tab').forEach(b => b.classList.remove('active'));
-  const activeBtn = document.querySelector('.tab-tab[onclick*="\'' + _activeTab + '\'"]');
-  if (activeBtn) activeBtn.classList.add('active');
+  const html = ['<div class="tile-grid">'];
+  for (const t of tabs) {
+    html.push(
+      '<button class="cat-tile ' + t.cls + '" onclick="setTab(\'' + t.id + '\')">' +
+        '<div class="cat-icon">' + t.icon + '</div>' +
+        '<div class="cat-label">' + esc(t.label) + '</div>' +
+        '<div class="cat-sub">' + esc(t.sub || '') + '</div>' +
+      '</button>'
+    );
+  }
+  html.push('</div>');
+  document.getElementById('main').innerHTML = html.join('');
+}
 
+function renderDetail() {
+  const tabs = _getTabsForType();
   const tab = tabs.find(t => t.id === _activeTab) || tabs[0];
-  document.getElementById('main').innerHTML = tab.render();
+  if (!tab) {
+    showTileMenu();
+    return;
+  }
+  const titleColorCls = (tab.cls || '').replace('cat-', 'cat-') + '-color';
+  const html =
+    '<button class="detail-back" onclick="showTileMenu()"><span class="arrow">←</span><span>Kategorie</span></button>' +
+    '<div class="detail-title ' + titleColorCls + '">' + tab.icon + ' ' + esc(tab.label) + '</div>' +
+    (tab.sub ? '<div class="detail-subtitle">' + esc(tab.sub) + '</div>' : '') +
+    tab.render();
+  document.getElementById('main').innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1150,15 +1225,15 @@ async function loadAndRender() {
       return;
     }
 
-    // Tabs (per typ)
+    // Aktywny tab z localStorage (jezeli user wczesniej wybral kategorie)
+    // pusty/null = menu kafelkowe
     const tabs = _getTabsForType();
-    const defaultTab = _getDefaultTab();
-    if (!_activeTab) {
-      try { _activeTab = localStorage.getItem('tablica_tab_' + URL_SLOT) || defaultTab; }
-      catch (_) { _activeTab = defaultTab; }
+    if (_activeTab === undefined) {
+      try {
+        const saved = localStorage.getItem('tablica_tab_' + URL_SLOT) || '';
+        _activeTab = saved && tabs.find(t => t.id === saved) ? saved : null;
+      } catch (_) { _activeTab = null; }
     }
-    if (!tabs.find(t => t.id === _activeTab)) _activeTab = defaultTab;
-    buildTabs(tabs);
     renderActiveView();
 
     setLive('ok');
