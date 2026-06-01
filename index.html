@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════
@@ -2485,15 +2485,18 @@ function _renderWjShareSection() {
   const linkEl = document.getElementById('wj-share-link');
   if (linkEl) linkEl.value = url;
   const canvas = document.getElementById('wj-share-qr');
-  if (canvas && typeof QRCode !== 'undefined') {
+  if (canvas && typeof QRious !== 'undefined') {
     try {
-      QRCode.toCanvas(canvas, url, {
-        width: 220, margin: 1,
-        color: { dark: '#111', light: '#ffffff' },
-        errorCorrectionLevel: 'M',
-      }, function(err){ if (err) console.warn('[QR]', err); });
+      new QRious({ element: canvas, value: url, size: 220, background: '#fff', foreground: '#111', level: 'M' });
     } catch(e) { console.warn('[QR]', e); }
   }
+}
+
+function _wjGenerateQrDataURL(text, size) {
+  if (typeof QRious === 'undefined') return null;
+  const tmp = document.createElement('canvas');
+  new QRious({ element: tmp, value: text, size: size || 600, background: '#fff', foreground: '#000', level: 'M' });
+  return tmp.toDataURL('image/png');
 }
 
 function openWjTablicaPreview() {
@@ -2519,27 +2522,26 @@ async function copyWjShareLink(btn) {
 
 function downloadWjQR() {
   const url = _getWjShareURL();
-  if (typeof QRCode === 'undefined') return alert('QR library niedostepna');
-  QRCode.toDataURL(url, { width: 600, margin: 2, color: { dark: '#000', light: '#fff' } }, function(err, dataUrl) {
-    if (err) return alert('Bład: ' + err.message);
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    const slug = (STATE.setup?.name || 'wieloboj').replace(/[^a-z0-9-]/gi, '_').toLowerCase();
-    a.download = 'qr_' + slug + '.png';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  });
+  const dataUrl = _wjGenerateQrDataURL(url, 600);
+  if (!dataUrl) return alert('QR library niedostepna');
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  const slug = (STATE.setup?.name || 'wieloboj').replace(/[^a-z0-9-]/gi, '_').toLowerCase();
+  a.download = 'qr_' + slug + '.png';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function printWjQR() {
-  if (typeof QRCode === 'undefined') return alert('QR library niedostepna');
+  if (typeof QRious === 'undefined') return alert('QR library niedostepna');
   const w = window.open('', '_blank');
   if (!w) return alert('Przegladarka zablokowala popup. Pozwol na popup-y i sprobuj.');
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR...</title></head><body style="font-family:sans-serif;text-align:center;padding:60px;color:#666;">Generuje QR...</body></html>');
 
   const url = _getWjShareURL();
   const _esc = s => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]);
-  QRCode.toDataURL(url, { width: 800, margin: 2, color: { dark: '#000', light: '#fff' } }, function(err, dataUrl) {
-    if (err) { w.document.body.innerHTML = '<p style="color:red;padding:40px;">Bład: ' + err.message + '</p>'; return; }
+  const dataUrl = _wjGenerateQrDataURL(url, 800);
+  setTimeout(function() {
+    if (!dataUrl) { w.document.body.innerHTML = '<p style="color:red;padding:40px;">Blad generowania QR</p>'; return; }
     const name = STATE.setup?.name || 'Wielobój';
     const city = STATE.setup?.place || '';
     const date = STATE.setup?.date || '';
@@ -2570,7 +2572,7 @@ function printWjQR() {
       '</body></html>'
     );
     w.document.close();
-  });
+  }, 0);
 }
 
 // ─── TEAMS ───
