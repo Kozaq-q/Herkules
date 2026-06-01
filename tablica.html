@@ -668,6 +668,358 @@ function renderPatrolOverall() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// OSF — load state
+// ═══════════════════════════════════════════════════════════════
+
+async function loadOsfState(slotId) {
+  const storageKey = 'osf_slot_' + slotId;
+  const { data, error } = await getSB()
+    .from('osf_state')
+    .select('state_json, updated_at')
+    .eq('slot_id', storageKey)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || !data.state_json) return null;
+  return JSON.parse(data.state_json);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OSF — punktacja
+// ═══════════════════════════════════════════════════════════════
+
+function _osfParseTime(t) {
+  if (!t || typeof t !== 'string') return Infinity;
+  const s = t.trim();
+  if (!s) return Infinity;
+  if (/^(DNF|DNS|NKL)$/i.test(s)) return Infinity;
+  // Liberalny parser: dwukropek lub kropka, przecinek
+  const cleaned = s.replace(/,/g, '.').replace(/-/g, '.').replace(/[^\d.:]/g, '');
+  if (!cleaned) return Infinity;
+  if (cleaned.includes(':')) {
+    const parts = cleaned.split(':');
+    if (parts.length === 2) {
+      const min = parseInt(parts[0]) || 0;
+      const sec = parseFloat(parts[1]) || 0;
+      return min * 60 + sec;
+    }
+  }
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? Infinity : n;
+}
+
+function _osfGetTime(state, id, series) {
+  return (state.times && state.times[id] && state.times[id][series]) || '';
+}
+
+function _osfIsDisq(state, id, series) {
+  return !!(state.disq && state.disq[id] && state.disq[id][series]);
+}
+
+function _osfBestTime(state, id) {
+  const s1 = _osfGetTime(state, id, 's1');
+  const s2 = _osfGetTime(state, id, 's2');
+  const isMarker = v => v === 'DNF' || v === 'DNS' || v === 'NKL';
+  const s1ok = s1 && !_osfIsDisq(state, id, 's1') && !isMarker(s1);
+  const s2ok = s2 && !_osfIsDisq(state, id, 's2') && !isMarker(s2);
+  if (!s1ok && !s2ok) return null;
+  if (!s1ok) return s2;
+  if (!s2ok) return s1;
+  return _osfParseTime(s1) <= _osfParseTime(s2) ? s1 : s2;
+}
+
+function _osfSumTime(state, id) {
+  const s1 = _osfGetTime(state, id, 's1');
+  const s2 = _osfGetTime(state, id, 's2');
+  const isMarker = v => v === 'DNF' || v === 'DNS' || v === 'NKL';
+  const s1ok = s1 && !_osfIsDisq(state, id, 's1') && !isMarker(s1);
+  const s2ok = s2 && !_osfIsDisq(state, id, 's2') && !isMarker(s2);
+  if (!s1ok && !s2ok) return Infinity;
+  if (!s1ok) return _osfParseTime(s2);
+  if (!s2ok) return _osfParseTime(s1);
+  return _osfParseTime(s1) + _osfParseTime(s2);
+}
+
+function renderOsfIndividual(gender) {
+  if (!_state.athletes || _state.athletes.length === 0) {
+    return '<div class="empty"><div class="empty-icon">📋</div>Brak zawodników</div>';
+  }
+  const rows = _state.athletes
+    .filter(a => a.gender === gender && !a.pk)
+    .map(a => {
+      const best = _osfBestTime(_state, a.id);
+      const sum = _osfSumTime(_state, a.id);
+      const s1 = _osfGetTime(_state, a.id, 's1');
+      const s2 = _osfGetTime(_state, a.id, 's2');
+      const bestSec = best ? _osfParseTime(best) : Infinity;
+      return { ath: a, s1, s2, best, bestSec, sum };
+    })
+    .filter(r => r.s1 || r.s2);
+
+  if (rows.length === 0) {
+    return '<div class="empty"><div class="empty-icon">📋</div>Brak wpisanych czasów</div>';
+  }
+
+  rows.sort((a, b) => {
+    if (a.bestSec !== b.bestSec) return a.bestSec - b.bestSec;
+    if (a.sum !== b.sum) return a.sum - b.sum;
+    return (a.ath.name || '').localeCompare(b.ath.name || '');
+  });
+
+  let visibleRank = 0;
+  return rows.map(r => {
+    const isClassified = Number.isFinite(r.bestSec);
+    if (isClassified) visibleRank++;
+    const rankDisp = isClassified ? visibleRank : '—';
+    const topCls = (isClassified && visibleRank <= 3) ? ' top-' + visibleRank : '';
+    const dsqCls = !isClassified ? ' dsq' : '';
+    const medal = _medal(visibleRank);
+    const name = r.ath.name || 'Bez nazwy';
+    const team = r.ath.team || '';
+    const bestDisp = r.best || '—';
+    const s1Disp = r.s1 || '—';
+    const s2Disp = r.s2 || '—';
+
+    return '<div class="rank-card' + topCls + dsqCls + '">' +
+      '<div class="rank-num">' + (medal || rankDisp) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(name) + '</div>' +
+        (team ? '<div class="rank-team">' + esc(team) + '</div>' : '') +
+        '<div class="rank-details">' +
+          '<span><span class="rank-detail-lbl">S1:</span><span class="rank-detail-val">' + esc(s1Disp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">S2:</span><span class="rank-detail-val">' + esc(s2Disp) + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score">' + esc(bestDisp) + '</div>' +
+        '<div class="rank-score-lbl">najl.</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderOsfTeam() {
+  // Ranking drużynowy: suma najlepszych czasów min 3 (M+K) z drużyny
+  if (!_state.athletes || _state.athletes.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🛡</div>Brak zawodników</div>';
+  }
+  const byTeam = {};
+  _state.athletes.forEach(a => {
+    if (!a.team || a.pk) return;
+    if (!byTeam[a.team]) byTeam[a.team] = [];
+    const best = _osfBestTime(_state, a.id);
+    const bestSec = best ? _osfParseTime(best) : Infinity;
+    if (Number.isFinite(bestSec)) byTeam[a.team].push({ ath: a, bestSec, best });
+  });
+
+  const teamRows = [];
+  for (const team in byTeam) {
+    const list = byTeam[team];
+    if (list.length < 3) continue;
+    list.sort((a, b) => a.bestSec - b.bestSec);
+    const top3 = list.slice(0, 3);
+    const sumSec = top3.reduce((s, r) => s + r.bestSec, 0);
+    teamRows.push({ team, sumSec, top3 });
+  }
+
+  if (teamRows.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🛡</div>Brak drużyn z min. 3 sklasyfikowanymi</div>';
+  }
+
+  teamRows.sort((a, b) => a.sumSec - b.sumSec);
+
+  return teamRows.map((r, i) => {
+    const rank = i + 1;
+    const topCls = rank <= 3 ? ' top-' + rank : '';
+    const medal = _medal(rank);
+    const names = r.top3.map(t => esc((t.ath.name || '?').split(' ').slice(-1)[0])).join(', ');
+    const sumDisp = (Math.round(r.sumSec * 100) / 100).toFixed(2);
+    return '<div class="rank-card' + topCls + '">' +
+      '<div class="rank-num">' + (medal || rank) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(r.team) + '</div>' +
+        '<div class="rank-details" style="margin-top:6px;">' +
+          '<span><span class="rank-detail-lbl">Top 3:</span><span class="rank-detail-val">' + names + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score">' + sumDisp + '</div>' +
+        '<div class="rank-score-lbl">s</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WIELOBÓJ — load state
+// ═══════════════════════════════════════════════════════════════
+
+async function loadWielobojState(slotId) {
+  // Mapowanie: herkules_slots.slot_id (np. 'abc') -> app_state.slot_id ('panel_abc')
+  // Próbuje obie wersje (z prefixem i bez) bo legacy
+  const tries = ['panel_' + slotId, slotId];
+  for (const sid of tries) {
+    const { data } = await getSB()
+      .from('app_state')
+      .select('state_json, updated_at')
+      .eq('slot_id', sid)
+      .maybeSingle();
+    if (data && data.state_json) {
+      return JSON.parse(data.state_json);
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WIELOBÓJ — punktacja
+// ═══════════════════════════════════════════════════════════════
+
+function _wjGetBestValidTime(arr, disqArr, dnfArr) {
+  if (!arr || !arr.length) return null;
+  const valid = arr.filter((t, i) => {
+    if (!t || isNaN(t) || t <= 0) return false;
+    if (disqArr && disqArr[i]) return false;
+    if (dnfArr && dnfArr[i]) return false;
+    return true;
+  });
+  if (!valid.length) return null;
+  return Math.min(...valid);
+}
+
+function _wjGetPoints(state, cat, event, timeSec) {
+  if (timeSec === null || timeSec === undefined || isNaN(timeSec) || timeSec <= 0) return 0;
+  let table = state.scoreTablesByCat?.[cat]?.[event];
+  if (!table || !table.length) table = state.scoreTables?.[cat[0]]?.[event];
+  if (!table || !table.length) return 0;
+  const sorted = [...table].sort((a, b) => a[0] - b[0]);
+  if (timeSec <= sorted[0][0]) return sorted[0][1];
+  if (timeSec >= sorted[sorted.length - 1][0]) return Math.max(0, sorted[sorted.length - 1][1]);
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (timeSec >= sorted[i][0] && timeSec <= sorted[i + 1][0]) {
+      const ratio = (timeSec - sorted[i][0]) / (sorted[i + 1][0] - sorted[i][0]);
+      return sorted[i][1] + ratio * (sorted[i + 1][1] - sorted[i][1]);
+    }
+  }
+  return 0;
+}
+
+function _wjGetAthletePoints(state, athleteId) {
+  const a = state.athletes.find(x => x.id == athleteId);
+  if (!a) return { k1: 0, k2: 0, k3: 0, k4: 0, total: 0 };
+  const r    = state.results[athleteId] || {};
+  const disq = state.disq[athleteId]    || {};
+  const dnf  = state.dnf[athleteId]     || {};
+  const cat  = a.cat;
+  const k1t = _wjGetBestValidTime(r.k1, disq.k1, dnf.k1);
+  const k2t = _wjGetBestValidTime(r.k2, disq.k2, dnf.k2);
+  const k3t1 = _wjGetBestValidTime(r.k3, disq.k3, dnf.k3);
+  const k3t2 = _wjGetBestValidTime(r.k3s2, disq.k3s2, dnf.k3s2);
+  const k3t = k3t1 && k3t2 ? Math.min(k3t1, k3t2) : (k3t1 || k3t2);
+  const k4t = _wjGetBestValidTime(r.k4, disq.k4, dnf.k4);
+  const k1p = _wjGetPoints(state, cat, 'k1', k1t);
+  const k2p = _wjGetPoints(state, cat, 'k2', k2t);
+  const k3p = _wjGetPoints(state, cat, 'k3', k3t);
+  const k4p = _wjGetPoints(state, cat, 'k4', k4t);
+  return { k1: k1p, k2: k2p, k3: k3p, k4: k4p, total: k1p + k2p + k3p + k4p };
+}
+
+function renderWielobojIndividual(gender) {
+  if (!_state.athletes || _state.athletes.length === 0) {
+    return '<div class="empty"><div class="empty-icon">📋</div>Brak zawodników</div>';
+  }
+  const rows = _state.athletes
+    .filter(a => a.gender === gender && !a.pk)
+    .map(a => {
+      const pts = _wjGetAthletePoints(_state, a.id);
+      return { ath: a, pts };
+    })
+    .filter(r => r.pts.total > 0);
+
+  if (rows.length === 0) {
+    return '<div class="empty"><div class="empty-icon">📋</div>Brak wpisanych wyników</div>';
+  }
+
+  rows.sort((a, b) => b.pts.total - a.pts.total);
+
+  return rows.map((r, i) => {
+    const rank = i + 1;
+    const topCls = rank <= 3 ? ' top-' + rank : '';
+    const medal = _medal(rank);
+    const name = r.ath.name || 'Bez nazwy';
+    const team = (_state.teams || []).find(t => t.id == r.ath.teamId);
+    const teamName = team ? team.name : (r.ath.team || '');
+    const cat = r.ath.cat || '';
+    const p = r.pts;
+    const totalDisp = Math.round(p.total);
+
+    return '<div class="rank-card' + topCls + '">' +
+      '<div class="rank-num">' + (medal || rank) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(name) + '</div>' +
+        '<div class="rank-team">' + esc(teamName) + (cat ? ' · ' + esc(cat) : '') + '</div>' +
+        '<div class="rank-details">' +
+          '<span><span class="rank-detail-lbl">K1:</span><span class="rank-detail-val">' + Math.round(p.k1) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">K2:</span><span class="rank-detail-val">' + Math.round(p.k2) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">K3:</span><span class="rank-detail-val">' + Math.round(p.k3) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">K4:</span><span class="rank-detail-val">' + Math.round(p.k4) + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score">' + totalDisp + '</div>' +
+        '<div class="rank-score-lbl">pkt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderWielobojTeam() {
+  // Suma punktów top 5 M + top 3 K z drużyny (uproszczona klasyfikacja)
+  if (!_state.athletes || _state.athletes.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🛡</div>Brak zawodników</div>';
+  }
+  const teams = _state.teams || [];
+  const teamRows = teams.map(team => {
+    const ath = _state.athletes.filter(a => a.teamId == team.id && !a.pk);
+    const men = ath.filter(a => a.gender === 'M').map(a => ({ a, pts: _wjGetAthletePoints(_state, a.id).total })).filter(x => x.pts > 0);
+    const women = ath.filter(a => a.gender === 'K').map(a => ({ a, pts: _wjGetAthletePoints(_state, a.id).total })).filter(x => x.pts > 0);
+    men.sort((a, b) => b.pts - a.pts);
+    women.sort((a, b) => b.pts - a.pts);
+    const topMen = men.slice(0, 5);
+    const topWomen = women.slice(0, 3);
+    const sumMen = topMen.reduce((s, x) => s + x.pts, 0);
+    const sumWomen = topWomen.reduce((s, x) => s + x.pts, 0);
+    const total = sumMen + sumWomen;
+    return { team, total, sumMen, sumWomen, mCount: topMen.length, kCount: topWomen.length };
+  }).filter(t => t.total > 0);
+
+  if (teamRows.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🛡</div>Brak drużyn z wynikami</div>';
+  }
+
+  teamRows.sort((a, b) => b.total - a.total);
+
+  return teamRows.map((r, i) => {
+    const rank = i + 1;
+    const topCls = rank <= 3 ? ' top-' + rank : '';
+    const medal = _medal(rank);
+    return '<div class="rank-card' + topCls + '">' +
+      '<div class="rank-num">' + (medal || rank) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(r.team.name) + '</div>' +
+        '<div class="rank-details" style="margin-top:6px;">' +
+          '<span><span class="rank-detail-lbl">♂ M (top ' + r.mCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumMen) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">♀ K (top ' + r.kCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumWomen) + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score">' + Math.round(r.total) + '</div>' +
+        '<div class="rank-score-lbl">pkt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
 // VIEW RENDERER (per typ)
 // ═══════════════════════════════════════════════════════════════
 
@@ -678,6 +1030,32 @@ const PATROL_TABS = [
   { id: 'trun',    label: '🏃 Bieg dr.',   cls: 'tab-tab-cat-trun',    render: () => renderPatrolTeamRun() },
   { id: 'overall', label: '🏆 Generalna', cls: 'tab-tab-cat-overall', render: () => renderPatrolOverall() },
 ];
+
+const OSF_TABS = [
+  { id: 'm',    label: '♂ Mężczyźni', cls: 'tab-tab-cat-m',    render: () => renderOsfIndividual('M') },
+  { id: 'k',    label: '♀ Kobiety',   cls: 'tab-tab-cat-k',    render: () => renderOsfIndividual('K') },
+  { id: 'team', label: '🛡 Drużynowa', cls: 'tab-tab-cat-team', render: () => renderOsfTeam() },
+];
+
+const WIELOBOJ_TABS = [
+  { id: 'm',    label: '♂ Mężczyźni', cls: 'tab-tab-cat-m',    render: () => renderWielobojIndividual('M') },
+  { id: 'k',    label: '♀ Kobiety',   cls: 'tab-tab-cat-k',    render: () => renderWielobojIndividual('K') },
+  { id: 'team', label: '🛡 Drużynowa', cls: 'tab-tab-cat-team', render: () => renderWielobojTeam() },
+];
+
+function _getTabsForType() {
+  if (_competitionType === 'patrol')   return PATROL_TABS;
+  if (_competitionType === 'osf')      return OSF_TABS;
+  if (_competitionType === 'wielobój') return WIELOBOJ_TABS;
+  return [];
+}
+
+function _getDefaultTab() {
+  if (_competitionType === 'patrol')   return 'overall';
+  if (_competitionType === 'osf')      return 'm';
+  if (_competitionType === 'wielobój') return 'm';
+  return null;
+}
 
 function buildTabs(tabs) {
   const el = document.getElementById('tabs');
@@ -694,20 +1072,17 @@ function setTab(id) {
 }
 
 function renderActiveView() {
-  if (_competitionType === 'patrol') {
-    document.querySelectorAll('.tab-tab').forEach(b => b.classList.remove('active'));
-    const activeBtn = document.querySelector('.tab-tab[onclick*="\'' + _activeTab + '\'"]');
-    if (activeBtn) activeBtn.classList.add('active');
-
-    const tab = PATROL_TABS.find(t => t.id === _activeTab) || PATROL_TABS[0];
-    document.getElementById('main').innerHTML = tab.render();
-  } else if (_competitionType === 'osf') {
-    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div>Widok OSF — wkrótce dostępny</div>';
-  } else if (_competitionType === 'wielobój') {
-    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div>Widok Wielobój — wkrótce dostępny</div>';
-  } else {
+  const tabs = _getTabsForType();
+  if (!tabs.length) {
     document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów</div>';
+    return;
   }
+  document.querySelectorAll('.tab-tab').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector('.tab-tab[onclick*="\'' + _activeTab + '\'"]');
+  if (activeBtn) activeBtn.classList.add('active');
+
+  const tab = tabs.find(t => t.id === _activeTab) || tabs[0];
+  document.getElementById('main').innerHTML = tab.render();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -735,26 +1110,36 @@ async function loadAndRender() {
     setMeta([typeLabel, name, city, date].filter(Boolean).join(' · '));
 
     // Załaduj stan zawodów (per typ)
-    if (_competitionType === 'patrol') {
-      _state = await loadPatrolState(URL_SLOT);
-      if (!_state) {
-        setLive('ok');
-        document.getElementById('main').innerHTML =
-          '<div class="empty"><div class="empty-icon">📭</div>Brak danych konkurencji</div>';
-        return;
-      }
-      // Tabs
-      if (!_activeTab) {
-        try { _activeTab = localStorage.getItem('tablica_tab_' + URL_SLOT) || 'overall'; }
-        catch (_) { _activeTab = 'overall'; }
-      }
-      if (!PATROL_TABS.find(t => t.id === _activeTab)) _activeTab = 'overall';
-      buildTabs(PATROL_TABS);
-      renderActiveView();
-    } else {
-      // OSF / wieloboj — stub na razie
-      renderActiveView();
+    let loader = null;
+    if (_competitionType === 'patrol')   loader = loadPatrolState;
+    else if (_competitionType === 'osf') loader = loadOsfState;
+    else if (_competitionType === 'wielobój') loader = loadWielobojState;
+
+    if (!loader) {
+      setLive('err');
+      document.getElementById('main').innerHTML =
+        '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów: ' + esc(_slotMeta.type || '?') + '</div>';
+      return;
     }
+
+    _state = await loader(URL_SLOT);
+    if (!_state) {
+      setLive('ok');
+      document.getElementById('main').innerHTML =
+        '<div class="empty"><div class="empty-icon">📭</div>Brak danych konkurencji</div>';
+      return;
+    }
+
+    // Tabs (per typ)
+    const tabs = _getTabsForType();
+    const defaultTab = _getDefaultTab();
+    if (!_activeTab) {
+      try { _activeTab = localStorage.getItem('tablica_tab_' + URL_SLOT) || defaultTab; }
+      catch (_) { _activeTab = defaultTab; }
+    }
+    if (!tabs.find(t => t.id === _activeTab)) _activeTab = defaultTab;
+    buildTabs(tabs);
+    renderActiveView();
 
     setLive('ok');
   } catch (e) {
