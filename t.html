@@ -1126,16 +1126,15 @@ function _getDefaultTab() {
   return null;
 }
 
-// _activeTab: null = menu kafelkowe (lista kategorii), inaczej id wybranej kategorii
+// _activeTab: null = menu kafelkowe (lista kategorii), inaczej id wybranej kategorii.
+// Nie zapisywany w localStorage — kazda nowa wizyta zaczyna od menu.
 function showTileMenu() {
   _activeTab = null;
-  try { localStorage.setItem('tablica_tab_' + (URL_SLOT || ''), ''); } catch (_) {}
   renderTileMenu();
 }
 
 function setTab(id) {
   _activeTab = id;
-  try { localStorage.setItem('tablica_tab_' + (URL_SLOT || ''), id); } catch (_) {}
   renderDetail();
 }
 
@@ -1225,15 +1224,9 @@ async function loadAndRender() {
       return;
     }
 
-    // Aktywny tab z localStorage (jezeli user wczesniej wybral kategorie)
-    // pusty/null = menu kafelkowe
-    const tabs = _getTabsForType();
-    if (_activeTab === undefined) {
-      try {
-        const saved = localStorage.getItem('tablica_tab_' + URL_SLOT) || '';
-        _activeTab = saved && tabs.find(t => t.id === saved) ? saved : null;
-      } catch (_) { _activeTab = null; }
-    }
+    // Pierwsze wejscie -> ZAWSZE menu kafelkowe.
+    // Po wybraniu kategorii _activeTab = id, kolejne auto-refreshe nie zmieniaja widoku.
+    if (_activeTab === undefined) _activeTab = null;
     renderActiveView();
 
     setLive('ok');
