@@ -299,8 +299,12 @@ window.MSS_AUTH = (function() {
     } catch (_) {}
   }
 
+  // Zwraca {profile, networkError}:
+  //   - profile: aktualny rekord mss_users (z bazy lub cache, lub null)
+  //   - networkError: true gdy nie udalo sie pobrac swiezych danych
+  // Caller (init) uzywa networkError zeby NIE wylogowac usera na chwilowy blad sieci.
   async function _loadProfile() {
-    if (!_user) { _profile = null; _cacheProfile(null); return null; }
+    if (!_user) { _profile = null; _cacheProfile(null); return { profile: null, networkError: false }; }
     try {
       const sb = getSupabase();
       const { data, error } = await sb
@@ -309,17 +313,15 @@ window.MSS_AUTH = (function() {
         .eq('id', _user.id)
         .maybeSingle();
       if (error) {
-        console.warn('[MSS_AUTH] loadProfile error', error);
-        // Sieciowy blad/timeout: nie kasuj cache, zostaw stale (offline)
-        return _profile;
+        console.warn('[MSS_AUTH] loadProfile error (siec?)', error);
+        return { profile: _profile, networkError: true };
       }
       _profile = data || null;
       _cacheProfile(_profile);
-      return _profile;
+      return { profile: _profile, networkError: false };
     } catch (e) {
-      console.warn('[MSS_AUTH] loadProfile exception (sieciowy?)', e);
-      // Tez nie kasuj cache
-      return _profile;
+      console.warn('[MSS_AUTH] loadProfile exception (siec?)', e);
+      return { profile: _profile, networkError: true };
     }
   }
 
@@ -329,8 +331,13 @@ window.MSS_AUTH = (function() {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
     _user = data.user;
-    await _loadProfile();
-    if (!_profile) {
+    const { profile, networkError } = await _loadProfile();
+    if (networkError) {
+      // Tuz po loginie nie mamy aktualnego profilu — moze siec, nie wylogowuj
+      // ale tez nie wpuszczaj. Rzuc blad zeby user sprobowal jeszcze raz.
+      throw new Error('Brak polaczenia z serwerem. Sprobuj ponownie.');
+    }
+    if (!profile) {
       // Konto bez rekordu w mss_users — twardy blok, wyloguj
       await sb.auth.signOut();
       _user = null;
@@ -492,25 +499,42 @@ window.MSS_AUTH = (function() {
         _user = session.user;
         // Najpierw probuj cache (dla offline) — i tak _loadProfile go odswiezy
         _restoreCachedProfile();
-        await _loadProfile();
-        if (_profile && _profile.active) {
+        const { profile, networkError } = await _loadProfile();
+
+        // PRZYPADEK 1: mamy aktywny profil (z cache lub z bazy) -> wpuszczamy
+        if (profile && profile.active) {
           _hideOverlay();
           _initialized = true;
-          _startWatchdog(); // monitorowanie dezaktywacji
+          _startWatchdog();
           return true;
         }
-        // Sesja jest, ale user dezaktywowany lub brak rekordu — wyloguj
-        // (tylko jak udalo sie pobrac profil; offline z _profile=null zostaw)
-        if (_profile && !_profile.active) {
+
+        // PRZYPADEK 2: profil POTWIERDZONY z bazy jako dezaktywowany -> wyloguj
+        // (tylko jak nie bylo network error - inaczej moze byc stary cache)
+        if (profile && profile.active === false && !networkError) {
           await sb.auth.signOut();
           _user = null;
           _profile = null;
           _cacheProfile(null);
-        } else if (!_profile) {
-          // Profil nieznany (online + brak rekordu LUB offline+brak cache)
-          // — bezpieczniej wylogowac
+        }
+        // PRZYPADEK 3: brak profilu + brak network error -> user nie w mss_users
+        else if (!profile && !networkError) {
+          // Zalogowany w Supabase Auth ale nie ma rekordu w mss_users
+          // (np. usuniete konto sedzia) -> wyloguj
           await sb.auth.signOut();
           _user = null;
+          _cacheProfile(null);
+        }
+        // PRZYPADEK 4: network error -> NIE wylogowuj, zostaw sesje
+        // Userowi pokaze sie overlay (bo _profile null), moze sprobowac
+        // zalogowac ponownie - Supabase odczyta cache sesji i wpuscic
+        // (alternatywnie: jak ma _profile w cache od _restoreCachedProfile
+        //  ale niealktywne flag - to przypadek 2 powyzej; nie tu)
+        else if (networkError) {
+          console.warn('[MSS_AUTH] init: network error, nie wylogowuje (sesja zachowana)');
+          // _user zostaje. _profile null lub stale-cached. Overlay sie pokaze
+          // bo nie wracamy true. Ale user mozna sprobowac z hasla ponownie -
+          // sb.auth.signInWithPassword bedzie dzialac z tej samej sesji.
         }
       }
 

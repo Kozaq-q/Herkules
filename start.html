@@ -359,7 +359,7 @@ const COMPETITION_TYPES = {
     open: function(panelId, slot) {
       const czworId = ensureCzworSlot(panelId, slot);
       localStorage.setItem('zawody_active_slot', czworId);
-      window.location.href = 'index.html';
+      window.location.href = 'wieloboj.html';
     },
     fallbackLocalStats: function(slot) {
       const czworId = localStorage.getItem('herkules_czwor_map_' + slot.id) || ('panel_' + slot.id);
