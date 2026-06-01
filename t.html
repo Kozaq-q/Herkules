@@ -45,17 +45,34 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 
 /* HEADER (sticky) */
 .tab-header {
-  background: var(--bg2); border-bottom: 2px solid var(--accent);
-  padding: 10px 16px; position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: rgba(13,15,15,.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 18px; position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 12px;
 }
-.tab-logo { font-family: var(--font-h); font-size: 20px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); line-height: 1; flex-shrink: 0; }
-.tab-meta { font-family: var(--font-b); font-size: 13px; color: var(--text2); font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-logo {
+  font-family: var(--font-h); font-size: 16px; font-weight: 800;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--accent); line-height: 1; flex-shrink: 0;
+  display: inline-flex; align-items: baseline; gap: 8px;
+}
+.tab-logo .logo-sub {
+  font-size: 9px; letter-spacing: 2.5px; color: var(--text3); font-weight: 700;
+}
+.tab-meta {
+  font-family: var(--font-b); font-size: 12px; color: var(--text3);
+  font-weight: 500; flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  letter-spacing: .3px;
+}
 .tab-live {
-  font-family: var(--font-m); font-size: 10px; color: var(--text3);
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 3px;
-  padding: 4px 8px; display: inline-flex; align-items: center; gap: 5px;
-  flex-shrink: 0;
+  font-family: var(--font-m); font-size: 9px; color: var(--text3);
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px;
+  flex-shrink: 0; letter-spacing: 1.5px; text-transform: uppercase;
 }
 .tab-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background .3s; }
 .tab-live.ok { color: var(--green); border-color: rgba(76,175,130,.4); background: rgba(76,175,130,.1); }
@@ -64,79 +81,155 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .tab-live.err .dot { background: var(--red); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 
-/* TILE MENU (kategorie jako kafelki) */
+/* HERO — nazwa zawodow */
+.hero {
+  text-align: center;
+  padding: 28px 20px 22px;
+  max-width: 820px;
+  margin: 0 auto 12px;
+  position: relative;
+}
+.hero-chip {
+  display: inline-block;
+  font-family: var(--font-h);
+  font-size: 10px; font-weight: 800; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--accent);
+  padding: 5px 14px;
+  border: 1px solid rgba(232,212,77,.35);
+  border-radius: 999px;
+  background: rgba(232,212,77,.05);
+  margin-bottom: 16px;
+}
+.hero-title {
+  font-family: var(--font-h);
+  font-size: 30px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text1);
+  line-height: 1.12;
+  margin-bottom: 8px;
+  text-wrap: balance;
+}
+.hero-meta {
+  font-family: var(--font-m);
+  font-size: 12px; letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+.hero-meta .sep { opacity: .35; margin: 0 8px; }
+.hero-divider {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  margin: 18px auto 0;
+  opacity: .6;
+}
+@media (min-width: 900px) {
+  .hero { padding: 48px 20px 30px; }
+  .hero-title { font-size: 44px; letter-spacing: 1.5px; }
+  .hero-meta { font-size: 13px; }
+}
+
+/* TILE MENU (kategorie jako kafelki — eleganckie) */
 .tile-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   max-width: 720px; margin: 0 auto;
 }
 .cat-tile {
-  background: var(--bg2); border: 2px solid var(--border2);
-  border-radius: 14px; padding: 28px 18px;
+  --tile-accent: var(--text3);
+  --tile-accent-soft: rgba(200,207,207,.18);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 26px 18px 22px;
   display: flex; flex-direction: column; align-items: center;
   gap: 6px; color: var(--text1); text-align: center;
-  cursor: pointer; transition: transform .12s, border-color .15s, background .15s;
-  min-height: 130px; justify-content: center;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .2s, background .2s, box-shadow .2s;
+  min-height: 134px; justify-content: center;
   position: relative; overflow: hidden;
 }
-.cat-tile:hover { transform: translateY(-2px); background: var(--bg3); }
-.cat-tile:active { transform: scale(.98); }
-.cat-tile .cat-icon { font-size: 38px; line-height: 1; margin-bottom: 4px; }
+.cat-tile::before {
+  /* subtelna linia akcent na gornej krawedzi */
+  content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tile-accent), transparent);
+  opacity: .55;
+  transition: opacity .2s, left .2s, right .2s;
+}
+.cat-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--tile-accent);
+  background: var(--bg3);
+  box-shadow: 0 10px 30px -12px var(--tile-accent-soft);
+}
+.cat-tile:hover::before { opacity: 1; left: 8%; right: 8%; }
+.cat-tile:active { transform: translateY(0) scale(.985); }
+.cat-tile .cat-icon {
+  font-size: 30px; line-height: 1; margin-bottom: 6px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.4));
+}
 .cat-tile .cat-label {
-  font-family: var(--font-h); font-size: 17px; font-weight: 800;
-  letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.15;
+  font-family: var(--font-h); font-size: 16px; font-weight: 700;
+  letter-spacing: 2.2px; text-transform: uppercase; line-height: 1.15;
+  color: var(--tile-accent);
 }
 .cat-tile .cat-sub {
-  font-family: var(--font-m); font-size: 11px; color: var(--text3);
-  letter-spacing: .5px; margin-top: 4px;
+  font-family: var(--font-b); font-size: 11px; color: var(--text3);
+  letter-spacing: .3px; margin-top: 6px; line-height: 1.35;
+  font-weight: 500;
 }
-.cat-tile.cat-m { border-color: rgba(91,155,213,.4); }
-.cat-tile.cat-m .cat-label { color: var(--male); }
-.cat-tile.cat-k { border-color: rgba(216,120,164,.4); }
-.cat-tile.cat-k .cat-label { color: var(--female); }
-.cat-tile.cat-team { border-color: rgba(232,148,77,.4); }
-.cat-tile.cat-team .cat-label { color: var(--orange); }
-.cat-tile.cat-trun { border-color: rgba(96,168,232,.4); }
-.cat-tile.cat-trun .cat-label { color: #60a8e8; }
+.cat-tile.cat-m { --tile-accent: var(--male); --tile-accent-soft: rgba(91,155,213,.18); }
+.cat-tile.cat-k { --tile-accent: var(--female); --tile-accent-soft: rgba(216,120,164,.18); }
+.cat-tile.cat-team { --tile-accent: var(--orange); --tile-accent-soft: rgba(232,148,77,.18); }
+.cat-tile.cat-trun { --tile-accent: #60a8e8; --tile-accent-soft: rgba(96,168,232,.18); }
 .cat-tile.cat-overall {
+  --tile-accent: var(--accent);
+  --tile-accent-soft: rgba(232,212,77,.18);
   grid-column: 1 / -1;
-  border-color: rgba(232,212,77,.5);
-  background: linear-gradient(135deg, rgba(232,212,77,.06), rgba(232,212,77,.02));
-  min-height: 90px; padding: 18px 18px;
+  background: linear-gradient(135deg, rgba(232,212,77,.04) 0%, var(--bg2) 60%);
+  min-height: 92px; padding: 20px 18px;
 }
-.cat-tile.cat-overall .cat-label { color: var(--accent); }
-.cat-tile.cat-overall .cat-icon { font-size: 32px; }
+.cat-tile.cat-overall .cat-icon { font-size: 26px; margin-bottom: 4px; }
+.cat-tile.cat-overall .cat-label { font-size: 17px; }
 @media (min-width: 900px) {
-  .tile-grid { grid-template-columns: repeat(4, 1fr); max-width: 1120px; gap: 18px; }
-  .cat-tile { padding: 32px 16px; min-height: 150px; }
-  .cat-tile .cat-icon { font-size: 46px; }
-  .cat-tile .cat-label { font-size: 19px; }
-  .cat-tile.cat-overall { grid-column: 1 / -1; min-height: 100px; padding: 22px; }
+  .tile-grid { grid-template-columns: repeat(4, 1fr); max-width: 1120px; gap: 16px; }
+  .cat-tile { padding: 36px 16px 30px; min-height: 160px; }
+  .cat-tile .cat-icon { font-size: 38px; }
+  .cat-tile .cat-label { font-size: 18px; }
+  .cat-tile .cat-sub { font-size: 12px; }
+  .cat-tile.cat-overall { grid-column: 1 / -1; min-height: 108px; padding: 24px; }
+  .cat-tile.cat-overall .cat-icon { font-size: 32px; }
+  .cat-tile.cat-overall .cat-label { font-size: 20px; }
 }
 
-/* BACK button na detail view */
+/* DETAIL view */
+.detail-wrap { max-width: 980px; margin: 0 auto; padding-top: 4px; }
 .detail-back {
   display: inline-flex; align-items: center; gap: 8px;
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: 8px; color: var(--text2);
-  font-family: var(--font-h); font-size: 12px; font-weight: 700;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 10px 16px; cursor: pointer; margin-bottom: 16px;
-  transition: background .12s, color .12s, border-color .12s;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 999px; color: var(--text3);
+  font-family: var(--font-h); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px 16px 8px 12px; cursor: pointer; margin-bottom: 22px;
+  transition: background .15s, color .15s, border-color .15s, transform .12s;
 }
-.detail-back:hover { background: var(--bg3); color: var(--text1); border-color: var(--border2); }
-.detail-back .arrow { font-size: 14px; }
+.detail-back:hover { background: var(--bg2); color: var(--text1); border-color: var(--border2); transform: translateX(-2px); }
+.detail-back .arrow { font-size: 13px; line-height: 1; }
 
 .detail-title {
-  font-family: var(--font-h); font-size: 22px; font-weight: 800;
+  font-family: var(--font-h); font-size: 24px; font-weight: 800;
   letter-spacing: 2px; text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 12px;
 }
+.detail-title .icon { font-size: 28px; line-height: 1; }
 .detail-title.cat-m-color { color: var(--male); }
 .detail-title.cat-k-color { color: var(--female); }
 .detail-title.cat-team-color { color: var(--orange); }
 .detail-title.cat-trun-color { color: #60a8e8; }
 .detail-title.cat-overall-color { color: var(--accent); }
-.detail-subtitle { font-size: 12px; color: var(--text3); margin-bottom: 18px; font-family: var(--font-m); letter-spacing: .5px; }
+.detail-subtitle {
+  font-size: 12px; color: var(--text3); margin-bottom: 22px;
+  font-family: var(--font-m); letter-spacing: .8px;
+  text-transform: uppercase; opacity: .85;
+}
 
 /* MAIN */
 .tab-main { padding: 16px 12px 60px; max-width: 980px; margin: 0 auto; }
@@ -233,8 +326,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 <body>
 
 <header class="tab-header">
-  <div class="tab-logo">⬡ MSS</div>
-  <div class="tab-meta" id="meta">—</div>
+  <div class="tab-logo">⬡ MSS <span class="logo-sub" id="header-type-sub"></span></div>
+  <div class="tab-meta" id="meta"></div>
   <div class="tab-live" id="live"><span class="dot"></span><span id="live-lbl">…</span></div>
 </header>
 
@@ -297,7 +390,41 @@ function setLive(status) {
 }
 
 function setMeta(text) {
-  document.getElementById('meta').textContent = text || '—';
+  document.getElementById('meta').textContent = text || '';
+}
+
+// Ustaw label typu zawodow w naglowku (subtelny: BIEG PATROLOWY, OSF, WIELOBÓJ)
+function setHeaderTypeSub(typeLabel) {
+  const el = document.getElementById('header-type-sub');
+  if (el) el.textContent = typeLabel ? '· ' + typeLabel : '';
+}
+
+// Buduje sekcje hero (nazwa + miasto + data) zwraca HTML string
+function _heroHTML() {
+  if (!_slotMeta) return '';
+  const typeLabel = _competitionType === 'wielobój' ? 'Wielobój' : (_competitionType === 'osf' ? 'OSF' : 'Bieg patrolowy');
+  const name = _slotMeta.name || 'Zawody';
+  const city = _slotMeta.city || '';
+  const date = _slotMeta.date || '';
+  const dateFmt = date ? _formatDateNice(date) : '';
+  const metaParts = [];
+  if (city) metaParts.push('<span>' + esc(city) + '</span>');
+  if (dateFmt) metaParts.push('<span>' + esc(dateFmt) + '</span>');
+  const metaJoined = metaParts.join('<span class="sep">·</span>');
+  return '<section class="hero">' +
+    '<div class="hero-chip">' + esc(typeLabel) + '</div>' +
+    '<h1 class="hero-title">' + esc(name) + '</h1>' +
+    (metaJoined ? '<div class="hero-meta">' + metaJoined + '</div>' : '') +
+    '<div class="hero-divider"></div>' +
+  '</section>';
+}
+
+// Format daty: "2026-02-17" -> "17.02.2026"
+function _formatDateNice(d) {
+  if (!d) return '';
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[3] + '.' + m[2] + '.' + m[1];
+  return d;
 }
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
@@ -1149,7 +1276,7 @@ function renderTileMenu() {
     document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów</div>';
     return;
   }
-  const html = ['<div class="tile-grid">'];
+  const html = [_heroHTML(), '<div class="tile-grid">'];
   for (const t of tabs) {
     html.push(
       '<button class="cat-tile ' + t.cls + '" onclick="setTab(\'' + t.id + '\')">' +
@@ -1172,10 +1299,12 @@ function renderDetail() {
   }
   const titleColorCls = (tab.cls || '').replace('cat-', 'cat-') + '-color';
   const html =
+    '<div class="detail-wrap">' +
     '<button class="detail-back" onclick="showTileMenu()"><span class="arrow">←</span><span>Kategorie</span></button>' +
-    '<div class="detail-title ' + titleColorCls + '">' + tab.icon + ' ' + esc(tab.label) + '</div>' +
+    '<div class="detail-title ' + titleColorCls + '"><span class="icon">' + tab.icon + '</span><span>' + esc(tab.label) + '</span></div>' +
     (tab.sub ? '<div class="detail-subtitle">' + esc(tab.sub) + '</div>' : '') +
-    tab.render();
+    tab.render() +
+    '</div>';
   document.getElementById('main').innerHTML = html;
 }
 
@@ -1196,12 +1325,11 @@ async function loadAndRender() {
     _slotMeta = slotData.meta;
     _competitionType = _resolveType(_slotMeta.type);
 
-    // Header meta
-    const name = _slotMeta.name || 'Zawody';
-    const city = _slotMeta.city || '';
-    const date = _slotMeta.date || '';
+    // Header: tylko typ zawodow (subtelnie), nazwa idzie do hero
     const typeLabel = _competitionType === 'wielobój' ? 'Wielobój' : (_competitionType === 'osf' ? 'OSF' : 'Patrol');
-    setMeta([typeLabel, name, city, date].filter(Boolean).join(' · '));
+    setHeaderTypeSub(typeLabel);
+    // Compact meta dla wask. ekranow (header) — nazwa zawodow
+    setMeta(_slotMeta.name || '');
 
     // Załaduj stan zawodów (per typ)
     let loader = null;
