@@ -3220,17 +3220,22 @@ function downloadPtrQR() {
 }
 
 function printPtrQR() {
-  const url = _getPtrShareURL();
   if (typeof QRCode === 'undefined') return alert('QR library niedostepna');
+  // 1. Najpierw otwieramy okno (synchronicznie, od razu po klikniciu - user gesture)
+  const w = window.open('', '_blank');
+  if (!w) return alert('Przegladarka zablokowala popup. Pozwol na popup-y dla tej strony i sprobuj ponownie.');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR...</title></head><body style="font-family:sans-serif;text-align:center;padding:60px;color:#666;">Generuje QR...</body></html>');
+
+  // 2. Asynchronicznie generujemy QR, potem dopisujemy do okna
+  const url = _getPtrShareURL();
   QRCode.toDataURL(url, { width: 800, margin: 2, color: { dark: '#000', light: '#fff' } }, function(err, dataUrl) {
-    if (err) return alert('Bład: ' + err.message);
+    if (err) { w.document.body.innerHTML = '<p style="color:red;padding:40px;">Bład: ' + err.message + '</p>'; return; }
     const name = state.setup?.name || 'Bieg patrolowy';
     const city = state.setup?.city || '';
     const date = state.setup?.date || '';
-    const w = window.open('', '_blank');
-    if (!w) return alert('Przeglądarka zablokowała nową kartę — pozwol na popup-y i sprobuj ponownie');
+    w.document.open();
     w.document.write(
-      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR — ' + name + '</title>' +
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR — ' + esc(name) + '</title>' +
       '<style>' +
         'body{margin:0;padding:40px 30px;font-family:Arial,sans-serif;text-align:center;color:#111;background:#fff;}' +
         'h1{font-size:32px;margin:0 0 8px;letter-spacing:1px;}' +
@@ -3240,15 +3245,20 @@ function printPtrQR() {
         '.url{font-family:monospace;font-size:14px;color:#444;word-break:break-all;margin-bottom:16px;padding:10px 14px;background:#f5f5f5;border-radius:6px;display:inline-block;max-width:90%;}' +
         '.cta{font-size:24px;font-weight:bold;color:#111;margin-top:24px;letter-spacing:2px;text-transform:uppercase;}' +
         '.lead{font-size:16px;color:#444;margin-top:14px;line-height:1.5;}' +
-        '@media print{body{padding:20px;}}' +
+        '@media print{body{padding:20px;} .no-print{display:none;}}' +
+        '.btn{display:inline-block;margin:6px;padding:10px 22px;background:#e8d44d;color:#111;font-weight:700;text-decoration:none;border-radius:5px;border:none;cursor:pointer;font-size:14px;}' +
       '</style></head><body>' +
       '<h1>WYNIKI NA ŻYWO</h1>' +
       '<div class="sub">' + esc(name) + (city ? ' · ' + esc(city) : '') + (date ? ' · ' + esc(date) : '') + '</div>' +
-      '<div class="qr"><img src="' + dataUrl + '" alt="QR" /></div>' +
+      '<div class="qr"><img id="qr-img" src="' + dataUrl + '" alt="QR" /></div>' +
       '<div class="cta">📱 Zeskanuj telefonem</div>' +
       '<div class="lead">albo wpisz adres w przegladarce:</div>' +
       '<div class="url">' + esc(url) + '</div>' +
-      '<script>setTimeout(function(){window.print();},300);<\/script>' +
+      '<div class="no-print" style="margin-top:28px;">' +
+        '<button class="btn" onclick="window.print()">🖨 Drukuj</button>' +
+        '<button class="btn" style="background:#ccc;" onclick="window.close()">Zamknij</button>' +
+      '</div>' +
+      '<script>document.getElementById("qr-img").onload=function(){setTimeout(function(){window.print();},200);};<\/script>' +
       '</body></html>'
     );
     w.document.close();
