@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="auth.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════
@@ -1207,6 +1208,41 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       </div>
     </div>
   </div>
+
+  <!-- 📺 TABLICA WYNIKOW PUBLICZNA -->
+  <div class="card mb-12" id="wj-share-card" style="margin-top:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+      <div class="card-title" style="margin:0;padding:0;border:none;">📺 Tablica wyników publiczna</div>
+      <button class="btn" onclick="openWjTablicaPreview()" style="font-size:11px;padding:6px 12px;">▶ Otwórz w nowej karcie</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+      Udostępnij link/QR kod uczestnikom. Tablica pokazuje wyniki <strong>tych zawodów wieloboju</strong> na żywo (auto-refresh 10s, bez logowania).
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 180px;gap:18px;align-items:start;" id="wj-share-grid">
+      <div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Link bezpośredni</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <input id="wj-share-link" type="text" readonly onclick="this.select();"
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:9px 12px;font-family:var(--font-m);font-size:12px;" />
+          <button class="btn" onclick="copyWjShareLink(this)" style="font-size:11px;padding:9px 14px;flex-shrink:0;">📋 Kopiuj</button>
+        </div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Pobierz/Drukuj</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button class="btn" onclick="downloadWjQR()" style="font-size:11px;padding:8px 12px;">⬇ PNG (QR)</button>
+          <button class="btn" onclick="printWjQR()" style="font-size:11px;padding:8px 12px;">🖨 Drukuj plakat</button>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;">
+        <canvas id="wj-share-qr" style="display:block;max-width:100%;height:auto;"></canvas>
+      </div>
+    </div>
+  </div>
+  <style>
+  @media (max-width: 700px) {
+    #wj-share-grid { grid-template-columns: 1fr !important; }
+    #wj-share-card canvas { max-width: 240px; margin: 0 auto; }
+  }
+  </style>
 </div>
 
 <!-- ═══ PAGE: ZAWODNICY ═══ -->
@@ -2427,6 +2463,105 @@ function renderSetup() {
   renderTeamsList();
   renderScoreTablesEditor();
   renderPersonalization();
+  _renderWjShareSection();
+}
+
+// ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
+const TABLICA_BASE_URL = 'https://militarysportsystem.pl/tablica.html';
+
+function _getWjShareURL() {
+  // ACTIVE_SLOT_ID = 'panel_<id>' lub legacy 'panel_2', 'mmqro...'
+  // Z tablica.html try-strategy odgaduje wiec wystarczy przekazac herkules slot id
+  // (Sprawdz mapping odwrotny: aktywny slot to ACTIVE_SLOT_ID; herkules slot to mapowany)
+  // Najprosciej: przekazujemy ACTIVE_SLOT_ID (tablica obsluzy tez forme 'panel_X')
+  const slotId = (typeof ACTIVE_SLOT_ID !== 'undefined' && ACTIVE_SLOT_ID) ? ACTIVE_SLOT_ID : 'default';
+  // Z 'panel_<id>' wyciagnij <id> (zeby URL byl ladniejszy)
+  const cleanId = slotId.replace(/^panel_/, '');
+  return TABLICA_BASE_URL + '?slot=' + encodeURIComponent(cleanId);
+}
+
+function _renderWjShareSection() {
+  const url = _getWjShareURL();
+  const linkEl = document.getElementById('wj-share-link');
+  if (linkEl) linkEl.value = url;
+  const canvas = document.getElementById('wj-share-qr');
+  if (canvas && typeof QRCode !== 'undefined') {
+    try {
+      QRCode.toCanvas(canvas, url, {
+        width: 220, margin: 1,
+        color: { dark: '#111', light: '#ffffff' },
+        errorCorrectionLevel: 'M',
+      }, function(err){ if (err) console.warn('[QR]', err); });
+    } catch(e) { console.warn('[QR]', e); }
+  }
+}
+
+function openWjTablicaPreview() {
+  window.open(_getWjShareURL(), '_blank');
+}
+
+async function copyWjShareLink(btn) {
+  const url = _getWjShareURL();
+  try {
+    await navigator.clipboard.writeText(url);
+    if (btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Skopiowane';
+      btn.style.background = 'var(--green)';
+      btn.style.color = '#fff';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 1500);
+    }
+  } catch (e) {
+    const inp = document.getElementById('wj-share-link');
+    if (inp) { inp.select(); document.execCommand('copy'); }
+  }
+}
+
+function downloadWjQR() {
+  const url = _getWjShareURL();
+  if (typeof QRCode === 'undefined') return alert('QR library niedostepna');
+  QRCode.toDataURL(url, { width: 600, margin: 2, color: { dark: '#000', light: '#fff' } }, function(err, dataUrl) {
+    if (err) return alert('Bład: ' + err.message);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    const slug = (STATE.setup?.name || 'wieloboj').replace(/[^a-z0-9-]/gi, '_').toLowerCase();
+    a.download = 'qr_' + slug + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+}
+
+function printWjQR() {
+  const url = _getWjShareURL();
+  if (typeof QRCode === 'undefined') return alert('QR library niedostepna');
+  QRCode.toDataURL(url, { width: 800, margin: 2, color: { dark: '#000', light: '#fff' } }, function(err, dataUrl) {
+    if (err) return alert('Bład: ' + err.message);
+    const name = STATE.setup?.name || 'Wielobój';
+    const city = STATE.setup?.place || '';
+    const date = STATE.setup?.date || '';
+    const w = window.open('', '_blank');
+    if (!w) return alert('Przeglądarka zablokowała popup');
+    const _esc = s => String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]);
+    w.document.write(
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR — ' + _esc(name) + '</title>' +
+      '<style>body{margin:0;padding:40px 30px;font-family:Arial,sans-serif;text-align:center;color:#111;background:#fff;}' +
+      'h1{font-size:32px;margin:0 0 8px;letter-spacing:1px;}' +
+      '.sub{font-size:18px;color:#666;margin-bottom:30px;}' +
+      '.qr{margin:0 auto 28px;max-width:480px;}.qr img{width:100%;height:auto;display:block;}' +
+      '.url{font-family:monospace;font-size:14px;color:#444;word-break:break-all;margin-bottom:16px;padding:10px 14px;background:#f5f5f5;border-radius:6px;display:inline-block;max-width:90%;}' +
+      '.cta{font-size:24px;font-weight:bold;color:#111;margin-top:24px;letter-spacing:2px;text-transform:uppercase;}' +
+      '.lead{font-size:16px;color:#444;margin-top:14px;line-height:1.5;}' +
+      '@media print{body{padding:20px;}}</style></head><body>' +
+      '<h1>WYNIKI NA ŻYWO</h1>' +
+      '<div class="sub">' + _esc(name) + (city ? ' · ' + _esc(city) : '') + (date ? ' · ' + _esc(date) : '') + '</div>' +
+      '<div class="qr"><img src="' + dataUrl + '" alt="QR" /></div>' +
+      '<div class="cta">📱 Zeskanuj telefonem</div>' +
+      '<div class="lead">albo wpisz adres w przegladarce:</div>' +
+      '<div class="url">' + _esc(url) + '</div>' +
+      '<script>setTimeout(function(){window.print();},300);<\/script>' +
+      '</body></html>'
+    );
+    w.document.close();
+  });
 }
 
 // ─── TEAMS ───
