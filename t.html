@@ -74,6 +74,120 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px;
   flex-shrink: 0; letter-spacing: 1.5px; text-transform: uppercase;
 }
+
+/* Przycisk lupy w naglowku */
+.tab-search-btn {
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 999px; padding: 6px 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text2); cursor: pointer; flex-shrink: 0;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.tab-search-btn:hover { color: var(--accent); border-color: var(--border2); background: var(--bg2); }
+.tab-search-btn:active { transform: scale(.96); }
+
+/* SEARCH OVERLAY */
+.search-overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(13,15,15,.78);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  padding: 40px 16px;
+  animation: searchFadeIn .18s ease;
+}
+.search-overlay.open { display: block; }
+@keyframes searchFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.search-modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px;
+  max-width: 620px; margin: 0 auto;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(232,212,77,.04);
+  animation: searchSlide .22s ease;
+  display: flex; flex-direction: column; max-height: calc(100vh - 80px);
+}
+@keyframes searchSlide { from { transform: translateY(-12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.search-head {
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(232,212,77,.03), transparent);
+}
+.search-input-wrap {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color .15s, background .15s;
+}
+.search-input-wrap:focus-within { border-color: var(--accent); background: var(--bg4); }
+.search-input-wrap .search-icon { color: var(--text3); flex-shrink: 0; transition: color .15s; }
+.search-input-wrap:focus-within .search-icon { color: var(--accent); }
+.search-input-wrap input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text1); font-family: var(--font-b); font-size: 16px;
+  letter-spacing: .2px; min-width: 0;
+}
+.search-input-wrap input::placeholder { color: var(--text3); font-weight: 400; }
+.search-close {
+  background: transparent; border: none; color: var(--text3); cursor: pointer;
+  width: 24px; height: 24px; border-radius: 999px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+  transition: color .15s, background .15s;
+}
+.search-close:hover { color: var(--text1); background: var(--bg4); }
+.search-hint {
+  font-family: var(--font-m); font-size: 10px; color: var(--text3);
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-top: 10px; padding: 0 2px;
+}
+.search-results {
+  overflow-y: auto; padding: 8px 8px 14px;
+}
+.search-results::-webkit-scrollbar { width: 6px; }
+.search-result {
+  background: transparent; border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 12px; align-items: center;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+  text-align: left;
+  width: 100%;
+  margin-bottom: 4px;
+}
+.search-result:hover { background: var(--bg3); border-color: var(--border); }
+.search-result-name {
+  font-family: var(--font-b); font-size: 15px; font-weight: 700;
+  color: var(--text1); line-height: 1.2; word-break: break-word;
+}
+.search-result-meta {
+  font-family: var(--font-m); font-size: 11px; color: var(--text3);
+  margin-top: 3px; letter-spacing: .3px;
+}
+.search-result-cat {
+  font-family: var(--font-h); font-size: 9px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.search-result-cat.cat-m { color: var(--male); }
+.search-result-cat.cat-k { color: var(--female); }
+.search-result-cat.cat-team { color: var(--orange); }
+.search-result-cat.cat-trun { color: #60a8e8; }
+.search-result-cat.cat-overall { color: var(--accent); }
+.search-empty {
+  text-align: center; padding: 40px 20px;
+  color: var(--text3); font-family: var(--font-b); font-size: 14px;
+}
+@media (max-width: 520px) {
+  .search-overlay { padding: 12px 8px; }
+  .search-modal { max-height: calc(100vh - 24px); border-radius: 14px; }
+  .search-result-name { font-size: 14px; }
+  .search-result-cat { font-size: 8px; padding: 3px 8px; }
+}
 .tab-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background .3s; }
 .tab-live.ok { color: var(--green); border-color: rgba(76,175,130,.4); background: rgba(76,175,130,.1); }
 .tab-live.ok .dot { background: var(--green); animation: pulse 2s ease-in-out infinite; }
@@ -328,8 +442,34 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 <header class="tab-header">
   <div class="tab-logo">⬡ MSS <span class="logo-sub" id="header-type-sub"></span></div>
   <div class="tab-meta" id="meta"></div>
+  <button class="tab-search-btn" id="search-btn" onclick="openSearch()" title="Wyszukaj zawodnika / drużynę" aria-label="Szukaj">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"></circle>
+      <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+    </svg>
+  </button>
   <div class="tab-live" id="live"><span class="dot"></span><span id="live-lbl">…</span></div>
 </header>
+
+<!-- SEARCH OVERLAY -->
+<div class="search-overlay" id="search-overlay" onclick="if(event.target===this)closeSearch()">
+  <div class="search-modal">
+    <div class="search-head">
+      <div class="search-input-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+        </svg>
+        <input id="search-input" type="text" placeholder="Nazwisko, drużyna..."
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+               oninput="runSearch()" onkeydown="if(event.key==='Escape')closeSearch();" />
+        <button class="search-close" onclick="closeSearch()" aria-label="Zamknij">✕</button>
+      </div>
+      <div class="search-hint" id="search-hint">Wpisz min. 2 znaki</div>
+    </div>
+    <div class="search-results" id="search-results"></div>
+  </div>
+</div>
 
 <main class="tab-main" id="main">
   <div class="loading">Ładowanie…</div>
@@ -426,6 +566,176 @@ function _formatDateNice(d) {
   if (m) return m[3] + '.' + m[2] + '.' + m[1];
   return d;
 }
+
+// ─── SEARCH (zawodnicy + druzyny + wyniki) ───
+function openSearch() {
+  if (!_state) return;
+  const overlay = document.getElementById('search-overlay');
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const inp = document.getElementById('search-input');
+  setTimeout(() => { inp.focus(); inp.select(); }, 50);
+  runSearch();
+}
+
+function closeSearch() {
+  const overlay = document.getElementById('search-overlay');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Normalizacja stringu: lowercase, usun polskie znaki dla bardziej forgiving search
+function _normForSearch(s) {
+  if (!s) return '';
+  return String(s).toLowerCase()
+    .replace(/[ąa]/g,'a').replace(/[ćc]/g,'c').replace(/[ęe]/g,'e')
+    .replace(/[łl]/g,'l').replace(/[ńn]/g,'n').replace(/[óo]/g,'o')
+    .replace(/[śs]/g,'s').replace(/[źżz]/g,'z')
+    .replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function runSearch() {
+  const inp = document.getElementById('search-input');
+  const results = document.getElementById('search-results');
+  const hint = document.getElementById('search-hint');
+  const q = inp.value.trim();
+  const qn = _normForSearch(q);
+
+  if (qn.length < 2) {
+    hint.textContent = q.length === 0 ? 'Wpisz nazwisko, drużynę lub fragment...' : 'Wpisz min. 2 znaki';
+    results.innerHTML = '';
+    return;
+  }
+
+  const hits = _searchInState(qn);
+  hint.textContent = hits.length === 0
+    ? 'Brak dopasowań'
+    : (hits.length === 1 ? '1 wynik' : (hits.length + (hits.length < 5 ? ' wyniki' : ' wyników')));
+
+  if (hits.length === 0) {
+    results.innerHTML = '<div class="search-empty">😕<br><br>Nic nie znaleziono</div>';
+    return;
+  }
+  results.innerHTML = hits.map(h =>
+    '<button class="search-result" onclick="_searchPickResult(\'' + h.catId + '\')">' +
+      '<div>' +
+        '<div class="search-result-name">' + esc(h.name) + '</div>' +
+        '<div class="search-result-meta">' + esc(h.meta || '') + '</div>' +
+      '</div>' +
+      '<div class="search-result-cat ' + h.catCls + '">' + h.catIcon + ' ' + esc(h.catLabel) + '</div>' +
+    '</button>'
+  ).join('');
+}
+
+function _searchPickResult(catId) {
+  closeSearch();
+  setTab(catId);
+}
+
+// Szuka w aktualnym _state. Zwraca [{name, meta, catId, catLabel, catCls, catIcon}].
+function _searchInState(qn) {
+  const tabs = _getTabsForType();
+  const findTab = (id) => tabs.find(t => t.id === id) || {};
+  const hits = [];
+  const seen = new Set(); // dedupe (athlete moze byc w team-run i ind)
+
+  function _matchAth(a) {
+    if (!a) return false;
+    const n = _normForSearch(a.name || '');
+    const t = _normForSearch(a.team || '');
+    return n.includes(qn) || t.includes(qn);
+  }
+
+  function _matchTeam(teamName) {
+    return _normForSearch(teamName || '').includes(qn);
+  }
+
+  if (_competitionType === 'patrol') {
+    // Indywidualnie M
+    (_state.athletes || []).filter(a => a.gender === 'M' && _matchAth(a)).forEach(a => {
+      const key = 'ind-m-' + a.id;
+      if (seen.has(key)) return; seen.add(key);
+      const tab = findTab('m');
+      hits.push({ name: a.name, meta: a.team || '—', catId: 'm', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+    });
+    // Indywidualnie K
+    (_state.athletes || []).filter(a => a.gender === 'K' && _matchAth(a)).forEach(a => {
+      const key = 'ind-k-' + a.id;
+      if (seen.has(key)) return; seen.add(key);
+      const tab = findTab('k');
+      hits.push({ name: a.name, meta: a.team || '—', catId: 'k', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+    });
+    // Druzyny (zbierz z athletes)
+    const teamsSeen = new Set();
+    (_state.athletes || []).forEach(a => {
+      if (a.team && !teamsSeen.has(a.team) && _matchTeam(a.team)) {
+        teamsSeen.add(a.team);
+        const tab = findTab('team');
+        hits.push({ name: a.team, meta: 'Drużyna', catId: 'team', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      }
+    });
+    // Bieg druzynowy
+    Object.keys(_state.teamRun || {}).forEach(teamName => {
+      if (_matchTeam(teamName)) {
+        const tab = findTab('trun');
+        hits.push({ name: teamName, meta: 'Bieg drużynowy', catId: 'trun', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      }
+    });
+  } else if (_competitionType === 'osf') {
+    (_state.athletes || []).filter(a => a.gender === 'M' && !a.pk && _matchAth(a)).forEach(a => {
+      const tab = findTab('m');
+      hits.push({ name: a.name, meta: a.team || '—', catId: 'm', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+    });
+    (_state.athletes || []).filter(a => a.gender === 'K' && !a.pk && _matchAth(a)).forEach(a => {
+      const tab = findTab('k');
+      hits.push({ name: a.name, meta: a.team || '—', catId: 'k', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+    });
+    const teamsSeen = new Set();
+    (_state.athletes || []).forEach(a => {
+      if (a.team && !teamsSeen.has(a.team) && _matchTeam(a.team)) {
+        teamsSeen.add(a.team);
+        const tab = findTab('team');
+        hits.push({ name: a.team, meta: 'Drużyna', catId: 'team', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      }
+    });
+  } else if (_competitionType === 'wielobój') {
+    // Athletes
+    (_state.athletes || []).filter(a => !a.pk).forEach(a => {
+      const team = (_state.teams || []).find(t => t.id == a.teamId);
+      const teamName = team ? team.name : (a.team || '');
+      const nMatch = _normForSearch(a.name || '').includes(qn);
+      const tMatch = _normForSearch(teamName).includes(qn);
+      if (!nMatch && !tMatch) return;
+      const catId = a.gender === 'K' ? 'k' : 'm';
+      const tab = findTab(catId);
+      hits.push({
+        name: a.name, meta: teamName + (a.cat ? ' · ' + a.cat : ''),
+        catId, catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon
+      });
+    });
+    // Teams
+    (_state.teams || []).forEach(team => {
+      if (_matchTeam(team.name)) {
+        const tab = findTab('team');
+        hits.push({ name: team.name, meta: 'Drużyna', catId: 'team', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      }
+    });
+  }
+
+  return hits.slice(0, 50); // limit
+}
+
+// Globalny klawisz Esc i Cmd/Ctrl+K (powerful UX)
+window.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('search-overlay');
+    if (ov && ov.classList.contains('open')) closeSearch();
+  }
+  if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    openSearch();
+  }
+});
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
