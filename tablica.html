@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
+<title>Tablica wyników — MSS</title>
+<meta name="description" content="Wyniki zawodów na żywo — Military Sports System">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:      #0d0f0f;
+  --bg2:     #141717;
+  --bg3:     #1c2020;
+  --bg4:     #232828;
+  --border:  #2e3535;
+  --border2: #3d4646;
+  --text1:   #f0f2f2;
+  --text2:   #c8cfcf;
+  --text3:   #8a9898;
+  --accent:  #e8d44d;
+  --green:   #4caf82;
+  --red:     #e05555;
+  --blue:    #5b9bd5;
+  --orange:  #e8944d;
+  --male:    #5b9bd5;
+  --female:  #d878a4;
+  --gold:    #ffd24a;
+  --silver:  #c0c8cc;
+  --bronze:  #cd8a4a;
+  --font-h:  'Barlow Condensed', sans-serif;
+  --font-b:  'Barlow', sans-serif;
+  --font-m:  'JetBrains Mono', monospace;
+  --radius:  4px;
+  --radius-lg: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); font-size: 15px; line-height: 1.5; min-height: 100vh; -webkit-text-size-adjust: 100%; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* HEADER (sticky) */
+.tab-header {
+  background: var(--bg2); border-bottom: 2px solid var(--accent);
+  padding: 10px 16px; position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.tab-logo { font-family: var(--font-h); font-size: 20px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); line-height: 1; flex-shrink: 0; }
+.tab-meta { font-family: var(--font-b); font-size: 13px; color: var(--text2); font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-live {
+  font-family: var(--font-m); font-size: 10px; color: var(--text3);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 3px;
+  padding: 4px 8px; display: inline-flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+}
+.tab-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); transition: background .3s; }
+.tab-live.ok { color: var(--green); border-color: rgba(76,175,130,.4); background: rgba(76,175,130,.1); }
+.tab-live.ok .dot { background: var(--green); animation: pulse 2s ease-in-out infinite; }
+.tab-live.err { color: var(--red); border-color: rgba(224,85,85,.4); background: rgba(224,85,85,.1); }
+.tab-live.err .dot { background: var(--red); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* TABS */
+.tab-tabs { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; gap: 4px; overflow-x: auto; position: sticky; top: 51px; z-index: 99; -webkit-overflow-scrolling: touch; }
+.tab-tabs::-webkit-scrollbar { display: none; }
+.tab-tab {
+  background: transparent; border: none; color: var(--text3);
+  font-family: var(--font-h); font-size: 12px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 12px 14px; cursor: pointer; white-space: nowrap;
+  position: relative; transition: color .15s;
+  border-bottom: 3px solid transparent;
+}
+.tab-tab:hover { color: var(--text2); }
+.tab-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-tab-cat-m { color: var(--male); }
+.tab-tab-cat-m.active { border-bottom-color: var(--male); }
+.tab-tab-cat-k { color: var(--female); }
+.tab-tab-cat-k.active { border-bottom-color: var(--female); }
+.tab-tab-cat-team { color: var(--orange); }
+.tab-tab-cat-team.active { border-bottom-color: var(--orange); }
+.tab-tab-cat-trun { color: #60a8e8; }
+.tab-tab-cat-trun.active { border-bottom-color: #60a8e8; }
+.tab-tab-cat-overall { color: var(--accent); }
+
+/* MAIN */
+.tab-main { padding: 16px 12px 60px; max-width: 980px; margin: 0 auto; }
+
+/* RANKING CARD */
+.rank-card {
+  display: grid; grid-template-columns: 56px 1fr auto; gap: 12px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 14px; margin-bottom: 10px; align-items: center;
+}
+.rank-card.top-1 { border-color: var(--gold); background: linear-gradient(135deg, var(--bg2) 0%, rgba(255,210,74,.08) 100%); }
+.rank-card.top-2 { border-color: var(--silver); background: linear-gradient(135deg, var(--bg2) 0%, rgba(192,200,204,.06) 100%); }
+.rank-card.top-3 { border-color: var(--bronze); background: linear-gradient(135deg, var(--bg2) 0%, rgba(205,138,74,.06) 100%); }
+.rank-card.dsq { opacity: .5; }
+.rank-num {
+  font-family: var(--font-h); font-size: 32px; font-weight: 800;
+  text-align: center; line-height: 1; color: var(--text3);
+}
+.rank-card.top-1 .rank-num { color: var(--gold); font-size: 38px; }
+.rank-card.top-2 .rank-num { color: var(--silver); font-size: 36px; }
+.rank-card.top-3 .rank-num { color: var(--bronze); font-size: 36px; }
+.rank-medal { font-size: 24px; line-height: 1; }
+.rank-info { min-width: 0; }
+.rank-name { font-family: var(--font-b); font-size: 16px; font-weight: 700; color: var(--text1); line-height: 1.2; margin-bottom: 3px; word-wrap: break-word; }
+.rank-team { font-family: var(--font-m); font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+.rank-details { display: flex; flex-wrap: wrap; gap: 8px 14px; font-family: var(--font-m); font-size: 11px; color: var(--text3); }
+.rank-detail-lbl { color: var(--text3); margin-right: 3px; }
+.rank-detail-val { color: var(--text2); }
+.rank-score {
+  font-family: var(--font-m); font-size: 22px; font-weight: 700;
+  color: var(--accent); text-align: right; line-height: 1; padding-left: 8px;
+}
+.rank-score.dnf { color: var(--text3); font-size: 14px; }
+.rank-score-lbl { font-family: var(--font-h); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-top: 4px; }
+
+/* EMPTY */
+.empty {
+  text-align: center; padding: 80px 20px; color: var(--text3);
+  font-family: var(--font-h); font-size: 16px; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.empty-icon { font-size: 48px; opacity: .3; margin-bottom: 16px; }
+
+/* LOADING */
+.loading { text-align: center; padding: 60px 20px; color: var(--text3); font-family: var(--font-m); font-size: 12px; }
+
+/* SLOTS LIST (no slot in URL) */
+.slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.slot-tile {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px; cursor: pointer; transition: border-color .15s, transform .12s;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.slot-tile:hover { border-color: var(--border2); transform: translateY(-1px); }
+.slot-tile-chip {
+  font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 3px;
+  display: inline-block; align-self: flex-start;
+}
+.slot-tile-chip.patrol { background: rgba(76,175,130,.15); color: var(--green); border: 1px solid rgba(76,175,130,.4); }
+.slot-tile-chip.osf { background: rgba(232,148,77,.15); color: var(--orange); border: 1px solid rgba(232,148,77,.4); }
+.slot-tile-chip.wieloboj { background: rgba(91,155,213,.15); color: var(--blue); border: 1px solid rgba(91,155,213,.4); }
+.slot-tile-name { font-family: var(--font-b); font-size: 16px; font-weight: 700; color: var(--text1); }
+.slot-tile-meta { font-family: var(--font-m); font-size: 11px; color: var(--text3); }
+
+/* PROJECTOR mode (large screens) */
+@media (min-width: 1400px) {
+  .tab-logo { font-size: 26px; }
+  .tab-meta { font-size: 18px; }
+  .rank-card { padding: 18px 22px; }
+  .rank-name { font-size: 20px; }
+  .rank-team { font-size: 13px; }
+  .rank-details { font-size: 13px; }
+  .rank-score { font-size: 30px; }
+  .rank-num { font-size: 40px; }
+  .rank-card.top-1 .rank-num { font-size: 48px; }
+}
+
+/* Mobile-specific */
+@media (max-width: 480px) {
+  .tab-header { padding: 8px 12px; }
+  .tab-logo { font-size: 16px; letter-spacing: 2px; }
+  .tab-meta { font-size: 11px; }
+  .tab-tabs { padding: 0 8px; }
+  .tab-tab { padding: 10px 10px; font-size: 11px; letter-spacing: 1px; }
+  .tab-main { padding: 12px 8px 40px; }
+  .rank-card { padding: 10px; gap: 8px; grid-template-columns: 42px 1fr auto; }
+  .rank-num { font-size: 24px; }
+  .rank-name { font-size: 14px; }
+  .rank-score { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<header class="tab-header">
+  <div class="tab-logo">⬡ MSS</div>
+  <div class="tab-meta" id="meta">—</div>
+  <div class="tab-live" id="live"><span class="dot"></span><span id="live-lbl">…</span></div>
+</header>
+
+<nav class="tab-tabs" id="tabs" style="display:none;"></nav>
+
+<main class="tab-main" id="main">
+  <div class="loading">Ładowanie…</div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// KONFIG SUPABASE — read-only client (anon key)
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
+let _sb = null;
+function getSB() {
+  if (!_sb) _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  return _sb;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// URL PARAMS
+// ═══════════════════════════════════════════════════════════════
+const URL_PARAMS = new URLSearchParams(window.location.search);
+const URL_SLOT = URL_PARAMS.get('slot');
+
+// State
+let _slot = null;        // herkules_slots row
+let _slotMeta = null;    // parsed slot_json
+let _competitionType = null; // 'patrol' | 'osf' | 'wielobój'
+let _state = null;       // state_json parsed (z patrol_state / osf_state / app_state)
+let _refreshTimer = null;
+let _activeTab = null;
+
+function setLive(status) {
+  const el = document.getElementById('live');
+  const lbl = document.getElementById('live-lbl');
+  el.classList.remove('ok', 'err');
+  if (status === 'ok') { el.classList.add('ok'); lbl.textContent = 'LIVE'; }
+  else if (status === 'err') { el.classList.add('err'); lbl.textContent = 'BŁĄD'; }
+  else { lbl.textContent = '...'; }
+}
+
+function setMeta(text) {
+  document.getElementById('meta').textContent = text || '—';
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+// ═══════════════════════════════════════════════════════════════
+// ROUTING — bez ?slot=, pokaz liste wszystkich aktywnych zawodow
+// ═══════════════════════════════════════════════════════════════
+
+async function showSlotsList() {
+  setMeta('Wybierz zawody');
+  document.getElementById('tabs').style.display = 'none';
+  setLive('ok');
+
+  try {
+    const { data, error } = await getSB()
+      .from('herkules_slots')
+      .select('slot_id, slot_json, updated_at')
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+
+    const slots = (data || []).map(row => {
+      try { return { id: row.slot_id, raw: row, meta: JSON.parse(row.slot_json || '{}') }; }
+      catch (_) { return null; }
+    }).filter(Boolean);
+
+    // Filtr: tylko aktywne (nie "done")
+    const active = slots.filter(s => !s.meta.done);
+
+    if (active.length === 0) {
+      document.getElementById('main').innerHTML =
+        '<div class="empty"><div class="empty-icon">🏁</div>Brak aktywnych zawodów</div>';
+      return;
+    }
+
+    const html = ['<div class="slot-grid">'];
+    for (const s of active) {
+      const type = _resolveType(s.meta.type);
+      const chipCls = (type === 'wielobój') ? 'wieloboj' : (type === 'osf' ? 'osf' : 'patrol');
+      const typeLabel = (type === 'wielobój') ? 'Wielobój' : (type === 'osf' ? 'OSF' : 'Patrol');
+      const name = s.meta.name || 'Zawody bez nazwy';
+      const city = s.meta.city || '';
+      const date = s.meta.date || '';
+      const url = 'tablica.html?slot=' + encodeURIComponent(s.id);
+      html.push(
+        '<a class="slot-tile" href="' + esc(url) + '" style="text-decoration:none;color:inherit;">' +
+          '<div class="slot-tile-chip ' + chipCls + '">' + typeLabel + '</div>' +
+          '<div class="slot-tile-name">' + esc(name) + '</div>' +
+          '<div class="slot-tile-meta">' + esc([city, date].filter(Boolean).join(' · ') || '—') + '</div>' +
+        '</a>'
+      );
+    }
+    html.push('</div>');
+    document.getElementById('main').innerHTML = html.join('');
+  } catch (e) {
+    console.error('[tablica] showSlotsList', e);
+    setLive('err');
+    document.getElementById('main').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠</div>Bład: ' + esc(e.message) + '</div>';
+  }
+}
+
+function _resolveType(raw) {
+  if (raw === 'czworboj') return 'wielobój';
+  if (raw === 'wielobój' || raw === 'osf' || raw === 'patrol') return raw;
+  return raw || null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOAD slot meta (z herkules_slots)
+// ═══════════════════════════════════════════════════════════════
+
+async function loadSlotMeta(slotId) {
+  const { data, error } = await getSB()
+    .from('herkules_slots')
+    .select('slot_id, slot_json, updated_at')
+    .eq('slot_id', slotId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  let meta = {};
+  try { meta = JSON.parse(data.slot_json || '{}'); } catch (_) {}
+  return { row: data, meta };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PATROL — load state
+// ═══════════════════════════════════════════════════════════════
+
+async function loadPatrolState(slotId) {
+  const { data, error } = await getSB()
+    .from('patrol_state')
+    .select('state_json, updated_at')
+    .eq('slot_id', slotId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || !data.state_json) return null;
+  return JSON.parse(data.state_json);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PATROL — punktacja (port z patrol.html)
+// ═══════════════════════════════════════════════════════════════
+
+function parseTime(t) {
+  if (!t || typeof t !== 'string') return NaN;
+  if (t === 'DNF' || t === 'DNS') return NaN;
+  // Formaty: "m:ss.SS", "mm:ss", "ss.SS", "ss"
+  const m = t.match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/);
+  if (m) return parseInt(m[1]) * 60 + parseFloat(m[2]);
+  const n = parseFloat(t);
+  return isNaN(n) ? NaN : n;
+}
+
+function isTimeMarker(v) { return v === 'DNF' || v === 'DNS'; }
+
+function _shotPointsFromRow(row) {
+  if (row.shotPoints !== undefined && row.shotPoints !== null && row.shotPoints !== '') {
+    const n = parseInt(row.shotPoints);
+    return Number.isFinite(n) ? n : null;
+  }
+  if (row.hits !== undefined && row.hits !== null) {
+    const h = parseInt(row.hits);
+    return Number.isFinite(h) ? h * 10 : null;
+  }
+  return null;
+}
+
+function calcPatrolPoints(row) {
+  if (row.dsq) return null;
+  if (!Number.isFinite(row.totalSec) || row.totalSec === Infinity) return null;
+  const osfSec = (row.osf && !isTimeMarker(row.osf)) ? parseTime(row.osf) : null;
+  if (osfSec === null || !Number.isFinite(osfSec) || osfSec <= 0) return null;
+  const shotPts = _shotPointsFromRow(row);
+  if (shotPts === null || shotPts === undefined) return null;
+  const biegPts = row.totalSec;
+  const osfPts  = 450 - 2 * osfSec;
+  const strzPts = shotPts * 2;
+  return Math.round(biegPts - osfPts - strzPts);
+}
+
+function _buildPatrolRow(a, state) {
+  const t = (state.times && state.times[a.id]) || {};
+  const total = t.total;
+  const osf   = t.osf;
+  const shotPoints = t.shotPoints;
+  const hits = t.hits;
+  const tens = t.tens;
+  const dsq = !!(state.disq && state.disq[a.id]);
+  const totalIsMarker = isTimeMarker(total);
+  const totalSec = (dsq || totalIsMarker || !total) ? Infinity : parseTime(total);
+  let tier = 3;
+  let marker = '';
+  if (dsq) tier = 3;
+  else if (totalSec < Infinity) tier = 0;
+  else if (total === 'DNF') { tier = 1; marker = 'DNF'; }
+  else if (total === 'DNS') { tier = 2; marker = 'DNS'; }
+  const hasAny = !!(total || osf || hits !== undefined || shotPoints !== undefined || dsq);
+  return { ath: a, total, osf, hits, shotPoints, tens, dsq, totalSec, tier, marker, hasAny };
+}
+
+function _formatTotalDisplay(row) {
+  if (row.dsq) return 'DSQ';
+  if (row.marker) return row.marker;
+  if (!row.total) return '—';
+  return row.total;
+}
+
+function _sortPatrolRows(rows) {
+  rows.forEach(r => { r._pts = calcPatrolPoints(r); });
+  rows.sort((a, b) => {
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    if (a.tier === 0) {
+      if (a._pts === null && b._pts !== null) return 1;
+      if (b._pts === null && a._pts !== null) return -1;
+      if (a._pts !== null && b._pts !== null && a._pts !== b._pts) return a._pts - b._pts;
+      const aShot = _shotPointsFromRow(a) || 0;
+      const bShot = _shotPointsFromRow(b) || 0;
+      if (aShot !== bShot) return bShot - aShot;
+      const aOsf = parseTime(a.osf || '');
+      const bOsf = parseTime(b.osf || '');
+      if (Number.isFinite(aOsf) && Number.isFinite(bOsf) && aOsf !== bOsf) return aOsf - bOsf;
+      const aTens = parseInt(a.tens) || 0;
+      const bTens = parseInt(b.tens) || 0;
+      if (aTens !== bTens) return bTens - aTens;
+    }
+    return (a.ath.name || '').localeCompare(b.ath.name || '');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER PATROL — różne widoki
+// ═══════════════════════════════════════════════════════════════
+
+function _medal(rank) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return '';
+}
+
+function renderPatrolIndividual(gender) {
+  const rows = _state.athletes.filter(a => a.gender === gender).map(a => _buildPatrolRow(a, _state)).filter(r => r.hasAny);
+  if (!rows.length) {
+    return '<div class="empty"><div class="empty-icon">📋</div>Brak wpisanych wyników</div>';
+  }
+  _sortPatrolRows(rows);
+
+  let visibleRank = 0;
+  return rows.map((r, i) => {
+    const isClassified = r.tier === 0 && r._pts !== null;
+    if (isClassified) visibleRank++;
+    const rankNum = isClassified ? visibleRank : '—';
+    const topCls = (isClassified && visibleRank <= 3) ? ' top-' + visibleRank : '';
+    const dsqCls = r.dsq ? ' dsq' : '';
+    const medal = _medal(visibleRank);
+    const name = r.ath.name || 'Bez nazwy';
+    const team = r.ath.team || '';
+    const totalDisp = _formatTotalDisplay(r);
+    const osfDisp = r.osf || '—';
+    const shotDisp = (r.shotPoints !== undefined && r.shotPoints !== null && r.shotPoints !== '') ? (r.shotPoints + ' pkt') : '—';
+    const ptsDisp = r._pts !== null ? r._pts.toString() : (r.dsq ? 'DSQ' : '—');
+    const scoreCls = (r._pts === null) ? ' dnf' : '';
+
+    return '<div class="rank-card' + topCls + dsqCls + '">' +
+      '<div class="rank-num">' + (medal || rankNum) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(name) + '</div>' +
+        (team ? '<div class="rank-team">' + esc(team) + '</div>' : '') +
+        '<div class="rank-details">' +
+          '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">⏱ OSF</span><span class="rank-detail-val">' + esc(osfDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">🎯</span><span class="rank-detail-val">' + esc(shotDisp) + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score' + scoreCls + '">' + esc(ptsDisp) + '</div>' +
+        '<div class="rank-score-lbl">pkt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderPatrolTeam() {
+  // Klasyfikacja drużynowa: suma 3 najlepszych M z drużyny
+  const menRows = _state.athletes.filter(a => a.gender === 'M').map(a => _buildPatrolRow(a, _state));
+
+  const byTeam = {};
+  menRows.forEach(r => {
+    const team = r.ath.team;
+    if (!team) return;
+    if (!byTeam[team]) byTeam[team] = [];
+    byTeam[team].push(r);
+  });
+
+  const teamRows = [];
+  for (const team in byTeam) {
+    const all = byTeam[team];
+    _sortPatrolRows(all);
+    const classified = all.filter(r => r._pts !== null);
+    if (classified.length < 3) continue;
+    const top3 = classified.slice(0, 3);
+    const sum = top3.reduce((s, r) => s + r._pts, 0);
+    teamRows.push({ team, sum, top3 });
+  }
+
+  if (teamRows.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🛡</div>Brak drużyn z 3 sklasyfikowanymi M</div>';
+  }
+
+  teamRows.sort((a, b) => a.sum - b.sum);
+
+  return teamRows.map((r, i) => {
+    const rank = i + 1;
+    const topCls = rank <= 3 ? ' top-' + rank : '';
+    const medal = _medal(rank);
+    const names = r.top3.map(t => esc(t.ath.name || '?')).join(', ');
+    return '<div class="rank-card' + topCls + '">' +
+      '<div class="rank-num">' + (medal || rank) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(r.team) + '</div>' +
+        '<div class="rank-details" style="margin-top:6px;">' +
+          '<span><span class="rank-detail-lbl">Top 3:</span><span class="rank-detail-val">' + names + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score">' + r.sum + '</div>' +
+        '<div class="rank-score-lbl">pkt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _parseTeamSec(str) {
+  if (!str) return NaN;
+  if (typeof str === 'number') return str;
+  const s = String(str).trim();
+  const m = s.match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/);
+  if (m) return parseInt(m[1]) * 60 + parseFloat(m[2]);
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : n;
+}
+
+function calcTeamRunPoints(tr) {
+  if (!tr) return null;
+  if (tr.dsq) return null;
+  const biegSec = parseFloat(tr.biegSec);
+  if (!Number.isFinite(biegSec) || biegSec <= 0) return null;
+  const osfSec = parseFloat(tr.osfSec);
+  if (!Number.isFinite(osfSec) || osfSec <= 0) return null;
+  const shotPoints = parseInt(tr.shotPoints);
+  if (!Number.isFinite(shotPoints)) return null;
+  const eliminated = parseInt(tr.eliminated) || 0;
+  const osfPts = 480 - 2 * osfSec;
+  const strzPts = shotPoints * 2;
+  const elimPts = eliminated * 100;
+  return Math.round(biegSec - osfPts - strzPts + elimPts);
+}
+
+function _formatTeamSec(sec) {
+  if (!Number.isFinite(sec)) return '—';
+  const m = Math.floor(sec / 60);
+  const s = sec - m * 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(2);
+}
+
+function renderPatrolTeamRun() {
+  const teamRun = _state.teamRun || {};
+  const teamNames = Object.keys(teamRun);
+  if (teamNames.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🏃</div>Brak wpisanych biegów drużynowych</div>';
+  }
+
+  const rows = teamNames.map(name => {
+    const tr = teamRun[name];
+    const pts = calcTeamRunPoints(tr);
+    return { name, tr, pts, dsq: !!tr.dsq };
+  });
+
+  rows.sort((a, b) => {
+    // Sklasyfikowani pierwsi
+    if (a.pts === null && b.pts === null) return 0;
+    if (a.pts === null) return 1;
+    if (b.pts === null) return -1;
+    return a.pts - b.pts;
+  });
+
+  let visibleRank = 0;
+  return rows.map(r => {
+    const isClassified = r.pts !== null;
+    if (isClassified) visibleRank++;
+    const rankNum = isClassified ? visibleRank : '—';
+    const topCls = (isClassified && visibleRank <= 3) ? ' top-' + visibleRank : '';
+    const dsqCls = r.dsq ? ' dsq' : '';
+    const medal = _medal(visibleRank);
+    const biegDisp = _formatTeamSec(parseFloat(r.tr.biegSec));
+    const osfDisp = _formatTeamSec(parseFloat(r.tr.osfSec));
+    const shotDisp = (r.tr.shotPoints !== undefined && r.tr.shotPoints !== null && r.tr.shotPoints !== '') ? (r.tr.shotPoints + ' pkt') : '—';
+    const elim = parseInt(r.tr.eliminated) || 0;
+    const ptsDisp = r.pts !== null ? r.pts.toString() : (r.dsq ? 'DSQ' : '—');
+    const scoreCls = (r.pts === null) ? ' dnf' : '';
+
+    return '<div class="rank-card' + topCls + dsqCls + '">' +
+      '<div class="rank-num">' + (medal || rankNum) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(r.name) + '</div>' +
+        '<div class="rank-details">' +
+          '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + biegDisp + '</span></span>' +
+          '<span><span class="rank-detail-lbl">⏱ OSF</span><span class="rank-detail-val">' + osfDisp + '</span></span>' +
+          '<span><span class="rank-detail-lbl">🎯</span><span class="rank-detail-val">' + shotDisp + '</span></span>' +
+          (elim > 0 ? '<span style="color:var(--red);">⚠ ' + elim + ' eliminacji</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score' + scoreCls + '">' + esc(ptsDisp) + '</div>' +
+        '<div class="rank-score-lbl">pkt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderPatrolOverall() {
+  // Klasyfikacja generalna: indywid (top 3 M z każdej drużyny) + bieg drużynowy
+  // Drużyna bez biegu drużynowego: +1200 pkt karnych
+  const menRows = _state.athletes.filter(a => a.gender === 'M').map(a => _buildPatrolRow(a, _state));
+  const byTeam = {};
+  menRows.forEach(r => {
+    const team = r.ath.team;
+    if (!team) return;
+    if (!byTeam[team]) byTeam[team] = [];
+    byTeam[team].push(r);
+  });
+
+  const teamRun = _state.teamRun || {};
+
+  const overall = [];
+  for (const team in byTeam) {
+    const all = byTeam[team];
+    _sortPatrolRows(all);
+    const classified = all.filter(r => r._pts !== null);
+    if (classified.length < 3) continue;
+    const indSum = classified.slice(0, 3).reduce((s, r) => s + r._pts, 0);
+    const tr = teamRun[team];
+    const trPts = tr ? calcTeamRunPoints(tr) : null;
+    const trPenalty = (trPts === null) ? 1200 : 0;
+    const total = indSum + (trPts !== null ? trPts : 0) + trPenalty;
+    overall.push({ team, indSum, trPts, trPenalty, total });
+  }
+
+  if (overall.length === 0) {
+    return '<div class="empty"><div class="empty-icon">🏆</div>Brak drużyn z kompletem wyników</div>';
+  }
+
+  overall.sort((a, b) => a.total - b.total);
+
+  return overall.map((r, i) => {
+    const rank = i + 1;
+    const topCls = rank <= 3 ? ' top-' + rank : '';
+    const medal = _medal(rank);
+    const trDisp = r.trPts !== null ? r.trPts + ' pkt' : ('brak (+' + r.trPenalty + ')');
+    return '<div class="rank-card' + topCls + '">' +
+      '<div class="rank-num">' + (medal || rank) + '</div>' +
+      '<div class="rank-info">' +
+        '<div class="rank-name">' + esc(r.team) + '</div>' +
+        '<div class="rank-details">' +
+          '<span><span class="rank-detail-lbl">Indyw:</span><span class="rank-detail-val">' + r.indSum + '</span></span>' +
+          '<span><span class="rank-detail-lbl">Bieg dr.:</span><span class="rank-detail-val">' + esc(trDisp) + '</span></span>' +
+        '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="rank-score">' + r.total + '</div>' +
+        '<div class="rank-score-lbl">pkt</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIEW RENDERER (per typ)
+// ═══════════════════════════════════════════════════════════════
+
+const PATROL_TABS = [
+  { id: 'm',       label: '♂ Mężczyźni',  cls: 'tab-tab-cat-m',       render: () => renderPatrolIndividual('M') },
+  { id: 'k',       label: '♀ Kobiety',    cls: 'tab-tab-cat-k',       render: () => renderPatrolIndividual('K') },
+  { id: 'team',    label: '🛡 Drużynowa',  cls: 'tab-tab-cat-team',    render: () => renderPatrolTeam() },
+  { id: 'trun',    label: '🏃 Bieg dr.',   cls: 'tab-tab-cat-trun',    render: () => renderPatrolTeamRun() },
+  { id: 'overall', label: '🏆 Generalna', cls: 'tab-tab-cat-overall', render: () => renderPatrolOverall() },
+];
+
+function buildTabs(tabs) {
+  const el = document.getElementById('tabs');
+  el.style.display = '';
+  el.innerHTML = tabs.map(t =>
+    '<button class="tab-tab ' + t.cls + (t.id === _activeTab ? ' active' : '') + '" onclick="setTab(\'' + t.id + '\')">' + t.label + '</button>'
+  ).join('');
+}
+
+function setTab(id) {
+  _activeTab = id;
+  try { localStorage.setItem('tablica_tab_' + (URL_SLOT || ''), id); } catch (_) {}
+  renderActiveView();
+}
+
+function renderActiveView() {
+  if (_competitionType === 'patrol') {
+    document.querySelectorAll('.tab-tab').forEach(b => b.classList.remove('active'));
+    const activeBtn = document.querySelector('.tab-tab[onclick*="\'' + _activeTab + '\'"]');
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const tab = PATROL_TABS.find(t => t.id === _activeTab) || PATROL_TABS[0];
+    document.getElementById('main').innerHTML = tab.render();
+  } else if (_competitionType === 'osf') {
+    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div>Widok OSF — wkrótce dostępny</div>';
+  } else if (_competitionType === 'wielobój') {
+    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div>Widok Wielobój — wkrótce dostępny</div>';
+  } else {
+    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów</div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN BOOT — z ?slot=
+// ═══════════════════════════════════════════════════════════════
+
+async function loadAndRender() {
+  try {
+    const slotData = await loadSlotMeta(URL_SLOT);
+    if (!slotData) {
+      setLive('err');
+      document.getElementById('main').innerHTML =
+        '<div class="empty"><div class="empty-icon">❓</div>Zawody nie znalezione</div>';
+      return;
+    }
+    _slot = slotData.row;
+    _slotMeta = slotData.meta;
+    _competitionType = _resolveType(_slotMeta.type);
+
+    // Header meta
+    const name = _slotMeta.name || 'Zawody';
+    const city = _slotMeta.city || '';
+    const date = _slotMeta.date || '';
+    const typeLabel = _competitionType === 'wielobój' ? 'Wielobój' : (_competitionType === 'osf' ? 'OSF' : 'Patrol');
+    setMeta([typeLabel, name, city, date].filter(Boolean).join(' · '));
+
+    // Załaduj stan zawodów (per typ)
+    if (_competitionType === 'patrol') {
+      _state = await loadPatrolState(URL_SLOT);
+      if (!_state) {
+        setLive('ok');
+        document.getElementById('main').innerHTML =
+          '<div class="empty"><div class="empty-icon">📭</div>Brak danych konkurencji</div>';
+        return;
+      }
+      // Tabs
+      if (!_activeTab) {
+        try { _activeTab = localStorage.getItem('tablica_tab_' + URL_SLOT) || 'overall'; }
+        catch (_) { _activeTab = 'overall'; }
+      }
+      if (!PATROL_TABS.find(t => t.id === _activeTab)) _activeTab = 'overall';
+      buildTabs(PATROL_TABS);
+      renderActiveView();
+    } else {
+      // OSF / wieloboj — stub na razie
+      renderActiveView();
+    }
+
+    setLive('ok');
+  } catch (e) {
+    console.error('[tablica]', e);
+    setLive('err');
+    document.getElementById('main').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠</div>Błąd: ' + esc(e.message) + '</div>';
+  }
+}
+
+// Auto-refresh
+function startAutoRefresh() {
+  if (_refreshTimer) return;
+  _refreshTimer = setInterval(loadAndRender, 10000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════
+if (!URL_SLOT) {
+  // Brak slotu → pokaz liste do wyboru
+  showSlotsList();
+  // Odswiezaj liste co 30s
+  setInterval(showSlotsList, 30000);
+} else {
+  // Konkretny slot
+  loadAndRender();
+  startAutoRefresh();
+}
+</script>
+</body>
+</html>
