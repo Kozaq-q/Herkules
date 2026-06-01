@@ -2467,17 +2467,14 @@ function renderSetup() {
 }
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
-const TABLICA_BASE_URL = 'https://militarysportsystem.pl/tablica.html';
+const TABLICA_BASE_URL = 'https://militarysportsystem.pl/t.html';
 
 function _getWjShareURL() {
-  // ACTIVE_SLOT_ID = 'panel_<id>' lub legacy 'panel_2', 'mmqro...'
-  // Z tablica.html try-strategy odgaduje wiec wystarczy przekazac herkules slot id
-  // (Sprawdz mapping odwrotny: aktywny slot to ACTIVE_SLOT_ID; herkules slot to mapowany)
-  // Najprosciej: przekazujemy ACTIVE_SLOT_ID (tablica obsluzy tez forme 'panel_X')
   const slotId = (typeof ACTIVE_SLOT_ID !== 'undefined' && ACTIVE_SLOT_ID) ? ACTIVE_SLOT_ID : 'default';
-  // Z 'panel_<id>' wyciagnij <id> (zeby URL byl ladniejszy)
+  // Strip 'panel_' prefix dla URL, potem ostatnie 6 znakow lowercase
   const cleanId = slotId.replace(/^panel_/, '');
-  return TABLICA_BASE_URL + '?slot=' + encodeURIComponent(cleanId);
+  const shortCode = String(cleanId).slice(-6).toLowerCase();
+  return TABLICA_BASE_URL + '?s=' + encodeURIComponent(shortCode);
 }
 
 function _renderWjShareSection() {

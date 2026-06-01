@@ -3158,10 +3158,13 @@ function renderSetupPage() {
 }
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
-const TABLICA_BASE_URL = 'https://militarysportsystem.pl/tablica.html';
+const TABLICA_BASE_URL = 'https://militarysportsystem.pl/t.html';
 
 function _getPtrShareURL() {
-  return TABLICA_BASE_URL + '?slot=' + encodeURIComponent(SLOT_ID || STORAGE_KEY || '');
+  const id = SLOT_ID || STORAGE_KEY || '';
+  // Krotki kod = ostatnie 6 znakow slot_id (lowercase)
+  const shortCode = String(id).slice(-6).toLowerCase();
+  return TABLICA_BASE_URL + '?s=' + encodeURIComponent(shortCode);
 }
 
 function _renderPtrShareSection() {
