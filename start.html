@@ -1131,7 +1131,7 @@ async function createSlot() {
   btn.innerHTML = '<span class="spinner"></span>Tworzenie...';
 
   const newId = generateSlotId();
-  const slot  = { id: newId, type: _newSelectedType, city, name, date, created: new Date().toISOString(), _updated: new Date().toISOString() };
+  const slot  = { id: newId, type: _newSelectedType, city, name, date, publicShare: false, created: new Date().toISOString(), _updated: new Date().toISOString() };
   try {
     await saveSlot(slot);
     const ids = getSlotIds();

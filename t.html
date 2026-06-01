@@ -1115,7 +1115,7 @@ async function loadAndRender() {
     if (!slotData) {
       setLive('err');
       document.getElementById('main').innerHTML =
-        '<div class="empty"><div class="empty-icon">❓</div>Zawody nie znalezione</div>';
+        '<div class="empty" style="padding:80px 20px;"><div class="empty-icon">🔒</div><div style="margin-bottom:8px;">Zawody niedostępne</div><div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Publikacja wyników nie jest włączona, lub link jest nieprawidłowy.</div></div>';
       return;
     }
     _slot = slotData.row;
@@ -1180,7 +1180,20 @@ function startAutoRefresh() {
 // BOOT
 // ═══════════════════════════════════════════════════════════════
 (async function _boot() {
-  // Jezeli mamy short code, najpierw rozwiazujemy do pelnego slot_id
+  // Bez parametru -> placeholder (NIE pokazujemy listy innych zawodow)
+  if (!URL_SLOT && !URL_SLOT_SHORT) {
+    setLive('ok');
+    setMeta('Tablica wyników MSS');
+    document.getElementById('main').innerHTML =
+      '<div class="empty" style="padding:80px 20px;">' +
+        '<div class="empty-icon">📱</div>' +
+        '<div style="margin-bottom:8px;">Zeskanuj QR kod zawodów</div>' +
+        '<div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Każde zawody mają indywidualny QR kod / link.<br>Otrzymasz go od organizatora.</div>' +
+      '</div>';
+    return;
+  }
+
+  // Mamy short code -> rozwiaz do pelnego slot_id
   if (!URL_SLOT && URL_SLOT_SHORT) {
     setLive('...');
     const resolved = await _resolveShortSlot(URL_SLOT_SHORT);
@@ -1188,18 +1201,18 @@ function startAutoRefresh() {
       URL_SLOT = resolved;
     } else {
       setLive('err');
+      setMeta('Tablica wyników MSS');
       document.getElementById('main').innerHTML =
-        '<div class="empty"><div class="empty-icon">❓</div>Nie znaleziono zawodów z kodem <code>' + esc(URL_SLOT_SHORT) + '</code></div>';
+        '<div class="empty" style="padding:80px 20px;">' +
+          '<div class="empty-icon">🔒</div>' +
+          '<div style="margin-bottom:8px;">Zawody niedostępne</div>' +
+          '<div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Kod zawodów <code>' + esc(URL_SLOT_SHORT) + '</code> nie został znaleziony, lub publikacja wyników nie jest jeszcze włączona przez organizatora.</div>' +
+        '</div>';
       return;
     }
   }
-  if (!URL_SLOT) {
-    showSlotsList();
-    setInterval(showSlotsList, 30000);
-  } else {
-    loadAndRender();
-    startAutoRefresh();
-  }
+  loadAndRender();
+  startAutoRefresh();
 })();
 </script>
 </body>
