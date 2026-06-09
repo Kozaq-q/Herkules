@@ -26,13 +26,14 @@
   --green:   #4caf82;
   --red:     #e05555;
   --blue:    #5b9bd5;
-  --orange:  #e8944d;
+  --orange:  #4caf82;       /* akcent patrolu — zielony (spójny ze wszystkimi ekranami patrolu) */
+  --warn:    #e8944d;       /* bursztynowy — ostrzeżenia/komunikaty (NIE akcent) */
   --male:    #5b9bd5;
   --female:  #d57b9b;
   --font-h:  'Barlow Condensed', sans-serif;
   --font-b:  'Barlow', sans-serif;
   --font-m:  'JetBrains Mono', monospace;
-  --radius:  6px;
+  --radius:  4px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: var(--bg); color: var(--text1); font-family: var(--font-b); font-size: 14px; line-height: 1.5; min-height: 100vh; overscroll-behavior: none; }
@@ -58,7 +59,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
 .hdr-status.ok .dot { background: var(--green); animation: pulse 2s infinite; }
 .hdr-status.err .dot { background: var(--red); }
-.hdr-status.warn { color: var(--orange); border-color: rgba(232,148,77,.5); }
+.hdr-status.warn { color: var(--warn); border-color: rgba(232,148,77,.5); }
 .hdr-status.block { color: var(--red); border-color: rgba(224,85,85,.5); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
@@ -73,9 +74,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 /* IDLE — czeka */
 .pair-card:not(.running):not(.finished) { opacity: .9; }
 .pair-card:not(.running):not(.finished)::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--border2); }
-/* RUNNING — pomaranczowa gruba ramka + glow + tło */
-.pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(232,148,77,.12), var(--bg2) 40%); box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); animation: card-glow 2s ease-in-out infinite; }
-@keyframes card-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(232,148,77,.18), 0 4px 20px rgba(232,148,77,.22); } 50% { box-shadow: 0 0 0 5px rgba(232,148,77,.30), 0 6px 28px rgba(232,148,77,.32); } }
+/* RUNNING — zielona gruba ramka + glow + tło */
+.pair-card.running { border-color: var(--orange); background: linear-gradient(to right, rgba(76,175,130,.12), var(--bg2) 40%); box-shadow: 0 0 0 4px rgba(76,175,130,.18), 0 4px 20px rgba(76,175,130,.22); animation: card-glow 2s ease-in-out infinite; }
+@keyframes card-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(76,175,130,.18), 0 4px 20px rgba(76,175,130,.22); } 50% { box-shadow: 0 0 0 5px rgba(76,175,130,.30), 0 6px 28px rgba(76,175,130,.32); } }
 /* FINISHED — wyszarzone, mniejsze, bez kolorów */
 .pair-card.finished { border-color: var(--border); background: var(--bg2); opacity: .55; filter: grayscale(.6); }
 .pair-card.finished:hover { opacity: .85; }
@@ -114,10 +115,10 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .pair-gender { font-size: 22px; }
 .pair-status { font-family: var(--font-h); font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 6px 14px; border-radius: 4px; }
 .pair-status.idle { background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
-.pair-status.running { background: var(--orange); color: #111; border: 1px solid var(--orange); animation: pulse 1.5s infinite; box-shadow: 0 2px 10px rgba(232,148,77,.45); }
+.pair-status.running { background: var(--orange); color: #111; border: 1px solid var(--orange); animation: pulse 1.5s infinite; box-shadow: 0 2px 10px rgba(76,175,130,.45); }
 .pair-status.finished { background: var(--green); color: #fff; border: 1px solid var(--green); box-shadow: 0 2px 10px rgba(76,175,130,.4); }
 
-.pair-card.running .pair-head { background: rgba(232,148,77,.10); }
+.pair-card.running .pair-head { background: rgba(76,175,130,.10); }
 .pair-card.finished .pair-head { background: rgba(76,175,130,.10); }
 .pair-card.running .pair-num { color: var(--orange); }
 .pair-card.finished .pair-num { color: var(--green); }
@@ -148,7 +149,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .ath-stat.empty .ath-stat-val { color: var(--text3); font-weight: 400; }
 .ath-stat.dsq { background: rgba(224,85,85,.1); border-color: rgba(224,85,85,.4); }
 .ath-stat.dsq .ath-stat-val { color: var(--red); }
-.ath-stat.marker { background: rgba(232,148,77,.1); border-color: rgba(232,148,77,.4); }
+.ath-stat.marker { background: rgba(76,175,130,.1); border-color: rgba(76,175,130,.4); }
 .ath-stat.marker .ath-stat-val { color: var(--orange); }
 .lane-badge { display: inline-block; font-family: var(--font-h); font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 2px 7px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
 .lane-L { background: rgba(91,155,213,.15); color: var(--male); border: 1px solid rgba(91,155,213,.4); }
@@ -183,7 +184,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .toast.show { transform: translateX(0); }
 .toast.success { border-left-color: var(--green); }
 .toast.error { border-left-color: var(--red); }
-.toast.warning { border-left-color: var(--orange); }
+.toast.warning { border-left-color: var(--warn); }
 </style>
 </head>
 <body>
@@ -207,7 +208,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
     </div>
     <div class="header-right">
       <button id="hide-finished-btn" onclick="togglePsHideFinished()" title="Pokaż/ukryj pary które ukończyły bieg" style="background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text3);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">👁 <span id="hide-finished-label">Ukryj zakończone</span></button>
-      <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(232,148,77,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram <span id="schedule-count" style="margin-left:4px;background:var(--orange);color:#111;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:800;display:none;"></span></button>
+      <button id="schedule-btn" onclick="openScheduleModal()" style="background:rgba(76,175,130,.12);border:1px solid var(--orange);border-radius:var(--radius);color:var(--orange);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;cursor:pointer;">⏰ Harmonogram <span id="schedule-count" style="margin-left:4px;background:var(--orange);color:#111;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:800;display:none;"></span></button>
       <button id="schedule-clear-btn" onclick="quickClearAllSchedule()" title="Szybko wyczyść wszystkie zaplanowane czasy startu" style="display:none;background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.5);border-radius:var(--radius);color:var(--red);font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;cursor:pointer;">🧹 Wyczyść</button>
       <div class="hdr-status" id="live-clock" style="font-family:var(--font-m);font-size:13px;color:var(--text1);font-weight:700;letter-spacing:1px;background:var(--bg3);">00:00:00</div>
       <div class="hdr-status" id="sync-indicator"><span class="dot"></span><span id="sync-label">—</span></div>
@@ -321,7 +322,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
       <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.4;">
         Aktualny czas (zegar serwera): <strong id="pst-pt-now">--:--:--</strong>
       </div>
-      <div id="pst-pt-warning" style="display:none;font-size:11px;color:var(--orange);margin-top:6px;line-height:1.4;background:rgba(232,148,77,.1);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:7px 10px;"></div>
+      <div id="pst-pt-warning" style="display:none;font-size:11px;color:var(--warn);margin-top:6px;line-height:1.4;background:rgba(232,148,77,.1);border:1px solid rgba(232,148,77,.3);border-radius:var(--radius);padding:7px 10px;"></div>
     </div>
     <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
       <button id="pst-pt-clear" onclick="confirmPstClear()" style="background:transparent;color:var(--red);border:1px solid rgba(224,85,85,.4);border-radius:var(--radius);padding:10px 14px;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;">✕ Wyczyść</button>
@@ -743,7 +744,7 @@ function renderTeamPairs() {
   if (!listEl) return;
   // Tryb offline — stoper nieaktywny
   if (state.cfg && state.cfg.offlineMode) {
-    listEl.innerHTML = '<div class="empty" style="border-color:rgba(232,148,77,.5);background:rgba(232,148,77,.04);">' +
+    listEl.innerHTML = '<div class="empty" style="border-color:rgba(76,175,130,.5);background:rgba(76,175,130,.04);">' +
       '<div class="empty-icon">🔌</div>' +
       '<div class="empty-title" style="color:var(--orange);">Tryb offline aktywny</div>' +
       '<div style="line-height:1.6;">Sędzia główny włączył tryb offline.<br>' +
@@ -886,7 +887,7 @@ function renderPairs() {
   const tabsRow = document.getElementById('ps-tabs-row');
   // Tryb offline — START nieaktywny
   if (state.cfg && state.cfg.offlineMode) {
-    listEl.innerHTML = '<div class="empty" style="border-color:rgba(232,148,77,.5);background:rgba(232,148,77,.04);">' +
+    listEl.innerHTML = '<div class="empty" style="border-color:rgba(76,175,130,.5);background:rgba(76,175,130,.04);">' +
       '<div class="empty-icon">🔌</div>' +
       '<div class="empty-title" style="color:var(--orange);">Tryb offline aktywny</div>' +
       '<div style="line-height:1.6;">Sędzia główny włączył tryb offline (sieć niestabilna).<br>' +
@@ -991,7 +992,7 @@ function _updateHideFinishedBtn() {
   if (!btn || !lbl) return;
   if (_psHideFinished) {
     lbl.textContent = 'Pokaż zakończone';
-    btn.style.background = 'rgba(232,148,77,.15)';
+    btn.style.background = 'rgba(76,175,130,.15)';
     btn.style.borderColor = 'var(--orange)';
     btn.style.color = 'var(--orange)';
     btn.firstChild.textContent = '🙈 ';

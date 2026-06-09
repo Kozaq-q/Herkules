@@ -32,6 +32,50 @@ Polski system do prowadzenia zawodów wojskowych. Pure HTML/CSS/JS, jeden plik p
 | `supabase/` | — | Migracje SQL (001-004) + Edge Functions |
 | `cloudflare/` | — | Worker proxy z cache 10s |
 
+## ═══════════════════════════════════════════════════════════
+## SYSTEM WIZUALNY (kanon estetyki) — single source of truth
+## ═══════════════════════════════════════════════════════════
+
+Cel: wszystkie ekrany **spójne**, ale każda konkurencja ma **własny kolor-akcent**
+dziedziczony do WSZYSTKICH swoich ekranów (panel + projektor + speaker + tablica).
+
+### Dwie rodziny wizualne (celowy podział — zachowany)
+- **Panele** (robocze ekrany sędziów): fonty Barlow Condensed / Barlow / JetBrains Mono, tło `#0d0f0f`.
+  Pliki: `start, wieloboj, osf, patrol, patrol-start, projektor, t.html`.
+- **Wielki ekran** (projektory + speaker — czytelność z dystansu): fonty Oswald / DM Sans / DM Mono, tło `#0a0c0e`.
+  Pliki: `osf-projektor, osf-speaker, patrol-speaker, patrol-projektor`.
+
+### Kolor-akcent per konkurencja (zmienna `--orange` = „akcent konkurencji")
+| Konkurencja | Panele (Barlow) | Wielki ekran (Oswald) |
+|---|---|---|
+| **Patrol** 🟢 | `#4caf82` | `#50c890` |
+| **OSF** 🟠 | `#e8944d` | `#f09050` |
+| **Wielobój** 🟡 | `#e8d44d` (= brand gold) | `#f0d060` |
+
+`start.html` (hub, wieloskładnikowy) = neutralny brand, akcent zostaje pomarańczowy.
+
+### Kanon tokenów wspólnych (NIE dryfować)
+- **Mężczyźni**: panele `#5b9bd5`, wielki ekran `#60a8e8`
+- **Kobiety**: panele `#d57b9b`, wielki ekran `#e060b0`
+- **Radius**: `4px` (+ `--radius-lg` 8–10px dla dużych kart, gdzie używane)
+- **Brand gold** (`--accent`): `#e8d44d` (panele) / `#f0d060` (wielki ekran) — stały, niezależny od konkurencji
+- **Zielony/czerwony semantyczny**: `--green #4caf82/#50c890`, `--red #e05555/#e85858`
+
+### WAŻNE anti-patterny kolorów (do sprzątnięcia per plik)
+- `--orange` powinien znaczyć TYLKO „akcent konkurencji". Ostrzeżenia/DSQ → `--red` (lub osobny token).
+  - **wieloboj.html** miesza `--orange` z kolorem DSQ (przekreślenia, „nieparzysta", btn-warn) —
+    przed przejściem na złoto trzeba rozdzielić akcent od koloru ostrzeżeń.
+- Zakodowane na sztywno odcienie akcentu (`rgba(232,148,77,…)`, `rgba(240,144,80,…)`) cieniują token —
+  przy zmianie koloru konkurencji trzeba przejść po tłach/cieniach, nie tylko po `:root`.
+
+### Status wdrożenia kanonu
+- ✅ Kolor kobiet ujednolicony (osf/t.html → `#d57b9b`)
+- ✅ Radius patrol-start → 4px
+- ✅ Patrol → zielony na `patrol-start`, `patrol-speaker`, `patrol-projektor` (token + odcienie rgba; patrol-start ma osobny `--warn` na ostrzeżenia)
+- ⬜ Wielobój → złoto (panel `wieloboj.html` + `projektor.html`; wymaga rozdzielenia DSQ od akcentu)
+- ⬜ `t.html` → akcent dynamiczny wg typu ładowanej konkurencji
+- ⬜ `start.html` → opcjonalne kolorowanie slotów wg typu
+
 ## Tabele Supabase
 - `herkules_slots` — metadane slotów (`slot_id`, `slot_json`, `updated_at`). Slot.meta = `{athletes, teams, status, accentColor, updatedAt}` zapisywane po każdym save (throttle 5s przez `_syncSlotMetaThrottled`). `start.html` `getSlotStats()` czyta `slot.meta` najpierw, fallback do localStorage. **Po fazie 2: slot ma też pole `publicShare: bool`** — kontroluje czy uczestnicy widzą wyniki w t.html.
 - `osf_state` — stan OSF (`slot_id`, `state_json`, `updated_at`). slot_id = `'osf_slot_' + herkulesId`
