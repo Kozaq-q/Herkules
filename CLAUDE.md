@@ -16,17 +16,45 @@ Polski system do prowadzenia zawodów wojskowych. Pure HTML/CSS/JS, jeden plik p
 | `osf.html` | 11027 | OSF — panel sędziowski (S1, S2, drużynówka, klasyfikacja) |
 | `osf-projektor.html` | 1480 | OSF projektor publiczny |
 | `osf-speaker.html` | 1700 | OSF speaker (komentator) |
-| `patrol.html` | 6836 | Patrol — panel sędziowski (główny plik nad którym pracujemy) |
+| `patrol.html` | ~7100 | Patrol — panel sędziowski (główny plik nad którym pracujemy) |
 | `patrol-start.html` | 1677 | Patrol — apka sędziego startu (mobilna) |
 | `patrol-speaker.html` | 818 | Patrol speaker |
 | `patrol-projektor.html` | 876 | Patrol projektor |
 | `projektor.html` | 1060 | Wielobój projektor |
+| `start.html` | ~1200 | Panel start (wejściowy) — z panelem zarządzania sędziami |
+| `wieloboj.html` | ~6500 | Wielobój (przemianowany z index.html) |
+| `index.html` | ~20 | Redirect → start.html (zachowuje query+hash) |
+| `t.html` | ~1500 | **TABLICA WYNIKÓW publiczna** dla uczestników (read-only, kafelkowy layout + hero + lupa + auto-refresh 10s) |
+| `tablica.html` | ~30 | Redirect na t.html (legacy URL) |
+| `qr.html` | ~280 | Plakat QR do druku A4 (czerno-biały, instrukcje dla zawodników) |
+| `favicon.svg` | — | Żółty sześciokąt MSS dla wszystkich tabów |
+| `auth.js` | ~600 | **Wspólny moduł autoryzacji** (Supabase Auth + login overlay + watchdog) |
+| `supabase/` | — | Migracje SQL (001-004) + Edge Functions |
+| `cloudflare/` | — | Worker proxy z cache 10s |
 
 ## Tabele Supabase
-- `herkules_slots` — metadane slotów (`slot_id`, `slot_json`, `updated_at`). Slot.meta = `{athletes, teams, status, accentColor, updatedAt}` zapisywane po każdym save (throttle 5s przez `_syncSlotMetaThrottled`). `start.html` `getSlotStats()` czyta `slot.meta` najpierw, fallback do localStorage.
-- `osf_state` — stan OSF (`slot_id`, `state_json`, `updated_at`)
-- `app_state` — stan czwórbóju/wieloboju
-- `patrol_state` — stan patrolu (utworzona ręcznie 2026-05-15, RLS + policy anon full access + publication supabase_realtime)
+- `herkules_slots` — metadane slotów (`slot_id`, `slot_json`, `updated_at`). Slot.meta = `{athletes, teams, status, accentColor, updatedAt}` zapisywane po każdym save (throttle 5s przez `_syncSlotMetaThrottled`). `start.html` `getSlotStats()` czyta `slot.meta` najpierw, fallback do localStorage. **Po fazie 2: slot ma też pole `publicShare: bool`** — kontroluje czy uczestnicy widzą wyniki w t.html.
+- `osf_state` — stan OSF (`slot_id`, `state_json`, `updated_at`). slot_id = `'osf_slot_' + herkulesId`
+- `app_state` — stan wieloboju. slot_id = `'panel_' + herkulesId`
+- `patrol_state` — stan patrolu. slot_id = herkulesId (direct)
+- `mss_users` — **whitelist sędziów** (od fazy 1). Kolumny: `id` (linked do auth.users), `email`, `display_name`, `role` (admin/judge), `active`, `created_at`, `created_by`, `notes`. Funkcje pomocnicze: `is_active_judge()`, `is_active_admin()` (SECURITY DEFINER).
+- `auth.users` — tabela systemowa Supabase Auth (emaile + hasła + UUID)
+
+### RLS (Row Level Security) — aktualny stan
+**SELECT:**
+- `mss_users`: anon=blok, authenticated=true (każdy zalogowany czyta listę)
+- `herkules_slots`: anon=tylko gdy `slot_json->>'publicShare' = 'true'`, authenticated=wszystko
+- `patrol_state/osf_state/app_state`: anon=tylko gdy powiązany slot ma `publicShare=true` (subquery do herkules_slots), authenticated=wszystko
+
+**WRITE (INSERT/UPDATE/DELETE):**
+- Wszystkie tabele stanu: tylko `is_active_judge() = true`
+- `mss_users`: tylko service_role (Edge Function admin-users)
+
+Migracje SQL w `supabase/migrations/`:
+- `001_auth_setup.sql` — tabela mss_users, funkcje, RLS na mss_users
+- `002_seed_admin.sql` — szablon do utworzenia pierwszego admina (Pawla)
+- `003_tighten_rls.sql` — zaostrzenie RLS na tabelach stanu
+- `004_public_share_isolation.sql` — anon SELECT tylko publicShare=true
 
 ## Architektura sync (wzorzec wspólny we wszystkich panelach)
 1. **Realtime channel** Supabase (`postgres_changes` na tabeli `<typ>_state`)
@@ -145,6 +173,146 @@ Obszary: `patrol`, `patrol-team-run`, `patrol-team-timer`, `patrol-start`, `patr
 - **Po każdej skończonej zmianie**: zapytać o commit+push (user nie chce ręcznych uploadów). Nie commitować bez zgody (chyba że user wcześniej w sesji powiedział „commit wszystko").
 - **Plik widoczny w preview panelu**: user nie chce komunikatów "plik widoczny w panelu Launch preview" po każdej edycji (mimo że hook to wymusza — ignorować szum, iść dalej).
 
+## ═══════════════════════════════════════════════════════════
+## FAZY ROZWOJU (status wdrożenia)
+## ═══════════════════════════════════════════════════════════
+
+### ✅ Faza 1 — Bezpieczeństwo (wdrożona)
+
+**Cel:** Zastąpić wspólne hasło panelu logowaniem per-sędzia + zabezpieczyć zapisy strukturalnie.
+
+**Komponenty:**
+- `auth.js` — wspólny moduł autoryzacji, Supabase Auth (email+hasło, sesje 30+ dni)
+- Login overlay z fade+blur, generowany dynamicznie przez auth.js
+- Storage key sesji: `mss-auth-token` (wspólny dla wszystkich plików MSS)
+- Cache profilu w `localStorage[mss-auth-profile-cache]` (offline-friendly)
+- Watchdog co 5s: jeśli `mss_users.active = false` → blokujący banner pełnoekranowy + auto-recovery (gdy admin włączy ponownie)
+- Edge Function `admin-users` (TypeScript w Deno, deployed via Supabase Studio) — CRUD na sędziach, używa service_role
+- Panel "👥 Sędziowie" w start.html (admin-only) — wywołuje Edge Function
+
+**Pliki sędziowskie z MSS_AUTH:** `start.html`, `wieloboj.html`, `osf.html`, `patrol.html`, `patrol-start.html`. Każdy ma `<script src="auth.js">` + boot czeka na `MSS_AUTH.init()`. Niezalogowani widzą overlay.
+
+**WAŻNE:** Sędziowie idą **bezpośrednio** do Supabase (NIE przez Worker) — zapisy natychmiastowe, RLS chroni przed niezalogowanymi.
+
+### ✅ Faza 2 — Publika + tablica (wdrożona)
+
+**Cel:** Udostępnić wyniki publicznie przez QR kod, ale strukturalnie odizolować różne zawody (uczestnik jednych zawodów NIE może zobaczyć innych).
+
+**Komponenty:**
+- Custom domena: **`militarysportsystem.pl`** (OVH, ~30 PLN/rok)
+- Cloudflare DNS proxy (free): SSL, DDoS protection, CDN
+- DNS nameservers: `ivy.ns.cloudflare.com`, `sean.ns.cloudflare.com`
+- GitHub Pages serwuje HTML/CSS/JS (przez Cloudflare cache)
+- Plik `CNAME` w repo → custom domain w Settings → Pages
+
+**Routing:**
+- `militarysportsystem.pl/` → `index.html` (redirect na start.html)
+- `militarysportsystem.pl/start.html` → panel sędziowski
+- `militarysportsystem.pl/t.html?s=XXXXXX` → **tablica publiczna** (QR target)
+- `militarysportsystem.pl/qr.html?u=...&n=...` → plakat QR A4 do druku
+
+**Short URL:** `?s=XXXXXX` = ostatnie 6 znaków UUID slotu (lowercase). `t.html` resolwuje przez `ILIKE '%XXXXXX'` w herkules_slots. Backward compat: stary `?slot=UUID` też działa.
+
+**publicShare toggle** w Konfiguracji każdej konkurencji (patrol/osf/wieloboj):
+- Storage: `slot.publicShare: bool` w herkules_slots.slot_json
+- Default `false` dla nowych slotów (`createSlot` w start.html)
+- Toggle UI w karcie "📺 Tablica wyników publiczna" w setup
+- RLS sprawdza tę flagę dla anon SELECT
+
+**Tablica `t.html` — features:**
+- Kafelkowy layout (jak patrol-speaker) — kategorie jako tile grid
+- Klik kafelek → detail view z back button "← Kategorie"
+- Hero section: chip typu (BIEG PATROLOWY/OSF/WIELOBÓJ) + duży tytuł zawodów + miasto/data
+- Subtelny header z `mss-api` URL i 🔍 lupą + ● LIVE indicator
+- **Lupa wyszukiwania** (Cmd+K też): szuka zawodników i drużyn forgiving (ignoruje polskie znaki, case)
+- Auto-refresh co 10s (state.runs via PostgREST)
+- Zawsze startuje od menu kafelkowego (nie z localStorage tab)
+- Pełna funkcjonalność dla 3 typów: patrol (M/K/Drużynowa/Bieg dr./Generalna), OSF (M/K/Drużynowa), wieloboj (M/K/Drużynowa)
+- Mobile responsive + projector-friendly (CSS breakpointy)
+
+**`qr.html` — plakat A4 do druku:**
+- Standalone, parametry przez URL: `?u=share_url&n=name&c=city&d=date`
+- Elegancki czarno-biały design: Georgia serif headline, geometryczny divider, instrukcje 3-kroki w okrągłych obwódkach
+- "Bez potrzeby aplikacji" + "Otwórz aparat w telefonie"
+- Auto-print (param `?print=0` wyłącza)
+
+**QR generator w panelach:** każdy panel (patrol/osf/wieloboj) ma kartę z QR + link + przyciski "Otwórz/Kopiuj/PNG/Drukuj plakat". Lib: `qrious@4.0.2`.
+
+### ✅ Faza 2.5 — Skalowanie (wdrożona)
+
+**Cel:** Wytrzymać dużo viewerów tablicy bez wyczerpania Supabase Free tier.
+
+**Cloudflare Worker** (`cloudflare/worker.js`):
+- URL: `https://mss-api.pawelkozak4327.workers.dev`
+- Cache GET na `/rest/v1/*` przez 10 sekund (`caches.default`)
+- POST/PATCH/DELETE i inne ścieżki — bypass cache
+- Header diagnostyczny: `X-MSS-Cache: HIT/MISS/BYPASS`
+
+**Tylko `t.html`** używa Workera (`SUPABASE_URL = 'https://mss-api.pawelkozak4327.workers.dev'`). Sędziowscy panele dalej direct do `yrgkgzrpfemmthscrprf.supabase.co`.
+
+**Efekt:** 300 viewerów polling co 10s = 1 req/10s do Supabase (zamiast 30 RPS), ~18 MB/h egress (zamiast 5.4 GB/h).
+
+**Cloudflare Workers Free limit:** 100k requestów/dzień. Realnie:
+- 25 viewerów × 8h dziennie: mieści się
+- 50 viewerów × 4h: mieści się
+- 100+ viewerów: ryzyko przekroczenia — wtedy tablica padnie (Worker 1027 error), sędziowie NIEAFEKTOWANI
+- 400+ viewerów: padnie po ~30 min → upgrade Workers Paid $5/mc (10M req/mc) lub zwiększyć refresh interval z 10s
+
+## ═══════════════════════════════════════════════════════════
+## ARCHITEKTURA — pełny stack
+## ═══════════════════════════════════════════════════════════
+
+```
+UCZESTNICY (telefony) — przez QR kod:
+  ↓
+militarysportsystem.pl (Cloudflare DNS)
+  ↓
+GitHub Pages (HTML/CSS/JS) — wymusza redirect z `/` na start.html
+  ↓
+Cloudflare Worker `mss-api` (cache 10s) — TYLKO dla t.html
+  ↓
+Supabase REST API (RLS: anon SELECT tylko publicShare=true)
+
+SĘDZIOWIE (laptop/telefon):
+  ↓
+militarysportsystem.pl → start.html (login overlay z auth.js)
+  ↓
+auth.js: Supabase Auth → JWT → sesja w localStorage[mss-auth-token]
+  ↓
+panele (patrol/osf/wieloboj/...) — BEZPOŚREDNIO do Supabase REST
+  ↓
+RLS: write tylko gdy is_active_judge() = true
+```
+
+## ═══════════════════════════════════════════════════════════
+## SUPABASE — konfiguracja konta
+## ═══════════════════════════════════════════════════════════
+
+- Project URL: `https://yrgkgzrpfemmthscrprf.supabase.co`
+- Anon key: w pliku `auth.js` (linia 26)
+- Auth → Providers → Email → signup DISABLED, password auth ENABLED, auto-confirm dla nowych userów (przez Edge Function)
+- Auth → Sessions: Time-box=0 (never), Inactivity=0 (never) — sesje persistują
+- Auth → Refresh Tokens: Detect compromised ON, reuse interval 10s
+- Edge Function `admin-users` deployed (kod w `supabase/functions/admin-users/index.ts`)
+- Pierwszy admin: `pawelkozak4327@gmail.com` (rola `admin` w mss_users)
+
+## ═══════════════════════════════════════════════════════════
 ## TODO / znane braki
-- patrol.html jest bardzo długi (6836 linii) — przyszły refactor: split na moduły? (na razie monolit dla prostoty deploymentu)
+## ═══════════════════════════════════════════════════════════
+
+**Otwarte pytanie (faza 2.5 niedokończona):**
+- Refresh interval w t.html: aktualnie 10s. Przy 100+ viewerów Worker Free się wyczerpie. Decyzja niepodjęta:
+  - Zmienić na 30s (DARMOWE, daje 3× pojemność)
+  - Workers Paid $5/mies (10M req/mies, praktycznie unlimited)
+  - Hybrid: dynamiczny refresh
+
+**Przyszłe fazy (nie wdrożone):**
+- **Faza 3** — audit log + auto-snapshoty stanu + soft-delete zawodników (recovery po sabotażu, ważne po pierwszych prawdziwych zawodach)
+- **Faza 4** — Cloudflare WAF + rate limiting (anty-spam/DDoS)
+- **Faza 5** — 2FA dla admina (TOTP)
+- **Faza 6** — Cloudflare Email Routing (email pod custom domeną)
+
+**Małe TODO:**
+- patrol.html jest bardzo długi (~7100 linii) — przyszły refactor: split na moduły? (na razie monolit dla prostoty deploymentu)
 - klucz startowy: aktualnie shuffle losowe — można rozważyć Berger gdy więcej drużyn (powtarzalność)
+- Realtime subscriptions w t.html zamiast polling (wymaga Supabase Pro $25/mc, 500 concurrent connections)
