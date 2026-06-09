@@ -57,7 +57,14 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .app-brand-sub { font-size: 9px; color: var(--text3); letter-spacing: 1px; font-family: var(--font-m); }
 .header-right { display: flex; align-items: center; gap: 8px; }
 .header-contest-name { font-family: var(--font-h); font-size: 13px; color: var(--text2); letter-spacing: 1px; }
-.header-autosave { font-size: 10px; color: var(--green); font-family: var(--font-m); opacity: 0.7; }
+.hdr-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
+.hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.hdr-status.ok .dot { background: var(--green); animation: pulse 2s infinite; }
+.hdr-status.err .dot { background: var(--red); }
+.hdr-status.warn .dot { background: var(--orange); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.hdr-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); font-family: var(--font-m); font-size: 10px; padding: 4px 10px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; }
+.hdr-btn:hover { color: var(--text1); border-color: var(--border2); }
 
 /* ─── NAV ─── */
 .nav-bar { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; padding: 0 12px; overflow-x: auto; gap: 2px; }
@@ -366,8 +373,8 @@ tr:last-child > td { border-bottom: none; }
   </div>
   <div class="header-right">
     <span class="header-contest-name" id="header-contest-name"></span>
-    <span class="header-autosave" id="header-autosave">● łączenie...</span>
-    <span id="rt-status" style="font-family:var(--font-m);font-size:10px;margin-left:8px;padding:2px 6px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);">RT: ...</span>
+    <div class="hdr-status" id="rt-status" title="Połączenie na żywo (Realtime)"><span class="dot"></span><span id="rt-label">łączę…</span></div>
+    <div class="hdr-status" id="header-autosave" title="Status zapisu"><span class="dot"></span><span id="autosave-label">łączenie…</span></div>
     <div style="position:relative;">
       <button class="btn btn-sm" onclick="toggleProjSettings()" title="Projektor i ustawienia"
         style="color:var(--accent);border-color:rgba(232,212,77,.3);display:flex;align-items:center;gap:6px;">
@@ -473,8 +480,8 @@ tr:last-child > td { border-bottom: none; }
         </div>
       </div>
     </div>
-    <button class="btn btn-sm" onclick="exportData()" title="Pobierz kopię zapasową zawodów (JSON)" style="flex-shrink:0;font-size:10px;color:var(--text3);border-color:var(--border);">⬇ Backup</button>
-    <button class="btn btn-sm" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
+    <button class="hdr-btn" onclick="exportData()" title="Pobierz kopię zapasową zawodów (JSON)" style="flex-shrink:0;">⬇ Backup</button>
+    <button class="hdr-btn" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
   </div>
 </header>
 
@@ -2302,13 +2309,12 @@ async function saveToSupabase() {
     const stateJson   = JSON.stringify(state);
     const payload     = { slot_id: STORAGE_KEY, state_json: stateJson, updated_at: now };
     const { error }   = await db.from('osf_state').upsert(payload, { onConflict: 'slot_id' });
-    const el = document.getElementById('header-autosave');
     if (error) {
       console.error('Supabase save error:', error);
-      if (el) { el.textContent = '⚠ BŁĄD SYNC'; el.style.color = 'var(--red)'; }
+      _osfSetSave('błąd zapisu', 'err');
       _myWriteTag = ''; // zapis nieudany — kolejny update z chmury może przejść
     } else {
-      if (el) { el.textContent = '● zsync'; el.style.color = 'var(--green)'; }
+      _osfSetSave('zapisano', 'ok');
       // Aktualizuj meta slotu w panelu (statystyki + status) — throttle 5s
       _syncSlotMetaThrottled();
     }
@@ -2469,12 +2475,8 @@ function _applyRemoteStateNow(stateJson) {
     if (state.setup && state.setup.accentColor) {
       document.documentElement.style.setProperty('--orange', state.setup.accentColor);
     }
-    const syncEl = document.getElementById('header-autosave');
-    if (syncEl) {
-      syncEl.textContent = '↓ SYNC';
-      syncEl.style.color = 'var(--accent)';
-      setTimeout(() => { if (syncEl) { syncEl.textContent = '● zsync'; syncEl.style.color = 'var(--green)'; } }, 1000);
-    }
+    _osfSetSave('↓ odebrano', 'ok');
+    setTimeout(() => _osfSetSave('zapisano', 'ok'), 1000);
 
     // Rerenderuj widok — ale tylko jeśli user nie wpisuje czegoś w tym momencie
     clearTimeout(_remoteRenderTimer);
@@ -2502,6 +2504,17 @@ function _tryRemoteRender() {
   else if (id === 'page-setup')        renderSetupPage();
 }
 
+// ── Wskaźniki nagłówka (pille .hdr-status z kropką) ─────────────────
+// kind: 'ok' (zielona pulsująca) | 'err' (czerwona) | 'warn' (pomarańczowa) | '' (szara)
+function _osfHdrStatus(elId, labelId, label, kind) {
+  const el = document.getElementById(elId);
+  if (el) { el.classList.remove('ok', 'err', 'warn'); if (kind) el.classList.add(kind); }
+  const l = document.getElementById(labelId);
+  if (l) l.textContent = label;
+}
+function _osfSetSave(label, kind) { _osfHdrStatus('header-autosave', 'autosave-label', label, kind); }
+function _osfSetRt(label, kind)   { _osfHdrStatus('rt-status', 'rt-label', label, kind); }
+
 // ── Realtime WebSocket (główny kanał, ~200ms latencja) ────────────────
 let _realtimeChannel = null;
 // ── RT health — gdy WebSocket pada, polling przyspiesza z 2s do 1s ───
@@ -2516,26 +2529,25 @@ function _setRtHealthy(healthy) {
 function startRealtimeSync() {
   if (_realtimeChannel) return;
   const db   = getSupabase();
-  const rtEl = document.getElementById('rt-status');
-  if (rtEl) { rtEl.textContent = 'RT: łączę...'; rtEl.style.color = 'var(--text3)'; }
+  _osfSetRt('łączę…', '');
 
   _realtimeChannel = db
     .channel('osf_rt_' + STORAGE_KEY)
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'osf_state', filter: 'slot_id=eq.' + STORAGE_KEY },
       (payload) => {
-        if (rtEl) { rtEl.textContent = 'RT: ↓'; rtEl.style.color = 'var(--accent)'; setTimeout(() => { if (rtEl) { rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)'; } }, 600); }
+        _osfSetRt('↓ live', 'ok');
+        setTimeout(() => _osfSetRt('live', 'ok'), 600);
         const json = payload.new?.state_json;
         if (json) _applyRemoteState(json);
       }
     )
     .subscribe((status) => {
-      if (!rtEl) return;
       if (status === 'SUBSCRIBED') {
-        rtEl.textContent = 'RT: live'; rtEl.style.color = 'var(--green)';
+        _osfSetRt('live', 'ok');
         _setRtHealthy(true);
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        rtEl.textContent = 'RT: błąd'; rtEl.style.color = 'var(--red)';
+        _osfSetRt('offline', 'err');
         _setRtHealthy(false);
         // Próba reconnectu po 3s
         getSupabase().removeChannel(_realtimeChannel);
@@ -2572,7 +2584,7 @@ function startPolling() {
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  document.getElementById('header-autosave').textContent = '● zapisano';
+  _osfSetSave('zapis…', '');
   scheduleSave();
 }
 
