@@ -478,8 +478,11 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 <script>
 // ═══════════════════════════════════════════════════════════════
 // KONFIG SUPABASE — read-only client (anon key)
+// Idziemy przez Cloudflare Worker (cache 10s) zamiast direct
+// do Supabase. Worker redukuje liczbe zapytan ~300x przy duzej
+// liczbie viewerow. Kod Worker: cloudflare/worker.js
 // ═══════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://yrgkgzrpfemmthscrprf.supabase.co';
+const SUPABASE_URL = 'https://mss-api.pawelkozak4327.workers.dev';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlyZ2tnenJwZmVtbXRoc2NycHJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjYxMTUsImV4cCI6MjA4OTAwMjExNX0.CKuLNRCyolMf6nPiWgOcE8j76Isjwc12bwQmIY5E8Do';
 let _sb = null;
 function getSB() {
