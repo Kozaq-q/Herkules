@@ -928,79 +928,6 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           <button onclick="setPtrRole('ADMIN');toggleRoleDropdown()" class="role-chip-opt" data-role="ADMIN" style="width:100%;text-align:left;background:none;border:none;font-family:var(--font-h);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);padding:7px 10px;cursor:pointer;border-radius:3px;">👑 Admin</button>
         </div>
       </div>
-      <div style="position:relative;">
-        <button class="hdr-btn" onclick="togglePtrProjSettings()" title="Projektor i ustawienia" style="color:var(--accent);border-color:rgba(232,212,77,.3);display:flex;align-items:center;gap:6px;">📺 Projektor <span style="opacity:.5;font-size:11px;">⚙</span></button>
-        <div id="ptr-proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:16px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.9);font-family:var(--font-b);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;">⚙ Projektor</div>
-            <button onclick="togglePtrProjSettings()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:0;">×</button>
-          </div>
-
-          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Wyniki</div>
-          <button onclick="openPatrolProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <span style="font-size:22px;">📊</span>
-            <div>
-              <div style="font-weight:700;font-size:13px;color:var(--accent);">Otwórz projektor wyników</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:2px;">M · K · Drużynowa · Bieg druż.</div>
-            </div>
-          </button>
-
-          <!-- Sekcje wyników — kafelki toggle -->
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
-            <button id="ptr-ps-tile-ind-m" onclick="togglePtrProjTile('ind-m')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--male);">♂ M</button>
-            <button id="ptr-ps-tile-ind-k" onclick="togglePtrProjTile('ind-k')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--female);">♀ K</button>
-            <button id="ptr-ps-tile-team" onclick="togglePtrProjTile('team')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--orange);">🛡 Drużynowa</button>
-            <button id="ptr-ps-tile-team-run" onclick="togglePtrProjTile('team-run')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--blue);">🏃 Bieg druż.</button>
-          </div>
-
-          <!-- Scroll + progress -->
-          <div style="display:flex;gap:6px;margin-bottom:14px;">
-            <div style="flex:1;">
-              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Scroll</div>
-              <select id="ptr-ps-scroll-speed" onchange="savePtrProjSettings()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-size:12px;cursor:pointer;">
-                <option value="0">Wyłączony</option>
-                <option value="15">Wolny</option>
-                <option value="30">Normalny</option>
-                <option value="60">Szybki</option>
-                <option value="100">Bardzo szybki</option>
-              </select>
-            </div>
-            <div style="flex:1;">
-              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
-              <button id="ptr-ps-tile-progress" onclick="togglePtrProjTile('progress')" style="width:100%;padding:6px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">Włącz</button>
-            </div>
-          </div>
-
-          <!-- LISTA STARTOWA -->
-          <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:10px;">
-            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Lista startowa</div>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
-              <button id="ptr-ps-tile-g-both" onclick="setPtrProjSLGender('both')" style="padding:8px;background:var(--bg3);border:2px solid var(--accent);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);">M + K</button>
-              <button id="ptr-ps-tile-g-m" onclick="setPtrProjSLGender('M')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♂ M</button>
-              <button id="ptr-ps-tile-g-k" onclick="setPtrProjSLGender('K')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♀ K</button>
-            </div>
-
-            <div style="margin-bottom:10px;">
-              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
-              <button id="ptr-ps-tile-sl-progress" onclick="togglePtrProjTile('sl-progress')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);">Włączony</button>
-            </div>
-            <div style="margin-bottom:10px;">
-              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Czasy auto-startu</div>
-              <button id="ptr-ps-tile-start-times" onclick="togglePtrProjTile('start-times')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);" title="Czy pokazywać zaplanowane czasy startu par (przed startem)">Włączone</button>
-            </div>
-
-            <button onclick="openPatrolStartlistProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;">
-              <span style="font-size:22px;">📋</span>
-              <div>
-                <div style="font-weight:700;font-size:13px;color:var(--green);">Otwórz listę startową</div>
-                <div id="ptr-ps-sl-preview" style="font-size:10px;color:var(--text3);margin-top:2px;">M + K</div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-      <button class="hdr-btn" onclick="exportPatrolBackup()" title="Pobierz kopię zapasową zawodów (JSON)" style="font-size:10px;color:var(--text3);border-color:var(--border);">⬇ Backup</button>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
     </div>
   </header>
@@ -1211,6 +1138,74 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           </div>
           <div style="background:#fff;border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;">
             <canvas id="ptr-share-qr" style="display:block;max-width:100%;height:auto;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROJEKTOR — duży ekran na sali (read-only, bez logowania) -->
+      <div class="card mb-12" id="ptr-projector-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+          <div class="card-title" style="margin:0;padding:0;border:none;">📺 Projektor (duży ekran)</div>
+          <div id="ptr-proj-share-status" style="font-size:11px;font-family:var(--font-m);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 10px;">—</div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:12px;">
+          Wyniki i lista startowa na monitor lub rzutnik. Działa <strong>bez logowania</strong> i jest
+          <strong>tylko do odczytu</strong> — osoba przy ekranie nie może nic zmienić w wynikach
+          (dlatego na komputerze projekcyjnym nie loguj się do panelu).
+          Wymaga włączonej publikacji w karcie „📺 Tablica wyników publiczna" powyżej.
+        </div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Link — wyślij lub otwórz na komputerze przy ekranie</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <input id="ptr-proj-link" type="text" readonly onclick="this.select();"
+            style="flex:1;min-width:220px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:9px 12px;font-family:var(--font-m);font-size:12px;" />
+          <button class="btn" onclick="copyPtrProjLink(this)" style="font-size:11px;padding:9px 14px;flex-shrink:0;">📋 Kopiuj</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="btn" onclick="openPatrolProjektor()" style="font-size:11px;padding:8px 14px;color:var(--accent);border-color:rgba(232,212,77,.4);">📊 Otwórz wyniki</button>
+          <button class="btn" onclick="openPatrolStartlistProjektor()" style="font-size:11px;padding:8px 14px;color:var(--green);border-color:rgba(76,175,130,.4);">📋 Otwórz listę startową</button>
+          <button class="btn" onclick="togglePtrProjSettings()" style="font-size:11px;padding:8px 14px;">⚙ Ustawienia <span id="ptr-proj-settings-arrow" style="font-size:9px;color:var(--text3);">▶</span></button>
+        </div>
+        <div id="ptr-proj-settings-pop" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+          <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Sekcje wyników</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+            <button id="ptr-ps-tile-ind-m" onclick="togglePtrProjTile('ind-m')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--male);">♂ M</button>
+            <button id="ptr-ps-tile-ind-k" onclick="togglePtrProjTile('ind-k')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--female);">♀ K</button>
+            <button id="ptr-ps-tile-team" onclick="togglePtrProjTile('team')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--orange);">🛡 Drużynowa</button>
+            <button id="ptr-ps-tile-team-run" onclick="togglePtrProjTile('team-run')" style="padding:10px 6px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--blue);">🏃 Bieg druż.</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:14px;max-width:420px;">
+            <div style="flex:1;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Scroll</div>
+              <select id="ptr-ps-scroll-speed" onchange="savePtrProjSettings()" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:6px 8px;font-size:12px;cursor:pointer;">
+                <option value="0">Wyłączony</option>
+                <option value="15">Wolny</option>
+                <option value="30">Normalny</option>
+                <option value="60">Szybki</option>
+                <option value="100">Bardzo szybki</option>
+              </select>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
+              <button id="ptr-ps-tile-progress" onclick="togglePtrProjTile('progress')" style="width:100%;padding:6px 8px;background:var(--bg3);border:2px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">Włącz</button>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:14px;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Lista startowa</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;max-width:420px;">
+              <button id="ptr-ps-tile-g-both" onclick="setPtrProjSLGender('both')" style="padding:8px;background:var(--bg3);border:2px solid var(--accent);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);">M + K</button>
+              <button id="ptr-ps-tile-g-m" onclick="setPtrProjSLGender('M')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♂ M</button>
+              <button id="ptr-ps-tile-g-k" onclick="setPtrProjSLGender('K')" style="padding:8px;background:var(--bg3);border:2px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text3);">♀ K</button>
+            </div>
+            <div style="display:flex;gap:6px;max-width:420px;">
+              <div style="flex:1;">
+                <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Progress bar</div>
+                <button id="ptr-ps-tile-sl-progress" onclick="togglePtrProjTile('sl-progress')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);">Włączony</button>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Czasy auto-startu</div>
+                <button id="ptr-ps-tile-start-times" onclick="togglePtrProjTile('start-times')" style="width:100%;padding:8px;background:rgba(80,200,144,.1);border:2px solid var(--green);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;color:var(--green);" title="Czy pokazywać zaplanowane czasy startu par (przed startem)">Włączone</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1874,15 +1869,24 @@ function startStarterPulseListener() {
 function _updateStarterClockPill() {
   const pill = document.getElementById('ptr-starter-clock-pill');
   if (!pill) return;
-  const { state, ageMs } = getStarterClockStatus();
-  if (state === 'live') {
+  // Puls startera ma znaczenie tylko przy synchronizowanym stoperze z aplikacją startera.
+  // Gdy dostęp sędziego startu jest wyłączony i pulsu nigdy nie było — "brak kalibracji"
+  // tylko straszy. Pełna diagnostyka i tak jest w kafelku STATUS w Konfiguracji.
+  const starterEnabled = !!(state && state.cfg && state.cfg.startEnabled);
+  const clk = getStarterClockStatus();
+  if (!starterEnabled && clk.state !== 'live' && clk.state !== 'cached') {
+    pill.style.display = 'none';
+    return;
+  }
+  const ageMs = clk.ageMs;
+  if (clk.state === 'live') {
     pill.style.display = 'inline-flex';
     pill.style.color = 'var(--green)';
     pill.style.borderColor = 'rgba(76,175,130,.5)';
     pill.style.background = 'rgba(76,175,130,.08)';
     pill.innerHTML = '🟢 starter LIVE';
     pill.title = 'Sedzia startu online, wysyla autorytatywny sygnal czasu. Wszyscy mierza czas tak samo.';
-  } else if (state === 'cached') {
+  } else if (clk.state === 'cached') {
     pill.style.display = 'inline-flex';
     const sec = Math.round(ageMs / 1000);
     const min = Math.floor(sec / 60);
@@ -3119,9 +3123,9 @@ function showSyncStatus(s) {
   if (!ind) return;
   ind.classList.remove('ok', 'err', 'pending');
   ind.style.cssText = ''; // reset
-  if (s === 'saving') { lbl.textContent = 'zapis...'; }
-  else if (s === 'ok') { ind.classList.add('ok'); lbl.textContent = 'live'; }
-  else if (s === 'err') { ind.classList.add('err'); lbl.textContent = 'błąd'; }
+  if (s === 'saving') { lbl.textContent = '☁ zapisywanie…'; ind.title = 'Trwa zapis do chmury.'; }
+  else if (s === 'ok') { ind.classList.add('ok'); lbl.textContent = '☁ zapisano'; ind.title = 'Wszystkie zmiany zapisane w chmurze — inni sędziowie je widzą.'; }
+  else if (s === 'err') { ind.classList.add('err'); lbl.textContent = '⚠ błąd zapisu'; ind.title = 'Zapis do chmury nie powiódł się — sprawdź sieć.'; }
   else if (s === 'pending') {
     // Offline / retry — pomarańczowy z licznikiem prób
     ind.classList.add('pending');
@@ -3255,30 +3259,20 @@ function setPtrProjSLGender(g) {
   _updatePtrProjTiles();
 }
 function togglePtrProjSettings() {
+  // Panel inline w karcie projektora (Konfiguracja) — zwykły collapse, bez outside-click
   const pop = document.getElementById('ptr-proj-settings-pop');
   if (!pop) return;
-  if (pop.style.display === 'none' || pop.style.display === '') {
-    pop.style.display = 'block';
-    _updatePtrProjTiles();
-    setTimeout(() => {
-      const handler = e => {
-        if (!pop.contains(e.target) && !e.target.closest('[onclick*="togglePtrProjSettings"]')) {
-          pop.style.display = 'none';
-        }
-        document.removeEventListener('click', handler);
-      };
-      document.addEventListener('click', handler);
-    }, 10);
-  } else {
-    pop.style.display = 'none';
-  }
+  const willOpen = (pop.style.display === 'none' || pop.style.display === '');
+  pop.style.display = willOpen ? 'block' : 'none';
+  if (willOpen) _updatePtrProjTiles();
+  const arrow = document.getElementById('ptr-proj-settings-arrow');
+  if (arrow) arrow.textContent = willOpen ? '▼' : '▶';
 }
 function openPatrolProjektor() {
   savePtrProjSettings();
   const url = 'patrol-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY);
   localStorage.setItem('patrol_proj_slot', STORAGE_KEY);
   window.open(url, 'patrol_projektor', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
-  const pop = document.getElementById('ptr-proj-settings-pop'); if (pop) pop.style.display = 'none';
 }
 function openPatrolStartlistProjektor() {
   savePtrProjSettings();
@@ -3286,7 +3280,35 @@ function openPatrolStartlistProjektor() {
   const gender = cfg.slGender || 'both';
   const url = 'patrol-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY) + '&mode=startlist&gender=' + gender;
   window.open(url, 'patrol_startlist_proj', 'width=1280,height=800,menubar=no,toolbar=no,location=no,status=no');
-  const pop = document.getElementById('ptr-proj-settings-pop'); if (pop) pop.style.display = 'none';
+}
+
+// Pełny URL projektora — do wysłania na komputer przy ekranie
+function _getPtrProjURL() {
+  return new URL('patrol-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY), window.location.href).href;
+}
+
+async function copyPtrProjLink(btn) {
+  try {
+    await navigator.clipboard.writeText(_getPtrProjURL());
+    showToast('📋 Link projektora skopiowany', 'success', 1800);
+  } catch(_) {
+    const inp = document.getElementById('ptr-proj-link');
+    if (inp) { inp.select(); document.execCommand('copy'); showToast('📋 Link skopiowany', 'success', 1800); }
+  }
+}
+
+// Karta projektora: link + wskaźnik zależności od publikacji (RLS: anon czyta tylko publicShare=true)
+function _renderPtrProjSection() {
+  const linkEl = document.getElementById('ptr-proj-link');
+  if (linkEl) linkEl.value = _getPtrProjURL();
+  const st = document.getElementById('ptr-proj-share-status');
+  if (st) {
+    const on = _getPtrPublicShare();
+    st.textContent = on ? '🟢 gotowy — publikacja włączona' : '🔴 wymaga włączenia publikacji';
+    st.style.color = on ? 'var(--green)' : 'var(--red)';
+    st.style.borderColor = on ? 'rgba(76,175,130,.4)' : 'rgba(224,85,85,.4)';
+    st.style.background = on ? 'rgba(76,175,130,.06)' : 'rgba(224,85,85,.06)';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3713,34 +3735,8 @@ function _ptrBuildOverallPrintHTML(asFragment) {
   return _ptrPdfHeader('PATROL', title) + '<div class="ranking-section">' + sectionBody + '</div>' + _ptrPdfFooter();
 }
 
-function exportPatrolBackup() {
-  try {
-    const payload = {
-      _kind: 'patrol_backup',
-      _version: 1,
-      _exportedAt: new Date().toISOString(),
-      slotId: SLOT_ID,
-      state: state
-    };
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const name = (state.setup && (state.setup.name || state.setup.city)) || 'patrol';
-    const date = (state.setup && state.setup.date) || new Date().toISOString().slice(0, 10);
-    const safe = String(name).replace(/[^a-zA-Z0-9_\-]+/g, '_').slice(0, 40) || 'patrol';
-    a.download = 'patrol_' + safe + '_' + date + '.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showToast('⬇ Backup pobrany', 'success', 1800);
-  } catch (e) {
-    console.error('exportPatrolBackup', e);
-    showToast('Błąd przy zapisie backupu', 'error', 3000);
-  }
-}
+// (exportPatrolBackup usunięte — przycisk Backup zniknął z nagłówka;
+//  para Backup/Przywróć żyje w Konfiguracja → Ustawienia zaawansowane: exportPatrolJSON/importPatrolJSON)
 
 // ═══════════════════════════════════════════════════════════════
 // MODAL HELPERS
@@ -3814,6 +3810,7 @@ function renderSetupPage() {
   if (typeof _renderStartSection === 'function') _renderStartSection();
   if (typeof _renderSpeakerSection === 'function') _renderSpeakerSection();
   _renderPtrShareSection();
+  _renderPtrProjSection();
 }
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
@@ -3876,6 +3873,8 @@ function _refreshPtrPublicShareUI() {
     desc.textContent = 'Uczestnicy z QR/linkiem zobaczą "Niedostępne". Kliknij aby włączyć.';
     if (card) card.style.opacity = '0.92';
   }
+  // Karta projektora zależy od tej samej flagi — odśwież jej wskaźnik
+  if (typeof _renderPtrProjSection === 'function') _renderPtrProjSection();
 }
 
 async function togglePtrPublicShare() {
@@ -5924,7 +5923,8 @@ function _updateRoleChip() {
   const role = getPtrRole();
   const cfg = PTR_ROLES[role];
   const lbl = document.getElementById('role-chip-label');
-  if (lbl) lbl.textContent = cfg.label.toUpperCase();
+  // "TRYB:" — odróżnia rolę patrolową od roli konta (ADMIN w chipie logowania to co innego)
+  if (lbl) lbl.textContent = 'TRYB: ' + cfg.label.toUpperCase();
   const btn = document.getElementById('role-chip-btn');
   if (btn) {
     const colors = {
