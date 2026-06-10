@@ -489,6 +489,278 @@ function ensureStateDefaults() {
   if (!state.teamRunPairs) state.teamRunPairs = [];
 }
 
+// ═══════════════════════════════════════════════════════════════
+// MERGE PER-POLE — lustrzana kopia logiki z patrol.html.
+// Starter wysyła PEŁNY stan, więc bez merge nadpisywałby współbieżne
+// wpisy sędziów META/OSF (stop, strzelanie, DSQ) snapshotem sprzed sekund.
+// ═══════════════════════════════════════════════════════════════
+const TIMES_FIELDS = ['osf', 'total', 'hits', 'shotPoints', 'tens', 'osfAlts', 'totalAlts'];
+const TIMES_FIELDS_WITH_SOURCE = ['osf', 'total'];
+
+function mergeTimesPerField(local, incoming) {
+  const allIds = new Set([...Object.keys(local), ...Object.keys(incoming)]);
+  for (const id of allIds) {
+    const L = local[id] || {};
+    const R = incoming[id] || {};
+    if (!incoming[id]) incoming[id] = {};
+    const out = incoming[id];
+    for (const field of TIMES_FIELDS) {
+      const atField = field + 'At';
+      const lAt = L[atField] || 0;
+      const rAt = R[atField] || 0;
+      if (lAt > rAt) {
+        if (L[field] !== undefined) out[field] = L[field];
+        else delete out[field];
+        out[atField] = lAt;
+        if (TIMES_FIELDS_WITH_SOURCE.includes(field)) {
+          const srcField = field + 'Source';
+          if (L[srcField] !== undefined) out[srcField] = L[srcField];
+          else delete out[srcField];
+        }
+      }
+    }
+  }
+}
+
+function mergeDisqPerId(localDisq, localDisqAt, remoteDisq, remoteDisqAt) {
+  const allIds = new Set([...Object.keys(localDisq), ...Object.keys(remoteDisq)]);
+  const outDisq = {};
+  const outAt = {};
+  for (const id of allIds) {
+    const lAt = localDisqAt[id] || 0;
+    const rAt = remoteDisqAt[id] || 0;
+    if (lAt > rAt) {
+      if (localDisq[id]) outDisq[id] = true;
+      outAt[id] = lAt;
+    } else if (rAt > 0) {
+      if (remoteDisq[id]) outDisq[id] = true;
+      outAt[id] = rAt;
+    }
+  }
+  Object.keys(localDisq).forEach(k => delete localDisq[k]);
+  Object.keys(localDisqAt).forEach(k => delete localDisqAt[k]);
+  Object.assign(localDisq, outDisq);
+  Object.assign(localDisqAt, outAt);
+}
+
+const TEAMRUN_MERGE_FIELDS = ['biegSec', 'osfSec', 'shotPoints', 'eliminated', 'tens', 'dsq', 'biegSecAlts', 'osfSecAlts'];
+const TEAMRUN_FIELDS_WITH_SOURCE = ['biegSec'];
+
+function mergeTeamRunPerField(local, incoming) {
+  const allTeams = new Set([...Object.keys(local || {}), ...Object.keys(incoming || {})]);
+  for (const team of allTeams) {
+    const L = (local || {})[team] || {};
+    const R = (incoming || {})[team] || {};
+    if (!incoming[team]) incoming[team] = {};
+    const out = incoming[team];
+    for (const field of TEAMRUN_MERGE_FIELDS) {
+      const atField = field + 'At';
+      const lAt = L[atField] || 0;
+      const rAt = R[atField] || 0;
+      if (lAt > rAt) {
+        if (L[field] !== undefined) out[field] = L[field];
+        else delete out[field];
+        out[atField] = lAt;
+        if (TEAMRUN_FIELDS_WITH_SOURCE.includes(field)) {
+          const srcField = field + 'Source';
+          if (L[srcField] !== undefined) out[srcField] = L[srcField];
+          else delete out[srcField];
+        }
+      }
+    }
+  }
+}
+
+// Per-key merge stoperów z tombstonami (deletedAt) + decyzją harmonogramu (scheduledStartAtAt)
+function _mergeRunsPerKey(localRuns, incomingRuns) {
+  const allKeys = new Set([...Object.keys(localRuns || {}), ...Object.keys(incomingRuns || {})]);
+  const out = {};
+  for (const k of allKeys) {
+    const L = (localRuns || {})[k];
+    const R = (incomingRuns || {})[k];
+    if (!L && !R) continue;
+    if (!L) { out[k] = R; continue; }
+    if (!R) { out[k] = L; continue; }
+    const del = Math.max(L.deletedAt || 0, R.deletedAt || 0);
+    const merged = {};
+    if (del) merged.deletedAt = del;
+    const startedAt = Math.max(
+      (L.startedAt || 0) > del ? L.startedAt : 0,
+      (R.startedAt || 0) > del ? R.startedAt : 0
+    );
+    if (startedAt) merged.startedAt = startedAt;
+    const finL = L.finishedAt || {};
+    const finR = R.finishedAt || {};
+    const finOut = {};
+    const finKeys = new Set([...Object.keys(finL), ...Object.keys(finR)]);
+    finKeys.forEach(id => {
+      const v = Math.max(finL[id] || 0, finR[id] || 0);
+      if (v && v > del) finOut[id] = v;
+    });
+    if (startedAt || Object.keys(finOut).length) merged.finishedAt = finOut;
+    const schedDecL = L.scheduledStartAtAt || 0;
+    const schedDecR = R.scheduledStartAtAt || 0;
+    if (schedDecL || schedDecR) {
+      const winner = schedDecL >= schedDecR ? L : R;
+      if (winner.scheduledStartAt) merged.scheduledStartAt = winner.scheduledStartAt;
+      merged.scheduledStartAtAt = Math.max(schedDecL, schedDecR);
+    } else {
+      const schedAt = Math.max(L.scheduledStartAt || 0, R.scheduledStartAt || 0);
+      if (schedAt) merged.scheduledStartAt = schedAt;
+    }
+    if (Object.keys(merged).length) out[k] = merged;
+  }
+  return out;
+}
+
+function _runTombstone(existing) {
+  const t = { deletedAt: nowMs() };
+  if (existing && (existing.scheduledStartAt || existing.scheduledStartAtAt)) t.scheduledStartAtAt = Date.now();
+  return t;
+}
+
+function _isRunTombstone(run) {
+  return !!(run && !run.startedAt && !run.scheduledStartAt && run.deletedAt);
+}
+
+function _mergeLocalIntoIncoming(incoming) {
+  if (!state) return incoming;
+  if (state.times) {
+    if (!incoming.times) incoming.times = {};
+    mergeTimesPerField(state.times, incoming.times);
+  }
+  if (state.disq) {
+    if (!state.disqAt) state.disqAt = {};
+    mergeDisqPerId(state.disq, state.disqAt, incoming.disq || {}, incoming.disqAt || {});
+    incoming.disq = state.disq;
+    incoming.disqAt = state.disqAt;
+  }
+  if (state.runs) incoming.runs = _mergeRunsPerKey(state.runs, incoming.runs || {});
+  if (state.teamRuns) incoming.teamRuns = _mergeRunsPerKey(state.teamRuns, incoming.teamRuns || {});
+  if (state.teamRun) {
+    if (!incoming.teamRun) incoming.teamRun = {};
+    mergeTeamRunPerField(state.teamRun, incoming.teamRun);
+  }
+  return incoming;
+}
+
+// Czyszczenie pola czasu Z TOMBSTONEM — zwykły delete nie propaguje przez merge
+function _psClearTimeField(id, field) {
+  if (!state.times?.[id]) return;
+  const t = state.times[id];
+  if (t[field] === undefined && !t[field + 'At']) return;
+  delete t[field];
+  delete t[field + 'Source'];
+  t[field + 'At'] = nowMs();
+}
+
+function _psClearTeamRunField(team, field) {
+  if (!state.teamRun?.[team]) return;
+  const tr = state.teamRun[team];
+  if (tr[field] === undefined && !tr[field + 'At']) return;
+  delete tr[field];
+  delete tr[field + 'Source'];
+  tr[field + 'At'] = nowMs();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DZIENNIK ZDARZEŃ — kolejka localStorage → mss_events (migracja 005).
+// Akcje startera (START/RESET/falstart) to kluczowe wpisy audytu.
+// ═══════════════════════════════════════════════════════════════
+const _EVQ_KEY = 'ptr_evq_starter_' + SLOT_ID;
+let _evqFlushTimer = null;
+let _evqFlushing = false;
+let _evqRetryTimer = null;
+
+function _evqLoad() {
+  try { return JSON.parse(localStorage.getItem(_EVQ_KEY)) || []; } catch(_) { return []; }
+}
+function _evqSave(q) {
+  try { localStorage.setItem(_EVQ_KEY, JSON.stringify(q)); } catch(_) {}
+}
+
+function logEvent(action, details) {
+  try {
+    const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || null;
+    const q = _evqLoad();
+    q.push({
+      slot_id:    STORAGE_KEY,
+      user_email: prof ? (prof.email || null) : null,
+      user_name:  prof ? (prof.display_name || prof.email || null) : null,
+      role:       'STARTER',
+      action:     action,
+      details:    details || {},
+      client_at:  new Date().toISOString()
+    });
+    if (q.length > 300) q.splice(0, q.length - 300);
+    _evqSave(q);
+  } catch(_) {}
+  _evqFlushSoon();
+}
+
+function _evqFlushSoon() {
+  if (_evqFlushTimer) return;
+  _evqFlushTimer = setTimeout(() => { _evqFlushTimer = null; _evqFlush(); }, 2000);
+}
+
+async function _evqFlush() {
+  if (_evqFlushing) return;
+  const q = _evqLoad();
+  if (!q.length) return;
+  _evqFlushing = true;
+  try {
+    const batch = q.slice(0, 50);
+    const { error } = await getDB().from('mss_events').insert(batch);
+    if (!error) {
+      const rest = _evqLoad().slice(batch.length);
+      _evqSave(rest);
+      if (rest.length) _evqFlushSoon();
+      if (_evqRetryTimer) { clearInterval(_evqRetryTimer); _evqRetryTimer = null; }
+    } else if (!_evqRetryTimer) {
+      _evqRetryTimer = setInterval(_evqFlush, 30000);
+    }
+  } catch(_) {
+    if (!_evqRetryTimer) _evqRetryTimer = setInterval(_evqFlush, 30000);
+  } finally {
+    _evqFlushing = false;
+  }
+}
+
+// ── OBECNOŚĆ — starter widoczny w chipie 👥 panelu głównego ──
+let _presenceChannel = null;
+function startPresence() {
+  if (_presenceChannel) return;
+  try {
+    _presenceChannel = getDB().channel('patrol_presence_' + STORAGE_KEY, {
+      config: { presence: { key: SESSION_ID } }
+    });
+    _presenceChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        _presenceTrack();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        try { getDB().removeChannel(_presenceChannel); } catch(_) {}
+        _presenceChannel = null;
+        setTimeout(startPresence, 5000);
+      }
+    });
+    setInterval(_presenceTrack, 60000);
+  } catch(_) {}
+}
+
+async function _presenceTrack() {
+  if (!_presenceChannel) return;
+  try {
+    const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || {};
+    await _presenceChannel.track({
+      name:   prof.display_name || (prof.email ? prof.email.split('@')[0] : 'starter'),
+      email:  prof.email || '',
+      role:   'STARTER',
+      device: 'starter',
+      at:     Date.now()
+    });
+  } catch(_) {}
+}
+
 async function loadState() {
   try {
     const { data } = await getDB().from('patrol_state').select('state_json').eq('slot_id', STORAGE_KEY).single();
@@ -568,7 +840,15 @@ async function saveState() {
     if (error) { console.error('Save error:', error); _myWriteTag = ''; showSyncStatus('err'); }
     else { showSyncStatus('ok'); }
   } catch(e) { console.error(e); _myWriteTag = ''; showSyncStatus('err'); }
-  finally { _isSaving = false; }
+  finally {
+    _isSaving = false;
+    // Remote odebrany w trakcie zapisu nie ginie — zastosuj po save (merge jest idempotentny)
+    if (_pendingRemoteApply) {
+      const json = _pendingRemoteApply;
+      _pendingRemoteApply = null;
+      applyRemoteState(json);
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -612,12 +892,16 @@ function startPolling() {
   }, interval);
 }
 
+let _pendingRemoteApply = null;
 function applyRemoteState(json) {
   if (!json) return;
+  // Remote w trakcie naszego zapisu — odłóż (zostanie zastosowany po save), nie gub
+  if (_isSaving) { _pendingRemoteApply = json; return; }
   try {
     const incoming = JSON.parse(json);
     if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
-    if (_isSaving) return;
+    // MERGE per-pole zamiast podmiany — starter nie nadpisuje współbieżnych wpisów META/OSF
+    _mergeLocalIntoIncoming(incoming);
     state = incoming;
     ensureStateDefaults();
     // Czy dostęp dalej OK?
@@ -666,7 +950,8 @@ function displayName(a) {
 
 function getRun(gender, pairNum) {
   const k = gender + '_' + pairNum;
-  return (state.runs && state.runs[k]) || null;
+  const r = (state.runs && state.runs[k]) || null;
+  return _isRunTombstone(r) ? null : r;
 }
 
 let _psTab = 'M';
@@ -690,11 +975,10 @@ function emergencyResetRunning() {
   }
   running.forEach(p => {
     const k = p.gender + '_' + p.pairNum;
-    if (state.runs && state.runs[k]) delete state.runs[k];
-    [p.aId, p.bId].filter(Boolean).forEach(id => {
-      if (state.times?.[id]?.total) delete state.times[id].total;
-    });
+    if (state.runs && state.runs[k]) state.runs[k] = _runTombstone(state.runs[k]); // tombstone — reset propaguje
+    [p.aId, p.bId].filter(Boolean).forEach(id => _psClearTimeField(id, 'total'));
   });
+  logEvent('reset_awaryjny', { pary: running.length });
   saveState();
   renderPairs();
   showToast('↺ Zresetowano ' + running.length + ' par', 'warning', 3000);
@@ -853,14 +1137,14 @@ function startTeamPairFromStarter(pairNum) {
     if (!confirm('Para drużyn ' + pairNum + ' już biegnie. Reset i start od nowa? (Falstart)')) return;
   }
   if (!state.teamRuns) state.teamRuns = {};
-  state.teamRuns[pairNum] = { startedAt: nowMs(), finishedAt: {} };
-  // Wyczyść biegSec drużyn z tej pary
+  const _t0 = nowMs();
+  state.teamRuns[pairNum] = { startedAt: _t0, finishedAt: {}, deletedAt: _t0 - 1 };
+  // Wyczyść biegSec drużyn z tej pary — z tombstonem (propagacja przez merge)
   const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
   if (p) {
-    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
-      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
-    });
+    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => _psClearTeamRunField(t, 'biegSec'));
   }
+  logEvent('start_pary_druzyn', { para: String(pairNum) });
   saveState();
   renderTeamPairs();
   showToast('▶ Para drużyn ' + pairNum + ' wystartowała', 'success', 1800);
@@ -869,13 +1153,12 @@ function startTeamPairFromStarter(pairNum) {
 function resetTeamPairFromStarter(pairNum) {
   if (!state.teamRuns?.[pairNum]) return;
   if (!confirm('Reset pary drużyn ' + pairNum + '? Czasy biegu zostaną usunięte.')) return;
-  delete state.teamRuns[pairNum];
+  state.teamRuns[pairNum] = _runTombstone(state.teamRuns[pairNum]); // tombstone — reset propaguje
   const p = (state.teamRunPairs || []).find(x => x.pairNum === pairNum);
   if (p) {
-    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => {
-      if (state.teamRun?.[t]?.biegSec) delete state.teamRun[t].biegSec;
-    });
+    [p.aTeam, p.bTeam].filter(Boolean).forEach(t => _psClearTeamRunField(t, 'biegSec'));
   }
+  logEvent('reset_pary_druzyn', { para: String(pairNum) });
   saveState();
   renderTeamPairs();
   showToast('↺ Reset pary drużyn ' + pairNum, 'info', 1500);
@@ -1192,14 +1475,17 @@ function startPair(gender, pairNum) {
     if (!confirm('Para ' + pairNum + ' już biegnie. Resetować i zacząć od nowa? (Falstart)')) return;
   }
   if (!state.runs) state.runs = {};
-  state.runs[k] = { startedAt: nowMs(), finishedAt: {} };
-  // Wyczyść total dla zawodników tej pary
+  // deletedAt = start-1: merge odrzuci stale finishedAt sprzed (re)startu z innych urządzeń
+  const _t0 = nowMs();
+  const _prev = state.runs[k];
+  state.runs[k] = { startedAt: _t0, finishedAt: {}, deletedAt: _t0 - 1 };
+  if (_prev && _prev.scheduledStartAtAt) state.runs[k].scheduledStartAtAt = _prev.scheduledStartAtAt;
+  // Wyczyść total dla zawodników tej pary — Z TOMBSTONEM (delete bez stempla nie propaguje)
   const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
   if (p) {
-    [p.aId, p.bId].filter(Boolean).forEach(id => {
-      if (state.times?.[id]?.total) delete state.times[id].total;
-    });
+    [p.aId, p.bId].filter(Boolean).forEach(id => _psClearTimeField(id, 'total'));
   }
+  logEvent('start_pary', { para: pairNum, plec: gender });
   saveState();
   renderPairs();
   showToast('▶ Para ' + pairNum + ' (' + gender + ') wystartowała', 'success', 1800);
@@ -1208,13 +1494,12 @@ function startPair(gender, pairNum) {
 function resetPair(gender, pairNum) {
   if (!confirm('Resetować start pary ' + pairNum + '? Wszystkie czasy łączne tej pary zostaną usunięte (falstart).')) return;
   const k = gender + '_' + pairNum;
-  if (state.runs) delete state.runs[k];
+  if (state.runs && state.runs[k]) state.runs[k] = _runTombstone(state.runs[k]); // tombstone — falstart propaguje
   const p = state.pairs.find(x => x.gender === gender && x.pairNum === pairNum);
   if (p) {
-    [p.aId, p.bId].filter(Boolean).forEach(id => {
-      if (state.times?.[id]?.total) delete state.times[id].total;
-    });
+    [p.aId, p.bId].filter(Boolean).forEach(id => _psClearTimeField(id, 'total'));
   }
+  logEvent('reset_pary', { para: pairNum, plec: gender });
   saveState();
   renderPairs();
   showToast('↺ Reset pary ' + pairNum, 'warning', 2000);
@@ -1231,11 +1516,14 @@ function checkScheduledStartsStart() {
     if (run.scheduledStartAt && !run.startedAt && Date.now() >= run.scheduledStartAt) {
       run.startedAt = nowMs();
       run.finishedAt = {};
+      run.deletedAt = Math.max(run.deletedAt || 0, run.startedAt - 1); // odetnij stale finishedAt sprzed startu
       delete run.scheduledStartAt;
+      run.scheduledStartAtAt = Date.now(); // skonsumowanie harmonogramu propaguje
       changed = true;
     }
   }
   if (changed) {
+    logEvent('auto_start', {});
     saveState();
     renderPairs();
     showToast('▶ Auto-start: para wystartowała', 'success', 2000);
@@ -1616,9 +1904,11 @@ function confirmPstClear() {
   const { k, pairNum } = _pstPairTimeCtx;
   if (state.runs && state.runs[k]) {
     delete state.runs[k].scheduledStartAt;
-    if (!Object.keys(state.runs[k]).length) delete state.runs[k];
+    // Stempel decyzji — anulowanie musi WYGRAĆ w merge z urządzeniami ze starą godziną
+    state.runs[k].scheduledStartAtAt = Date.now();
   }
   closePairTimeModal();
+  logEvent('harmonogram', { para: pairNum, akcja: 'wyczyszczono auto-start' });
   saveState();
   renderPairs();
   showToast('✕ Wyczyszczono auto-start pary ' + pairNum, 'info', 1500);
@@ -1635,10 +1925,12 @@ function confirmPstSave() {
   if (!state.runs) state.runs = {};
   if (!state.runs[k]) state.runs[k] = {};
   state.runs[k].scheduledStartAt = ts;
+  state.runs[k].scheduledStartAtAt = Date.now(); // stempel decyzji — propaguje też przesunięcie na wcześniej
   const pad = n => (n < 10 ? '0' : '') + n;
   const d = new Date(ts);
   const label = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
   closePairTimeModal();
+  logEvent('harmonogram', { para: pairNum, godzina: label });
   saveState();
   renderPairs();
   showToast('⏰ Para ' + pairNum + ' o ' + label, 'success', 1500);
@@ -1677,6 +1969,8 @@ async function boot() {
   startRealtime();
   startPolling();
   startStarterPulse();
+  startPresence();   // starter widoczny w chipie 👥 panelu
+  _evqFlushSoon();   // dosłanie zaległych zdarzeń dziennika
   // Aktualizuj wskaźnik pulsu co 2s (żeby wykrył gdy puls przestał lecieć)
   setInterval(_updatePulseStatus, 2000);
 }
