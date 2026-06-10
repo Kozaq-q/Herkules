@@ -59,13 +59,15 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .logo-sub { font-family: var(--font-m); font-size: 10px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .header-contest { font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin: 0 16px; min-width: 0; text-align: center; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.hdr-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); }
-.hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
+.hdr-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
+.hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.hdr-status.ok { color: var(--green); border-color: rgba(76,175,130,.35); }
 .hdr-status.ok .dot { background: var(--green); animation: pulse 2s infinite; }
+.hdr-status.err { color: var(--red); border-color: rgba(224,85,85,.4); }
 .hdr-status.err .dot { background: var(--red); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-.hdr-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); font-family: var(--font-m); font-size: 10px; padding: 4px 10px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; }
-.hdr-btn:hover { color: var(--text1); border-color: var(--border2); }
+.hdr-btn { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 4px 12px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; }
+.hdr-btn:hover { color: var(--orange); border-color: var(--orange); }
 
 /* NAV TABS */
 .nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; position: sticky; top: 58px; z-index: 99; }
@@ -914,7 +916,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         <span id="sync-label">—</span>
       </div>
       <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
-      <div class="hdr-status" id="ptr-starter-clock-pill" style="display:none;cursor:help;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;"></div>
+      <div class="hdr-status" id="ptr-starter-clock-pill" style="display:none;cursor:help;"></div>
       <!-- Chip globalnego wyboru roli -->
       <div style="position:relative;">
         <button id="role-chip-btn" onclick="toggleRoleDropdown()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
@@ -3123,9 +3125,9 @@ function showSyncStatus(s) {
   if (!ind) return;
   ind.classList.remove('ok', 'err', 'pending');
   ind.style.cssText = ''; // reset
-  if (s === 'saving') { lbl.textContent = '☁ zapisywanie…'; ind.title = 'Trwa zapis do chmury.'; }
-  else if (s === 'ok') { ind.classList.add('ok'); lbl.textContent = '☁ zapisano'; ind.title = 'Wszystkie zmiany zapisane w chmurze — inni sędziowie je widzą.'; }
-  else if (s === 'err') { ind.classList.add('err'); lbl.textContent = '⚠ błąd zapisu'; ind.title = 'Zapis do chmury nie powiódł się — sprawdź sieć.'; }
+  if (s === 'saving') { lbl.textContent = 'zapisywanie…'; ind.title = 'Trwa zapis do chmury.'; }
+  else if (s === 'ok') { ind.classList.add('ok'); lbl.textContent = 'zapisano'; ind.title = 'Wszystkie zmiany zapisane w chmurze — inni sędziowie je widzą.'; }
+  else if (s === 'err') { ind.classList.add('err'); lbl.textContent = 'błąd zapisu'; ind.title = 'Zapis do chmury nie powiódł się — sprawdź sieć.'; }
   else if (s === 'pending') {
     // Offline / retry — pomarańczowy z licznikiem prób
     ind.classList.add('pending');
