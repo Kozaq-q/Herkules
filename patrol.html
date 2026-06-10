@@ -68,13 +68,28 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 .hdr-btn { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 4px 12px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; }
 .hdr-btn:hover { color: var(--orange); border-color: var(--orange); }
-/* Wszystkie chipy nagłówka równej wysokości (szerokość wolna) */
-.hdr-status, .hdr-btn, #role-chip-btn, #mss-auth-chip, #ptr-presence-chip { height: 26px; box-sizing: border-box; display: inline-flex; align-items: center; }
-/* Zegar: na wąskich ekranach zwykły chip w prawej grupie; na szerokich — duże,
-   eleganckie cyfry wycentrowane w pasku (header jest sticky = positioned). */
-#live-clock { font-family: var(--font-m); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text1); background: var(--bg3); border-color: var(--border2); }
+/* ─── Kapsuły nagłówka: powiązane chipy w jednej obudowie, segmenty oddzielone kreską ───
+   [tożsamość: konto·obecność] [system: zapis·zegar serwera·puls startera] [akcje: tryb·panel] */
+.hdr-group { display: inline-flex; align-items: stretch; height: 28px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); }
+.hdr-group:empty { display: none; }
+.hdr-status, .hdr-btn, #role-chip-btn, #mss-auth-chip, #ptr-presence-chip { box-sizing: border-box; display: inline-flex; align-items: center; }
+.hdr-group > * { height: 100%; }
+.hdr-group .hdr-status, .hdr-group .hdr-btn, .hdr-group #role-chip-btn { height: 100%; background: transparent; border: none; border-radius: 0; }
+.hdr-group > :not(:first-child) { border-left: 1px solid var(--border); }
+.hdr-group .hdr-btn:hover { color: var(--orange); background: rgba(255,255,255,.03); border-left-color: var(--border); }
+/* Zegar: chip-wyświetlacz (wpuszczone tło); na szerokich ekranach wycentrowany w pasku */
+#live-clock { height: 28px; box-sizing: border-box; font-family: var(--font-m); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text1); background: #0a0c0b; border-color: var(--border2); box-shadow: inset 0 1px 4px rgba(0,0,0,.5); }
 @media (min-width: 1150px) {
-  #live-clock { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); height: auto; padding: 0; background: transparent; border: none; font-size: 20px; letter-spacing: 5px; color: var(--text1); text-shadow: 0 0 18px rgba(76,175,130,.25); }
+  #live-clock {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    height: 36px; padding: 0 22px;
+    border: 1px solid var(--border2);
+    border-bottom: 2px solid color-mix(in srgb, var(--orange) 55%, transparent);
+    border-radius: var(--radius);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,.6);
+    font-size: 19px; letter-spacing: 5px;
+    text-shadow: 0 0 16px color-mix(in srgb, var(--orange) 40%, transparent);
+  }
   .header-contest { max-width: calc(50vw - 250px); } /* tytuł nie wjeżdża pod wycentrowany zegar */
 }
 
@@ -920,15 +935,22 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
     <div class="header-contest" id="header-contest">—</div>
     <div class="header-right">
       <div class="hdr-status" id="live-clock">00:00:00</div>
-      <div class="hdr-status" id="sync-indicator">
-        <span class="dot"></span>
-        <span id="sync-label">—</span>
+      <!-- Kapsuła: tożsamość (konto + obecność — wstrzykiwane przez JS) -->
+      <div class="hdr-group" id="hdr-group-identity"></div>
+      <!-- Kapsuła: system (status zapisu + zegar serwera + puls startera) -->
+      <div class="hdr-group" id="hdr-group-system">
+        <div class="hdr-status" id="sync-indicator">
+          <span class="dot"></span>
+          <span id="sync-label">—</span>
+        </div>
+        <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
+        <div class="hdr-status" id="ptr-starter-clock-pill" style="display:none;cursor:help;"></div>
       </div>
-      <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
-      <div class="hdr-status" id="ptr-starter-clock-pill" style="display:none;cursor:help;"></div>
+      <!-- Kapsuła: akcje (tryb + powrót do panelu) -->
+      <div class="hdr-group">
       <!-- Chip globalnego wyboru roli -->
       <div style="position:relative;">
-        <button id="role-chip-btn" onclick="toggleRoleDropdown()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+        <button id="role-chip-btn" onclick="toggleRoleDropdown()" style="background:transparent;border:none;font-family:var(--font-m);font-size:10px;font-weight:700;letter-spacing:.5px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:100%;">
           <span id="role-chip-label">META</span>
           <span style="font-size:9px;">▾</span>
         </button>
@@ -940,6 +962,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         </div>
       </div>
       <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
+      </div>
     </div>
   </header>
 
@@ -2617,11 +2640,12 @@ function _renderPresenceChip() {
     el = document.createElement('button');
     el.id = 'ptr-presence-chip';
     el.title = 'Sędziowie online na tych zawodach';
-    el.style.cssText = 'position:relative;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;';
+    el.style.cssText = 'position:relative;background:transparent;border:none;border-left:1px solid var(--border);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;height:100%;';
     el.onclick = (e) => { e.stopPropagation(); _togglePresenceDropdown(); };
     el.innerHTML = '<span id="ptr-presence-count">👥</span>';
-    const authChip = document.getElementById('mss-auth-chip');
-    if (authChip && authChip.nextSibling) right.insertBefore(el, authChip.nextSibling);
+    // Segment kapsuły tożsamości, za chipem konta (fallback: luzem w header-right)
+    const grp = document.getElementById('hdr-group-identity');
+    if (grp) grp.appendChild(el);
     else right.insertBefore(el, right.firstChild);
     document.addEventListener('click', () => {
       const dd = document.getElementById('ptr-presence-dd');
@@ -2632,7 +2656,7 @@ function _renderPresenceChip() {
   // Aktualizuj TYLKO licznik — innerHTML chipa zniszczyłoby doczepiony dropdown
   const cnt = document.getElementById('ptr-presence-count');
   if (cnt) cnt.textContent = '👥 ' + n;
-  el.style.borderColor = n > 1 ? 'rgba(76,175,130,.45)' : 'var(--border2)';
+  el.style.color = n > 1 ? 'var(--green)' : 'var(--text2)'; // >1 sędziów online = zielony akcent
 }
 
 function _togglePresenceDropdown() {
@@ -3110,12 +3134,13 @@ function _renderAuthChip() {
       el = document.createElement('button');
       el.id = 'mss-auth-chip';
       el.title = 'Twoje konto · kliknij aby wylogować';
-      el.style.cssText = 'background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;';
+      el.style.cssText = 'background:transparent;border:none;font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:100%;';
       el.onclick = () => {
         if (confirm('Wylogować się z MSS?')) MSS_AUTH.signOut();
       };
-      // Wstaw na początku header-right (przed innymi chipami)
-      right.insertBefore(el, right.firstChild);
+      // Segment kapsuły tożsamości (fallback: luzem w header-right)
+      const grp = document.getElementById('hdr-group-identity');
+      (grp || right).insertBefore(el, (grp || right).firstChild);
     }
     if (prof) {
       const roleLabel = prof.role === 'admin'
