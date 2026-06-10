@@ -2556,8 +2556,15 @@ function startPresence() {
         }
       });
     if (!_presenceRefreshTimer) _presenceRefreshTimer = setInterval(_presenceTrack, 60000);
+    // Licznik odświeżany też lokalnie — martwe wpisy "starzeją się" poza próg 3 min
+    setInterval(_renderPresenceChip, 30000);
   } catch(_) {}
 }
+
+// Sprzątanie przy zamknięciu/odświeżeniu karty — serwer szybciej usunie naszą sesję
+window.addEventListener('pagehide', () => {
+  try { if (_presenceChannel) { _presenceChannel.untrack(); getSupabase().removeChannel(_presenceChannel); } } catch(_) {}
+});
 
 async function _presenceTrack() {
   if (!_presenceChannel) return;
@@ -2571,6 +2578,20 @@ async function _presenceTrack() {
       at:     Date.now()
     });
   } catch(_) {}
+}
+
+// Tylko ŻYWE wpisy: żywy klient odświeża swój `at` co 60s, więc wpis starszy niż 3 min
+// to martwa sesja (zamknięta karta / odświeżenie strony), której serwer jeszcze nie sprzątnął.
+// Dodatkowo dedup po koncie+urządzeniu — 3 odświeżenia tej samej osoby to nie "3 sędziów".
+function _freshPresencePeers() {
+  const now = Date.now();
+  const fresh = _presencePeers.filter(p => p && p.at && (now - p.at) < 180000);
+  const byKey = {};
+  fresh.forEach(p => {
+    const k = (p.email || p.name || '?') + '|' + (p.device || '');
+    if (!byKey[k] || (p.at || 0) > (byKey[k].at || 0)) byKey[k] = p;
+  });
+  return Object.values(byKey);
 }
 
 function _renderPresenceChip() {
@@ -2592,7 +2613,7 @@ function _renderPresenceChip() {
       if (dd) dd.style.display = 'none';
     });
   }
-  const n = _presencePeers.length;
+  const n = _freshPresencePeers().length;
   // Aktualizuj TYLKO licznik — innerHTML chipa zniszczyłoby doczepiony dropdown
   const cnt = document.getElementById('ptr-presence-count');
   if (cnt) cnt.textContent = '👥 ' + n;
@@ -2612,19 +2633,18 @@ function _togglePresenceDropdown() {
   }
   if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
   const now = Date.now();
-  const rows = _presencePeers
-    .slice()
-    .sort((a, b) => (a.device || '').localeCompare(b.device || ''))
-    .map(p => {
+  const peers = _freshPresencePeers()
+    .sort((a, b) => (a.device || '').localeCompare(b.device || '') || (a.name || '').localeCompare(b.name || ''));
+  const rows = peers.map(p => {
       const ago = p.at ? Math.max(0, Math.round((now - p.at) / 1000)) : null;
       const agoTxt = ago === null ? '' : (ago < 90 ? ago + 's temu' : Math.round(ago / 60) + ' min temu');
       const dev = p.device === 'starter' ? '📱 starter' : '🖥 panel';
-      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 4px;border-bottom:1px solid var(--border);font-size:11px;">' +
-        '<span style="color:var(--text1);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(p.name || '?') + '</span>' +
-        '<span style="color:var(--text3);flex-shrink:0;">' + esc(p.role || '') + ' · ' + dev + (agoTxt ? ' · ' + agoTxt : '') + '</span>' +
+      return '<div style="padding:6px 4px;border-bottom:1px solid var(--border);">' +
+        '<div style="font-size:12px;color:var(--text1);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(p.name || '?') + '</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-top:1px;">' + esc(p.role || '') + ' · ' + dev + (agoTxt ? ' · aktywność ' + agoTxt : '') + '</div>' +
       '</div>';
     }).join('');
-  dd.innerHTML = '<div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">Online (' + _presencePeers.length + ')</div>' +
+  dd.innerHTML = '<div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">Online (' + peers.length + ')</div>' +
     (rows || '<div style="font-size:11px;color:var(--text3);padding:6px 4px;">Tylko Ty.</div>');
   dd.style.display = 'block';
 }

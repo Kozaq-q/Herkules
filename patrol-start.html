@@ -747,6 +747,11 @@ function startPresence() {
   } catch(_) {}
 }
 
+// Sprzątanie przy zamknięciu/odświeżeniu karty — serwer szybciej usunie naszą sesję
+window.addEventListener('pagehide', () => {
+  try { if (_presenceChannel) { _presenceChannel.untrack(); getDB().removeChannel(_presenceChannel); } } catch(_) {}
+});
+
 async function _presenceTrack() {
   if (!_presenceChannel) return;
   try {
