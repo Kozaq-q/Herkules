@@ -58,7 +58,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .logo { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .logo-name { font-family: var(--font-h); font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); white-space: nowrap; }
 .logo-sub { font-family: var(--font-m); font-size: 10px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.header-contest { font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; margin: 0 16px; min-width: 0; text-align: left; border-left: 1px solid var(--border2); padding-left: 16px; }
+.header-contest { font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; margin: 0 16px; min-width: 0; text-align: left; border-left: 1px solid var(--border2); padding-left: 16px; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .hdr-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
 .hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
@@ -78,20 +78,18 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .hdr-group .hdr-status, .hdr-group .hdr-btn, .hdr-group #role-chip-btn { height: 100%; background: transparent; border: none; border-radius: 0; }
 .hdr-group > :not(:first-child) { border-left: 1px solid var(--border); }
 .hdr-group .hdr-btn:hover { color: var(--orange); background: rgba(255,255,255,.03); border-left-color: var(--border); }
-/* Zegar: chip-wyświetlacz (wpuszczone tło); na szerokich ekranach wycentrowany w pasku */
-#live-clock { height: 28px; box-sizing: border-box; font-family: var(--font-m); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text1); background: #0a0c0b; border-color: var(--border2); box-shadow: inset 0 1px 4px rgba(0,0,0,.5); }
+/* Zegar: czysty chip (bez wpuszczonego tła); na szerokich ekranach wyśrodkowany auto-marginesami
+   — flex nigdy nie pozwala mu nachodzić na chipy po prawej. */
+#live-clock { height: 28px; box-sizing: border-box; display: inline-flex; align-items: center; font-family: var(--font-m); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text1); background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 12px; }
 @media (min-width: 1150px) {
   #live-clock {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    height: 36px; padding: 0 22px;
+    margin-left: auto; margin-right: auto;   /* środek paska, bez position:absolute */
+    height: 34px; padding: 0 20px;
+    background: var(--bg3);
     border: 1px solid var(--border2);
-    border-bottom: 2px solid color-mix(in srgb, var(--orange) 55%, transparent);
-    border-radius: var(--radius);
-    box-shadow: inset 0 2px 8px rgba(0,0,0,.6);
-    font-size: 19px; letter-spacing: 5px;
-    text-shadow: 0 0 16px color-mix(in srgb, var(--orange) 40%, transparent);
+    border-bottom: 2px solid color-mix(in srgb, var(--orange) 60%, transparent);
+    font-size: 18px; letter-spacing: 4px;
   }
-  .header-contest { max-width: calc(50vw - 250px); } /* tytuł nie wjeżdża pod wycentrowany zegar */
 }
 
 /* NAV TABS */
@@ -287,8 +285,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-guide-toggle.on .ptr-guide-knob { left: 16px; }
 .ptr-guide-hint { display: flex; align-items: center; gap: 8px; background: rgba(232,164,93,.08); border: 1px solid rgba(232,164,93,.2); border-radius: 10px; padding: 8px 12px; margin-bottom: 16px; font-size: 12.5px; color: #d8c4a8; cursor: pointer; }
 .ptr-guide-hint strong { color: var(--warn); }
-#ptr-bento-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+#ptr-bento-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
 .ptr-bcol { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ptr-bcol > .ptr-cat:last-child { flex: 1 0 auto; } /* ostatnia karta wypełnia kolumnę — luka jako wewn. margines, nie void */
 .ptr-cat { background: var(--bg2); border: 1px solid var(--cat-bd, var(--border2)); border-radius: 14px; overflow: hidden; }
 .ptr-cat.span2 { grid-column: 1 / -1; }
 .ptr-cat-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--cat-soft); }
@@ -317,9 +316,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-tile2-copy:hover { background: var(--bg4); }
 .ptr-tile2-copy .ptr-i { font-size: 15px; }
 .ptr-tile2-check { color: var(--green); display: flex; flex-shrink: 0; }
-.ptr-tile2-help { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; background: transparent; border: none; border-radius: 50%; color: var(--text3); font-size: 10px; line-height: 16px; text-align: center; cursor: help; padding: 0; opacity: 0; }
+.ptr-tile2-help { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; background: rgba(255,255,255,.05); border: none; border-radius: 50%; color: var(--text3); font-size: 10px; line-height: 16px; text-align: center; cursor: help; padding: 0; opacity: .7; }
 .ptr-tile2:hover .ptr-tile2-help { opacity: 1; }
-.ptr-tile2-help:hover { color: var(--text1); background: rgba(255,255,255,.08); }
+.ptr-tile2-help:hover { color: var(--text1); background: rgba(255,255,255,.12); }
+.ptr-tile2-badge { font-family: var(--font-b); font-size: 10px; font-weight: 600; letter-spacing: .3px; color: var(--blue); background: rgba(91,155,213,.14); border-radius: 6px; padding: 1px 7px; margin-left: 7px; white-space: nowrap; vertical-align: 1px; }
 /* Inline SVG ikon — dziedziczy kolor i rozmiar po rodzicu */
 .ptr-i { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
 .ptr-i svg { width: 1em; height: 1em; }
@@ -1055,6 +1055,11 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         <div class="hdr-status" id="ptr-clock-status" style="display:none;cursor:help;"></div>
         <div class="hdr-status" id="ptr-starter-clock-pill" style="display:none;cursor:help;"></div>
       </div>
+      <!-- Kapsuła: zapis (Zapisz teraz + pobierz kopię na komputer) -->
+      <div class="hdr-group">
+        <button class="hdr-btn" onclick="ptrSaveNow()" title="Zapisz teraz do chmury" style="color:var(--green);display:inline-flex;align-items:center;gap:6px;"><span class="ptr-i" style="font-size:14px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg></span>Zapisz</button>
+        <button class="hdr-btn" id="ptr-hdr-export" onclick="exportPatrolJSON()" title="Pobierz kopię zawodów na komputer (plik .json do późniejszego wgrania)" style="padding:4px 9px;"><span class="ptr-i" style="font-size:15px;display:inline-flex;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></svg></span></button>
+      </div>
       <!-- Kapsuła: akcje (tryb + powrót do panelu) -->
       <div class="hdr-group">
       <!-- Chip globalnego wyboru roli -->
@@ -1347,10 +1352,15 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
             style="flex:1;min-width:220px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:9px 12px;font-family:var(--font-m);font-size:12px;" />
           <button class="btn" onclick="copyPtrProjLink(this)" style="font-size:11px;padding:9px 14px;flex-shrink:0;">📋 Kopiuj</button>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
           <button class="btn" onclick="openPatrolProjektor()" style="font-size:11px;padding:8px 14px;color:var(--accent);border-color:rgba(232,212,77,.4);">📊 Otwórz wyniki</button>
           <button class="btn" onclick="openPatrolStartlistProjektor()" style="font-size:11px;padding:8px 14px;color:var(--green);border-color:rgba(76,175,130,.4);">📋 Otwórz listę startową</button>
+          <button class="btn" onclick="copyPtrStartlistLink()" style="font-size:11px;padding:8px 12px;color:var(--green);border-color:rgba(76,175,130,.3);" title="Kopiuj link do listy startowej na projektorze">📋 Kopiuj link listy</button>
           <button class="btn" onclick="togglePtrProjSettings()" style="font-size:11px;padding:8px 14px;">⚙ Ustawienia <span id="ptr-proj-settings-arrow" style="font-size:9px;color:var(--text3);">▶</span></button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">
+          Ustawienia (które sekcje, prędkość przewijania) ustawiasz <strong>na komputerze projekcyjnym</strong> — nie podróżują w linku.
+          Link „wyniki" i „lista startowa" to dwa różne adresy.
         </div>
         <div id="ptr-proj-settings-pop" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
           <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Sekcje wyników</div>
@@ -1433,24 +1443,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
             <div id="ptr-info-expanded">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:relative;">
                 <div class="card-title" style="margin:0;padding:0;border:none;">📋 Informacje o zawodach</div>
-                <div style="display:flex;gap:6px;align-items:center;position:relative;">
-                  <button onclick="toggleAccentPalette()" id="ptr-accent-toggle"
-                    style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);width:30px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;" title="Kolor akcentu">
-                    <span id="ptr-accent-current" style="width:14px;height:14px;border-radius:50%;background:var(--orange);display:inline-block;"></span>
-                  </button>
-                  <div id="ptr-accent-popover" style="display:none;position:absolute;top:32px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;z-index:10;box-shadow:0 4px 12px rgba(0,0,0,.4);">
-                    <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Kolor</div>
-                    <div style="display:flex;gap:6px;" id="ptr-accent-picker">
-                      <button class="ptr-swatch" data-color="#4caf82" style="background:#4caf82;" title="Zielony"></button>
-                      <button class="ptr-swatch" data-color="#e8944d" style="background:#e8944d;" title="Pomarańczowy"></button>
-                      <button class="ptr-swatch" data-color="#e8d44d" style="background:#e8d44d;" title="Złoty"></button>
-                      <button class="ptr-swatch" data-color="#5b9bd5" style="background:#5b9bd5;" title="Niebieski"></button>
-                      <button class="ptr-swatch" data-color="#e05555" style="background:#e05555;" title="Czerwony"></button>
-                      <button class="ptr-swatch" data-color="#c084fc" style="background:#c084fc;" title="Fioletowy"></button>
-                    </div>
-                  </div>
-                  <button class="btn" onclick="collapseInfoCard()" style="font-size:10px;padding:4px 8px;color:var(--text3);">▲ zwiń</button>
-                </div>
+                <button class="btn" onclick="collapseInfoCard()" style="font-size:10px;padding:4px 8px;color:var(--text3);">▲ zwiń</button>
               </div>
               <div class="form-group">
                 <label>Nazwa zawodów</label>
@@ -2071,7 +2064,7 @@ function _updateStarterClockPill() {
     pill.style.color = 'var(--green)';
     pill.style.borderColor = 'rgba(76,175,130,.5)';
     pill.style.background = 'rgba(76,175,130,.08)';
-    pill.innerHTML = '🟢 starter LIVE';
+    pill.innerHTML = _ptrDot('var(--green)', true) + 'starter LIVE';
     pill.title = 'Sedzia startu online, wysyla autorytatywny sygnal czasu. Wszyscy mierza czas tak samo.';
   } else if (clk.state === 'cached') {
     pill.style.display = 'inline-flex';
@@ -2086,14 +2079,14 @@ function _updateStarterClockPill() {
       pill.style.color = 'var(--text3)';
       pill.style.borderColor = 'var(--border2)';
       pill.style.background = 'var(--bg3)';
-      pill.innerHTML = '💤 starter ' + label + ' temu';
+      pill.innerHTML = _ptrDot('var(--text3)') + 'starter ' + label + ' temu';
       pill.title = 'Aplikacja startera chwilowo nieaktywna (' + label + '). Kalibracja zegara jest aktualna — wszystko działa normalnie.';
     } else {
       // > 5 min — łagodne ostrzeżenie
       pill.style.color = 'var(--orange)';
       pill.style.borderColor = 'rgba(232,148,77,.5)';
       pill.style.background = 'rgba(232,148,77,.08)';
-      pill.innerHTML = '🟡 starter ' + label + ' temu';
+      pill.innerHTML = _ptrDot('var(--orange)') + 'starter ' + label + ' temu';
       pill.title = 'Aplikacja startera nieaktywna od ' + label + '. Używam zapamiętanej kalibracji — drift kwarcu ~36ms/h, więc nawet po godzinie <0.05s niedokładności.';
     }
   } else {
@@ -2101,7 +2094,7 @@ function _updateStarterClockPill() {
     pill.style.color = 'var(--text3)';
     pill.style.borderColor = 'var(--border)';
     pill.style.background = 'var(--bg3)';
-    pill.innerHTML = '🔴 brak kalibracji';
+    pill.innerHTML = _ptrDot('var(--red)') + 'brak kalibracji';
     pill.title = 'Brak sygnalu od sedziego startu — fallback do zegara serwera. Drift miedzy urzadzeniami mozliwy (do ~kilkuset ms).';
   }
 }
@@ -2291,6 +2284,13 @@ function save() {
 function scheduleSave() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => { _saveTimer = null; saveToSupabase(); }, 300);
+}
+
+// Ręczny "Zapisz teraz" z nagłówka — natychmiastowy upload + potwierdzenie
+function ptrSaveNow() {
+  try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(_) {}
+  try { save(); saveImmediate(); } catch(_) {}
+  if (typeof showToast === 'function') showToast('Zapisano do chmury', 'success', 1500);
 }
 
 function saveImmediate() {
@@ -2799,7 +2799,7 @@ function _renderPresenceChip() {
     el.title = 'Sędziowie online na tych zawodach';
     el.style.cssText = 'position:relative;background:transparent;border:none;border-left:1px solid var(--border);font-family:var(--font-m);font-size:10px;color:var(--text2);padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;height:100%;';
     el.onclick = (e) => { e.stopPropagation(); _togglePresenceDropdown(); };
-    el.innerHTML = '<span id="ptr-presence-count">👥</span>';
+    el.innerHTML = '<span style="display:inline-flex;font-size:13px;vertical-align:-2px;">' + (typeof _ptrIco === 'function' ? _ptrIco('users') : '') + '</span><span id="ptr-presence-count">0</span>';
     // Segment kapsuły tożsamości, za chipem konta (fallback: luzem w header-right)
     const grp = document.getElementById('hdr-group-identity');
     if (grp) grp.appendChild(el);
@@ -2812,7 +2812,7 @@ function _renderPresenceChip() {
   const n = _freshPresencePeers().length;
   // Aktualizuj TYLKO licznik — innerHTML chipa zniszczyłoby doczepiony dropdown
   const cnt = document.getElementById('ptr-presence-count');
-  if (cnt) cnt.textContent = '👥 ' + n;
+  if (cnt) cnt.textContent = n;
   el.style.color = n > 1 ? 'var(--green)' : 'var(--text2)'; // >1 sędziów online = zielony akcent
 }
 
@@ -3304,13 +3304,14 @@ function _renderAuthChip() {
       const grp = document.getElementById('hdr-group-identity');
       (grp || right).insertBefore(el, (grp || right).firstChild);
     }
+    const _u = '<span style="display:inline-flex;font-size:13px;color:var(--text3);margin-right:5px;vertical-align:-2px;">' + (typeof _ptrIco === 'function' ? _ptrIco('user') : '') + '</span>';
     if (prof) {
       const roleLabel = prof.role === 'admin'
         ? '<span style="color:var(--accent);font-weight:700;">ADMIN</span>'
         : 'sędzia';
-      el.innerHTML = '👤 ' + (prof.display_name || prof.email.split('@')[0]) + ' · ' + roleLabel;
+      el.innerHTML = _u + esc(prof.display_name || prof.email.split('@')[0]) + ' · ' + roleLabel;
     } else {
-      el.innerHTML = '👤 ?';
+      el.innerHTML = _u + '?';
     }
   } catch (e) { /* noop */ }
 }
@@ -3493,6 +3494,17 @@ async function copyPtrProjLink(btn) {
     const inp = document.getElementById('ptr-proj-link');
     if (inp) { inp.select(); document.execCommand('copy'); showToast('📋 Link skopiowany', 'success', 1800); }
   }
+}
+
+// Link do projektora w trybie LISTY STARTOWEJ (osobny adres: &mode=startlist&gender)
+function _getPtrStartlistURL() {
+  let gender = 'both';
+  try { gender = (JSON.parse(localStorage.getItem('patrol_proj_settings') || '{}').slGender) || 'both'; } catch(_) {}
+  return new URL('patrol-projektor.html?slot=' + encodeURIComponent(STORAGE_KEY) + '&mode=startlist&gender=' + gender, window.location.href).href;
+}
+function copyPtrStartlistLink() {
+  if (typeof savePtrProjSettings === 'function') savePtrProjSettings();
+  _ptrCopyText(_getPtrStartlistURL());
 }
 
 // Karta projektora: link + wskaźnik zależności od publikacji (RLS: anon czyta tylko publicShare=true)
@@ -4059,12 +4071,19 @@ const _PTR_ICONS = {
   'history': '<path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/>',
   'camera': '<path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>',
   'plus': '<path d="M12 5l0 14"/><path d="M5 12l14 0"/>',
+  'user': '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
+  'download': '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/>',
+  'device-floppy': '<path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/>',
   'pin': '<path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6"/><path d="M12 16l0 5"/><path d="M8 4l8 0"/>',
   'alert': '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
   'shield': '<path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/><path d="M12 11m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 12v2.5"/>',
 };
 function _ptrIco(name) {
   return '<span class="ptr-i" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (_PTR_ICONS[name] || '') + '</svg></span>';
+}
+// Kropka statusu (zamiast emoji 🟢🔴) — opcjonalnie pulsująca
+function _ptrDot(color, pulse) {
+  return '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + color + ';margin-right:6px;flex-shrink:0;' + (pulse ? 'animation:pulse 2s infinite;' : '') + '"></span>';
 }
 
 // Kategorie o STAŁYCH pozycjach i kolorach (te same w patrol/osf/wieloboj).
@@ -4093,8 +4112,8 @@ const PTR_BENTO_ITEMS = [
   { id: 'speaker', cat: 'apps', icon: 'microphone', label: 'Speaker', cardId: 'ptr-tile-speaker', muteable: true, app: true,
     help: 'Apka tylko-do-odczytu dla komentatora: lista startowa, pary na trasie i wyniki na żywo. Wygeneruj link i wyślij na telefon.',
     onOpen: () => { const b = document.getElementById('ptr-speaker-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-speaker-arrow'); if (a) a.textContent = '▼'; } },
-  { id: 'share', cat: 'apps', icon: 'qrcode', label: 'Wyniki online', cardId: 'ptr-share-card', muteable: true, app: true,
-    help: 'Publiczne wyniki na telefony uczestników (QR / link, bez logowania, tylko odczyt). Wymaga włączonej publikacji — od niej zależy też projektor.' },
+  { id: 'share', cat: 'apps', icon: 'qrcode', label: 'Wyniki online', badge: 'dla zawodników', cardId: 'ptr-share-card', muteable: true, app: true,
+    help: 'Publiczne wyniki na telefony uczestników (QR / link, bez logowania, tylko odczyt). To jedyna rzecz, którą widzą zawodnicy.' },
   { id: 'projector', cat: 'apps', icon: 'device-tv', label: 'Projektor', cardId: 'ptr-projector-card', muteable: true, app: true,
     help: 'Wyniki i lista startowa na monitor/rzutnik. Bez logowania, tylko odczyt. Działa gdy publikacja (Wyniki online) jest włączona.' },
   { id: 'status', cat: 'system', icon: 'activity', label: 'Status', cardId: 'ptr-tile-status',
@@ -4212,7 +4231,7 @@ function _ptrBentoTileHtml(it, v, guide) {
   return '<div class="' + cls + '" data-bid="' + it.id + '" style="view-transition-name:ptrb-' + it.id + ';" onclick="ptrBentoOpen(\'' + it.id + '\')">' +
     _ptrBentoHelpHtml(it) +
     '<span class="ptr-tile2-ico">' + _ptrIco(it.icon) + '</span>' +
-    '<span class="ptr-tile2-main"><span class="ptr-tile2-name">' + esc(it.label) + '</span>' + meta + '</span>' +
+    '<span class="ptr-tile2-main"><span class="ptr-tile2-name">' + esc(it.label) + (it.badge ? '<span class="ptr-tile2-badge">' + esc(it.badge) + '</span>' : '') + '</span>' + meta + '</span>' +
     right + '</div>';
 }
 
@@ -4359,9 +4378,10 @@ function ptrBentoOpen(id) {
   _ptrBentoOpenedAt = Date.now();
   _ptrBentoJustOpened = true;
   _ptrBentoRunOnOpen = true;
-  const vt = ptrBentoRenderSmart();
-  // Dosuń wylany panel PO animacji, ZE SPORYM zapasem pod spodem (≈110px)
-  const after = () => requestAnimationFrame(() => {
+  ptrBentoRenderSmart();
+  // Dosuń wylany panel OD RAZU (bez czekania na koniec animacji — eliminuje "laga"),
+  // ze sporym zapasem pod spodem (≈110px).
+  requestAnimationFrame(() => {
     const el = document.getElementById('ptr-bento-flow');
     if (!el) return;
     try {
@@ -4371,8 +4391,6 @@ function ptrBentoOpen(id) {
       else if (r.top < 80) window.scrollBy({ top: r.top - 80, behavior: 'smooth' });
     } catch(_) {}
   });
-  if (vt && vt.finished) vt.finished.catch(() => {}).then(after);
-  else after();
 }
 
 function ptrBentoClose() {
