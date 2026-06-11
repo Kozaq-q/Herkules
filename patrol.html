@@ -288,6 +288,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-guide-hint { display: flex; align-items: center; gap: 8px; background: rgba(232,164,93,.08); border: 1px solid rgba(232,164,93,.2); border-radius: 10px; padding: 8px 12px; margin-bottom: 16px; font-size: 12.5px; color: #d8c4a8; cursor: pointer; }
 .ptr-guide-hint strong { color: var(--warn); }
 #ptr-bento-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.ptr-bcol { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .ptr-cat { background: var(--bg2); border: 1px solid var(--cat-bd, var(--border2)); border-radius: 14px; overflow: hidden; }
 .ptr-cat.span2 { grid-column: 1 / -1; }
 .ptr-cat-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--cat-soft); }
@@ -325,10 +326,34 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 /* Kompaktowe rozwinięcie — chowamy długie pola linków (user klika tylko Kopiuj) */
 .ptr-bento-inline-body #ptr-share-link, .ptr-bento-inline-body #ptr-proj-link,
 .ptr-bento-inline-body #start-link-input, .ptr-bento-inline-body #speaker-link-input { display: none !important; }
+/* Rozwinięcie: chowamy zdublowane nagłówki/zwijacze kart (pasek bento już je ma) */
+.ptr-bento-inline-body .card-title { display: none; }
+.ptr-bento-inline-body #ptr-info-collapsed { display: none !important; }
+.ptr-bento-inline-body #ptr-info-expanded > div:first-child { margin-bottom: 6px; }
+.ptr-bento-inline-body [onclick="collapseInfoCard()"],
+.ptr-bento-inline-body [onclick="confirmInfoCard()"] { display: none !important; }
+.ptr-bento-inline-body .form-group label { font-family: var(--font-b); font-size: 12px; letter-spacing: .3px; text-transform: none; color: var(--text3); }
 @media (max-width: 760px) {
   #ptr-bento-cats { grid-template-columns: 1fr; }
   .ptr-cat-grid { grid-template-columns: 1fr !important; }
 }
+/* Notatki — edytor (ważność + cele) i paski na zakładkach */
+.ptr-note-lvl { font-family: var(--font-b); font-size: 11.5px; padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text3); cursor: pointer; }
+.ptr-note-lvl.active[data-level="normal"] { border-color: var(--text3); color: var(--text1); background: var(--bg4); }
+.ptr-note-lvl.active[data-level="important"] { border-color: var(--warn); color: var(--warn); background: rgba(232,164,93,.12); }
+.ptr-note-lvl.active[data-level="critical"] { border-color: var(--red); color: var(--red); background: rgba(224,85,85,.12); }
+.ptr-note-target { font-family: var(--font-b); font-size: 11.5px; padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text3); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.ptr-note-target.on { border-color: var(--green); color: var(--green); background: rgba(76,175,130,.1); }
+.ptr-note-bar { display: flex; align-items: flex-start; gap: 10px; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-family: var(--font-b); font-size: 13.5px; line-height: 1.5; border: 1px solid; white-space: pre-wrap; }
+.ptr-note-bar .ptr-i { flex-shrink: 0; margin-top: 1px; }
+.ptr-note-bar.normal { background: var(--bg3); border-color: var(--border2); color: var(--text2); }
+.ptr-note-bar.important { background: rgba(232,164,93,.1); border-color: rgba(232,164,93,.45); color: #e8c79d; }
+.ptr-note-bar.critical { background: rgba(224,85,85,.12); border-color: rgba(224,85,85,.5); color: #f0a5a5; }
+.ptr-note-bar.critical .ptr-i { color: var(--red); }
+.ptr-note-bar.important .ptr-i { color: var(--warn); }
+.ptr-note-bar-tag { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 1px 7px; border-radius: 4px; flex-shrink: 0; align-self: center; }
+.ptr-note-bar.important .ptr-note-bar-tag { background: rgba(232,164,93,.2); color: var(--warn); }
+.ptr-note-bar.critical .ptr-note-bar-tag { background: rgba(224,85,85,.2); color: var(--red); }
 
 .stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; }
 .stat-num { font-family: var(--font-h); font-size: 38px; font-weight: 800; line-height: 1; color: var(--text1); }
@@ -1104,9 +1129,24 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           <span class="ptr-notes-sub">widoczne dla całego zespołu</span>
         </div>
         <textarea id="ptr-notes" rows="3" placeholder="np. Strzelnica suchy stojąco · start z linii ABC · pogoda słoneczna..."
-          oninput="saveSetup();"
+          oninput="saveSetup();_renderPtrNotesBars();"
           onblur="_placeNotes();"
           class="ptr-notes-input"></textarea>
+        <!-- Ważność + na których zakładkach pokazać notatkę -->
+        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Ważność</div>
+            <div id="ptr-note-levels" style="display:inline-flex;gap:4px;">
+              <button type="button" class="ptr-note-lvl" data-level="normal" onclick="setPtrNoteLevel('normal')">Zwykła</button>
+              <button type="button" class="ptr-note-lvl" data-level="important" onclick="setPtrNoteLevel('important')">Ważna</button>
+              <button type="button" class="ptr-note-lvl" data-level="critical" onclick="setPtrNoteLevel('critical')">Krytyczna</button>
+            </div>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Pokaż na górze zakładek</div>
+            <div id="ptr-note-targets" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+          </div>
+        </div>
       </div>
 
       <!-- KAFELKI TRYBU/DOSTĘPU — 4 obok siebie, pełna szerokość -->
@@ -1289,7 +1329,17 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           Wyniki i lista startowa na monitor lub rzutnik. Działa <strong>bez logowania</strong> i jest
           <strong>tylko do odczytu</strong> — osoba przy ekranie nie może nic zmienić w wynikach
           (dlatego na komputerze projekcyjnym nie loguj się do panelu).
-          Wymaga włączonej publikacji w karcie „Wyniki online".
+          Niezależny od „Wyniki online" — możesz włączyć sam ekran na sali bez udostępniania wyników uczestnikom.
+        </div>
+        <!-- Toggle: projektor ON/OFF (osobna flaga projectorShare, migracja 007) -->
+        <div id="ptr-proj-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="togglePtrProjectorShare()">
+          <div id="ptr-proj-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
+            <div id="ptr-proj-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div id="ptr-proj-toggle-label" style="font-weight:700;font-size:13px;color:var(--text1);">Projektor: WYŁĄCZONY</div>
+            <div id="ptr-proj-toggle-desc" style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;">Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.</div>
+          </div>
         </div>
         <div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Link — wyślij lub otwórz na komputerze przy ekranie</div>
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
@@ -1357,9 +1407,9 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           <strong>Migawki</strong> to automatyczne kopie stanu co 5 minut (ostatnie 20) — pozwalają cofnąć omyłkowy reset lub zły sync.
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
-          <button class="btn" onclick="openPtrEventsLog()" style="font-size:11px;padding:8px 14px;">📜 Dziennik zdarzeń</button>
-          <button class="btn" onclick="openPtrSnapshots()" style="font-size:11px;padding:8px 14px;">🛟 Migawki stanu</button>
-          <button class="btn" onclick="makePtrSnapshotNow()" style="font-size:11px;padding:8px 14px;">＋ Zapisz migawkę teraz</button>
+          <button class="btn" onclick="openPtrEventsLog()" style="font-size:11px;padding:8px 14px;display:inline-flex;align-items:center;gap:7px;"><span class="ptr-i" aria-hidden="true" style="font-size:15px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg></span>Dziennik zdarzeń</button>
+          <button class="btn" onclick="openPtrSnapshots()" style="font-size:11px;padding:8px 14px;display:inline-flex;align-items:center;gap:7px;"><span class="ptr-i" aria-hidden="true" style="font-size:15px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span>Migawki stanu</button>
+          <button class="btn" onclick="makePtrSnapshotNow()" style="font-size:11px;padding:8px 14px;display:inline-flex;align-items:center;gap:7px;"><span class="ptr-i" aria-hidden="true" style="font-size:15px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg></span>Zapisz migawkę teraz</button>
         </div>
       </div>
 
@@ -2176,12 +2226,14 @@ function ensureStateDefaults() {
   // Żywe bento: funkcje oznaczone "nie używam" (per slot, sync między urządzeniami)
   if (!state.cfg.bentoMuted) state.cfg.bentoMuted = {};
   const SETUP_DEFAULTS = {
-    accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: ''
+    accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: '',
+    notesLevel: 'normal'   // 'normal' | 'important' | 'critical'
   };
   if (!state.setup) state.setup = { ...SETUP_DEFAULTS };
   else for (const k in SETUP_DEFAULTS) {
     if (state.setup[k] === undefined) state.setup[k] = SETUP_DEFAULTS[k];
   }
+  if (!state.setup.notesTabs) state.setup.notesTabs = {}; // {athletes, pairs, team-run, results: bool}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3190,6 +3242,9 @@ function _applyRemoteStateNowInternal(stateJson) {
 // UI
 // ═══════════════════════════════════════════════════════════════
 function showTab(id) {
+  // Zatwierdź ewentualną edycję w aktywnym polu PRZED zmianą zakładki — onchange/onblur
+  // zdąży zapisać (rozwiązuje gubienie zmian przy szybkim klikaniu między zakładkami).
+  try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(_) {}
   // Restrykcja dostępu: setup + athletes tylko dla ADMIN.
   // Pozostałe role próbujące tam wejść → przekierowane do "pairs" + toast.
   if ((id === 'setup' || id === 'athletes') && getPtrRole() !== 'ADMIN') {
@@ -3211,6 +3266,8 @@ function showTab(id) {
     else if (id === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
     else if (id === 'results' && typeof renderResultsView === 'function') renderResultsView();
   } catch(e) { console.error('Render error:', e); }
+  // Pasek notatki na górze zakładki (po renderze treści — gdyby render wymazał stary)
+  if (typeof _renderPtrNotesBars === 'function') _renderPtrNotesBars();
   // Odśwież sticky banner "BIEGNIE TERAZ" — widoczny tylko na zakładkach Pary/Stoper
   if (typeof _renderPtrRunningBanner === 'function') _renderPtrRunningBanner();
 }
@@ -3442,13 +3499,25 @@ async function copyPtrProjLink(btn) {
 function _renderPtrProjSection() {
   const linkEl = document.getElementById('ptr-proj-link');
   if (linkEl) linkEl.value = _getPtrProjURL();
+  const on = _getPtrProjectorShare();
   const st = document.getElementById('ptr-proj-share-status');
   if (st) {
-    const on = _getPtrPublicShare();
-    st.textContent = on ? '🟢 gotowy — publikacja włączona' : '🔴 wymaga włączenia publikacji';
+    st.textContent = on ? '🟢 włączony' : '🔴 wyłączony';
     st.style.color = on ? 'var(--green)' : 'var(--red)';
     st.style.borderColor = on ? 'rgba(76,175,130,.4)' : 'rgba(224,85,85,.4)';
     st.style.background = on ? 'rgba(76,175,130,.06)' : 'rgba(224,85,85,.06)';
+  }
+  // Przełącznik projektora (mirror publicShare)
+  const sw = document.getElementById('ptr-proj-toggle-switch');
+  const knob = document.getElementById('ptr-proj-toggle-knob');
+  const lbl = document.getElementById('ptr-proj-toggle-label');
+  const desc = document.getElementById('ptr-proj-toggle-desc');
+  if (sw && knob && lbl && desc) {
+    sw.style.background = on ? 'var(--green)' : 'var(--border2)';
+    knob.style.left = on ? '22px' : '2px';
+    lbl.textContent = on ? 'Projektor: WŁĄCZONY' : 'Projektor: WYŁĄCZONY';
+    lbl.style.color = on ? 'var(--green)' : 'var(--text1)';
+    desc.textContent = on ? 'Ekran na sali pokazuje wyniki na żywo (bez logowania, tylko odczyt).' : 'Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.';
   }
 }
 
@@ -3954,6 +4023,8 @@ function renderSetupPage() {
   if (typeof _renderSpeakerSection === 'function') _renderSpeakerSection();
   _renderPtrShareSection();
   _renderPtrProjSection();
+  if (typeof _renderNoteEditor === 'function') _renderNoteEditor();
+  if (typeof _renderPtrNotesBars === 'function') _renderPtrNotesBars();
   if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
 }
 
@@ -3983,6 +4054,13 @@ const _PTR_ICONS = {
   'arrow-right': '<path d="M5 12h14"/><path d="M13 18l6 -6"/><path d="M13 6l6 6"/>',
   'apps': '<path d="M4 4h6v6h-6z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6h-6z"/><path d="M14 14h6v6h-6z"/>',
   'x': '<path d="M18 6l-12 12"/><path d="M6 6l12 12"/>',
+  'clock': '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/>',
+  'broadcast': '<path d="M18.364 19.364a9 9 0 1 0 -12.728 0"/><path d="M15.536 16.536a5 5 0 1 0 -7.072 0"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>',
+  'history': '<path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/>',
+  'camera': '<path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>',
+  'plus': '<path d="M12 5l0 14"/><path d="M5 12l14 0"/>',
+  'pin': '<path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6"/><path d="M12 16l0 5"/><path d="M8 4l8 0"/>',
+  'alert': '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
   'shield': '<path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/><path d="M12 11m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 12v2.5"/>',
 };
 function _ptrIco(name) {
@@ -3990,11 +4068,12 @@ function _ptrIco(name) {
 }
 
 // Kategorie o STAŁYCH pozycjach i kolorach (te same w patrol/osf/wieloboj).
+// col: 'L' lewa kolumna · 'R' prawa (Pomiar+System stackowane — wypełniają lukę) · 'F' pełna szerokość.
 const PTR_BENTO_CATS = [
-  { key: 'zawody', name: 'Zawody', ico: 'clipboard-text', cssVar: '--cz', span2: false, cols: 1 },
-  { key: 'pomiar', name: 'Pomiar', ico: 'stopwatch', cssVar: '--cp', span2: false, cols: 1 },
-  { key: 'apps',   name: 'Aplikacje i linki', ico: 'apps', cssVar: '--ca', span2: true, cols: 2, note: 'linki do wysłania sędziom i na ekrany' },
-  { key: 'system', name: 'System i dane', ico: 'shield', cssVar: '--cs', span2: true, cols: 3 },
+  { key: 'zawody', name: 'Zawody', ico: 'clipboard-text', cssVar: '--cz', col: 'L', cols: 1 },
+  { key: 'pomiar', name: 'Pomiar', ico: 'stopwatch', cssVar: '--cp', col: 'R', cols: 1 },
+  { key: 'system', name: 'System i dane', ico: 'shield', cssVar: '--cs', col: 'R', cols: 1 },
+  { key: 'apps',   name: 'Aplikacje i linki', ico: 'apps', cssVar: '--ca', col: 'F', cols: 2, note: 'linki do wysłania sędziom i na ekrany' },
 ];
 
 const PTR_BENTO_ITEMS = [
@@ -4066,7 +4145,13 @@ function _ptrBentoStates() {
   st.athletes = hasAth
     ? { band: 'done', meta: (state.athletes || []).length + ' zaw.' + (teams ? ' · ' + teams + ' druż.' : '') }
     : { band: 'attention', sub: 'zaimportuj plik albo dodaj zawodników ręcznie', action: 'Importuj' };
-  st.notes = { band: 'done', meta: ((s.notes || '').trim()) ? 'zapisane' : 'puste', dim: !((s.notes || '').trim()) };
+  const _noteTxt = (s.notes || '').trim();
+  const _noteTgt = Object.values(s.notesTabs || {}).filter(Boolean).length;
+  const _noteLvl = s.notesLevel || 'normal';
+  const _noteLvlLbl = _noteLvl === 'critical' ? 'Krytyczna' : (_noteLvl === 'important' ? 'Ważna' : 'Zwykła');
+  st.notes = _noteTxt
+    ? { band: 'done', meta: _noteLvlLbl + (_noteTgt ? ' · ' + _noteTgt + ' zakł.' : ' · nigdzie nie pokazana') }
+    : { band: 'done', meta: 'puste', dim: true };
   st.mode = { band: 'active', pill: cfg.offlineMode ? { t: 'fizyczny', k: 'muted' } : { t: 'w panelu, sync', k: 'ok' } };
   st.starter = muted.starter ? { band: 'muted', meta: 'nieużywany' }
     : cfg.startEnabled ? { band: 'active', pill: { t: 'link aktywny', k: 'ok' }, copy: true }
@@ -4079,8 +4164,11 @@ function _ptrBentoStates() {
     : shareOn ? { band: 'active', pill: { t: 'publikacja wł.', k: 'ok' }, copy: true }
     : !hasAth ? { band: 'later' }
     : { band: 'attention', sub: 'publikacja wyłączona — QR nie zadziała', action: 'Włącz publikację' };
+  const projOn = (typeof _getPtrProjectorShare === 'function') ? _getPtrProjectorShare() : false;
   st.projector = muted.projector ? { band: 'muted', meta: 'nieużywany' }
-    : { band: 'active', pill: shareOn ? { t: 'gotowy', k: 'ok' } : { t: 'wymaga publikacji', k: 'muted' }, copy: shareOn };
+    : projOn ? { band: 'active', pill: { t: 'włączony', k: 'ok' }, copy: true }
+    : !hasAth ? { band: 'later' }
+    : { band: 'attention', sub: 'ekran na sali wyłączony', action: 'Włącz projektor' }; // niezależny od „Wyniki online"
   st.status = { band: 'active', pill: (_pendingSaveSince > 0) ? { t: 'offline', k: 'warn' } : (_rtHealthy ? { t: 'działa', k: 'ok' } : { t: 'łączenie…', k: 'muted' }) };
   st.safety = { band: 'active', pill: { t: 'migawki wł.', k: 'ok' } };
   st.advanced = { band: 'done', meta: 'backup · reset', dim: true };
@@ -4174,18 +4262,24 @@ function renderPtrBento() {
     }
   }
 
-  // Kategorie (stałe pozycje, stałe kolory)
-  const cont = document.getElementById('ptr-bento-cats');
-  cont.innerHTML = PTR_BENTO_CATS.map(cat => {
+  // Kategorie (stałe pozycje, stałe kolory). Render jednej karty kategorii:
+  const renderCat = (cat) => {
     const items = PTR_BENTO_ITEMS.filter(it => it.cat === cat.key);
     const tiles = items.map(it => _ptrBentoTileHtml(it, st[it.id], guide)).join('');
     const soft = 'color-mix(in srgb, var(' + cat.cssVar + ') 9%, transparent)';
     const bd = 'color-mix(in srgb, var(' + cat.cssVar + ') 28%, transparent)';
-    return '<div class="ptr-cat' + (cat.span2 ? ' span2' : '') + '" style="--cat-bd:' + bd + ';--cat-soft:' + soft + ';--cat-ico:var(' + cat.cssVar + ');">' +
+    return '<div class="ptr-cat' + (cat.col === 'F' ? ' span2' : '') + '" style="--cat-bd:' + bd + ';--cat-soft:' + soft + ';--cat-ico:var(' + cat.cssVar + ');">' +
       '<div class="ptr-cat-head">' + _ptrIco(cat.ico) + '<span class="ptr-cat-name">' + esc(cat.name) + '</span>' +
       (cat.note ? '<span class="ptr-cat-note">' + esc(cat.note) + '</span>' : '') + '</div>' +
       '<div class="ptr-cat-grid" style="grid-template-columns:repeat(' + cat.cols + ',minmax(0,1fr));">' + tiles + '</div></div>';
-  }).join('');
+  };
+  const colCats = (c) => PTR_BENTO_CATS.filter(cat => cat.col === c).map(renderCat).join('');
+  const cont = document.getElementById('ptr-bento-cats');
+  // Lewa kolumna (Zawody) · prawa kolumna stackowana (Pomiar + System) · pełna szerokość (Aplikacje)
+  cont.innerHTML =
+    '<div class="ptr-bcol">' + colCats('L') + '</div>' +
+    '<div class="ptr-bcol">' + colCats('R') + '</div>' +
+    colCats('F');
 
   _ptrBentoMountFlow();
   bento._sig = _ptrBentoSig();
@@ -4217,7 +4311,8 @@ function _ptrBentoMountFlow() {
   if (_ptrBentoJustOpened) { flow.classList.add('enter'); _ptrBentoJustOpened = false; }
   anchor.insertAdjacentElement('afterend', flow);
   document.getElementById('ptr-bento-inline-body').appendChild(card);
-  if (it.onOpen) { try { it.onOpen(); } catch(_) {} }
+  // onOpen TYLKO przy świeżym otwarciu (nie przy każdym renderze co 5s — to kradło fokus i mieszało)
+  if (_ptrBentoRunOnOpen && it.onOpen) { _ptrBentoRunOnOpen = false; try { it.onOpen(); } catch(_) {} }
 }
 
 // Sygnatura układu: które kafelki w których pasmach + co otwarte (z uwzględnieniem zamrożenia)
@@ -4244,21 +4339,37 @@ function ptrBentoRenderSmart() {
   return null;
 }
 
+let _ptrBentoOpenedAt = 0;   // anti-double-close: kliknięcie tuż po otwarciu nie zamyka
+let _ptrBentoRunOnOpen = false; // onOpen tylko przy ŚWIEŻYM otwarciu, nie przy każdym renderze
 function ptrBentoOpen(id) {
-  if (_ptrBentoOpenId === id) { ptrBentoClose(); return; }
+  if (_ptrBentoOpenId === id) {
+    // Re-klik w otwarty kafelek = zamknij, ale ignoruj przypadkowy dubel-klik (<350ms)
+    if (Date.now() - _ptrBentoOpenedAt < 350) return;
+    ptrBentoClose();
+    return;
+  }
+  // Zatwierdź ewentualną edycję w polu zanim przeniesiemy karty (onchange/onblur → zapis)
+  try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(_) {}
   // Zamroź pasmo/wygląd kafelka na czas otwarcia — zmiany ustawień nie przerzucają go
-  // między kolumnami, dopóki user nie zamknie panelu lub nie kliknie innego kafelka
   try {
     const { st } = _ptrBentoStates();
     _ptrBentoFrozen = st[id] ? { id, v: st[id] } : null;
   } catch(_) { _ptrBentoFrozen = null; }
   _ptrBentoOpenId = id;
+  _ptrBentoOpenedAt = Date.now();
   _ptrBentoJustOpened = true;
+  _ptrBentoRunOnOpen = true;
   const vt = ptrBentoRenderSmart();
-  // Delikatnie dosuń wylany panel PO animacji (scroll w trakcie psułby morph)
+  // Dosuń wylany panel PO animacji, ZE SPORYM zapasem pod spodem (≈110px)
   const after = () => requestAnimationFrame(() => {
     const el = document.getElementById('ptr-bento-flow');
-    if (el) { try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch(_) {} }
+    if (!el) return;
+    try {
+      const r = el.getBoundingClientRect();
+      const pad = 110;
+      if (r.bottom > window.innerHeight - pad) window.scrollBy({ top: r.bottom - (window.innerHeight - pad), behavior: 'smooth' });
+      else if (r.top < 80) window.scrollBy({ top: r.top - 80, behavior: 'smooth' });
+    } catch(_) {}
   });
   if (vt && vt.finished) vt.finished.catch(() => {}).then(after);
   else after();
@@ -4266,14 +4377,20 @@ function ptrBentoOpen(id) {
 
 function ptrBentoClose() {
   if (!_ptrBentoOpenId) return;
+  try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(_) {}
   _ptrBentoOpenId = null;
-  _ptrBentoFrozen = null; // odmrożenie — kafelek może teraz migrować między pasmami (z animacją)
+  _ptrBentoFrozen = null;
   ptrBentoRenderSmart();
 }
 
 function ptrBentoAction(id) {
   if (id === 'share') {
     if (typeof togglePtrPublicShare === 'function') togglePtrPublicShare();
+    setTimeout(ptrBentoRenderSmart, 400);
+    return;
+  }
+  if (id === 'projector') {
+    if (typeof togglePtrProjectorShare === 'function') togglePtrProjectorShare();
     setTimeout(ptrBentoRenderSmart, 400);
     return;
   }
@@ -4302,27 +4419,92 @@ function ptrBentoToggleGuide() {
   ptrBentoRenderSmart();
 }
 
-// Szybki "Kopiuj link" wprost z kafelka aplikacji — bez otwierania szczegółu
-function ptrBentoCopy(id, btn) {
-  const map = {
-    share: () => (typeof copyPtrShareLink === 'function') ? copyPtrShareLink(btn) : _ptrCopyText(_getPtrShareURL()),
-    projector: () => (typeof copyPtrProjLink === 'function') ? copyPtrProjLink(btn) : _ptrCopyText(_getPtrProjURL && _getPtrProjURL()),
-    starter: () => (typeof copyStartLink === 'function') ? copyStartLink() : null,
-    speaker: () => (typeof copySpeakerLink === 'function') ? copySpeakerLink() : null,
-  };
-  try { (map[id] || (() => {}))(); } catch(_) {}
+// Szybki "Kopiuj link" wprost z kafelka — czysty toast, BEZ mutowania przycisku
+// (stara delegacja do copyPtrShareLink podmieniała treść małego przycisku → brzydka animacja).
+function ptrBentoCopy(id) {
+  let url = '';
+  try {
+    if (id === 'share') url = _getPtrShareURL();
+    else if (id === 'projector') url = (typeof _getPtrProjURL === 'function') ? _getPtrProjURL() : '';
+    else if (id === 'starter') url = (document.getElementById('start-link-input') || {}).value || '';
+    else if (id === 'speaker') url = (document.getElementById('speaker-link-input') || {}).value || '';
+  } catch(_) {}
+  _ptrCopyText(url);
 }
 function _ptrCopyText(t) {
-  if (!t) return;
-  try { navigator.clipboard.writeText(t); if (typeof showToast === 'function') showToast('📋 Skopiowano link', 'success', 1500); } catch(_) {}
+  if (!t) { if (typeof showToast === 'function') showToast('Brak linku do skopiowania', 'warning', 1500); return; }
+  const done = () => { if (typeof showToast === 'function') showToast('Skopiowano link', 'success', 1500); };
+  try { navigator.clipboard.writeText(t).then(done).catch(done); } catch(_) { done(); }
 }
 
-// Pigułki statusu odświeżane okresowo (RT/offline/puls zmieniają się bez renderSetupPage).
-// Smart-render: zmiana układu (np. z remote sync) animuje się, samo odświeżenie pigułek nie.
+// Pigułki statusu odświeżane okresowo. NIE przerysowuj gdy jakiś kafelek jest otwarty
+// (przemontowanie karty kradłoby fokus / gubiło edycję) — wtedy czekamy na zamknięcie.
 setInterval(() => {
   const page = document.getElementById('page-setup');
-  if (page && page.classList.contains('active')) ptrBentoRenderSmart();
+  if (page && page.classList.contains('active') && !_ptrBentoOpenId) ptrBentoRenderSmart();
 }, 5000);
+
+// ═══════════════════════════════════════════════════════════════
+// NOTATKI z targetowaniem — jedna wspólna notatka, wybór zakładek + ważność.
+// Pasek pojawia się NA GÓRZE wybranych zakładek (nie tylko w Konfiguracji).
+// ═══════════════════════════════════════════════════════════════
+const PTR_NOTE_TABS = [
+  { key: 'athletes', page: 'page-athletes', label: 'Zawodnicy' },
+  { key: 'pairs',    page: 'page-pairs',    label: 'Pary' },
+  { key: 'team-run', page: 'page-team-run', label: 'Pary drużyn' },
+  { key: 'results',  page: 'page-results',  label: 'Wyniki' },
+];
+function _ptrNoteLevel() { return (state.setup && state.setup.notesLevel) || 'normal'; }
+function _ptrNoteTabs()  { return (state.setup && state.setup.notesTabs) || {}; }
+function setPtrNoteLevel(lvl) {
+  if (!state.setup) state.setup = {};
+  state.setup.notesLevel = lvl;
+  save();
+  _renderNoteEditor();
+  _renderPtrNotesBars();
+}
+function togglePtrNoteTarget(key) {
+  if (!state.setup) state.setup = {};
+  if (!state.setup.notesTabs) state.setup.notesTabs = {};
+  state.setup.notesTabs[key] = !state.setup.notesTabs[key];
+  save();
+  _renderNoteEditor();
+  _renderPtrNotesBars();
+}
+function _renderNoteEditor() {
+  const lvl = _ptrNoteLevel();
+  document.querySelectorAll('.ptr-note-lvl').forEach(b => b.classList.toggle('active', b.dataset.level === lvl));
+  const cont = document.getElementById('ptr-note-targets');
+  if (cont) {
+    const tabs = _ptrNoteTabs();
+    cont.innerHTML = PTR_NOTE_TABS.map(t =>
+      '<button type="button" class="ptr-note-target' + (tabs[t.key] ? ' on' : '') + '" onclick="togglePtrNoteTarget(\'' + t.key + '\')">' +
+      (tabs[t.key] ? _ptrIco('check') : '') + esc(t.label) + '</button>'
+    ).join('');
+  }
+}
+// Wstawia/aktualizuje/usuwa pasek notatki na górze każdej zakładki-celu
+function _renderPtrNotesBars() {
+  if (!state || !state.setup) return;
+  const txt = ((state.setup.notes) || '').trim();
+  const lvl = _ptrNoteLevel();
+  const tabs = _ptrNoteTabs();
+  const tag = lvl === 'critical' ? 'Krytyczne' : (lvl === 'important' ? 'Ważne' : '');
+  const icoName = lvl === 'normal' ? 'pin' : 'alert';
+  PTR_NOTE_TABS.forEach(t => {
+    const page = document.getElementById(t.page);
+    if (!page) return;
+    const id = 'ptr-note-bar-' + t.key;
+    let bar = document.getElementById(id);
+    if (!(txt && tabs[t.key])) { if (bar) bar.remove(); return; }
+    if (!bar) { bar = document.createElement('div'); bar.id = id; page.insertBefore(bar, page.firstChild); }
+    else if (bar !== page.firstChild) { page.insertBefore(bar, page.firstChild); } // utrzymaj na górze po rerenderze
+    bar.className = 'ptr-note-bar ' + lvl;
+    bar.innerHTML = '<span class="ptr-i" style="font-size:16px;">' + (_PTR_ICONS[icoName] ? _ptrIco(icoName) : '') + '</span>' +
+      (tag ? '<span class="ptr-note-bar-tag">' + tag + '</span>' : '') +
+      '<span style="flex:1;min-width:0;">' + esc(txt) + '</span>';
+  });
+}
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
 const TABLICA_BASE_URL = 'https://militarysportsystem.pl/t.html';
@@ -4418,6 +4600,38 @@ async function togglePtrPublicShare() {
   } catch(e) {
     alert('Bład: ' + e.message);
   }
+}
+
+// ─── Projektor: osobna flaga projectorShare (niezależna od publicShare) ───
+function _getPtrProjectorShare() {
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+    if (!slotRaw) return false;
+    return !!JSON.parse(slotRaw).projectorShare;
+  } catch (e) { return false; }
+}
+async function togglePtrProjectorShare() {
+  const current = _getPtrProjectorShare();
+  const newVal = !current;
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+    if (!slotRaw) return alert('Brak lokalnego cache slotu - odśwież stronę');
+    const slot = JSON.parse(slotRaw);
+    slot.projectorShare = newVal;
+    slot._updated = new Date().toISOString();
+    localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+    _renderPtrProjSection();
+    if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
+    const { error } = await getSupabase().from('herkules_slots').upsert({
+      slot_id: String(SLOT_ID), slot_json: JSON.stringify(slot), updated_at: slot._updated
+    }, { onConflict: 'slot_id' });
+    if (error) {
+      slot.projectorShare = current;
+      localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+      _renderPtrProjSection();
+      alert('Bład zapisu: ' + error.message);
+    }
+  } catch(e) { alert('Bład: ' + e.message); }
 }
 
 // Zwraca data URL (PNG) z wygenerowanym QR
@@ -4687,9 +4901,9 @@ function _updatePtrStatusTile() {
   const body = document.getElementById('ptr-status-body');
   if (body && body.style.display === 'none') return;
 
-  function row(icon, label, value, color) {
+  function row(iconName, label, value, color) {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);">' +
-      '<span style="color:var(--text2);">' + icon + ' ' + label + '</span>' +
+      '<span style="color:var(--text2);display:inline-flex;align-items:center;gap:7px;"><span style="color:var(--text3);font-size:14px;display:inline-flex;">' + (typeof _ptrIco === 'function' ? _ptrIco(iconName) : '') + '</span>' + label + '</span>' +
       '<span style="color:' + (color || 'var(--text1)') + ';font-weight:700;">' + value + '</span>' +
     '</div>';
   }
@@ -4744,11 +4958,11 @@ function _updatePtrStatusTile() {
   const modeColor = offline ? 'var(--orange)' : 'var(--green)';
 
   bodyRows.innerHTML =
-    row('🕐', 'Drift zegara (serwer)', driftTxt, driftColor) +
-    row('🎬', 'Aplikacja startera', starterTxt, starterColor) +
-    row('📡', 'Realtime sync', rtTxt, rtColor) +
-    row('💾', 'Zapis do chmury', saveTxt, saveColor) +
-    row('⚙', 'Tryb działania', modeTxt, modeColor);
+    row('clock', 'Drift zegara (serwer)', driftTxt, driftColor) +
+    row('flag', 'Aplikacja startera', starterTxt, starterColor) +
+    row('broadcast', 'Realtime sync', rtTxt, rtColor) +
+    row('database', 'Zapis do chmury', saveTxt, saveColor) +
+    row('adjustments', 'Tryb działania', modeTxt, modeColor);
 }
 
 // Aktualizuj kafelek statusu co 5s
