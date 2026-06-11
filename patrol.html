@@ -285,11 +285,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-guide-toggle.on .ptr-guide-knob { left: 16px; }
 .ptr-guide-hint { display: flex; align-items: center; gap: 8px; background: rgba(232,164,93,.08); border: 1px solid rgba(232,164,93,.2); border-radius: 10px; padding: 8px 12px; margin-bottom: 16px; font-size: 12.5px; color: #d8c4a8; cursor: pointer; }
 .ptr-guide-hint strong { color: var(--warn); }
-#ptr-bento-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
-.ptr-bcol { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.ptr-bcol > .ptr-cat:last-child { flex: 1 0 auto; } /* ostatnia karta wypełnia kolumnę — luka jako wewn. margines, nie void */
+/* 3 kolumny: Zawody | Stoper(krótki, u góry) | System i dane.
+   Środkowa kolumna wąska, Stoper przy górnej krawędzi → sąsiednie kolumny otulają go
+   z boków i schodzą poniżej, prawie stykając się na dole. */
+#ptr-bento-cats { display: grid; grid-template-columns: 1fr minmax(150px, 0.5fr) 1fr; gap: 12px; align-items: start; }
 .ptr-cat { background: var(--bg2); border: 1px solid var(--cat-bd, var(--border2)); border-radius: 14px; overflow: hidden; }
 .ptr-cat.span2 { grid-column: 1 / -1; }
+.ptr-cat.mid { align-self: start; }                 /* Stoper krótki, przy górnej krawędzi */
+.ptr-cat.mid .ptr-tile2 { flex-wrap: wrap; row-gap: 6px; }  /* w wąskiej kolumnie pigułka schodzi pod nazwę */
+.ptr-cat.mid .ptr-tile2-pill { margin-left: 41px; }         /* wyrównanie pigułki pod tekstem (za ikoną) */
 .ptr-cat-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--cat-soft); }
 .ptr-cat-head .ptr-i { color: var(--cat-ico); font-size: 16px; }
 .ptr-cat-name { font-family: var(--font-h); font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cat-ico); }
@@ -1070,7 +1074,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
       </div>
       <!-- Kapsuła: zapis (Zapisz teraz + pobierz kopię na komputer) -->
       <div class="hdr-group">
-        <button class="hdr-btn" onclick="ptrSaveNow()" title="Zapisz teraz do chmury" style="color:var(--green);display:inline-flex;align-items:center;gap:6px;"><span class="ptr-i" style="font-size:14px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg></span>Zapisz</button>
+        <button class="hdr-btn" onclick="ptrSaveNow()" title="Zapisz migawkę stanu (punkt przywracania) + upload do chmury" style="color:var(--green);display:inline-flex;align-items:center;gap:6px;"><span class="ptr-i" style="font-size:14px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg></span>Zapisz</button>
         <button class="hdr-btn" id="ptr-hdr-export" onclick="exportPatrolJSON()" title="Pobierz kopię zawodów na komputer (plik .json do późniejszego wgrania)" style="padding:4px 9px;"><span class="ptr-i" style="font-size:15px;display:inline-flex;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></svg></span></button>
       </div>
       <!-- Kapsuła: akcje (tryb + powrót do panelu) -->
@@ -2302,11 +2306,13 @@ function scheduleSave() {
   _saveTimer = setTimeout(() => { _saveTimer = null; saveToSupabase(); }, 300);
 }
 
-// Ręczny "Zapisz teraz" z nagłówka — natychmiastowy upload + potwierdzenie
+// Ręczny "Zapisz" z nagłówka — natychmiastowy upload do chmury + zapis MIGAWKI stanu
+// (punkt przywracania, do którego można wrócić w "Dane i kopie").
 function ptrSaveNow() {
   try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch(_) {}
   try { save(); saveImmediate(); } catch(_) {}
-  if (typeof showToast === 'function') showToast('Zapisano do chmury', 'success', 1500);
+  if (typeof makePtrSnapshotNow === 'function') makePtrSnapshotNow(); // pokazuje własny toast "Migawka zapisana"
+  else if (typeof showToast === 'function') showToast('Zapisano do chmury', 'success', 1500);
 }
 
 function saveImmediate() {
@@ -4092,9 +4098,9 @@ function _ptrDot(color, pulse) {
 // Kategorie o STAŁYCH pozycjach i kolorach (te same w patrol/osf/wieloboj).
 // col: 'L' lewa kolumna · 'R' prawa (Pomiar+System stackowane — wypełniają lukę) · 'F' pełna szerokość.
 const PTR_BENTO_CATS = [
-  { key: 'zawody', name: 'Zawody', ico: 'clipboard-text', cssVar: '--cz', col: 'L', cols: 1 },
-  { key: 'pomiar', name: 'Pomiar', ico: 'stopwatch', cssVar: '--cp', col: 'R', cols: 1 },
-  { key: 'system', name: 'System i dane', ico: 'shield', cssVar: '--cs', col: 'R', cols: 1 },
+  { key: 'zawody', name: 'Zawody', ico: 'clipboard-text', cssVar: '--cz', cols: 1 },
+  { key: 'pomiar', name: 'Pomiar', ico: 'stopwatch', cssVar: '--cp', cols: 1, mid: true },
+  { key: 'system', name: 'System i dane', ico: 'shield', cssVar: '--cs', cols: 1 },
   { key: 'apps',   name: 'Aplikacje i linki', ico: 'apps', cssVar: '--ca', col: 'F', cols: 2, note: 'linki do wysłania sędziom i na ekrany' },
 ];
 
@@ -4106,8 +4112,8 @@ const PTR_BENTO_ITEMS = [
     help: 'Import zawodników z pliku .xlsx/.csv (szablon do pobrania). Ręczne dodawanie i edycja — zakładka Zawodnicy.' },
   { id: 'notes', cat: 'zawody', icon: 'note', label: 'Notatki', modal: true,
     help: 'Notatki sędziowskie. Każdą możesz wysłać na górę wybranych zakładek (Zawodnicy, Pary, Wyniki…) i nadać jej ważność (zwykła / ważna / krytyczna).' },
-  { id: 'mode', cat: 'pomiar', icon: 'stopwatch', label: 'Stoper', cardId: 'ptr-mode-card',
-    help: 'STOPER W PANELU — przyciski START/STOP w apce, czas sync na żywo. STOPER FIZYCZNY — pomiar ręcznymi stoperami i ręczne wpisywanie czasów (dobry przy słabym internecie).' },
+  { id: 'mode', cat: 'pomiar', icon: 'stopwatch', label: 'Stoper', toggle: true,
+    help: 'Kliknij, by przełączyć sposób pomiaru. STOPER W PANELU — przyciski START/STOP w apce, czas sync na żywo (potrzebny stabilny internet). STOPER FIZYCZNY — pomiar ręcznymi stoperami i ręczne wpisywanie czasów (dobry przy słabym internecie).' },
   { id: 'starter', cat: 'apps', icon: 'flag', label: 'Sędzia startu', cardId: 'ptr-tile-starter', muteable: true, app: true,
     help: 'Osobna apka na telefon sędziego na linii startu: duże przyciski START/RESET dla każdej pary + autorytatywny zegar dla całego systemu. Wygeneruj link i wyślij.',
     onOpen: () => { const b = document.getElementById('ptr-starter-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-starter-arrow'); if (a) a.textContent = '▼'; } },
@@ -4285,18 +4291,14 @@ function renderPtrBento() {
     const tiles = items.map(it => _ptrBentoTileHtml(it, st[it.id], guide)).join('');
     const soft = 'color-mix(in srgb, var(' + cat.cssVar + ') 9%, transparent)';
     const bd = 'color-mix(in srgb, var(' + cat.cssVar + ') 28%, transparent)';
-    return '<div class="ptr-cat' + (cat.col === 'F' ? ' span2' : '') + '" style="--cat-bd:' + bd + ';--cat-soft:' + soft + ';--cat-ico:var(' + cat.cssVar + ');">' +
+    return '<div class="ptr-cat' + (cat.col === 'F' ? ' span2' : '') + (cat.mid ? ' mid' : '') + '" style="--cat-bd:' + bd + ';--cat-soft:' + soft + ';--cat-ico:var(' + cat.cssVar + ');">' +
       '<div class="ptr-cat-head">' + _ptrIco(cat.ico) + '<span class="ptr-cat-name">' + esc(cat.name) + '</span>' +
       (cat.note ? '<span class="ptr-cat-note">' + esc(cat.note) + '</span>' : '') + '</div>' +
       '<div class="ptr-cat-grid" style="grid-template-columns:repeat(' + cat.cols + ',minmax(0,1fr));">' + tiles + '</div></div>';
   };
-  const colCats = (c) => PTR_BENTO_CATS.filter(cat => cat.col === c).map(renderCat).join('');
+  // Kolejność = pozycje w siatce: Zawody (kol.1) · Stoper (kol.2, wyśrodkowany) · System (kol.3) · Aplikacje (pełna szer.)
   const cont = document.getElementById('ptr-bento-cats');
-  // Lewa kolumna (Zawody) · prawa kolumna stackowana (Pomiar + System) · pełna szerokość (Aplikacje)
-  cont.innerHTML =
-    '<div class="ptr-bcol">' + colCats('L') + '</div>' +
-    '<div class="ptr-bcol">' + colCats('R') + '</div>' +
-    colCats('F');
+  cont.innerHTML = PTR_BENTO_CATS.map(renderCat).join('');
 
   _ptrBentoMountFlow();
   bento._sig = _ptrBentoSig();
@@ -4365,6 +4367,12 @@ function ptrBentoOpen(id) {
     if (id === 'notes' && typeof openPtrNotesModal === 'function') openPtrNotesModal();
     return;
   }
+  // Kafelki "toggle" (Stoper) nie rozwijają się — klik przełącza ustawienie wprost
+  if (_it && _it.toggle) {
+    if (id === 'mode' && typeof toggleOfflineMode === 'function') toggleOfflineMode();
+    if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
+    return;
+  }
   if (_ptrBentoOpenId === id) {
     // Re-klik w otwarty kafelek = zamknij, ale ignoruj przypadkowy dubel-klik (<350ms)
     if (Date.now() - _ptrBentoOpenedAt < 350) return;
@@ -4383,18 +4391,43 @@ function ptrBentoOpen(id) {
   _ptrBentoJustOpened = true;
   _ptrBentoRunOnOpen = true;
   ptrBentoRenderSmart();
-  // Dosuń wylany panel OD RAZU (bez czekania na koniec animacji — eliminuje "laga"),
-  // ze sporym zapasem pod spodem (≈110px).
-  requestAnimationFrame(() => {
-    const el = document.getElementById('ptr-bento-flow');
-    if (!el) return;
-    try {
-      const r = el.getBoundingClientRect();
-      const pad = 110;
-      if (r.bottom > window.innerHeight - pad) window.scrollBy({ top: r.bottom - (window.innerHeight - pad), behavior: 'smooth' });
-      else if (r.top < 80) window.scrollBy({ top: r.top - 80, behavior: 'smooth' });
-    } catch(_) {}
-  });
+  // Dosuń wylany panel — niezawodnie (mierzymy realny element, nie czekamy na animację VT)
+  // i płynnie własną animacją (rAF + easing, anulowalną), więc nigdy nie "świruje".
+  requestAnimationFrame(() => _ptrScrollFlowIntoView());
+}
+
+// Płynne, szybkie, anulowalne przewijanie do wartości docelowej (easeOutCubic ~260ms)
+let _ptrScrollRAF = null;
+function _ptrSmoothScrollTo(targetY, dur) {
+  if (_ptrScrollRAF) { cancelAnimationFrame(_ptrScrollRAF); _ptrScrollRAF = null; }
+  const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  targetY = Math.max(0, Math.min(targetY, maxY));
+  const startY = window.scrollY || window.pageYOffset;
+  const dist = targetY - startY;
+  if (Math.abs(dist) < 3) return;
+  dur = dur || 260;
+  const t0 = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3);
+  const step = (now) => {
+    const t = Math.min(1, (now - t0) / dur);
+    window.scrollTo(0, startY + dist * ease(t));
+    if (t < 1) _ptrScrollRAF = requestAnimationFrame(step);
+    else _ptrScrollRAF = null;
+  };
+  _ptrScrollRAF = requestAnimationFrame(step);
+}
+// Wylicza docelowy scroll tak, by panel był w całości widoczny z zapasem (góra i dół)
+function _ptrScrollFlowIntoView() {
+  const el = document.getElementById('ptr-bento-flow');
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  const curY = window.scrollY || window.pageYOffset;
+  const padTop = 80, padBottom = 96;
+  let target = curY;
+  if (r.bottom > window.innerHeight - padBottom) target = curY + (r.bottom - (window.innerHeight - padBottom));
+  // jeśli po dosunięciu dołu góra panelu wyjechałaby nad pasek — woli pokazać górę
+  if (r.top - (target - curY) < padTop) target = curY + (r.top - padTop);
+  _ptrSmoothScrollTo(target);
 }
 
 function ptrBentoClose() {
