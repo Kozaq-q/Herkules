@@ -293,17 +293,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-bento-chip.dim { opacity: .75; }
 .ptr-bento-mini-name { font-size: 12px; color: #9aa49e; text-align: center; }
 .ptr-bento-mini-ico { font-size: 17px; opacity: .8; }
-#ptr-bento-detail { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 0; margin-bottom: 22px; overflow: hidden; }
-.ptr-bento-detail-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.02); }
-#ptr-bento-detail-title { font-family: var(--font-b); font-size: 13.5px; font-weight: 500; color: var(--text1); flex: 1; }
-.ptr-bento-detail-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; color: var(--text3); font-family: var(--font-b); font-size: 11.5px; padding: 4px 12px; cursor: pointer; }
-.ptr-bento-detail-btn:hover { color: var(--text1); border-color: var(--text3); }
-#ptr-bento-detail-body { padding: 14px; }
-#ptr-bento-detail-body > .card { margin-bottom: 0 !important; border: none; background: transparent; padding: 0; }
-#ptr-bento-detail-body .ptr-starter-tile { width: 100%; border: none; background: transparent; }
-#ptr-bento-detail-body .ptr-help-btn { display: none !important; }
-#ptr-bento-detail-body .ptr-help-popover { display: none !important; }
-#ptr-bento-detail-body .ptr-mode-tile { aspect-ratio: auto; min-height: 0; flex-direction: row; gap: 10px; padding: 12px 14px; }
+/* Kafelek rozrośnięty W MIEJSCU — zajmuje pełny wiersz swojego pasma */
+.ptr-bento-tile.expanded { grid-column: 1 / -1; cursor: default; padding: 0; border-color: var(--border2); flex-direction: column; gap: 0; opacity: 1; }
+.ptr-bento-tile.expanded:hover { background: var(--bg2); }
+.ptr-bento-tile.expanded.warn:hover { background: #1a1713; }
+.ptr-bento-inline-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.ptr-bento-inline-title { font-family: var(--font-b); font-size: 13.5px; font-weight: 500; color: var(--text1); flex: 1; }
+.ptr-bento-inline-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; color: var(--text3); font-family: var(--font-b); font-size: 11.5px; padding: 4px 12px; cursor: pointer; flex-shrink: 0; }
+.ptr-bento-inline-btn:hover { color: var(--text1); border-color: var(--text3); }
+.ptr-bento-inline-body { padding: 14px; max-height: 62vh; overflow: auto; overscroll-behavior: contain; }
+.ptr-bento-inline-body > .card { margin-bottom: 0 !important; border: none; background: transparent; padding: 0; }
+.ptr-bento-inline-body .ptr-starter-tile { width: 100%; border: none; background: transparent; }
+.ptr-bento-inline-body .ptr-starter-head { display: none; } /* nagłówek kafelka dubluje pasek inline */
+.ptr-bento-inline-body [id$='-body'] { border-top: none !important; }
+.ptr-bento-inline-body .ptr-help-btn { display: none !important; }
+.ptr-bento-inline-body .ptr-help-popover { display: none !important; }
+.ptr-bento-inline-body .ptr-mode-tile { aspect-ratio: auto; min-height: 0; flex-direction: row; gap: 10px; padding: 12px 14px; }
+/* Rozrośnięty żeton w pasie chipów (flex) — pełna szerokość wiersza */
+.ptr-bento-chips .ptr-bento-tile.expanded { flex-basis: 100%; width: 100%; }
 @media (max-width: 700px) {
   .ptr-bento-grid.big { grid-template-columns: 1fr; }
   .ptr-bento-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1075,16 +1082,8 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           <div class="ptr-band-label muted">Później <span class="ptr-band-hint" id="ptr-band-later-hint">— obudzą się po dodaniu zawodników</span></div>
           <div class="ptr-bento-grid mini" id="ptr-band-later"></div>
         </div>
-        <!-- Otwarty szczegół kafelka (JS przenosi tu kartę ze store) -->
-        <div id="ptr-bento-detail" style="display:none;">
-          <div class="ptr-bento-detail-bar">
-            <span id="ptr-bento-detail-title"></span>
-            <button class="ptr-bento-detail-btn" id="ptr-bento-detail-mute" onclick="ptrBentoToggleMute()" style="display:none;">🔕 Nie używam</button>
-            <button class="ptr-bento-detail-btn" onclick="ptrBentoClose()">✕ Zamknij</button>
-          </div>
-          <div id="ptr-bento-detail-body"></div>
-        </div>
-        <!-- Magazyn zaadoptowanych kart (ukryty) -->
+        <!-- Magazyn zaadoptowanych kart (ukryty). Otwarty kafelek rozrasta się W MIEJSCU
+             (grid-column 1/-1) i dostaje kartę ze store do .ptr-bento-inline-body. -->
         <div id="ptr-bento-store" style="display:none;"></div>
       </div>
 
@@ -3973,7 +3972,7 @@ const PTR_BENTO_ITEMS = [
     onOpen: () => { const b = document.getElementById('ptr-speaker-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-speaker-arrow'); if (a) a.textContent = '▼'; } },
   { id: 'status', icon: '📡', label: 'Status systemu', cardId: 'ptr-tile-status',
     help: 'Diagnostyka: zegar serwera, puls startera, realtime sync, kolejka zapisów. Zielone = OK, pomarańczowe = sprawdź, czerwone = problem.',
-    onOpen: () => { const b = document.getElementById('ptr-status-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-status-arrow'); if (a) a.textContent = '▼'; } },
+    onOpen: () => { const b = document.getElementById('ptr-status-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-status-arrow'); if (a) a.textContent = '▼'; if (typeof _updatePtrStatusTile === 'function') _updatePtrStatusTile(); } },
   { id: 'share', icon: '📺', label: 'Tablica uczestników', cardId: 'ptr-share-card', muteable: true,
     help: 'Publiczna tablica wyników na telefony uczestników (QR / link, bez logowania, tylko odczyt). Wymaga włączonej publikacji — od niej zależy też projektor.' },
   { id: 'projector', icon: '🖥', label: 'Projektor', cardId: 'ptr-projector-card', muteable: true,
@@ -4058,7 +4057,17 @@ function renderPtrBento() {
   if (!bento._adopted) _ptrBentoAdopt();
   // Nie przerysowuj gdy otwarty popover pomocy (re-render by go zamknął)
   if (bento.querySelector('.ptr-help-popover.open')) return;
+  // Nie przerysowuj gdy user pisze w polu wewnątrz bento (notatki, linki) — utrata fokusa
+  const _act = document.activeElement;
+  if (_act && bento.contains(_act) && /^(INPUT|TEXTAREA|SELECT)$/.test(_act.tagName)) return;
   const { st, hasInfo, hasAth, muted, cfg } = _ptrBentoStates();
+  // Odłóż wszystkie karty do magazynu PRZED przebudową pasm (innerHTML zniszczyłby
+  // kartę zamontowaną w rozrośniętym kafelku)
+  const _store = document.getElementById('ptr-bento-store');
+  PTR_BENTO_ITEMS.forEach(it => {
+    const c = document.getElementById(it.cardId);
+    if (c && c.parentNode !== _store) _store.appendChild(c);
+  });
 
   // Pasek postępu: 5 kroków + podpis "co dalej"
   const steps = [
@@ -4077,7 +4086,12 @@ function renderPtrBento() {
   PTR_BENTO_ITEMS.forEach(it => {
     const v = st[it.id];
     if (!v) return;
-    const openCls = (_ptrBentoOpenId === it.id) ? ' open' : '';
+    // Otwarty kafelek rozrasta się W MIEJSCU na pełny wiersz swojego pasma
+    if (_ptrBentoOpenId === it.id) {
+      bands[v.band].push(_ptrBentoExpandedHtml(it, v));
+      return;
+    }
+    const openCls = '';
     if (v.band === 'attention') {
       bands.attention.push('<div class="ptr-bento-tile warn big' + openCls + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
         '<div class="ptr-bento-ico warn">' + it.icon + '</div><div style="min-width:0;">' +
@@ -4110,45 +4124,50 @@ function renderPtrBento() {
   // Etykieta pasma uwagi: na świeżych zawodach "Zacznij od tego", potem "Wymaga uwagi"
   document.getElementById('ptr-band-attention-label').textContent = (!hasInfo || !hasAth) ? 'Zacznij od tego' : 'Wymaga uwagi';
 
-  // Otwarty szczegół: umieść pod pasmem, w którym aktualnie mieszka kafelek
-  const detail = document.getElementById('ptr-bento-detail');
-  if (_ptrBentoOpenId && detail) {
-    const band = (st[_ptrBentoOpenId] || {}).band || 'done';
-    const wrap = document.getElementById('ptr-band-' + band + '-wrap');
-    if (wrap && wrap.nextElementSibling !== detail) wrap.insertAdjacentElement('afterend', detail);
+  // Zamontuj kartę otwartego kafelka w jego rozrośniętym ciele (po przebudowie innerHTML)
+  if (_ptrBentoOpenId) {
+    const it = PTR_BENTO_ITEMS.find(x => x.id === _ptrBentoOpenId);
+    const slot = document.getElementById('ptr-bento-inline-body');
+    const card = it ? document.getElementById(it.cardId) : null;
+    if (it && slot && card) {
+      slot.appendChild(card);
+      if (it.onOpen) { try { it.onOpen(); } catch(_) {} }
+    } else {
+      _ptrBentoOpenId = null;
+    }
   }
+}
+
+// Markup rozrośniętego kafelka: pasek (ikona · nazwa · mute · zwiń) + ciało na kartę
+function _ptrBentoExpandedHtml(it, v) {
+  const isMuted = !!((state.cfg && state.cfg.bentoMuted) || {})[it.id];
+  const warnCls = (v.band === 'attention') ? ' warn' : '';
+  return '<div class="ptr-bento-tile expanded' + warnCls + '">' +
+    '<div class="ptr-bento-inline-head" onclick="ptrBentoClose()" title="Zwiń">' +
+      '<span style="font-size:15px;">' + it.icon + '</span>' +
+      '<span class="ptr-bento-inline-title">' + esc(it.label) + '</span>' +
+      (it.muteable ? '<button class="ptr-bento-inline-btn" onclick="event.stopPropagation();ptrBentoToggleMute()">' + (isMuted ? '🔔 Przywróć' : '🔕 Nie używam') + '</button>' : '') +
+      '<button class="ptr-bento-inline-btn" onclick="event.stopPropagation();ptrBentoClose()">✕ Zwiń</button>' +
+    '</div>' +
+    '<div class="ptr-bento-inline-body" id="ptr-bento-inline-body" onclick="event.stopPropagation()"></div>' +
+  '</div>';
 }
 
 function ptrBentoOpen(id) {
   if (_ptrBentoOpenId === id) { ptrBentoClose(); return; }
-  if (_ptrBentoOpenId) ptrBentoClose(true);
-  const it = PTR_BENTO_ITEMS.find(x => x.id === id);
-  if (!it) return;
-  const card = document.getElementById(it.cardId);
-  if (!card) return;
   _ptrBentoOpenId = id;
-  document.getElementById('ptr-bento-detail-body').appendChild(card);
-  document.getElementById('ptr-bento-detail-title').textContent = it.icon + ' ' + it.label;
-  const muteBtn = document.getElementById('ptr-bento-detail-mute');
-  if (muteBtn) {
-    muteBtn.style.display = it.muteable ? '' : 'none';
-    muteBtn.textContent = ((state.cfg?.bentoMuted || {})[id]) ? '🔔 Przywróć' : '🔕 Nie używam';
-  }
-  document.getElementById('ptr-bento-detail').style.display = '';
-  if (it.onOpen) { try { it.onOpen(); } catch(_) {} }
   renderPtrBento();
+  // Delikatnie dosuń rozrośnięty kafelek, jeśli wyszedł poza viewport
+  requestAnimationFrame(() => {
+    const el = document.querySelector('#ptr-bento .ptr-bento-tile.expanded');
+    if (el) { try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch(_) {} }
+  });
 }
 
-function ptrBentoClose(silent) {
+function ptrBentoClose() {
   if (!_ptrBentoOpenId) return;
-  const it = PTR_BENTO_ITEMS.find(x => x.id === _ptrBentoOpenId);
-  if (it) {
-    const card = document.getElementById(it.cardId);
-    if (card) document.getElementById('ptr-bento-store').appendChild(card);
-  }
   _ptrBentoOpenId = null;
-  document.getElementById('ptr-bento-detail').style.display = 'none';
-  if (!silent) renderPtrBento();
+  renderPtrBento();
 }
 
 function ptrBentoAction(id) {
@@ -4170,10 +4189,8 @@ function ptrBentoToggleMute() {
   if (!state.cfg) state.cfg = {};
   if (!state.cfg.bentoMuted) state.cfg.bentoMuted = {};
   state.cfg.bentoMuted[id] = !state.cfg.bentoMuted[id];
-  const muteBtn = document.getElementById('ptr-bento-detail-mute');
-  if (muteBtn) muteBtn.textContent = state.cfg.bentoMuted[id] ? '🔔 Przywróć' : '🔕 Nie używam';
   save();
-  renderPtrBento();
+  renderPtrBento(); // przebudowa odświeży etykietę przycisku i pasmo kafelka
 }
 
 // Pigułki statusu odświeżane okresowo (RT/offline/puls zmieniają się bez renderSetupPage)
