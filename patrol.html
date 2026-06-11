@@ -307,6 +307,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-stoper-ico .ptr-i { font-size: 24px; color: var(--cp); }
 .ptr-stoper-name { font-family: var(--font-h); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--cp); }
 .ptr-stoper .ptr-tile2-help { position: absolute; top: 8px; right: 8px; }
+/* Tryb fizyczny (stoper online wyłączony) — oś milknie, kafelek szarzeje */
+.ptr-mid.off .ptr-mid-spine { background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--text3) 22%, transparent) 18%, color-mix(in srgb, var(--text3) 22%, transparent) 82%, transparent); }
+.ptr-mid.off .ptr-mid-spine::after { display: none; }
+.ptr-mid.off .ptr-mid-wire { opacity: .35; background: linear-gradient(to var(--dir, right), color-mix(in srgb, var(--text3) 25%, transparent), transparent); }
+.ptr-stoper.off { border-color: var(--border2); background: var(--bg2); }
+.ptr-stoper.off:hover { border-color: var(--text3); background: var(--bg3); }
+.ptr-stoper.off .ptr-stoper-ico { background: rgba(138,152,152,.12); }
+.ptr-stoper.off .ptr-stoper-ico .ptr-i { color: var(--text3); }
+.ptr-stoper.off .ptr-stoper-name { color: var(--text3); }
 .ptr-cat-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--cat-soft); }
 .ptr-cat-head .ptr-i { color: var(--cat-ico); font-size: 16px; }
 .ptr-cat-name { font-family: var(--font-h); font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cat-ico); }
@@ -4223,10 +4232,12 @@ function _ptrStoperMidHtml(v, guide) {
   v = v || { band: 'active', pill: { t: '', k: 'muted' } };
   const it = PTR_BENTO_ITEMS.find(x => x.id === 'mode');
   const p = v.pill || { t: 'w panelu, sync', k: 'ok' };
-  return '<div class="ptr-mid">' +
+  // Tryb fizyczny (online OFF) = brak żywego sygnału → oś milknie, kafelek szarzeje
+  const off = !!(state.cfg && state.cfg.offlineMode);
+  return '<div class="ptr-mid' + (off ? ' off' : '') + '">' +
     '<div class="ptr-mid-spine" aria-hidden="true"></div>' +
     '<div class="ptr-mid-wire l" aria-hidden="true"></div><div class="ptr-mid-wire r" aria-hidden="true"></div>' +
-    '<div class="ptr-stoper" data-bid="mode" onclick="ptrBentoOpen(\'mode\')" title="Kliknij, by przełączyć tryb pomiaru">' +
+    '<div class="ptr-stoper' + (off ? ' off' : '') + '" data-bid="mode" onclick="ptrBentoOpen(\'mode\')" title="Kliknij, by przełączyć tryb pomiaru">' +
       _ptrBentoHelpHtml(it) +
       '<span class="ptr-stoper-ico">' + _ptrIco('stopwatch') + '</span>' +
       '<span class="ptr-stoper-name">Stoper</span>' +
