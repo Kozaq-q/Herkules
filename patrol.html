@@ -27,6 +27,7 @@
   --green:   #4caf82;
   --red:     #e05555;
   --blue:    #5b9bd5;
+  --warn:    #e8a45d;       /* bursztyn "wymaga uwagi" — NIE mylić z --orange (akcent konkurencji) */
   --orange:  #4caf82;       /* default patrol — zielony, ale sędzia może zmienić w config */
   --male:    #5b9bd5;
   --female:  #d57b9b;
@@ -246,6 +247,69 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-help-popover strong { color: var(--accent); }
 /* Pozycjonowanie kontenera kafelka non-expand (offline / speaker placeholder) */
 .ptr-mode-tile { position: relative; }
+
+/* ═══ ŻYWE BENTO — Konfiguracja sortowana wg uwagi ═══
+   Miękkie kafelki bez ramek, pigułki statusu, żetony, pasma. */
+.ptr-bento-progress { display: flex; align-items: center; gap: 12px; margin: 2px 0 18px; }
+.ptr-bento-progress .seg { width: 22px; height: 4px; border-radius: 2px; background: var(--bg4); flex-shrink: 0; }
+.ptr-bento-progress .seg.done { background: var(--green); }
+.ptr-bento-progress .seg.now { background: var(--warn); }
+.ptr-bento-progress .cap { font-family: var(--font-b); font-size: 12.5px; color: var(--text3); }
+.ptr-bento-band { margin-bottom: 22px; }
+.ptr-band-label { font-family: var(--font-h); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; color: var(--text3); }
+.ptr-band-label.warn { color: var(--warn); }
+.ptr-band-label.ok { color: var(--green); }
+.ptr-band-label.muted { color: #6e7873; }
+.ptr-band-hint { font-family: var(--font-b); font-size: 11.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: #69736d; margin-left: 4px; }
+.ptr-bento-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.ptr-bento-grid.big { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.ptr-bento-grid.mini { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+.ptr-bento-tile { position: relative; background: var(--bg2); border: 1px solid transparent; border-radius: 14px; padding: 15px 14px; display: flex; flex-direction: column; gap: 9px; cursor: pointer; text-align: left; font-family: var(--font-b); transition: background .15s, border-color .15s; }
+.ptr-bento-tile:hover { background: var(--bg3); }
+.ptr-bento-tile.open { border-color: var(--border2); }
+.ptr-bento-tile.warn { background: #1a1713; }
+.ptr-bento-tile.warn:hover { background: #1f1b16; }
+.ptr-bento-tile.big { flex-direction: row; align-items: center; gap: 13px; padding: 16px; }
+.ptr-bento-tile.later-tile { background: rgba(20,23,23,.45); opacity: .55; flex-direction: column; align-items: center; gap: 6px; padding: 12px 10px; }
+.ptr-bento-tile.later-tile:hover { opacity: .85; }
+.ptr-bento-ico { width: 34px; height: 34px; border-radius: 50%; background: rgba(138,152,152,.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.ptr-bento-tile.big .ptr-bento-ico { width: 42px; height: 42px; font-size: 19px; }
+.ptr-bento-ico.ok { background: rgba(76,175,130,.16); }
+.ptr-bento-ico.warn { background: rgba(232,164,93,.14); }
+.ptr-bento-name { font-size: 14.5px; font-weight: 500; color: var(--text1); margin-bottom: 4px; }
+.ptr-bento-sub { font-size: 12px; color: #9a917f; margin-bottom: 9px; line-height: 1.4; }
+.ptr-bento-pill { display: inline-block; font-size: 11px; border-radius: 9px; padding: 2px 9px; }
+.ptr-bento-pill.ok { color: var(--green); background: rgba(76,175,130,.13); }
+.ptr-bento-pill.warn { color: var(--warn); background: rgba(232,164,93,.12); }
+.ptr-bento-pill.muted { color: #828c86; background: rgba(255,255,255,.05); }
+.ptr-bento-act { display: inline-block; font-size: 12px; color: var(--bg); background: var(--warn); border: none; border-radius: 8px; padding: 5px 16px; font-weight: 600; font-family: var(--font-b); cursor: pointer; }
+.ptr-bento-act:hover { filter: brightness(1.1); }
+.ptr-bento-help { position: absolute; top: 9px; right: 9px; width: 18px; height: 18px; background: rgba(255,255,255,.05); border: none; border-radius: 50%; color: #6e7873; font-size: 11px; line-height: 18px; text-align: center; cursor: help; padding: 0; }
+.ptr-bento-help:hover { color: var(--text1); background: rgba(255,255,255,.1); }
+.ptr-bento-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ptr-bento-chip { display: inline-flex; align-items: center; gap: 7px; background: rgba(20,23,23,.7); border: 1px solid transparent; border-radius: 10px; padding: 7px 13px; font-family: var(--font-b); font-size: 12.5px; color: #9aa49e; cursor: pointer; transition: background .15s; }
+.ptr-bento-chip:hover { background: var(--bg3); color: var(--text2); }
+.ptr-bento-chip .ok-mark { color: var(--green); font-size: 12px; }
+.ptr-bento-chip.dim { opacity: .75; }
+.ptr-bento-mini-name { font-size: 12px; color: #9aa49e; text-align: center; }
+.ptr-bento-mini-ico { font-size: 17px; opacity: .8; }
+#ptr-bento-detail { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 0; margin-bottom: 22px; overflow: hidden; }
+.ptr-bento-detail-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.02); }
+#ptr-bento-detail-title { font-family: var(--font-b); font-size: 13.5px; font-weight: 500; color: var(--text1); flex: 1; }
+.ptr-bento-detail-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; color: var(--text3); font-family: var(--font-b); font-size: 11.5px; padding: 4px 12px; cursor: pointer; }
+.ptr-bento-detail-btn:hover { color: var(--text1); border-color: var(--text3); }
+#ptr-bento-detail-body { padding: 14px; }
+#ptr-bento-detail-body > .card { margin-bottom: 0 !important; border: none; background: transparent; padding: 0; }
+#ptr-bento-detail-body .ptr-starter-tile { width: 100%; border: none; background: transparent; }
+#ptr-bento-detail-body .ptr-help-btn { display: none !important; }
+#ptr-bento-detail-body .ptr-help-popover { display: none !important; }
+#ptr-bento-detail-body .ptr-mode-tile { aspect-ratio: auto; min-height: 0; flex-direction: row; gap: 10px; padding: 12px 14px; }
+@media (max-width: 700px) {
+  .ptr-bento-grid.big { grid-template-columns: 1fr; }
+  .ptr-bento-grid { grid-template-columns: repeat(2, 1fr); }
+  .ptr-bento-grid.mini { grid-template-columns: repeat(3, 1fr); }
+}
+
 .stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; }
 .stat-num { font-family: var(--font-h); font-size: 38px; font-weight: 800; line-height: 1; color: var(--text1); }
 .stat-label { font-family: var(--font-h); font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
@@ -990,6 +1054,40 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
     <!-- KONFIGURACJA -->
     <div class="page active" id="page-setup">
 
+      <!-- ═══ ŻYWE BENTO — kafelki sortowane wg uwagi (pasma: uwaga/działa/żetony/później) ═══
+           Istniejące karty są ADOPTOWANE przez JS do #ptr-bento-store i pokazywane
+           jako rozwijany szczegół kafelka. Gdy JS nie wystartuje — stary układ zostaje. -->
+      <div id="ptr-bento" style="display:none;">
+        <div class="ptr-bento-progress" id="ptr-bento-progress"></div>
+        <div class="ptr-bento-band" id="ptr-band-attention-wrap" style="display:none;">
+          <div class="ptr-band-label warn" id="ptr-band-attention-label">Zacznij od tego</div>
+          <div class="ptr-bento-grid big" id="ptr-band-attention"></div>
+        </div>
+        <div class="ptr-bento-band" id="ptr-band-active-wrap" style="display:none;">
+          <div class="ptr-band-label ok">Działa</div>
+          <div class="ptr-bento-grid" id="ptr-band-active"></div>
+        </div>
+        <div class="ptr-bento-band" id="ptr-band-done-wrap" style="display:none;">
+          <div class="ptr-band-label muted">Skonfigurowane</div>
+          <div class="ptr-bento-chips" id="ptr-band-done"></div>
+        </div>
+        <div class="ptr-bento-band" id="ptr-band-later-wrap" style="display:none;">
+          <div class="ptr-band-label muted">Później <span class="ptr-band-hint" id="ptr-band-later-hint">— obudzą się po dodaniu zawodników</span></div>
+          <div class="ptr-bento-grid mini" id="ptr-band-later"></div>
+        </div>
+        <!-- Otwarty szczegół kafelka (JS przenosi tu kartę ze store) -->
+        <div id="ptr-bento-detail" style="display:none;">
+          <div class="ptr-bento-detail-bar">
+            <span id="ptr-bento-detail-title"></span>
+            <button class="ptr-bento-detail-btn" id="ptr-bento-detail-mute" onclick="ptrBentoToggleMute()" style="display:none;">🔕 Nie używam</button>
+            <button class="ptr-bento-detail-btn" onclick="ptrBentoClose()">✕ Zamknij</button>
+          </div>
+          <div id="ptr-bento-detail-body"></div>
+        </div>
+        <!-- Magazyn zaadoptowanych kart (ukryty) -->
+        <div id="ptr-bento-store" style="display:none;"></div>
+      </div>
+
       <!-- 📌 NOTATKI — slot górny (widoczny gdy notatki niepuste) -->
       <div id="ptr-notes-top-slot"></div>
 
@@ -1009,7 +1107,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
       <!-- KAFELKI TRYBU/DOSTĘPU — 4 obok siebie, pełna szerokość -->
       <div class="ptr-tiles-row mb-12">
         <!-- 1. Tryb pomiaru (stoper w panelu ↔ stoper fizyczny) -->
-        <div style="position:relative;">
+        <div id="ptr-mode-card" style="position:relative;">
           <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('offline')" title="Co to robi?">?</button>
           <div class="ptr-help-popover" id="ptr-help-offline">
             <strong>STOPER W PANELU</strong> — przyciski START/STOP w apce, czas sync na żywo (potrzebny stabilny internet u wszystkich sędziów). <strong>STOPER FIZYCZNY</strong> — mierzcie ręcznymi stoperami i wpisujcie czasy ręcznie. Dobry też gdy któryś sędzia ma słaby internet: jego wpisy zapiszą się lokalnie i zsynchronizują gdy sieć wróci.
@@ -1260,7 +1358,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         </div>
       </div>
 
-      <div class="grid-2">
+      <div class="grid-2" id="ptr-setup-grid2">
         <!-- LEWA: Informacje + Reguły parowania -->
         <div>
           <!-- Info zawodów (collapse) -->
@@ -1327,7 +1425,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
 
         <!-- PRAWA: Import + Operacje -->
         <div>
-          <div class="card mb-12">
+          <div class="card mb-12" id="ptr-import-card">
             <div class="card-title">📥 Import listy startowej</div>
             <div style="display:flex;gap:10px;margin-bottom:8px;">
               <button class="btn" onclick="document.getElementById('ptr-import-file').click()" style="flex:1;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;height:auto;">
@@ -1345,7 +1443,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           </div>
 
           <!-- Ustawienia zaawansowane -->
-          <div class="card mb-12">
+          <div class="card mb-12" id="ptr-advanced-card">
             <button onclick="toggleOps()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
               <div class="card-title" style="margin:0;padding:0;border:none;">⚙ Ustawienia zaawansowane</div>
               <span id="ptr-ops-arrow" style="color:var(--text3);font-size:12px;">▶</span>
@@ -2070,6 +2168,8 @@ function ensureStateDefaults() {
   if (state.cfg.startKeyExpiresAt === undefined) state.cfg.startKeyExpiresAt = null;
   // Tryb offline — wyłącza stoper, sędziowie wpisują ręcznie
   if (state.cfg.offlineMode === undefined) state.cfg.offlineMode = false;
+  // Żywe bento: funkcje oznaczone "nie używam" (per slot, sync między urządzeniami)
+  if (!state.cfg.bentoMuted) state.cfg.bentoMuted = {};
   const SETUP_DEFAULTS = {
     accentColor: '#4caf82', name: '', city: '', date: '', org: '', notes: ''
   };
@@ -3814,10 +3914,12 @@ function _placeNotes() {
   if (!card) return;
   const txt = document.getElementById('ptr-notes')?.value || '';
   const hasContent = !!txt.trim();
-  const topSlot = document.getElementById('ptr-notes-top-slot');
-  const bottomSlot = document.getElementById('ptr-notes-bottom-slot');
   card.classList.toggle('notes-filled', hasContent);
   card.classList.toggle('notes-empty', !hasContent);
+  // ŻYWE BENTO adoptuje kartę notatek (kafelek + szczegół) — nie przenoś jej do slotów
+  if (document.getElementById('ptr-bento')?._adopted) return;
+  const topSlot = document.getElementById('ptr-notes-top-slot');
+  const bottomSlot = document.getElementById('ptr-notes-bottom-slot');
   if (hasContent && topSlot && card.parentNode !== topSlot) topSlot.appendChild(card);
   else if (!hasContent && bottomSlot && card.parentNode !== bottomSlot) bottomSlot.appendChild(card);
 }
@@ -3847,7 +3949,238 @@ function renderSetupPage() {
   if (typeof _renderSpeakerSection === 'function') _renderSpeakerSection();
   _renderPtrShareSection();
   _renderPtrProjSection();
+  if (typeof renderPtrBento === 'function') renderPtrBento();
 }
+
+// ═══════════════════════════════════════════════════════════════
+// ŻYWE BENTO — Konfiguracja sortowana wg uwagi.
+// Istniejące karty są adoptowane do #ptr-bento-store i pokazywane jako
+// szczegół kafelka. Pasma: uwaga (akcja) / działa / żetony / później.
+// ═══════════════════════════════════════════════════════════════
+const PTR_BENTO_ITEMS = [
+  { id: 'info', icon: '📋', label: 'Informacje o zawodach', cardId: 'ptr-info-card',
+    help: 'Nazwa, miasto, data i organizator zawodów + kolor akcentu panelu. Te dane trafiają na tablicę publiczną, projektor i wydruki.',
+    onOpen: () => { if (typeof expandInfoCard === 'function') expandInfoCard(); } },
+  { id: 'athletes', icon: '👥', label: 'Lista startowa', cardId: 'ptr-import-card',
+    help: 'Import zawodników z pliku .xlsx/.csv (szablon do pobrania). Ręczne dodawanie i edycja — zakładka Zawodnicy.' },
+  { id: 'mode', icon: '⏱', label: 'Stoper', cardId: 'ptr-mode-card',
+    help: 'STOPER W PANELU — przyciski START/STOP w apce, czas sync na żywo. STOPER FIZYCZNY — pomiar ręcznymi stoperami i ręczne wpisywanie czasów (dobry przy słabym internecie).' },
+  { id: 'starter', icon: '🎬', label: 'Sędzia startu', cardId: 'ptr-tile-starter', muteable: true,
+    help: 'Osobna apka na telefon sędziego na linii startu: duże przyciski START/RESET dla każdej pary + autorytatywny zegar dla całego systemu. Wygeneruj link i wyślij.',
+    onOpen: () => { const b = document.getElementById('ptr-starter-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-starter-arrow'); if (a) a.textContent = '▼'; } },
+  { id: 'speaker', icon: '🎙', label: 'Speaker', cardId: 'ptr-tile-speaker', muteable: true,
+    help: 'Apka tylko-do-odczytu dla komentatora: lista startowa, pary na trasie i wyniki na żywo. Wygeneruj link i wyślij na telefon.',
+    onOpen: () => { const b = document.getElementById('ptr-speaker-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-speaker-arrow'); if (a) a.textContent = '▼'; } },
+  { id: 'status', icon: '📡', label: 'Status systemu', cardId: 'ptr-tile-status',
+    help: 'Diagnostyka: zegar serwera, puls startera, realtime sync, kolejka zapisów. Zielone = OK, pomarańczowe = sprawdź, czerwone = problem.',
+    onOpen: () => { const b = document.getElementById('ptr-status-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-status-arrow'); if (a) a.textContent = '▼'; } },
+  { id: 'share', icon: '📺', label: 'Tablica uczestników', cardId: 'ptr-share-card', muteable: true,
+    help: 'Publiczna tablica wyników na telefony uczestników (QR / link, bez logowania, tylko odczyt). Wymaga włączonej publikacji — od niej zależy też projektor.' },
+  { id: 'projector', icon: '🖥', label: 'Projektor', cardId: 'ptr-projector-card', muteable: true,
+    help: 'Wyniki i lista startowa na monitor/rzutnik. Bez logowania, tylko odczyt. Działa gdy publikacja (Tablica) jest włączona.' },
+  { id: 'safety', icon: '🛡', label: 'Dane i kopie', cardId: 'ptr-safety-card',
+    help: 'Dziennik zdarzeń (kto, kiedy, co zmienił) + automatyczne migawki stanu co 5 minut z możliwością przywrócenia.' },
+  { id: 'notes', icon: '📌', label: 'Notatki', cardId: 'ptr-notes-card',
+    help: 'Notatki sędziowskie widoczne dla całego zespołu (np. warunki na strzelnicy, pogoda, ustalenia).',
+    onOpen: () => { setTimeout(() => { try { document.getElementById('ptr-notes').focus(); } catch(_) {} }, 60); } },
+  { id: 'advanced', icon: '⚙', label: 'Zaawansowane', cardId: 'ptr-advanced-card',
+    help: 'Backup/przywracanie pliku, zakończenie zawodów oraz operacje destrukcyjne (resety). Używać ostrożnie.',
+    onOpen: () => { const p = document.getElementById('ptr-ops-panel'); if (p) p.style.display = 'block'; const a = document.getElementById('ptr-ops-arrow'); if (a) a.textContent = '▼'; } },
+];
+let _ptrBentoOpenId = null;
+
+// Adopcja: przenieś istniejące karty do magazynu, schowaj stare wrappery, pokaż bento
+function _ptrBentoAdopt() {
+  const bento = document.getElementById('ptr-bento');
+  const store = document.getElementById('ptr-bento-store');
+  if (!bento || !store || bento._adopted) return;
+  PTR_BENTO_ITEMS.forEach(it => {
+    const card = document.getElementById(it.cardId);
+    if (card) store.appendChild(card);
+  });
+  const tiles = document.querySelector('#page-setup .ptr-tiles-row');
+  if (tiles) tiles.style.display = 'none';
+  const grid = document.getElementById('ptr-setup-grid2');
+  if (grid) grid.style.display = 'none';
+  bento.style.display = '';
+  bento._adopted = true;
+}
+
+// Stan per kafelek: {band: attention|active|done|later, pill:{t,k}, sub, action, chip}
+function _ptrBentoStates() {
+  const s = state.setup || {};
+  const cfg = state.cfg || {};
+  const muted = cfg.bentoMuted || {};
+  const hasInfo = !!((s.city || '').trim() && s.date);
+  const hasAth = (state.athletes || []).length > 0;
+  const teams = new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean)).size;
+  const shareOn = (typeof _getPtrPublicShare === 'function') ? _getPtrPublicShare() : false;
+  const fmtD = d => { try { const p = String(d).split('-'); return p.length === 3 ? p[2] + '.' + p[1] : d; } catch(_) { return d; } };
+  const st = {};
+  st.info = hasInfo
+    ? { band: 'done', chip: '<span class="ok-mark">✓</span>Informacje · ' + esc(s.city) + (s.date ? ', ' + esc(fmtD(s.date)) : '') }
+    : { band: 'attention', sub: 'uzupełnij miasto, datę i organizatora', action: 'Uzupełnij' };
+  st.athletes = hasAth
+    ? { band: 'done', chip: '<span class="ok-mark">✓</span>Lista startowa · ' + (state.athletes || []).length + ' zaw.' + (teams ? ' · ' + teams + ' druż.' : '') }
+    : { band: 'attention', sub: 'zaimportuj plik albo dodaj zawodników ręcznie', action: 'Importuj' };
+  st.mode = !hasAth ? { band: 'later' }
+    : { band: 'active', pill: cfg.offlineMode ? { t: 'stoper fizyczny, wpisy ręczne', k: 'muted' } : { t: 'w panelu, sync', k: 'ok' } };
+  st.starter = !hasAth ? { band: 'later' }
+    : muted.starter ? { band: 'done', chip: '🎬 Sędzia startu · nieużywany', dim: true }
+    : cfg.startEnabled ? { band: 'active', pill: { t: 'link aktywny', k: 'ok' } }
+    : { band: 'attention', sub: 'nie ma jeszcze linku na telefon', action: 'Aktywuj link' };
+  st.speaker = !hasAth ? { band: 'later' }
+    : muted.speaker ? { band: 'done', chip: '🎙 Speaker · nieużywany', dim: true }
+    : { band: 'active', pill: cfg.speakerEnabled ? { t: 'link aktywny', k: 'ok' } : { t: 'link wyłączony', k: 'muted' } };
+  st.status = { band: 'active', pill: (_pendingSaveSince > 0) ? { t: 'offline — ponawiam', k: 'warn' } : (_rtHealthy ? { t: 'wszystko działa', k: 'ok' } : { t: 'łączenie…', k: 'muted' }) };
+  st.share = !hasAth ? { band: 'later' }
+    : muted.share ? { band: 'done', chip: '📺 Tablica · nieużywana', dim: true }
+    : shareOn ? { band: 'active', pill: { t: 'publikacja włączona', k: 'ok' } }
+    : { band: 'attention', sub: 'publikacja wyłączona — QR nie zadziała', action: 'Włącz publikację' };
+  st.projector = !hasAth ? { band: 'later' }
+    : muted.projector ? { band: 'done', chip: '🖥 Projektor · nieużywany', dim: true }
+    : { band: 'active', pill: shareOn ? { t: 'gotowy', k: 'ok' } : { t: 'wymaga publikacji', k: 'muted' } };
+  st.safety = { band: 'active', pill: { t: 'auto-migawki włączone', k: 'ok' } };
+  st.notes = { band: 'done', chip: '📌 Notatki · ' + (((s.notes || '').trim()) ? 'zapisane' : 'puste'), dim: !((s.notes || '').trim()) };
+  st.advanced = { band: 'done', chip: '⚙ Zaawansowane', dim: true };
+  return { st, hasInfo, hasAth, muted, shareOn, cfg };
+}
+
+function _ptrBentoHelpHtml(it) {
+  return '<button class="ptr-bento-help" onclick="event.stopPropagation();togglePtrHelp(\'b-' + it.id + '\')" title="Co to robi?">?</button>' +
+    '<div class="ptr-help-popover" id="ptr-help-b-' + it.id + '">' + it.help + '</div>';
+}
+
+function renderPtrBento() {
+  const bento = document.getElementById('ptr-bento');
+  if (!bento) return;
+  if (!state || !state.setup) return; // przed bootem nie ma czego renderować
+  if (!bento._adopted) _ptrBentoAdopt();
+  // Nie przerysowuj gdy otwarty popover pomocy (re-render by go zamknął)
+  if (bento.querySelector('.ptr-help-popover.open')) return;
+  const { st, hasInfo, hasAth, muted, cfg } = _ptrBentoStates();
+
+  // Pasek postępu: 5 kroków + podpis "co dalej"
+  const steps = [
+    { done: hasInfo,  cap: 'pierwszy krok: dane zawodów' },
+    { done: hasAth,   cap: 'dodaj lub zaimportuj zawodników' },
+    { done: !!(cfg.startEnabled || muted.starter), cap: 'aktywuj sędziego startu (albo oznacz „nie używam")' },
+    { done: !!((typeof _getPtrPublicShare === 'function' && _getPtrPublicShare()) || muted.share), cap: 'włącz publikację tablicy' },
+    { done: (state.pairs || []).length > 0, cap: 'wylosuj pary — zakładka Pary' },
+  ];
+  const next = steps.find(x => !x.done);
+  document.getElementById('ptr-bento-progress').innerHTML =
+    steps.map(x => '<span class="seg ' + (x.done ? 'done' : (x === next ? 'now' : '')) + '"></span>').join('') +
+    '<span class="cap">' + (next ? esc(next.cap) : '✓ wszystko dopięte — powodzenia!') + '</span>';
+
+  const bands = { attention: [], active: [], done: [], later: [] };
+  PTR_BENTO_ITEMS.forEach(it => {
+    const v = st[it.id];
+    if (!v) return;
+    const openCls = (_ptrBentoOpenId === it.id) ? ' open' : '';
+    if (v.band === 'attention') {
+      bands.attention.push('<div class="ptr-bento-tile warn big' + openCls + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
+        '<div class="ptr-bento-ico warn">' + it.icon + '</div><div style="min-width:0;">' +
+        '<div class="ptr-bento-name">' + esc(it.label) + '</div>' +
+        '<div class="ptr-bento-sub">' + esc(v.sub || '') + '</div>' +
+        '<button class="ptr-bento-act" onclick="event.stopPropagation();ptrBentoAction(\'' + it.id + '\')">' + esc(v.action || 'Otwórz') + '</button>' +
+        '</div></div>');
+    } else if (v.band === 'active') {
+      const p = v.pill || { t: '', k: 'muted' };
+      bands.active.push('<div class="ptr-bento-tile' + openCls + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
+        '<div class="ptr-bento-ico ' + (p.k === 'ok' ? 'ok' : '') + '">' + it.icon + '</div><div>' +
+        '<div class="ptr-bento-name">' + esc(it.label) + '</div>' +
+        '<span class="ptr-bento-pill ' + p.k + '">' + esc(p.t) + '</span>' +
+        '</div></div>');
+    } else if (v.band === 'done') {
+      bands.done.push('<button class="ptr-bento-chip' + (v.dim ? ' dim' : '') + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + (v.chip || esc(it.label)) + '</button>');
+    } else {
+      bands.later.push('<div class="ptr-bento-tile later-tile" onclick="ptrBentoOpen(\'' + it.id + '\')">' +
+        '<span class="ptr-bento-mini-ico">' + it.icon + '</span><span class="ptr-bento-mini-name">' + esc(it.label) + '</span></div>');
+    }
+  });
+  const setBand = (key, html) => {
+    document.getElementById('ptr-band-' + key).innerHTML = html.join('');
+    document.getElementById('ptr-band-' + key + '-wrap').style.display = html.length ? '' : 'none';
+  };
+  setBand('attention', bands.attention);
+  setBand('active', bands.active);
+  setBand('done', bands.done);
+  setBand('later', bands.later);
+  // Etykieta pasma uwagi: na świeżych zawodach "Zacznij od tego", potem "Wymaga uwagi"
+  document.getElementById('ptr-band-attention-label').textContent = (!hasInfo || !hasAth) ? 'Zacznij od tego' : 'Wymaga uwagi';
+
+  // Otwarty szczegół: umieść pod pasmem, w którym aktualnie mieszka kafelek
+  const detail = document.getElementById('ptr-bento-detail');
+  if (_ptrBentoOpenId && detail) {
+    const band = (st[_ptrBentoOpenId] || {}).band || 'done';
+    const wrap = document.getElementById('ptr-band-' + band + '-wrap');
+    if (wrap && wrap.nextElementSibling !== detail) wrap.insertAdjacentElement('afterend', detail);
+  }
+}
+
+function ptrBentoOpen(id) {
+  if (_ptrBentoOpenId === id) { ptrBentoClose(); return; }
+  if (_ptrBentoOpenId) ptrBentoClose(true);
+  const it = PTR_BENTO_ITEMS.find(x => x.id === id);
+  if (!it) return;
+  const card = document.getElementById(it.cardId);
+  if (!card) return;
+  _ptrBentoOpenId = id;
+  document.getElementById('ptr-bento-detail-body').appendChild(card);
+  document.getElementById('ptr-bento-detail-title').textContent = it.icon + ' ' + it.label;
+  const muteBtn = document.getElementById('ptr-bento-detail-mute');
+  if (muteBtn) {
+    muteBtn.style.display = it.muteable ? '' : 'none';
+    muteBtn.textContent = ((state.cfg?.bentoMuted || {})[id]) ? '🔔 Przywróć' : '🔕 Nie używam';
+  }
+  document.getElementById('ptr-bento-detail').style.display = '';
+  if (it.onOpen) { try { it.onOpen(); } catch(_) {} }
+  renderPtrBento();
+}
+
+function ptrBentoClose(silent) {
+  if (!_ptrBentoOpenId) return;
+  const it = PTR_BENTO_ITEMS.find(x => x.id === _ptrBentoOpenId);
+  if (it) {
+    const card = document.getElementById(it.cardId);
+    if (card) document.getElementById('ptr-bento-store').appendChild(card);
+  }
+  _ptrBentoOpenId = null;
+  document.getElementById('ptr-bento-detail').style.display = 'none';
+  if (!silent) renderPtrBento();
+}
+
+function ptrBentoAction(id) {
+  if (id === 'share') {
+    if (typeof togglePtrPublicShare === 'function') togglePtrPublicShare();
+    setTimeout(renderPtrBento, 400);
+    return;
+  }
+  ptrBentoOpen(id);
+  if (id === 'starter' && !state.cfg?.startEnabled && typeof toggleStartEnabled === 'function') {
+    toggleStartEnabled();
+    setTimeout(renderPtrBento, 400);
+  }
+}
+
+function ptrBentoToggleMute() {
+  const id = _ptrBentoOpenId;
+  if (!id) return;
+  if (!state.cfg) state.cfg = {};
+  if (!state.cfg.bentoMuted) state.cfg.bentoMuted = {};
+  state.cfg.bentoMuted[id] = !state.cfg.bentoMuted[id];
+  const muteBtn = document.getElementById('ptr-bento-detail-mute');
+  if (muteBtn) muteBtn.textContent = state.cfg.bentoMuted[id] ? '🔔 Przywróć' : '🔕 Nie używam';
+  save();
+  renderPtrBento();
+}
+
+// Pigułki statusu odświeżane okresowo (RT/offline/puls zmieniają się bez renderSetupPage)
+setInterval(() => {
+  const page = document.getElementById('page-setup');
+  if (page && page.classList.contains('active')) renderPtrBento();
+}, 5000);
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
 const TABLICA_BASE_URL = 'https://militarysportsystem.pl/t.html';
@@ -3911,6 +4244,8 @@ function _refreshPtrPublicShareUI() {
   }
   // Karta projektora zależy od tej samej flagi — odśwież jej wskaźnik
   if (typeof _renderPtrProjSection === 'function') _renderPtrProjSection();
+  // Migracja kafelka Tablicy między pasmami bento (uwaga ↔ działa)
+  if (typeof renderPtrBento === 'function') renderPtrBento();
 }
 
 async function togglePtrPublicShare() {
