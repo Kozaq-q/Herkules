@@ -291,9 +291,22 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 #ptr-bento-cats { display: grid; grid-template-columns: 1fr minmax(150px, 0.5fr) 1fr; gap: 12px; align-items: start; }
 .ptr-cat { background: var(--bg2); border: 1px solid var(--cat-bd, var(--border2)); border-radius: 14px; overflow: hidden; }
 .ptr-cat.span2 { grid-column: 1 / -1; }
-.ptr-cat.mid { align-self: start; }                 /* Stoper krótki, przy górnej krawędzi */
-.ptr-cat.mid .ptr-tile2 { flex-wrap: wrap; row-gap: 6px; }  /* w wąskiej kolumnie pigułka schodzi pod nazwę */
-.ptr-cat.mid .ptr-tile2-pill { margin-left: 41px; }         /* wyrównanie pigułki pod tekstem (za ikoną) */
+/* Stoper jako kwadratowy "rdzeń pomiaru" wyśrodkowany w środkowej kolumnie.
+   Luki góra/dół wypełnia animowana oś (pulsująca kropka), a poziome łączniki
+   sięgają ku kolumnom po bokach — Stoper "spina" układ. */
+.ptr-mid { align-self: stretch; position: relative; display: flex; align-items: center; justify-content: center; min-height: 130px; }
+.ptr-mid-spine { position: absolute; left: 50%; top: 6px; bottom: 6px; width: 2px; transform: translateX(-50%); background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--cp) 35%, transparent) 18%, color-mix(in srgb, var(--cp) 35%, transparent) 82%, transparent); }
+.ptr-mid-spine::after { content: ''; position: absolute; left: 50%; width: 7px; height: 7px; border-radius: 50%; background: var(--cp); transform: translateX(-50%); box-shadow: 0 0 9px var(--cp); animation: ptrSpinePulse 3.2s ease-in-out infinite; }
+@keyframes ptrSpinePulse { 0% { top: 6%; opacity: 0; } 12% { opacity: 1; } 50% { opacity: 1; } 88% { opacity: 1; } 100% { top: 94%; opacity: 0; } }
+.ptr-mid-wire { position: absolute; top: 50%; height: 1px; width: 30%; background: linear-gradient(to var(--dir, right), color-mix(in srgb, var(--cp) 30%, transparent), transparent); }
+.ptr-mid-wire.l { left: 0; --dir: left; }
+.ptr-mid-wire.r { right: 0; --dir: right; }
+.ptr-stoper { position: relative; z-index: 1; width: 100%; max-width: 150px; aspect-ratio: 1 / 1; background: var(--bg2); border: 1px solid color-mix(in srgb, var(--cp) 30%, var(--border2)); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; cursor: pointer; font-family: var(--font-b); transition: background .15s, border-color .15s; }
+.ptr-stoper:hover { background: var(--bg3); border-color: color-mix(in srgb, var(--cp) 55%, var(--border2)); }
+.ptr-stoper-ico { width: 46px; height: 46px; border-radius: 50%; background: rgba(76,175,130,.15); display: flex; align-items: center; justify-content: center; }
+.ptr-stoper-ico .ptr-i { font-size: 24px; color: var(--cp); }
+.ptr-stoper-name { font-family: var(--font-h); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--cp); }
+.ptr-stoper .ptr-tile2-help { position: absolute; top: 8px; right: 8px; }
 .ptr-cat-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--cat-soft); }
 .ptr-cat-head .ptr-i { color: var(--cat-ico); font-size: 16px; }
 .ptr-cat-name { font-family: var(--font-h); font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--cat-ico); }
@@ -4123,7 +4136,7 @@ const PTR_BENTO_ITEMS = [
   { id: 'share', cat: 'apps', icon: 'qrcode', label: 'Wyniki online', badge: 'dla zawodników', cardId: 'ptr-share-card', muteable: true, app: true,
     help: 'Publiczne wyniki na telefony uczestników (QR / link, bez logowania, tylko odczyt). To jedyna rzecz, którą widzą zawodnicy.' },
   { id: 'projector', cat: 'apps', icon: 'device-tv', label: 'Projektor', cardId: 'ptr-projector-card', muteable: true, app: true,
-    help: 'Wyniki i lista startowa na monitor/rzutnik. Bez logowania, tylko odczyt. Działa gdy publikacja (Wyniki online) jest włączona.' },
+    help: 'Wyniki i lista startowa na monitor/rzutnik. Bez logowania, tylko odczyt. Działa niezależnie — NIE wymaga włączenia „Wyników online" dla uczestników.' },
   { id: 'status', cat: 'system', icon: 'activity', label: 'Status', cardId: 'ptr-tile-status',
     help: 'Diagnostyka: zegar serwera, puls startera, realtime sync, kolejka zapisów. Zielone = OK, pomarańczowe = sprawdź, czerwone = problem.',
     onOpen: () => { const b = document.getElementById('ptr-status-body'); if (b) b.style.display = 'block'; const a = document.getElementById('ptr-status-arrow'); if (a) a.textContent = '▼'; if (typeof _updatePtrStatusTile === 'function') _updatePtrStatusTile(); } },
@@ -4203,6 +4216,22 @@ function _ptrBentoNeeds(id, st) { return (st[id] || {}).band === 'attention'; }
 function _ptrBentoHelpHtml(it) {
   return '<button class="ptr-tile2-help" onclick="event.stopPropagation();togglePtrHelp(\'b-' + it.id + '\', this)" title="Co to robi?" aria-label="Co to robi?">?</button>' +
     '<div class="ptr-help-popover" id="ptr-help-b-' + it.id + '">' + it.help + '</div>';
+}
+
+// Stoper jako kwadratowy "rdzeń pomiaru" w środkowej kolumnie + animowana oś i łączniki do kolumn
+function _ptrStoperMidHtml(v, guide) {
+  v = v || { band: 'active', pill: { t: '', k: 'muted' } };
+  const it = PTR_BENTO_ITEMS.find(x => x.id === 'mode');
+  const p = v.pill || { t: 'w panelu, sync', k: 'ok' };
+  return '<div class="ptr-mid">' +
+    '<div class="ptr-mid-spine" aria-hidden="true"></div>' +
+    '<div class="ptr-mid-wire l" aria-hidden="true"></div><div class="ptr-mid-wire r" aria-hidden="true"></div>' +
+    '<div class="ptr-stoper" data-bid="mode" onclick="ptrBentoOpen(\'mode\')" title="Kliknij, by przełączyć tryb pomiaru">' +
+      _ptrBentoHelpHtml(it) +
+      '<span class="ptr-stoper-ico">' + _ptrIco('stopwatch') + '</span>' +
+      '<span class="ptr-stoper-name">Stoper</span>' +
+      '<span class="ptr-tile2-pill ' + p.k + '">' + esc(p.t) + '</span>' +
+    '</div></div>';
 }
 
 // Generator kompaktowego kafelka (wiersz: ikona · nazwa/meta · status/akcja/kopiuj)
@@ -4287,6 +4316,7 @@ function renderPtrBento() {
 
   // Kategorie (stałe pozycje, stałe kolory). Render jednej karty kategorii:
   const renderCat = (cat) => {
+    if (cat.key === 'pomiar') return _ptrStoperMidHtml(st['mode'], guide); // kwadratowy rdzeń + oś
     const items = PTR_BENTO_ITEMS.filter(it => it.cat === cat.key);
     const tiles = items.map(it => _ptrBentoTileHtml(it, st[it.id], guide)).join('');
     const soft = 'color-mix(in srgb, var(' + cat.cssVar + ') 9%, transparent)';
@@ -4390,10 +4420,12 @@ function ptrBentoOpen(id) {
   _ptrBentoOpenedAt = Date.now();
   _ptrBentoJustOpened = true;
   _ptrBentoRunOnOpen = true;
-  ptrBentoRenderSmart();
-  // Dosuń wylany panel — niezawodnie (mierzymy realny element, nie czekamy na animację VT)
-  // i płynnie własną animacją (rAF + easing, anulowalną), więc nigdy nie "świruje".
-  requestAnimationFrame(() => _ptrScrollFlowIntoView());
+  // OTWIERANIE: render SYNCHRONICZNY (bez View Transition) — dzięki temu wylany panel
+  // istnieje OD RAZU i scroll jest NIEZAWODNY. (VT defferowało render → panel jeszcze nie
+  // istniał gdy liczyliśmy scroll → "czasami działał".) Animację daje .enter na panelu.
+  renderPtrBento();
+  // Dwa rAF: pierwszy po layout, drugi gdy box panelu jest już pewny — potem płynny scroll.
+  requestAnimationFrame(() => requestAnimationFrame(() => _ptrScrollFlowIntoView()));
 }
 
 // Płynne, szybkie, anulowalne przewijanie do wartości docelowej (easeOutCubic ~260ms)
