@@ -311,6 +311,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-bento-inline-body .ptr-mode-tile { aspect-ratio: auto; min-height: 0; flex-direction: row; gap: 10px; padding: 12px 14px; }
 /* Rozrośnięty żeton w pasie chipów (flex) — pełna szerokość wiersza */
 .ptr-bento-chips .ptr-bento-tile.expanded { flex-basis: 100%; width: 100%; }
+/* Animacje przesunięć bento (View Transitions API) — szybkie, z degradacją do braku animacji */
+::view-transition-group(*) { animation-duration: .18s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .12s; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-image-pair(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
 @media (max-width: 700px) {
   .ptr-bento-grid.big { grid-template-columns: 1fr; }
   .ptr-bento-grid { grid-template-columns: repeat(2, 1fr); }
@@ -3948,7 +3954,7 @@ function renderSetupPage() {
   if (typeof _renderSpeakerSection === 'function') _renderSpeakerSection();
   _renderPtrShareSection();
   _renderPtrProjSection();
-  if (typeof renderPtrBento === 'function') renderPtrBento();
+  if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4093,7 +4099,7 @@ function renderPtrBento() {
     }
     const openCls = '';
     if (v.band === 'attention') {
-      bands.attention.push('<div class="ptr-bento-tile warn big' + openCls + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
+      bands.attention.push('<div class="ptr-bento-tile warn big' + openCls + '" style="view-transition-name:ptrb-' + it.id + ';" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
         '<div class="ptr-bento-ico warn">' + it.icon + '</div><div style="min-width:0;">' +
         '<div class="ptr-bento-name">' + esc(it.label) + '</div>' +
         '<div class="ptr-bento-sub">' + esc(v.sub || '') + '</div>' +
@@ -4101,15 +4107,15 @@ function renderPtrBento() {
         '</div></div>');
     } else if (v.band === 'active') {
       const p = v.pill || { t: '', k: 'muted' };
-      bands.active.push('<div class="ptr-bento-tile' + openCls + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
+      bands.active.push('<div class="ptr-bento-tile' + openCls + '" style="view-transition-name:ptrb-' + it.id + ';" onclick="ptrBentoOpen(\'' + it.id + '\')">' + _ptrBentoHelpHtml(it) +
         '<div class="ptr-bento-ico ' + (p.k === 'ok' ? 'ok' : '') + '">' + it.icon + '</div><div>' +
         '<div class="ptr-bento-name">' + esc(it.label) + '</div>' +
         '<span class="ptr-bento-pill ' + p.k + '">' + esc(p.t) + '</span>' +
         '</div></div>');
     } else if (v.band === 'done') {
-      bands.done.push('<button class="ptr-bento-chip' + (v.dim ? ' dim' : '') + '" onclick="ptrBentoOpen(\'' + it.id + '\')">' + (v.chip || esc(it.label)) + '</button>');
+      bands.done.push('<button class="ptr-bento-chip' + (v.dim ? ' dim' : '') + '" style="view-transition-name:ptrb-' + it.id + ';" onclick="ptrBentoOpen(\'' + it.id + '\')">' + (v.chip || esc(it.label)) + '</button>');
     } else {
-      bands.later.push('<div class="ptr-bento-tile later-tile" onclick="ptrBentoOpen(\'' + it.id + '\')">' +
+      bands.later.push('<div class="ptr-bento-tile later-tile" style="view-transition-name:ptrb-' + it.id + ';" onclick="ptrBentoOpen(\'' + it.id + '\')">' +
         '<span class="ptr-bento-mini-ico">' + it.icon + '</span><span class="ptr-bento-mini-name">' + esc(it.label) + '</span></div>');
     }
   });
@@ -4136,13 +4142,35 @@ function renderPtrBento() {
       _ptrBentoOpenId = null;
     }
   }
+  bento._sig = _ptrBentoSig(); // sygnatura układu — do decyzji "animować czy nie"
+}
+
+// Sygnatura układu: które kafelki w których pasmach + co otwarte
+function _ptrBentoSig() {
+  try {
+    const { st } = _ptrBentoStates();
+    return PTR_BENTO_ITEMS.map(it => it.id + ':' + ((st[it.id] || {}).band || '?')).join('|') + '|open:' + (_ptrBentoOpenId || '');
+  } catch(_) { return ''; }
+}
+
+// Render z animacją przejść (View Transitions API) TYLKO gdy układ się zmienia.
+// Brak wsparcia / brak zmian → zwykły render. Zwraca obiekt przejścia lub null.
+function ptrBentoRenderSmart() {
+  const bento = document.getElementById('ptr-bento');
+  if (!bento) return null;
+  const changed = bento._sig !== undefined && bento._sig !== _ptrBentoSig();
+  if (changed && document.startViewTransition && !document.hidden) {
+    try { return document.startViewTransition(() => renderPtrBento()); } catch(_) {}
+  }
+  renderPtrBento();
+  return null;
 }
 
 // Markup rozrośniętego kafelka: pasek (ikona · nazwa · mute · zwiń) + ciało na kartę
 function _ptrBentoExpandedHtml(it, v) {
   const isMuted = !!((state.cfg && state.cfg.bentoMuted) || {})[it.id];
   const warnCls = (v.band === 'attention') ? ' warn' : '';
-  return '<div class="ptr-bento-tile expanded' + warnCls + '">' +
+  return '<div class="ptr-bento-tile expanded' + warnCls + '" style="view-transition-name:ptrb-' + it.id + ';">' +
     '<div class="ptr-bento-inline-head" onclick="ptrBentoClose()" title="Zwiń">' +
       '<span style="font-size:15px;">' + it.icon + '</span>' +
       '<span class="ptr-bento-inline-title">' + esc(it.label) + '</span>' +
@@ -4156,30 +4184,32 @@ function _ptrBentoExpandedHtml(it, v) {
 function ptrBentoOpen(id) {
   if (_ptrBentoOpenId === id) { ptrBentoClose(); return; }
   _ptrBentoOpenId = id;
-  renderPtrBento();
-  // Delikatnie dosuń rozrośnięty kafelek, jeśli wyszedł poza viewport
-  requestAnimationFrame(() => {
+  const vt = ptrBentoRenderSmart();
+  // Delikatnie dosuń rozrośnięty kafelek PO animacji (scroll w trakcie psułby morph)
+  const after = () => requestAnimationFrame(() => {
     const el = document.querySelector('#ptr-bento .ptr-bento-tile.expanded');
     if (el) { try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch(_) {} }
   });
+  if (vt && vt.finished) vt.finished.catch(() => {}).then(after);
+  else after();
 }
 
 function ptrBentoClose() {
   if (!_ptrBentoOpenId) return;
   _ptrBentoOpenId = null;
-  renderPtrBento();
+  ptrBentoRenderSmart();
 }
 
 function ptrBentoAction(id) {
   if (id === 'share') {
     if (typeof togglePtrPublicShare === 'function') togglePtrPublicShare();
-    setTimeout(renderPtrBento, 400);
+    setTimeout(ptrBentoRenderSmart, 400);
     return;
   }
   ptrBentoOpen(id);
   if (id === 'starter' && !state.cfg?.startEnabled && typeof toggleStartEnabled === 'function') {
     toggleStartEnabled();
-    setTimeout(renderPtrBento, 400);
+    setTimeout(ptrBentoRenderSmart, 400);
   }
 }
 
@@ -4190,13 +4220,14 @@ function ptrBentoToggleMute() {
   if (!state.cfg.bentoMuted) state.cfg.bentoMuted = {};
   state.cfg.bentoMuted[id] = !state.cfg.bentoMuted[id];
   save();
-  renderPtrBento(); // przebudowa odświeży etykietę przycisku i pasmo kafelka
+  ptrBentoRenderSmart(); // przebudowa odświeży etykietę przycisku i animuje zmianę pasma
 }
 
-// Pigułki statusu odświeżane okresowo (RT/offline/puls zmieniają się bez renderSetupPage)
+// Pigułki statusu odświeżane okresowo (RT/offline/puls zmieniają się bez renderSetupPage).
+// Smart-render: zmiana układu (np. z remote sync) animuje się, samo odświeżenie pigułek nie.
 setInterval(() => {
   const page = document.getElementById('page-setup');
-  if (page && page.classList.contains('active')) renderPtrBento();
+  if (page && page.classList.contains('active')) ptrBentoRenderSmart();
 }, 5000);
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
@@ -4261,8 +4292,8 @@ function _refreshPtrPublicShareUI() {
   }
   // Karta projektora zależy od tej samej flagi — odśwież jej wskaźnik
   if (typeof _renderPtrProjSection === 'function') _renderPtrProjSection();
-  // Migracja kafelka Tablicy między pasmami bento (uwaga ↔ działa)
-  if (typeof renderPtrBento === 'function') renderPtrBento();
+  // Migracja kafelka Tablicy między pasmami bento (uwaga ↔ działa) — z animacją
+  if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
 }
 
 async function togglePtrPublicShare() {
