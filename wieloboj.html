@@ -168,13 +168,22 @@ html, body {
   max-width: 240px;
 }
 .header-autosave {
-  font-size: 10px;
+  display: inline-flex; align-items: center; height: 100%; box-sizing: border-box;
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
   color: var(--green);
   font-family: var(--font-m);
-  opacity: 0.7;
   white-space: nowrap;
   flex-shrink: 0;
+  padding: 0 10px;
 }
+/* ─── Kapsuły nagłówka: powiązane chipy w jednej obudowie, segmenty oddzielone kreską ─── */
+.hdr-group { display: inline-flex; align-items: stretch; height: 28px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); flex-shrink: 0; }
+.hdr-group:empty { display: none; }
+.hdr-group > * { height: 100%; box-sizing: border-box; flex-shrink: 0; }
+.hdr-group > .btn { background: transparent; border: none; border-radius: 0; height: 100%; display: inline-flex; align-items: center; }
+.hdr-group > :not(:first-child) { border-left: 1px solid var(--border); }
+.hdr-group > .btn:hover { color: var(--accent); background: rgba(255,255,255,.03); }
+.header-contest-name { border-left: 1px solid var(--border2); padding-left: 12px; }
 @media (max-width: 860px) {
   .app-brand-sub { display: none; }
 }
@@ -892,19 +901,23 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="app-brand">
     <span class="app-brand-name">Military Sports System</span>
     <span class="app-brand-sub">© By Kozak</span>
+    <span class="header-contest-name" id="header-contest-name"></span>
+    <span id="header-status-badge" style="display:none;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0"></span>
   </div>
   <div class="app-header-right">
-    <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden">
-      <span class="header-contest-name" id="header-contest-name"></span>
-      <span id="header-status-badge" style="display:none;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0"></span>
+    <!-- Kapsuła: status (obecność wstrzykiwana przez JS · zapis) -->
+    <div class="hdr-group" id="wj-hdr-status-group">
+      <span class="header-autosave" id="header-autosave">● SYNC</span>
     </div>
-    <span class="header-autosave" id="header-autosave">● SYNC</span>
     <span id="auth-role-badge" style="display:none;flex-shrink:0"></span>
-    <button class="btn btn-sm btn-xs" onclick="window.location.href='start.html'" title="Panel startowy" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--text3);border-color:var(--border)">← Panel</button>
-    <button class="btn btn-sm btn-xs" onclick="finishContest()" title="Zakończ zawody" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--green);border-color:rgba(76,175,130,.4);">✓ Zakończ</button>
-    <button class="btn btn-sm btn-xs" onclick="authLogout()" title="Wyloguj" style="flex-shrink:0;font-size:10px;padding:4px 8px;color:var(--text3);border-color:var(--border)">⏻ Wyloguj</button>
+    <!-- Kapsuła: akcje (panel · zakończ · wyloguj · eksport) -->
+    <div class="hdr-group">
+      <button class="btn btn-sm btn-xs" onclick="window.location.href='start.html'" title="Panel startowy" style="font-size:10px;padding:4px 10px;color:var(--text2)">← Panel</button>
+      <button class="btn btn-sm btn-xs" onclick="finishContest()" title="Zakończ zawody" style="font-size:10px;padding:4px 10px;color:var(--green)">✓ Zakończ</button>
+      <button class="btn btn-sm btn-xs" onclick="authLogout()" title="Wyloguj" style="font-size:10px;padding:4px 10px;color:var(--text3)">⏻ Wyloguj</button>
+      <button class="btn btn-sm btn-xs" onclick="exportData()" title="Pobierz kopię (JSON)" style="font-size:10px;padding:4px 10px;color:var(--text2)">💾 <span class="btn-label-long">Eksport</span></button>
+    </div>
     <!-- przycisk Menu zawodów ukryty -->
-    <button class="btn btn-sm" onclick="exportData()" style="white-space:nowrap;flex-shrink:0">💾 <span class="btn-label-long">Eksport</span></button>
     <div style="position:relative;flex-shrink:0">
       <div style="display:flex;align-items:center;background:var(--green);border-radius:4px;overflow:hidden;border:1px solid var(--green)">
         <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1">📺 <span class="btn-label-long">Projektor</span></button>
@@ -1256,6 +1269,20 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     #wj-share-card canvas { max-width: 240px; margin: 0 auto; }
   }
   </style>
+
+  <!-- 🛡 BEZPIECZEŃSTWO DANYCH — dziennik zdarzeń + migawki stanu (migracja 006) -->
+  <div class="card mb-12" id="wj-safety-card" style="margin-top:14px;">
+    <div class="card-title" style="margin:0 0 10px 0;">🛡 Bezpieczeństwo danych</div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:12px;">
+      <strong>Dziennik zdarzeń</strong> zapisuje każdą akcję sędziów (wyniki, DSQ, edycje tablic) — kto, kiedy, co.
+      <strong>Migawki</strong> to automatyczne kopie stanu co 5 minut (ostatnie 20) — pozwalają cofnąć omyłkę lub zły sync.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-sm" onclick="openWjEventsLog()">📜 Dziennik zdarzeń</button>
+      <button class="btn btn-sm" onclick="openWjSnapshots()">🛟 Migawki stanu</button>
+      <button class="btn btn-sm" onclick="makeWjSnapshotNow()">＋ Zapisz migawkę teraz</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ PAGE: ZAWODNICY ═══ -->
@@ -1441,6 +1468,11 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
 <!-- ═══ PAGE: RANKING ═══ -->
 <div id="page-ranking" class="page">
+  <!-- Kontrola kompletności — co jest niedokończone przed ogłoszeniem wyników -->
+  <div class="card mb-12" id="wj-checklist-card" style="display:none;padding:10px 14px;cursor:pointer;" onclick="toggleWjChecklist()">
+    <div id="wj-checklist-head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;"></div>
+    <div id="wj-checklist-body" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;" onclick="event.stopPropagation()"></div>
+  </div>
   <div id="ranking-search-wrap" class="card" style="padding:10px 14px">
     <div class="flex">
       <div style="flex:1">
@@ -1583,6 +1615,32 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 </div>
 
 <!-- TOAST -->
+<!-- ═══ MODAL: DZIENNIK ZDARZEŃ ═══ -->
+<div class="modal-overlay" id="modal-wj-events">
+  <div class="modal" style="max-width:760px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📜</span><span>Dziennik zdarzeń</span>
+      <button class="btn btn-sm" onclick="openWjEventsLog()" style="font-size:10px;padding:4px 10px;margin-left:auto;">↻ Odśwież</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">Ostatnie 200 zdarzeń tych zawodów (append-only — wpisów nie da się edytować ani usunąć).</div>
+    <div id="wj-events-body" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;"><button class="btn" onclick="closeModal('modal-wj-events')">Zamknij</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: MIGAWKI STANU ═══ -->
+<div class="modal-overlay" id="modal-wj-snapshots">
+  <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">🛟</span><span>Migawki stanu</span>
+      <button class="btn btn-sm" onclick="makeWjSnapshotNow()" style="font-size:10px;padding:4px 10px;margin-left:auto;">＋ Migawka teraz</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">Auto-kopia co 5 minut (gdy są zmiany), ostatnie 20. Przed każdym przywróceniem aktualny stan zapisuje się jako osobna migawka.</div>
+    <div id="wj-snapshots-body" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;"><button class="btn" onclick="closeModal('modal-wj-snapshots')">Zamknij</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- HIDDEN INPUTS -->
@@ -1869,8 +1927,22 @@ function deleteSlot(id) {
 
 function switchToSlot(id) {
   ACTIVE_SLOT_ID = id;
+  _cachedPanelId = null;       // reverse-lookup meta dla nowego slotu
+  _pollLastUpdatedAt = '';
   localStorage.setItem('zawody_active_slot', id);
   load();
+  // Przepnij kanał Realtime na NOWY slot (filtr był przypięty do starego slot_id;
+  // bez tego eventy starego slotu lądowały jako stan nowego → krzyżowa korupcja).
+  try { if (_realtimeChannel) { getSupabase().removeChannel(_realtimeChannel); _realtimeChannel = null; } } catch(_) {}
+  // Pobierz świeży stan nowego slotu z chmury (merge z lokalnym), potem podłącz sync na nowo
+  Promise.resolve(loadFromSupabase()).then(() => {
+    renderSetup();
+    renderAthletesList && renderAthletesList();
+    updateHeaderContestName();
+    startRealtimeSync();
+    if (typeof startPresence === 'function') { try { if (_presenceChannel) { getSupabase().removeChannel(_presenceChannel); _presenceChannel = null; } } catch(_) {} startPresence(); }
+    if (typeof _evqFlushSoon === 'function') _evqFlushSoon();
+  }).catch(() => { startRealtimeSync(); });
   // Ukryj welcome screen jeśli otwarty
   const ws = document.getElementById('welcome-screen');
   if (ws) ws.style.display = 'none';
@@ -1885,10 +1957,13 @@ let _saveTimer = null;
 let _supabaseSaveTimer = null;
 
 function save() {
-  // 1. Natychmiastowy zapis do localStorage (backup + projektor)
+  // 1. Natychmiastowy zapis do localStorage (backup + projektor) — try/catch na quota
   if (ACTIVE_SLOT_ID) {
-    localStorage.setItem(_slotKey(ACTIVE_SLOT_ID), JSON.stringify(STATE));
-    localStorage.setItem('zawody_state_v2', JSON.stringify(STATE));
+    try {
+      localStorage.setItem(_slotKey(ACTIVE_SLOT_ID), JSON.stringify(STATE));
+      localStorage.setItem('zawody_state_v2', JSON.stringify(STATE));
+      localStorage.setItem(_slotKey(ACTIVE_SLOT_ID) + '_dirty', '1'); // niewysłane — czyszczone po uploadzie
+    } catch(_) {}
   }
 
   // 2. Aktualizacja wskaźnika w nagłówku
@@ -1917,14 +1992,17 @@ async function saveToSupabase() {
     const el = document.getElementById('header-autosave');
     if (error) {
       console.error('Supabase save error:', error);
-      if (el) el.textContent = '⚠ BŁĄD SYNC';
+      if (el) { el.textContent = '⚠ BŁĄD SYNC'; el.style.color = 'var(--red)'; }
     } else {
-      if (el) el.textContent = '● AUTO-SAVE';
+      if (el) { el.textContent = '● ZAPISANO'; el.style.color = ''; }
+      try { localStorage.removeItem(_slotKey(ACTIVE_SLOT_ID) + '_dirty'); } catch(_) {}
       // Aktualizuj meta slotu w panelu (statystyki + status) — throttle 5s
       _syncSlotMetaThrottled();
     }
   } catch(e) {
     console.error('Supabase save exception:', e);
+    const el = document.getElementById('header-autosave');
+    if (el) { el.textContent = '⚠ OFFLINE — zmiany lokalne'; el.style.color = 'var(--orange)'; }
   }
 }
 
@@ -2021,11 +2099,16 @@ async function loadFromSupabase() {
     }
 
     const parsed = JSON.parse(data.state_json);
+    // MERGE z lokalnym stanem — refresh po pracy offline nie kasuje niewysłanych wyników
+    _w4MergeLocalInto(parsed);
     STATE = parsed;
     ensureStateDefaults();
     // Zaktualizuj też localStorage
-    localStorage.setItem(_slotKey(ACTIVE_SLOT_ID), JSON.stringify(STATE));
-    localStorage.setItem('zawody_state_v2', JSON.stringify(STATE));
+    try {
+      localStorage.setItem(_slotKey(ACTIVE_SLOT_ID), JSON.stringify(STATE));
+      localStorage.setItem('zawody_state_v2', JSON.stringify(STATE));
+    } catch(_) {}
+    if (localStorage.getItem(_slotKey(ACTIVE_SLOT_ID) + '_dirty')) saveToSupabase(); // dopchnij niewysłane
     console.log('Stan wczytany z Supabase.');
     return true;
   } catch(e) {
@@ -2033,6 +2116,263 @@ async function loadFromSupabase() {
     return false;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// MERGE PER-POLE — bezpieczna synchronizacja gdy dwóch sędziów wpisuje
+// równolegle (np. jeden K1, drugi K3). Bez tego pełny stan to last-write-wins.
+// Model: results[aid][ev]=[próby], dnf[aid][ev]=[..], disq[aid][ev]=[..].
+// Znacznik per (aid, ev): resultsAt[aid][ev] (results+dnf razem) i disqAt[aid][ev].
+// ═══════════════════════════════════════════════════════════════
+function _w4Now() { return Date.now(); }
+function _w4Slot() { return ACTIVE_SLOT_ID || SLOT_KEY; }
+function _w4esc(s) { if (s === null || s === undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function _w4SetNested(obj, aid, ev, val) { if (val === undefined) { if (obj[aid]) delete obj[aid][ev]; return; } if (!obj[aid]) obj[aid] = {}; obj[aid][ev] = val; }
+function _w4Get(obj, aid, ev) { return (obj && obj[aid]) ? obj[aid][ev] : undefined; }
+
+function _w4StampResult(aid, ev) { if (!STATE.resultsAt) STATE.resultsAt = {}; if (!STATE.resultsAt[aid]) STATE.resultsAt[aid] = {}; STATE.resultsAt[aid][ev] = _w4Now(); }
+function _w4StampDisq(aid, ev) { if (!STATE.disqAt) STATE.disqAt = {}; if (!STATE.disqAt[aid]) STATE.disqAt[aid] = {}; STATE.disqAt[aid][ev] = _w4Now(); }
+
+// Scala LOKALNE wyniki do `incoming` (mutuje incoming). results+dnf jadą razem wg resultsAt,
+// disq wg disqAt. Per (aid, ev) — pokrywa równoległą edycję różnych konkurencji/zawodników.
+function _w4MergeLocalInto(incoming) {
+  if (!STATE) return incoming;
+  incoming.results = incoming.results || {}; incoming.dnf = incoming.dnf || {}; incoming.disq = incoming.disq || {};
+  incoming.resultsAt = incoming.resultsAt || {}; incoming.disqAt = incoming.disqAt || {};
+  const localRA = STATE.resultsAt || {}, localDA = STATE.disqAt || {};
+  // results + dnf wg resultsAt
+  const rAids = new Set([...Object.keys(STATE.results||{}), ...Object.keys(incoming.results||{}), ...Object.keys(localRA), ...Object.keys(incoming.resultsAt)]);
+  for (const aid of rAids) {
+    const evs = new Set([...Object.keys((STATE.results||{})[aid]||{}), ...Object.keys(incoming.results[aid]||{}), ...Object.keys(localRA[aid]||{}), ...Object.keys(incoming.resultsAt[aid]||{})]);
+    for (const ev of evs) {
+      const lAt = (localRA[aid]||{})[ev] || 0;
+      const rAt = (incoming.resultsAt[aid]||{})[ev] || 0;
+      if (lAt > rAt) {
+        _w4SetNested(incoming.results, aid, ev, _w4Get(STATE.results, aid, ev));
+        _w4SetNested(incoming.dnf, aid, ev, _w4Get(STATE.dnf, aid, ev));
+        _w4SetNested(incoming.resultsAt, aid, ev, lAt);
+      }
+    }
+  }
+  // disq wg disqAt
+  const dAids = new Set([...Object.keys(STATE.disq||{}), ...Object.keys(incoming.disq||{}), ...Object.keys(localDA), ...Object.keys(incoming.disqAt)]);
+  for (const aid of dAids) {
+    const evs = new Set([...Object.keys((STATE.disq||{})[aid]||{}), ...Object.keys(incoming.disq[aid]||{}), ...Object.keys(localDA[aid]||{}), ...Object.keys(incoming.disqAt[aid]||{})]);
+    for (const ev of evs) {
+      const lAt = (localDA[aid]||{})[ev] || 0;
+      const rAt = (incoming.disqAt[aid]||{})[ev] || 0;
+      if (lAt > rAt) {
+        _w4SetNested(incoming.disq, aid, ev, _w4Get(STATE.disq, aid, ev));
+        _w4SetNested(incoming.disqAt, aid, ev, lAt);
+      }
+    }
+  }
+  // scoreTablesByCat: NIE nadpisuj świeżo edytowanej lokalnej wersji pustą/zdalną
+  // (edytor tablic zapisuje do STATE.scoreTablesByCat — chronimy przed wyzerowaniem przez sync)
+  return incoming;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DZIENNIK ZDARZEŃ (mss_events) — kolejka localStorage przeżywa offline
+// ═══════════════════════════════════════════════════════════════
+function _evqKey() { return 'wj_evq_' + _w4Slot(); }
+let _evqFlushTimer = null, _evqFlushing = false, _evqRetryTimer = null;
+const _evqDebounceTimers = {};
+function _evqLoad() { try { return JSON.parse(localStorage.getItem(_evqKey())) || []; } catch(_) { return []; } }
+function _evqSave(q) { try { localStorage.setItem(_evqKey(), JSON.stringify(q)); } catch(_) {} }
+function logEvent(action, details) {
+  try {
+    const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || null;
+    const q = _evqLoad();
+    q.push({ slot_id: _w4Slot(), user_email: prof ? (prof.email || null) : null, user_name: prof ? (prof.display_name || prof.email || null) : null, role: prof ? (prof.role || null) : null, action, details: details || {}, client_at: new Date().toISOString() });
+    if (q.length > 500) q.splice(0, q.length - 500);
+    _evqSave(q);
+  } catch(_) {}
+  _evqFlushSoon();
+}
+function logEventDebounced(key, action, detailsFn, delay) { clearTimeout(_evqDebounceTimers[key]); _evqDebounceTimers[key] = setTimeout(() => { delete _evqDebounceTimers[key]; try { logEvent(action, detailsFn()); } catch(_) {} }, delay || 2500); }
+function _evqFlushSoon() { if (_evqFlushTimer) return; _evqFlushTimer = setTimeout(() => { _evqFlushTimer = null; _evqFlush(); }, 2000); }
+async function _evqFlush() {
+  if (_evqFlushing) return;
+  const q = _evqLoad(); if (!q.length) return;
+  _evqFlushing = true;
+  try {
+    const batch = q.slice(0, 50);
+    const { error } = await getSupabase().from('mss_events').insert(batch);
+    if (!error) { _evqSave(_evqLoad().slice(batch.length)); if (_evqLoad().length) _evqFlushSoon(); if (_evqRetryTimer) { clearInterval(_evqRetryTimer); _evqRetryTimer = null; } }
+    else if (!_evqRetryTimer) _evqRetryTimer = setInterval(_evqFlush, 30000);
+  } catch(_) { if (!_evqRetryTimer) _evqRetryTimer = setInterval(_evqFlush, 30000); }
+  finally { _evqFlushing = false; }
+}
+const _WJ_EV_LABELS = { wynik: '🔢 Wynik', dsq: '⛔ DSQ', wyczyszczenie: '🗑 Wyczyszczenie', reset: '🗑 Reset danych', migawka_reczna: '🛟 Migawka ręczna', przywrocenie_migawki: '🛟 Przywrócenie migawki', edycja_tablic: '📊 Edycja tablic pkt' };
+async function openWjEventsLog() {
+  document.getElementById('modal-wj-events').classList.add('open');
+  const body = document.getElementById('wj-events-body');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Wczytywanie…</div>';
+  try {
+    const { data, error } = await getSupabase().from('mss_events').select('user_name,user_email,role,action,details,client_at,created_at').eq('slot_id', _w4Slot()).order('id', { ascending: false }).limit(200);
+    if (error) throw error;
+    const pend = _evqLoad().length;
+    const pendInfo = pend ? '<div style="font-size:11px;color:var(--orange);margin-bottom:8px;">⏳ ' + pend + ' zdarzeń czeka na wysłanie (offline)</div>' : '';
+    if (!data || !data.length) { body.innerHTML = pendInfo + '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Brak zdarzeń.</div>'; return; }
+    const fmtT = iso => { try { const d = new Date(iso); const p = n => (n<10?'0':'')+n; return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); } catch(_) { return '—'; } };
+    body.innerHTML = pendInfo + data.map(ev => {
+      const who = _w4esc(ev.user_name || ev.user_email || '?') + (ev.role ? ' <span style="color:var(--text3);">(' + _w4esc(ev.role) + ')</span>' : '');
+      const label = _WJ_EV_LABELS[ev.action] || _w4esc(ev.action);
+      let det = ''; try { const d = ev.details || {}; det = Object.keys(d).map(k => _w4esc(k) + ': <strong>' + _w4esc(String(d[k])) + '</strong>').join(' · '); } catch(_) {}
+      return '<div style="display:flex;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:11.5px;align-items:baseline;"><span style="font-family:var(--font-m);color:var(--text3);flex-shrink:0;">' + fmtT(ev.client_at || ev.created_at) + '</span><span style="flex-shrink:0;min-width:110px;">' + label + '</span><span style="color:var(--text2);flex:1;min-width:0;">' + det + '</span><span style="color:var(--text3);flex-shrink:0;">' + who + '</span></div>';
+    }).join('');
+  } catch(e) { body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--red);font-size:12px;">Nie udało się wczytać dziennika.<br><span style="color:var(--text3);">Sprawdź sieć lub czy migracja 006 (mss_events) jest wdrożona.</span></div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MIGAWKI STANU (mss_snapshots, ring buffer 20/slot)
+// ═══════════════════════════════════════════════════════════════
+let _snapshotTimer = null, _lastSnapshotSig = '';
+function _startSnapshotTimer() { if (_snapshotTimer) return; _snapshotTimer = setInterval(_maybeAutoSnapshot, 5 * 60 * 1000); }
+function _wjSnapMeta() {
+  const times = Object.keys(STATE.results || {}).filter(aid => { const r = STATE.results[aid]; return r && Object.keys(r).length; }).length;
+  return { athletes: (STATE.athletes || []).length, results: times, teams: (STATE.teams || []).length };
+}
+async function _insertSnapshot(kind) {
+  const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || null;
+  const { error } = await getSupabase().from('mss_snapshots').insert({ slot_id: _w4Slot(), comp_type: 'wieloboj', state_json: JSON.stringify(STATE), kind, meta: _wjSnapMeta(), created_by: prof ? (prof.display_name || prof.email || null) : null });
+  return !error;
+}
+async function _maybeAutoSnapshot() {
+  try {
+    if (!STATE || !(STATE.athletes || []).length) return;
+    const sig = JSON.stringify(_wjSnapMeta()) + '|' + Object.keys(STATE.results || {}).length;
+    if (sig === _lastSnapshotSig) return;
+    if (await _insertSnapshot('auto')) _lastSnapshotSig = sig;
+  } catch(_) {}
+}
+async function makeWjSnapshotNow() {
+  try {
+    if (await _insertSnapshot('manual')) { logEvent('migawka_reczna', {}); toast('🛟 Migawka zapisana'); const m = document.getElementById('modal-wj-snapshots'); if (m && m.classList.contains('open')) openWjSnapshots(); }
+    else toast('Nie udało się zapisać migawki (sieć / migracja 006?)');
+  } catch(_) { toast('Nie udało się zapisać migawki'); }
+}
+async function openWjSnapshots() {
+  document.getElementById('modal-wj-snapshots').classList.add('open');
+  const body = document.getElementById('wj-snapshots-body');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Wczytywanie…</div>';
+  try {
+    const { data, error } = await getSupabase().from('mss_snapshots').select('id,kind,meta,created_by,created_at').eq('slot_id', _w4Slot()).order('id', { ascending: false }).limit(20);
+    if (error) throw error;
+    if (!data || !data.length) { body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Brak migawek. Pierwsza powstanie do 5 minut po zmianach<br>(albo kliknij „Zapisz migawkę teraz").</div>'; return; }
+    const kindLbl = { auto: 'auto', manual: 'ręczna', 'pre-restore': 'sprzed przywrócenia' };
+    body.innerHTML = data.map(s => {
+      const d = new Date(s.created_at); const p = n => (n<10?'0':'')+n;
+      const when = p(d.getDate()) + '.' + p(d.getMonth()+1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      const m = s.meta || {};
+      const metaTxt = (m.athletes ?? '?') + ' zaw. · ' + (m.results ?? '?') + ' z wynikami · ' + (m.teams ?? '?') + ' drużyn';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:12px;"><span style="font-family:var(--font-m);flex-shrink:0;">' + when + '</span><span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px;flex-shrink:0;min-width:60px;">' + (kindLbl[s.kind] || _w4esc(s.kind)) + '</span><span style="color:var(--text2);flex:1;min-width:0;">' + metaTxt + (s.created_by ? ' <span style="color:var(--text3);">· ' + _w4esc(s.created_by) + '</span>' : '') + '</span><button class="btn btn-sm" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="restoreWjSnapshot(' + s.id + ',\'' + when + '\')">↩ Przywróć</button></div>';
+    }).join('');
+  } catch(e) { body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--red);font-size:12px;">Nie udało się wczytać migawek.<br><span style="color:var(--text3);">Sprawdź sieć lub czy migracja 006 (mss_snapshots) jest wdrożona.</span></div>'; }
+}
+function _wjBumpEditTimestamps(st) {
+  const ts = _w4Now();
+  ['resultsAt', 'disqAt'].forEach(coll => { for (const aid in (st[coll] || {})) for (const ev in st[coll][aid]) st[coll][aid][ev] = ts; });
+  // upewnij się że każdy wynik ma znacznik (po przywróceniu starej migawki bez At)
+  st.resultsAt = st.resultsAt || {}; st.disqAt = st.disqAt || {};
+  for (const aid in (st.results || {})) { st.resultsAt[aid] = st.resultsAt[aid] || {}; for (const ev in st.results[aid]) st.resultsAt[aid][ev] = ts; }
+  for (const aid in (st.disq || {})) { st.disqAt[aid] = st.disqAt[aid] || {}; for (const ev in st.disq[aid]) st.disqAt[aid][ev] = ts; }
+}
+async function restoreWjSnapshot(snapId, whenLabel) {
+  if (!confirm('Przywrócić stan z migawki ' + whenLabel + '?\n\nAktualny stan zostanie najpierw zapisany jako osobna migawka (można wrócić).\n\nNajlepiej przywracać, gdy inne urządzenia są zamknięte.')) return;
+  if (!confirm('Na pewno? Stan zawodów zostanie zastąpiony migawką z ' + whenLabel + '.')) return;
+  try {
+    const { data, error } = await getSupabase().from('mss_snapshots').select('state_json').eq('id', snapId).single();
+    if (error || !data) throw (error || new Error('brak danych'));
+    await _insertSnapshot('pre-restore');
+    const restored = JSON.parse(data.state_json);
+    _wjBumpEditTimestamps(restored);
+    STATE = restored;
+    ensureStateDefaults();
+    logEvent('przywrocenie_migawki', { migawka: whenLabel });
+    save();
+    updateHeaderContestName();
+    const activePage = document.querySelector('.page.active');
+    const id = activePage ? activePage.id : '';
+    if      (id === 'page-k1') renderK1(); else if (id === 'page-k2') renderK2();
+    else if (id === 'page-k3') renderK3(); else if (id === 'page-k4') renderK4();
+    else if (id === 'page-ranking') renderRanking();
+    else if (id === 'page-zawodnicy') renderAthletesList();
+    else if (id === 'page-setup') { renderSetup(); renderTeamsList && renderTeamsList(); }
+    closeModal('modal-wj-snapshots');
+    toast('🛟 Przywrócono stan z ' + whenLabel);
+  } catch(e) { console.error('restore snapshot:', e); toast('Nie udało się przywrócić migawki'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OBECNOŚĆ SĘDZIÓW (presence) — chip w nagłówku
+// ═══════════════════════════════════════════════════════════════
+let _presenceChannel = null, _presencePeers = [], _presenceRefreshTimer = null;
+function startPresence() {
+  if (_presenceChannel) return;
+  try {
+    _presenceChannel = getSupabase().channel('wieloboj_presence_' + _w4Slot(), { config: { presence: { key: SESSION_ID } } });
+    _presenceChannel.on('presence', { event: 'sync' }, () => { try { _presencePeers = Object.values(_presenceChannel.presenceState()).flat(); _renderPresenceChip(); } catch(_) {} })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') _presenceTrack();
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') { try { getSupabase().removeChannel(_presenceChannel); } catch(_) {} _presenceChannel = null; setTimeout(startPresence, 5000); }
+      });
+    if (!_presenceRefreshTimer) { _presenceRefreshTimer = setInterval(_presenceTrack, 60000); setInterval(_renderPresenceChip, 30000); }
+  } catch(_) {}
+}
+async function _presenceTrack() {
+  if (!_presenceChannel) return;
+  try { const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || {}; await _presenceChannel.track({ name: prof.display_name || (prof.email ? prof.email.split('@')[0] : '?'), email: prof.email || '', role: prof.role || 'sędzia', device: 'panel', at: Date.now() }); } catch(_) {}
+}
+function _wjFreshPeers() {
+  const now = Date.now();
+  const fresh = _presencePeers.filter(p => p && p.at && (now - p.at) < 180000);
+  const byKey = {};
+  fresh.forEach(p => { const k = (p.email || p.name || '?') + '|' + (p.device || ''); if (!byKey[k] || (p.at || 0) > (byKey[k].at || 0)) byKey[k] = p; });
+  return Object.values(byKey);
+}
+function _renderPresenceChip() {
+  // Segment kapsuły statusu (fallback: app-header-right luzem)
+  const host = document.getElementById('wj-hdr-status-group') || document.querySelector('.app-header-right');
+  if (!host) return;
+  let el = document.getElementById('wj-presence-chip');
+  if (!el) {
+    el = document.createElement('button');
+    el.id = 'wj-presence-chip';
+    el.className = 'btn btn-sm btn-xs';
+    el.title = 'Sędziowie online na tych zawodach';
+    el.style.cssText = 'font-size:10px;padding:4px 10px;cursor:pointer;position:relative;color:var(--text2);';
+    el.onclick = (e) => { e.stopPropagation(); _togglePresenceDropdown(); };
+    el.innerHTML = '<span id="wj-presence-count">👥</span>';
+    host.insertBefore(el, host.firstChild);
+    document.addEventListener('click', () => { const dd = document.getElementById('wj-presence-dd'); if (dd) dd.style.display = 'none'; });
+  }
+  const n = _wjFreshPeers().length;
+  const cnt = document.getElementById('wj-presence-count');
+  if (cnt) cnt.textContent = '👥 ' + n;
+  el.style.color = n > 1 ? 'var(--green)' : 'var(--text2)';
+}
+function _togglePresenceDropdown() {
+  let dd = document.getElementById('wj-presence-dd');
+  const chip = document.getElementById('wj-presence-chip');
+  if (!chip) return;
+  // position:fixed (nie absolute) — .app-header-right ma overflow:hidden i przyciąłby dropdown
+  if (!dd) { dd = document.createElement('div'); dd.id = 'wj-presence-dd'; dd.style.cssText = 'position:fixed;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;z-index:9000;box-shadow:0 4px 14px rgba(0,0,0,.45);min-width:230px;text-align:left;'; dd.onclick = e => e.stopPropagation(); document.body.appendChild(dd); }
+  if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+  const r = chip.getBoundingClientRect();
+  dd.style.top = (r.bottom + 6) + 'px';
+  dd.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  const now = Date.now();
+  const peers = _wjFreshPeers().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const rows = peers.map(p => {
+    const ago = p.at ? Math.max(0, Math.round((now - p.at) / 1000)) : null;
+    const agoTxt = ago === null ? '' : (ago < 90 ? ago + 's temu' : Math.round(ago / 60) + ' min temu');
+    return '<div style="padding:6px 4px;border-bottom:1px solid var(--border);"><div style="font-size:12px;color:var(--text1);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _w4esc(p.name || '?') + '</div><div style="font-size:10px;color:var(--text3);margin-top:1px;">' + _w4esc(p.role || '') + ' · 🖥 panel' + (agoTxt ? ' · aktywność ' + agoTxt : '') + '</div></div>';
+  }).join('');
+  dd.innerHTML = '<div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">Online (' + peers.length + ')</div>' + (rows || '<div style="font-size:11px;color:var(--text3);padding:6px 4px;">Tylko Ty.</div>');
+  dd.style.display = 'block';
+}
+window.addEventListener('pagehide', () => { try { if (_presenceChannel) { _presenceChannel.untrack(); getSupabase().removeChannel(_presenceChannel); } } catch(_) {} });
 
 // ── Real-time sync (nasłuchuje zmian od innych sędziów) ──
 let _realtimeChannel = null;
@@ -2049,10 +2389,12 @@ function startRealtimeSync() {
         // Ktoś inny zapisał — wczytaj nowy stan i odśwież UI
         try {
           const newState = JSON.parse(payload.new.state_json);
+          // MERGE per-pole — równoległe wpisy dwóch sędziów nie nadpisują się nawzajem
+          _w4MergeLocalInto(newState);
           STATE = newState;
           ensureStateDefaults();
-          STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
-          localStorage.setItem(_slotKey(ACTIVE_SLOT_ID || SLOT_KEY), JSON.stringify(STATE));
+          // (usunięto reset scoreTablesByCat → ORIGINAL — kasował edycje tablic i propagował reset)
+          try { localStorage.setItem(_slotKey(ACTIVE_SLOT_ID || SLOT_KEY), JSON.stringify(STATE)); } catch(_) {}
 
           // Odśwież aktywną zakładkę (z zachowaniem scrolla i fokusa)
           const activePage = document.querySelector('.page.active');
@@ -2081,13 +2423,21 @@ function startRealtimeSync() {
         } catch(e) { console.error('Realtime parse error:', e); }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      // Reconnect gdy kanał padnie (wcześniej .subscribe() bez callbacku = brak ponownego łączenia)
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        try { getSupabase().removeChannel(_realtimeChannel); } catch(_) {}
+        _realtimeChannel = null;
+        setTimeout(startRealtimeSync, 3000);
+      }
+    });
   console.log('Real-time sync aktywny.');
 }
 
 // ── Fallback polling co 12s — gdy WebSocket się rozłączy ──
 let _lastSyncTime = Date.now();
 let _pollFallback = null;
+let _pollLastUpdatedAt = '';
 
 function startPollingFallback() {
   if (_pollFallback) return;
@@ -2101,12 +2451,14 @@ function startPollingFallback() {
         .select('session_id, updated_at, state_json')
         .eq('slot_id', ACTIVE_SLOT_ID || SLOT_KEY)
         .single();
-      if (data && data.session_id !== SESSION_ID) {
+      // Reaguj TYLKO na świeższy updated_at (wcześniej sam session_id → reaplikacja starego stanu w kółko)
+      if (data && data.session_id !== SESSION_ID && data.updated_at && data.updated_at !== _pollLastUpdatedAt) {
+        _pollLastUpdatedAt = data.updated_at;
         const newState = JSON.parse(data.state_json);
+        _w4MergeLocalInto(newState);
         STATE = newState;
         ensureStateDefaults();
-        STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
-        localStorage.setItem(_slotKey(ACTIVE_SLOT_ID || SLOT_KEY), JSON.stringify(STATE));
+        try { localStorage.setItem(_slotKey(ACTIVE_SLOT_ID || SLOT_KEY), JSON.stringify(STATE)); } catch(_) {}
         const activePage = document.querySelector('.page.active');
         const id = activePage ? activePage.id : '';
         if      (id === 'page-k1')        preserveScrollAndFocus(() => renderK1());
@@ -2132,7 +2484,13 @@ function ensureStateDefaults() {
   if (!STATE.setup.accent) STATE.setup.accent = '#e8d44d';
   if (!STATE.setup.notes) STATE.setup.notes = { k1:'', k2:'', k3:'', k4:'' };
   if (!STATE.scoreTables) STATE.scoreTables = defaultScoreTables();
-  if (!STATE.scoreTablesByCat) STATE.scoreTablesByCat = {};
+  // scoreTablesByCat: jeśli puste — wypełnij fabrycznymi (zamiast resetować je przy każdym syncu;
+  // edytowane tablice są teraz trwałe i synchronizowane).
+  if (!STATE.scoreTablesByCat || !Object.keys(STATE.scoreTablesByCat).length) {
+    try { STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT || {})); } catch(_) { STATE.scoreTablesByCat = {}; }
+  }
+  if (!STATE.resultsAt) STATE.resultsAt = {};
+  if (!STATE.disqAt) STATE.disqAt = {};
   if (!STATE.results) STATE.results = {};
   if (!STATE.genderConfirmed) STATE.genderConfirmed = {};
   if (!STATE.loneConfirmed) STATE.loneConfirmed = {};
@@ -2728,6 +3086,7 @@ function updateScoreRow(i, col, val) {
   if (!STATE.scoreTablesByCat[cat]) STATE.scoreTablesByCat[cat] = {k1:[],k2:[],k3:[],k4:[]};
   STATE.scoreTablesByCat[cat][editingScoreTable.event][i][col] = parseFloat(val);
   STATE.scoreTablesByCat[cat][editingScoreTable.event].sort((a,b)=>a[0]-b[0]);
+  if (typeof logEventDebounced === 'function') logEventDebounced('tbl_' + cat + '_' + editingScoreTable.event, 'edycja_tablic', () => ({ kategoria: cat, konkurencja: editingScoreTable.event.toUpperCase() }));
   save();
 }
 function addScoreRow() {
@@ -2745,6 +3104,7 @@ function resetScoreTables() {
   if (!confirm('Przywrócić oryginalne tablice punktowe z pliku Excel? Twoje zmiany zostaną utracone.')) return;
   // Reset to EXCEL tables
   STATE.scoreTablesByCat = JSON.parse(JSON.stringify(ORIGINAL_SCORE_TABLES_BY_CAT));
+  if (typeof logEvent === 'function') logEvent('edycja_tablic', { akcja: 'reset do fabrycznych' });
   save(); renderScoreTablesEditor(); toast('Tablice przywrócone');
 }
 
@@ -2990,6 +3350,8 @@ function removeAthlete(id) {
   if (!confirm('Usunąć zawodnika?')) return;
   STATE.athletes = STATE.athletes.filter(a => a.id != id);
   delete STATE.results[id]; delete STATE.disq[id]; delete STATE.dnf[id];
+  if (STATE.resultsAt) delete STATE.resultsAt[id];
+  if (STATE.disqAt) delete STATE.disqAt[id];
   save(); renderAthletesList();
 }
 
@@ -3441,6 +3803,14 @@ function qeSave(input, mode) {
     input.classList.add('has-val');
     input.value = mode==='k4' ? secToTimeK4(result) : fmtSec1(result);
   }
+  _w4StampResult(aid, ev); // znacznik do merge (results+dnf razem)
+  const _a = STATE.athletes.find(x => String(x.id) === String(aid));
+  const _aLbl = _a ? ('#' + (_a.bib || '?') + ' ' + (_a.name || '')) : aid;
+  logEventDebounced('res_' + aid + '_' + ev, 'wynik', () => ({ zawodnik: _aLbl, konkurencja: ev.toUpperCase(), proba: (att + 1), wartosc: (result === 'DNF' ? 'NKL' : (result === null ? '—' : input.value)) }));
+  // Walidacja krzyżowa: realny wynik dający 0 pkt = prawdopodobnie poza tabelą (błąd jednostki/przecinka)
+  if (typeof result === 'number' && Number.isFinite(result) && result > 0 && _a) {
+    try { if (getPoints(_a.cat, ev, result) === 0) toast('⚠ ' + (_a.name || '') + ': ' + ev.toUpperCase() + ' = ' + input.value + ' daje 0 pkt (poza tabelą — sprawdź wpis)'); } catch(_) {}
+  }
   save();
 
   // Update row
@@ -3471,6 +3841,8 @@ function toggleDisq(aid, ev, att) {
   if (!STATE.disq[aid][ev]) STATE.disq[aid][ev] = [false, false];
   while (STATE.disq[aid][ev].length <= att) STATE.disq[aid][ev].push(false);
   STATE.disq[aid][ev][att] = !STATE.disq[aid][ev][att];
+  _w4StampDisq(aid, ev);
+  { const a = STATE.athletes.find(x => String(x.id) === String(aid)); logEvent('dsq', { zawodnik: a ? ('#' + (a.bib || '?') + ' ' + (a.name || '')) : aid, konkurencja: ev.toUpperCase(), proba: (att + 1), aktywne: !!STATE.disq[aid][ev][att] }); }
   save();
   // Aktualizuj tylko ten wiersz — nie przebudowuj całego DOM
   const row = document.getElementById('qe-row-' + aid) ||
@@ -3669,6 +4041,7 @@ function k3ToggleDisq(aid, series) {
   if (!STATE.disq[aid]) STATE.disq[aid] = {};
   if (!STATE.disq[aid][key]) STATE.disq[aid][key] = [false];
   STATE.disq[aid][key][0] = !STATE.disq[aid][key][0];
+  _w4StampDisq(aid, key);
   save();
   renderK3();
   const isDq = STATE.disq[aid][key][0];
@@ -4202,7 +4575,58 @@ function renderK4() {
 // ════════════════════════════════════════════════════════════
 let currentIndivCat = 'M35';
 
+// ═══════════════════════════════════════════════════════════════
+// CHECKLISTA KOMPLETNOŚCI — co jest niedokończone przed ogłoszeniem wyników
+// ═══════════════════════════════════════════════════════════════
+const _WJ_EVENTS = ['k1', 'k2', 'k3', 'k4'];
+function _wjEventHasResult(aid, ev) {
+  const r = (STATE.results[aid] || {})[ev];
+  if (!Array.isArray(r)) return false;
+  return r.some(v => v !== null && v !== undefined && v !== '');
+}
+function _buildWjChecklist() {
+  const issues = [];
+  const push = (grp, txt) => issues.push({ grp, txt });
+  (STATE.athletes || []).forEach(a => {
+    const done = _WJ_EVENTS.filter(ev => _wjEventHasResult(a.id, ev)).length;
+    const team = (STATE.teams || []).find(t => t.id == a.teamId);
+    const name = (a.name || '') + (a.cat ? ' [' + a.cat + ']' : '') + (team ? ' (' + team.name + ')' : '');
+    if (done === 0) push('🔢 Bez żadnego wyniku', name);
+    else if (done < 4) push('◐ Niepełny zestaw konkurencji', name + ' — ' + done + '/4');
+  });
+  return issues;
+}
+let _wjChecklistOpen = false;
+function toggleWjChecklist() { _wjChecklistOpen = !_wjChecklistOpen; _renderWjChecklist(); }
+function _renderWjChecklist() {
+  const card = document.getElementById('wj-checklist-card');
+  if (!card) return;
+  const hasData = (STATE.athletes || []).some(a => _WJ_EVENTS.some(ev => _wjEventHasResult(a.id, ev)));
+  if (!hasData) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const issues = _buildWjChecklist();
+  const head = document.getElementById('wj-checklist-head');
+  const body = document.getElementById('wj-checklist-body');
+  if (!issues.length) {
+    head.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ Kontrola kompletności: wszyscy mają komplet 4 konkurencji</span>';
+    body.style.display = 'none';
+    card.style.borderColor = 'rgba(76,175,130,.4)';
+    return;
+  }
+  card.style.borderColor = 'rgba(232,148,77,.45)';
+  head.innerHTML = '<span style="font-weight:700;color:var(--text1);">📋 Kontrola kompletności: <span style="color:var(--orange);">' + issues.length + '</span> do sprawdzenia</span><span style="color:var(--text3);font-size:11px;">' + (_wjChecklistOpen ? '▲ zwiń' : '▼ rozwiń') + '</span>';
+  if (!_wjChecklistOpen) { body.style.display = 'none'; return; }
+  body.style.display = '';
+  const byGrp = {};
+  issues.forEach(i => { (byGrp[i.grp] = byGrp[i.grp] || []).push(i.txt); });
+  body.innerHTML = Object.keys(byGrp).map(grp =>
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);margin-bottom:4px;">' + _w4esc(grp) + ' <span style="color:var(--text3);font-weight:400;">(' + byGrp[grp].length + ')</span></div>' +
+    byGrp[grp].map(t => '<div style="font-size:12px;color:var(--text2);padding:3px 0 3px 14px;border-left:2px solid var(--border2);margin-left:2px;">' + _w4esc(t) + '</div>').join('') + '</div>'
+  ).join('');
+}
+
 function renderRanking() {
+  if (typeof _renderWjChecklist === 'function') _renderWjChecklist();
   renderTeamRanking();
   renderIndivRanking(currentIndivCat);
   renderCompetitionProgress();
@@ -5693,6 +6117,10 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   // ── Uruchom real-time sync po inicjalizacji ──
   startRealtimeSync();
   startPollingFallback();
+  // Nowe moduły: obecność sędziów, auto-migawki, dosłanie zaległych zdarzeń
+  if (typeof startPresence === 'function')   startPresence();
+  if (typeof _startSnapshotTimer === 'function') _startSnapshotTimer();
+  if (typeof _evqFlushSoon === 'function')   _evqFlushSoon();
 })();
 
 // ════════════════════════════════════════════════════════════

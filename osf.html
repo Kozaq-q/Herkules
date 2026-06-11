@@ -56,15 +56,26 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .app-brand-name { font-family: var(--font-h); font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); }
 .app-brand-sub { font-size: 9px; color: var(--text3); letter-spacing: 1px; font-family: var(--font-m); }
 .header-right { display: flex; align-items: center; gap: 8px; }
-.header-contest-name { font-family: var(--font-h); font-size: 13px; color: var(--text2); letter-spacing: 1px; }
-.hdr-status { display: flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
+.header-contest-name { font-family: var(--font-b); font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw; border-left: 1px solid var(--border2); padding-left: 12px; }
+.hdr-status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
 .hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.hdr-status.ok { color: var(--green); border-color: rgba(76,175,130,.35); }
 .hdr-status.ok .dot { background: var(--green); animation: pulse 2s infinite; }
+.hdr-status.err { color: var(--red); border-color: rgba(224,85,85,.4); }
 .hdr-status.err .dot { background: var(--red); }
+.hdr-status.warn { color: var(--orange); border-color: rgba(232,148,77,.4); }
 .hdr-status.warn .dot { background: var(--orange); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-.hdr-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text3); font-family: var(--font-m); font-size: 10px; padding: 4px 10px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; }
-.hdr-btn:hover { color: var(--text1); border-color: var(--border2); }
+.hdr-btn { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 4px 12px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; }
+.hdr-btn:hover { color: var(--orange); border-color: var(--orange); }
+/* ─── Kapsuły nagłówka: powiązane chipy w jednej obudowie, segmenty oddzielone kreską ─── */
+.hdr-group { display: inline-flex; align-items: stretch; height: 28px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); }
+.hdr-group:empty { display: none; }
+.header-right > .hdr-status, .header-right > .hdr-btn, .header-right > .btn { height: 28px; box-sizing: border-box; display: inline-flex; align-items: center; }
+.hdr-group > * { height: 100%; box-sizing: border-box; }
+.hdr-group .hdr-status, .hdr-group .hdr-btn, .hdr-group .btn { height: 100%; background: transparent; border: none; border-radius: 0; }
+.hdr-group > :not(:first-child) { border-left: 1px solid var(--border); }
+.hdr-group .hdr-btn:hover, .hdr-group .btn:hover { color: var(--orange); background: rgba(255,255,255,.03); border-left-color: var(--border); }
 
 /* ─── NAV ─── */
 .nav-bar { background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; padding: 0 12px; overflow-x: auto; gap: 2px; }
@@ -370,14 +381,19 @@ tr:last-child > td { border-bottom: none; }
   <div class="app-brand">
     <span class="app-brand-name">OSF</span>
     <span class="app-brand-sub">OŚRODEK SPRAWNOŚCI FIZYCZNEJ</span>
+    <span class="header-contest-name" id="header-contest-name"></span>
   </div>
   <div class="header-right">
-    <span class="header-contest-name" id="header-contest-name"></span>
-    <div class="hdr-status" id="rt-status" title="Połączenie na żywo (Realtime)"><span class="dot"></span><span id="rt-label">łączę…</span></div>
-    <div class="hdr-status" id="header-autosave" title="Status zapisu"><span class="dot"></span><span id="autosave-label">łączenie…</span></div>
-    <div style="position:relative;">
-      <button class="btn btn-sm" onclick="toggleProjSettings()" title="Projektor i ustawienia"
-        style="color:var(--accent);border-color:rgba(232,212,77,.3);display:flex;align-items:center;gap:6px;">
+    <!-- Kapsuła: status (obecność wstrzykiwana przez JS · Realtime · zapis) -->
+    <div class="hdr-group" id="osf-hdr-status-group">
+      <div class="hdr-status" id="rt-status" title="Połączenie na żywo (Realtime)"><span class="dot"></span><span id="rt-label">łączę…</span></div>
+      <div class="hdr-status" id="header-autosave" title="Status zapisu"><span class="dot"></span><span id="autosave-label">łączenie…</span></div>
+    </div>
+    <!-- Kapsuła: akcje (projektor · backup · panel) -->
+    <div class="hdr-group">
+    <div style="position:relative;height:100%;">
+      <button class="hdr-btn" onclick="toggleProjSettings()" title="Projektor i ustawienia"
+        style="color:var(--accent);height:100%;display:inline-flex;align-items:center;gap:6px;">
         📺 Projektor <span style="opacity:.5;font-size:11px;">⚙</span>
       </button>
       <div id="proj-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:16px;width:320px;box-shadow:0 4px 24px rgba(0,0,0,.9);">
@@ -480,8 +496,9 @@ tr:last-child > td { border-bottom: none; }
         </div>
       </div>
     </div>
-    <button class="hdr-btn" onclick="exportData()" title="Pobierz kopię zapasową zawodów (JSON)" style="flex-shrink:0;">⬇ Backup</button>
-    <button class="hdr-btn" onclick="window.location.href='start.html'" style="flex-shrink:0;">← Panel</button>
+    <button class="hdr-btn" onclick="exportData()" title="Pobierz kopię zapasową zawodów (JSON)">⬇ Backup</button>
+    <button class="hdr-btn" onclick="window.location.href='start.html'">← Panel</button>
+    </div>
   </div>
 </header>
 
@@ -824,6 +841,11 @@ tr:last-child > td { border-bottom: none; }
 
 <!-- ═══ TAB: WYNIKI ═══ -->
 <div class="page" id="page-wyniki">
+  <!-- Kontrola kompletności — co jest niedokończone przed ogłoszeniem wyników -->
+  <div class="card mb-12" id="osf-checklist-card" style="display:none;padding:10px 14px;cursor:pointer;" onclick="toggleOsfChecklist()">
+    <div id="osf-checklist-head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;"></div>
+    <div id="osf-checklist-body" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;" onclick="event.stopPropagation()"></div>
+  </div>
   <div class="flex-between mb-12">
     <div style="font-family:var(--font-h);font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Wyniki indywidualne</div>
     <div class="flex">
@@ -1217,6 +1239,20 @@ tr:last-child > td { border-bottom: none; }
     #osf-share-card canvas { max-width: 240px; margin: 0 auto; }
   }
   </style>
+
+  <!-- 🛡 BEZPIECZEŃSTWO DANYCH — dziennik zdarzeń + migawki stanu (migracja 006) -->
+  <div class="card mb-12" id="osf-safety-card">
+    <div class="card-title" style="margin:0 0 10px 0;">🛡 Bezpieczeństwo danych</div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:12px;">
+      <strong>Dziennik zdarzeń</strong> zapisuje każdą akcję sędziów (czasy, DSQ, losowania, edycje) — kto, kiedy, co.
+      <strong>Migawki</strong> to automatyczne kopie stanu co 5 minut (ostatnie 20) — pozwalają cofnąć omyłkę lub zły sync.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="btn" onclick="openOsfEventsLog()" style="font-size:11px;padding:8px 14px;">📜 Dziennik zdarzeń</button>
+      <button class="btn" onclick="openOsfSnapshots()" style="font-size:11px;padding:8px 14px;">🛟 Migawki stanu</button>
+      <button class="btn" onclick="makeOsfSnapshotNow()" style="font-size:11px;padding:8px 14px;">＋ Zapisz migawkę teraz</button>
+    </div>
+  </div>
 
   <div class="grid-2" style="gap:16px;">
 
@@ -2148,6 +2184,32 @@ tr:last-child > td { border-bottom: none; }
   </div>
 </div>
 
+<!-- ═══ MODAL: DZIENNIK ZDARZEŃ ═══ -->
+<div class="modal-overlay" id="modal-osf-events">
+  <div class="modal" style="max-width:760px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">📜</span><span>Dziennik zdarzeń</span>
+      <button class="btn" onclick="openOsfEventsLog()" style="font-size:10px;padding:4px 10px;margin-left:auto;">↻ Odśwież</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">Ostatnie 200 zdarzeń tych zawodów (append-only — wpisów nie da się edytować ani usunąć).</div>
+    <div id="osf-events-body" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;"><button class="btn" onclick="closeModal('modal-osf-events')">Zamknij</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: MIGAWKI STANU ═══ -->
+<div class="modal-overlay" id="modal-osf-snapshots">
+  <div class="modal" style="max-width:640px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">🛟</span><span>Migawki stanu</span>
+      <button class="btn" onclick="makeOsfSnapshotNow()" style="font-size:10px;padding:4px 10px;margin-left:auto;">＋ Migawka teraz</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;">Auto-kopia co 5 minut (gdy są zmiany), ostatnie 20. Przed każdym przywróceniem aktualny stan zapisuje się jako osobna migawka.</div>
+    <div id="osf-snapshots-body" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;"><button class="btn" onclick="closeModal('modal-osf-snapshots')">Zamknij</button></div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script>
@@ -2315,6 +2377,7 @@ async function saveToSupabase() {
       _myWriteTag = ''; // zapis nieudany — kolejny update z chmury może przejść
     } else {
       _osfSetSave('zapisano', 'ok');
+      try { localStorage.removeItem(STORAGE_KEY + '_dirty'); } catch(_) {}
       // Aktualizuj meta slotu w panelu (statystyki + status) — throttle 5s
       _syncSlotMetaThrottled();
     }
@@ -2366,17 +2429,27 @@ function _buildSlotMeta() {
 
 async function _syncSlotMetaNow() {
   try {
-    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
-    if (!slotRaw) return; // brak slotu — nic do aktualizacji
-    const slot = JSON.parse(slotRaw);
     const newMeta = _buildSlotMeta();
-    // Pomiń jeśli meta się nie zmieniła (nie zalewaj chmury)
+    const db = getSupabase();
+    // READ-MODIFY-WRITE: pobierz AKTUALNY slot z chmury i nadpisz TYLKO meta.
+    // Bez tego stary lokalny cache mógł cofnąć publicShare ustawione na innym urządzeniu
+    // (→ tablica/projektor gasły w trakcie zawodów).
+    let slot = null;
+    try {
+      const { data } = await db.from('herkules_slots').select('slot_json').eq('slot_id', String(SLOT_ID)).single();
+      if (data && data.slot_json) slot = JSON.parse(data.slot_json);
+    } catch(_) {}
+    if (!slot) {
+      const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+      if (!slotRaw) return;
+      slot = JSON.parse(slotRaw);
+    }
     const oldMeta = slot.meta || {};
     if (oldMeta.athletes === newMeta.athletes && oldMeta.teams === newMeta.teams && oldMeta.status === newMeta.status && oldMeta.accentColor === newMeta.accentColor) return;
     slot.meta = newMeta;
     slot._updated = new Date().toISOString();
     localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
-    await getSupabase().from('herkules_slots').upsert({
+    await db.from('herkules_slots').upsert({
       slot_id:    String(SLOT_ID),
       slot_json:  JSON.stringify(slot),
       updated_at: slot._updated
@@ -2395,11 +2468,16 @@ async function loadFromSupabase() {
     if (error || !data) return false;
     if (data.slot_id !== STORAGE_KEY) return false;
     const parsed = JSON.parse(data.state_json);
+    // MERGE z lokalnym stanem zamiast podmiany — refresh strony po pracy offline
+    // NIE kasuje niewysłanych wyników (lokalne świeższe pola wygrywają per-timestamp).
+    _osfMergeLocalInto(parsed);
     state = parsed;
     ensureStateDefaults();
     // Ustaw tag żeby pierwszy poll/RT nie rerenderował bez potrzeby
     _myWriteTag = parsed._writerTag || '';
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(_) {}
+    // Niewysłane zmiany sprzed refreshu → wypchnij scalony stan do chmury
+    if (localStorage.getItem(STORAGE_KEY + '_dirty')) { _osfSetSave('zapis…', ''); scheduleSave(); }
     return true;
   } catch(e) { return false; }
 }
@@ -2416,16 +2494,370 @@ async function loadFromSupabase() {
   }
 })();
 
-// Zapis awaryjny przy zamknięciu zakładki
+// Zapis awaryjny przy zamknięciu zakładki — tylko gdy są niewysłane zmiany.
+// sendBeacon NIE umie nagłówków auth → RLS by go odrzucił (martwy kod). Zamiast tego
+// fetch z keepalive i tokenem sesji MSS (jak w patrolu).
 window.addEventListener('beforeunload', () => {
   clearTimeout(_saveTimer);
-  const payload = JSON.stringify({
-    slot_id: STORAGE_KEY, state_json: JSON.stringify(state), updated_at: new Date().toISOString()
-  });
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon(SUPABASE_URL + '/rest/v1/osf_state', new Blob([payload], { type: 'application/json' }));
-  }
+  if (!localStorage.getItem(STORAGE_KEY + '_dirty')) return; // nic niewysłanego — nie nadpisuj chmury starym stanem
+  try {
+    let authHeader = 'Bearer ' + SUPABASE_KEY;
+    try { const tokRaw = localStorage.getItem('mss-auth-token'); if (tokRaw) { const tok = JSON.parse(tokRaw); if (tok && tok.access_token) authHeader = 'Bearer ' + tok.access_token; } } catch(_) {}
+    const payload = JSON.stringify({ slot_id: STORAGE_KEY, state_json: JSON.stringify(state), updated_at: new Date().toISOString() });
+    fetch(SUPABASE_URL + '/rest/v1/osf_state', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: authHeader, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+      body: payload, keepalive: true
+    });
+  } catch(_) {}
 });
+
+// ═══════════════════════════════════════════════════════════════
+// MERGE PER-POLE — bezpieczna synchronizacja gdy dwóch sędziów pracuje
+// równocześnie (np. jeden wpisuje S1 M, drugi S1 K). Bez tego pełny stan
+// to last-write-wins i zapis jednego kasuje świeży wpis drugiego.
+// OSF nie ma zegara startera — znaczniki to zwykły Date.now() (kolejność edycji).
+// Model: state.times[id]={s1,s2}, disq[id]={s1,s2}, teamTimes/teamDisq analogicznie.
+// Każde pole ma teraz swój <pole>At; merge per id/team i per seria wybiera świeższe.
+// ═══════════════════════════════════════════════════════════════
+function _osfNow() { return Date.now(); }
+const _OSF_SERIES_FIELDS = ['s1', 's2'];
+
+// Scala jedną zagnieżdżoną strukturę {key: {s1, s2, s1At, s2At}} per pole.
+// Mutuje `incoming`. Pole bez wartości po stronie świeższej = puste (''/false) —
+// w OSF czyszczenie to pusty string / false, więc i tak propaguje przez timestamp.
+function _osfMergeNested(local, incoming) {
+  local = local || {};
+  if (!incoming) incoming = {};
+  const allKeys = new Set([...Object.keys(local), ...Object.keys(incoming)]);
+  for (const k of allKeys) {
+    const L = local[k] || {};
+    const R = incoming[k] || {};
+    if (!incoming[k]) incoming[k] = {};
+    const out = incoming[k];
+    for (const f of _OSF_SERIES_FIELDS) {
+      const atF = f + 'At';
+      const lAt = L[atF] || 0;
+      const rAt = R[atF] || 0;
+      if (lAt > rAt) {
+        // Lokalne pole świeższe — przenieś wartość i znacznik
+        if (L[f] !== undefined) out[f] = L[f];
+        else delete out[f];
+        out[atF] = lAt;
+      }
+      // else: zdalne świeższe lub równe — zostaw
+    }
+  }
+}
+
+// Scala LOKALNY stan do `incoming` (mutuje incoming). Wspólna ścieżka dla
+// realtime/poll ORAZ bootu (loadFromSupabase) — refresh po pracy offline nie kasuje wpisów.
+function _osfMergeLocalInto(incoming) {
+  if (!state) return incoming;
+  if (state.times)     { incoming.times     = incoming.times     || {}; _osfMergeNested(state.times,     incoming.times); }
+  if (state.disq)      { incoming.disq      = incoming.disq      || {}; _osfMergeNested(state.disq,      incoming.disq); }
+  if (state.teamTimes) { incoming.teamTimes = incoming.teamTimes || {}; _osfMergeNested(state.teamTimes, incoming.teamTimes); }
+  if (state.teamDisq)  { incoming.teamDisq  = incoming.teamDisq  || {}; _osfMergeNested(state.teamDisq,  incoming.teamDisq); }
+  return incoming;
+}
+
+// Stempluj pole czasu/DSQ świeżym znacznikiem (do merge). Wołane przez settery.
+function _osfStampTime(id, ser) { if (!state.times[id]) state.times[id] = {}; state.times[id][ser + 'At'] = _osfNow(); }
+function _osfStampDisq(id, ser) { if (!state.disq[id]) state.disq[id] = {}; state.disq[id][ser + 'At'] = _osfNow(); }
+function _osfStampTeamTime(team, ser) { if (!state.teamTimes[team]) state.teamTimes[team] = {}; state.teamTimes[team][ser + 'At'] = _osfNow(); }
+function _osfStampTeamDisq(team, ser) { if (!state.teamDisq[team]) state.teamDisq[team] = {}; state.teamDisq[team][ser + 'At'] = _osfNow(); }
+
+// Etykieta zawodnika do dziennika/walidacji: "#bib Nazwisko"
+function _osfAthLabel(id) {
+  const a = (state.athletes || []).find(x => x.id === id);
+  if (!a) return '#' + id;
+  return '#' + (a.bib || '?') + ' ' + (a.name || '');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DZIENNIK ZDARZEŃ (append-only) — tabela mss_events (migracja 005/006).
+// Kolejka w localStorage przeżywa brak sieci, dosyła się sama.
+// ═══════════════════════════════════════════════════════════════
+const _EVQ_KEY = 'osf_evq_' + SLOT_ID;
+let _evqFlushTimer = null, _evqFlushing = false, _evqRetryTimer = null;
+const _evqDebounceTimers = {};
+function _evqLoad() { try { return JSON.parse(localStorage.getItem(_EVQ_KEY)) || []; } catch(_) { return []; } }
+function _evqSave(q) { try { localStorage.setItem(_EVQ_KEY, JSON.stringify(q)); } catch(_) {} }
+
+function logEvent(action, details) {
+  try {
+    const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || null;
+    const q = _evqLoad();
+    q.push({
+      slot_id: STORAGE_KEY,
+      user_email: prof ? (prof.email || null) : null,
+      user_name: prof ? (prof.display_name || prof.email || null) : null,
+      role: prof ? (prof.role || null) : null,
+      action: action, details: details || {},
+      client_at: new Date().toISOString()
+    });
+    if (q.length > 500) q.splice(0, q.length - 500);
+    _evqSave(q);
+  } catch(_) {}
+  _evqFlushSoon();
+}
+function logEventDebounced(key, action, detailsFn, delay) {
+  clearTimeout(_evqDebounceTimers[key]);
+  _evqDebounceTimers[key] = setTimeout(() => { delete _evqDebounceTimers[key]; try { logEvent(action, detailsFn()); } catch(_) {} }, delay || 2500);
+}
+function _evqFlushSoon() { if (_evqFlushTimer) return; _evqFlushTimer = setTimeout(() => { _evqFlushTimer = null; _evqFlush(); }, 2000); }
+async function _evqFlush() {
+  if (_evqFlushing) return;
+  const q = _evqLoad();
+  if (!q.length) return;
+  _evqFlushing = true;
+  try {
+    const batch = q.slice(0, 50);
+    const { error } = await getSupabase().from('mss_events').insert(batch);
+    if (!error) {
+      _evqSave(_evqLoad().slice(batch.length));
+      if (_evqLoad().length) _evqFlushSoon();
+      if (_evqRetryTimer) { clearInterval(_evqRetryTimer); _evqRetryTimer = null; }
+    } else if (!_evqRetryTimer) { _evqRetryTimer = setInterval(_evqFlush, 30000); }
+  } catch(_) { if (!_evqRetryTimer) _evqRetryTimer = setInterval(_evqFlush, 30000); }
+  finally { _evqFlushing = false; }
+}
+
+const _OSF_EV_LABELS = {
+  czas: '⏱ Czas', czas_druzyny: '⏱ Czas drużyny', dsq: '⛔ DSQ', dsq_druzyny: '⛔ DSQ drużyny',
+  losowanie_s1: '🎲 Losowanie S1', losowanie_s2: '🎲 Losowanie S2', edycja_awaryjna: '✏ Edycja awaryjna',
+  wyczyszczenie_zawodnikow: '🗑 Wyczyszczenie zawodników', migawka_reczna: '🛟 Migawka ręczna',
+  przywrocenie_migawki: '🛟 Przywrócenie migawki'
+};
+async function openOsfEventsLog() {
+  document.getElementById('modal-osf-events').classList.add('open');
+  const body = document.getElementById('osf-events-body');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Wczytywanie…</div>';
+  try {
+    const { data, error } = await getSupabase().from('mss_events')
+      .select('user_name,user_email,role,action,details,client_at,created_at')
+      .eq('slot_id', STORAGE_KEY).order('id', { ascending: false }).limit(200);
+    if (error) throw error;
+    const pend = _evqLoad().length;
+    const pendInfo = pend ? '<div style="font-size:11px;color:var(--orange);margin-bottom:8px;">⏳ ' + pend + ' zdarzeń czeka na wysłanie (offline)</div>' : '';
+    if (!data || !data.length) { body.innerHTML = pendInfo + '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Brak zdarzeń.</div>'; return; }
+    const fmtT = iso => { try { const d = new Date(iso); const p = n => (n<10?'0':'')+n; return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); } catch(_) { return '—'; } };
+    body.innerHTML = pendInfo + data.map(ev => {
+      const who = esc(ev.user_name || ev.user_email || '?') + (ev.role ? ' <span style="color:var(--text3);">(' + esc(ev.role) + ')</span>' : '');
+      const label = _OSF_EV_LABELS[ev.action] || esc(ev.action);
+      let det = '';
+      try { const d = ev.details || {}; det = Object.keys(d).map(k => esc(k) + ': <strong>' + esc(String(d[k])) + '</strong>').join(' · '); } catch(_) {}
+      return '<div style="display:flex;gap:10px;padding:7px 4px;border-bottom:1px solid var(--border);font-size:11.5px;align-items:baseline;">' +
+        '<span style="font-family:var(--font-m);color:var(--text3);flex-shrink:0;">' + fmtT(ev.client_at || ev.created_at) + '</span>' +
+        '<span style="flex-shrink:0;min-width:120px;">' + label + '</span>' +
+        '<span style="color:var(--text2);flex:1;min-width:0;">' + det + '</span>' +
+        '<span style="color:var(--text3);flex-shrink:0;">' + who + '</span></div>';
+    }).join('');
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--red);font-size:12px;">Nie udało się wczytać dziennika.<br><span style="color:var(--text3);">Sprawdź sieć lub czy migracja 006 (mss_events) jest wdrożona.</span></div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MIGAWKI STANU — tabela mss_snapshots (migracja 006, ring buffer 20/slot)
+// ═══════════════════════════════════════════════════════════════
+let _snapshotTimer = null, _lastSnapshotSavedAt = '';
+function _startSnapshotTimer() { if (_snapshotTimer) return; _snapshotTimer = setInterval(_maybeAutoSnapshot, 5 * 60 * 1000); }
+function _snapshotMeta() {
+  const times = Object.values(state.times || {}).filter(t => t && (t.s1 || t.s2)).length;
+  return { athletes: (state.athletes || []).length, times, teams: new Set((state.athletes || []).map(a => (a.team || '').trim()).filter(Boolean)).size };
+}
+async function _insertSnapshot(kind) {
+  const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || null;
+  const { error } = await getSupabase().from('mss_snapshots').insert({
+    slot_id: STORAGE_KEY, comp_type: 'osf', state_json: JSON.stringify(state),
+    kind, meta: _snapshotMeta(), created_by: prof ? (prof.display_name || prof.email || null) : null
+  });
+  return !error;
+}
+async function _maybeAutoSnapshot() {
+  try {
+    if (!state || !(state.athletes || []).length) return;
+    if (!state._savedAt || state._savedAt === _lastSnapshotSavedAt) return;
+    if (await _insertSnapshot('auto')) _lastSnapshotSavedAt = state._savedAt;
+  } catch(_) {}
+}
+async function makeOsfSnapshotNow() {
+  try {
+    if (await _insertSnapshot('manual')) {
+      _lastSnapshotSavedAt = state._savedAt || '';
+      logEvent('migawka_reczna', {});
+      showToastOsf('🛟 Migawka zapisana', 'success');
+      const m = document.getElementById('modal-osf-snapshots');
+      if (m && m.classList.contains('open')) openOsfSnapshots();
+    } else showToastOsf('Nie udało się zapisać migawki (sieć / migracja 006?)', 'error');
+  } catch(_) { showToastOsf('Nie udało się zapisać migawki', 'error'); }
+}
+async function openOsfSnapshots() {
+  document.getElementById('modal-osf-snapshots').classList.add('open');
+  const body = document.getElementById('osf-snapshots-body');
+  body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Wczytywanie…</div>';
+  try {
+    const { data, error } = await getSupabase().from('mss_snapshots')
+      .select('id,kind,meta,created_by,created_at').eq('slot_id', STORAGE_KEY)
+      .order('id', { ascending: false }).limit(20);
+    if (error) throw error;
+    if (!data || !data.length) { body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Brak migawek. Pierwsza auto-migawka powstanie do 5 minut po zmianach<br>(albo kliknij „Zapisz migawkę teraz").</div>'; return; }
+    const kindLbl = { auto: 'auto', manual: 'ręczna', 'pre-restore': 'sprzed przywrócenia' };
+    body.innerHTML = data.map(s => {
+      const d = new Date(s.created_at); const p = n => (n<10?'0':'')+n;
+      const when = p(d.getDate()) + '.' + p(d.getMonth()+1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      const m = s.meta || {};
+      const metaTxt = (m.athletes ?? '?') + ' zaw. · ' + (m.times ?? '?') + ' czasów · ' + (m.teams ?? '?') + ' drużyn';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:12px;">' +
+        '<span style="font-family:var(--font-m);flex-shrink:0;">' + when + '</span>' +
+        '<span style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:1px;flex-shrink:0;min-width:60px;">' + (kindLbl[s.kind] || esc(s.kind)) + '</span>' +
+        '<span style="color:var(--text2);flex:1;min-width:0;">' + metaTxt + (s.created_by ? ' <span style="color:var(--text3);">· ' + esc(s.created_by) + '</span>' : '') + '</span>' +
+        '<button class="btn" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="restoreOsfSnapshot(' + s.id + ',\'' + when + '\')">↩ Przywróć</button></div>';
+    }).join('');
+  } catch(e) {
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--red);font-size:12px;">Nie udało się wczytać migawek.<br><span style="color:var(--text3);">Sprawdź sieć lub czy migracja 006 (mss_snapshots) jest wdrożona.</span></div>';
+  }
+}
+// Po przywróceniu starszej migawki podbij znaczniki EDYCJI — inaczej inne urządzenia
+// "wygrałyby" merge swoimi nowszymi polami i cofnęły przywrócenie.
+function _osfBumpEditTimestamps(st) {
+  const ts = _osfNow();
+  ['times', 'disq', 'teamTimes', 'teamDisq'].forEach(coll => {
+    for (const k in (st[coll] || {})) {
+      const o = st[coll][k];
+      for (const f of _OSF_SERIES_FIELDS) if (o[f] !== undefined || o[f + 'At'] !== undefined) o[f + 'At'] = ts;
+    }
+  });
+}
+async function restoreOsfSnapshot(snapId, whenLabel) {
+  if (!confirm('Przywrócić stan z migawki ' + whenLabel + '?\n\nAktualny stan zostanie najpierw zapisany jako osobna migawka (można wrócić).\n\nNajlepiej przywracać, gdy inne urządzenia są zamknięte.')) return;
+  if (!confirm('Na pewno? Stan zawodów zostanie zastąpiony migawką z ' + whenLabel + '.')) return;
+  try {
+    const { data, error } = await getSupabase().from('mss_snapshots').select('state_json').eq('id', snapId).single();
+    if (error || !data) throw (error || new Error('brak danych'));
+    await _insertSnapshot('pre-restore');
+    const restored = JSON.parse(data.state_json);
+    _osfBumpEditTimestamps(restored);
+    state = restored;
+    ensureStateDefaults();
+    logEvent('przywrocenie_migawki', { migawka: whenLabel });
+    save(); saveImmediate();
+    const c = state.contest || {};
+    const headerEl = document.getElementById('header-contest-name');
+    if (headerEl) headerEl.textContent = (c.name ? c.name + ' · ' : '') + (c.city || '') + (c.date ? ' · ' + c.date : '');
+    if (state.setup && state.setup.accentColor) document.documentElement.style.setProperty('--orange', state.setup.accentColor);
+    _tryRemoteRender();
+    closeModal('modal-osf-snapshots');
+    showToastOsf('🛟 Przywrócono stan z ' + whenLabel, 'success');
+  } catch(e) { console.error('restore snapshot:', e); showToastOsf('Nie udało się przywrócić migawki', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OBECNOŚĆ SĘDZIÓW (presence) — chip w nagłówku
+// ═══════════════════════════════════════════════════════════════
+let _presenceChannel = null, _presencePeers = [], _presenceRefreshTimer = null;
+function startPresence() {
+  if (_presenceChannel) return;
+  try {
+    _presenceChannel = getSupabase().channel('osf_presence_' + STORAGE_KEY, { config: { presence: { key: SESSION_ID } } });
+    _presenceChannel
+      .on('presence', { event: 'sync' }, () => { try { _presencePeers = Object.values(_presenceChannel.presenceState()).flat(); _renderPresenceChip(); } catch(_) {} })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') _presenceTrack();
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') { try { getSupabase().removeChannel(_presenceChannel); } catch(_) {} _presenceChannel = null; setTimeout(startPresence, 5000); }
+      });
+    if (!_presenceRefreshTimer) { _presenceRefreshTimer = setInterval(_presenceTrack, 60000); setInterval(_renderPresenceChip, 30000); }
+  } catch(_) {}
+}
+async function _presenceTrack() {
+  if (!_presenceChannel) return;
+  try {
+    const prof = (typeof MSS_AUTH !== 'undefined' && MSS_AUTH.getProfile && MSS_AUTH.getProfile()) || {};
+    await _presenceChannel.track({ name: prof.display_name || (prof.email ? prof.email.split('@')[0] : '?'), email: prof.email || '', role: prof.role || 'sędzia', device: 'panel', at: Date.now() });
+  } catch(_) {}
+}
+function _osfFreshPeers() {
+  const now = Date.now();
+  const fresh = _presencePeers.filter(p => p && p.at && (now - p.at) < 180000);
+  const byKey = {};
+  fresh.forEach(p => { const k = (p.email || p.name || '?') + '|' + (p.device || ''); if (!byKey[k] || (p.at || 0) > (byKey[k].at || 0)) byKey[k] = p; });
+  return Object.values(byKey);
+}
+function _renderPresenceChip() {
+  // Segment kapsuły statusu (fallback: header-right luzem)
+  const host = document.getElementById('osf-hdr-status-group') || document.querySelector('.header-right');
+  if (!host) return;
+  let el = document.getElementById('osf-presence-chip');
+  if (!el) {
+    el = document.createElement('button');
+    el.id = 'osf-presence-chip';
+    el.className = 'hdr-status';
+    el.title = 'Sędziowie online na tych zawodach';
+    el.style.cssText = 'cursor:pointer;position:relative;';
+    el.onclick = (e) => { e.stopPropagation(); _togglePresenceDropdown(); };
+    el.innerHTML = '<span id="osf-presence-count">👥</span>';
+    host.insertBefore(el, host.firstChild);
+    document.addEventListener('click', () => { const dd = document.getElementById('osf-presence-dd'); if (dd) dd.style.display = 'none'; });
+  }
+  const n = _osfFreshPeers().length;
+  const cnt = document.getElementById('osf-presence-count');
+  if (cnt) cnt.textContent = '👥 ' + n;
+  el.style.color = n > 1 ? 'var(--green)' : 'var(--text3)';
+}
+function _togglePresenceDropdown() {
+  let dd = document.getElementById('osf-presence-dd');
+  const chip = document.getElementById('osf-presence-chip');
+  if (!chip) return;
+  if (!dd) {
+    dd = document.createElement('div');
+    dd.id = 'osf-presence-dd';
+    dd.style.cssText = 'position:absolute;top:calc(100% + 6px);right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.45);min-width:230px;text-align:left;';
+    dd.onclick = e => e.stopPropagation();
+    chip.appendChild(dd);
+  }
+  if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+  const now = Date.now();
+  const peers = _osfFreshPeers().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const rows = peers.map(p => {
+    const ago = p.at ? Math.max(0, Math.round((now - p.at) / 1000)) : null;
+    const agoTxt = ago === null ? '' : (ago < 90 ? ago + 's temu' : Math.round(ago / 60) + ' min temu');
+    return '<div style="padding:6px 4px;border-bottom:1px solid var(--border);">' +
+      '<div style="font-size:12px;color:var(--text1);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(p.name || '?') + '</div>' +
+      '<div style="font-size:10px;color:var(--text3);margin-top:1px;">' + esc(p.role || '') + ' · 🖥 panel' + (agoTxt ? ' · aktywność ' + agoTxt : '') + '</div></div>';
+  }).join('');
+  dd.innerHTML = '<div style="font-size:10px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:5px;">Online (' + peers.length + ')</div>' + (rows || '<div style="font-size:11px;color:var(--text3);padding:6px 4px;">Tylko Ty.</div>');
+  dd.style.display = 'block';
+}
+window.addEventListener('pagehide', () => { try { if (_presenceChannel) { _presenceChannel.untrack(); getSupabase().removeChannel(_presenceChannel); } } catch(_) {} });
+
+// ═══════════════════════════════════════════════════════════════
+// WALIDACJA KRZYŻOWA — łapie literówki w momencie wpisu
+// ═══════════════════════════════════════════════════════════════
+function _osfCrossValidate(id) {
+  try {
+    const t = state.times[id]; if (!t) return;
+    const s1 = (t.s1 && !isTimeMarker(t.s1)) ? parseTime(t.s1) : null;
+    const s2 = (t.s2 && !isTimeMarker(t.s2)) ? parseTime(t.s2) : null;
+    const lbl = _osfAthLabel(id);
+    [['S1', s1, t.s1], ['S2', s2, t.s2]].forEach(([nm, sec, raw]) => {
+      if (sec != null && Number.isFinite(sec) && sec > 0 && (sec < 20 || sec > 1200))
+        showToastOsf('⚠ ' + lbl + ': podejrzany czas ' + nm + ' (' + raw + ') — sprawdź wpis', 'warn');
+    });
+    if (s1 != null && s2 != null && Number.isFinite(s1) && Number.isFinite(s2) && s1 > 0 && s2 > 0) {
+      const hi = Math.max(s1, s2), lo = Math.min(s1, s2);
+      if (hi / lo > 1.5) showToastOsf('⚠ ' + lbl + ': S1 i S2 różnią się o >50% — sprawdź wpis', 'warn');
+    }
+  } catch(_) {}
+}
+
+// Wrapper na istniejący showToast (zdefiniowany niżej w pliku) — mapuje 'warn'→'warning'
+// i wydłuża czas dla ostrzeżeń/błędów. Bezpieczny przed inicjalizacją (typeof guard).
+function showToastOsf(msg, type) {
+  const t = type === 'warn' ? 'warning' : type;
+  const dur = (type === 'warn' || type === 'error') ? 5000 : 2500;
+  if (typeof showToast === 'function') showToast(msg, t, dur);
+}
 
 // ── Aplikuj stan przychodzący z innego urządzenia ────────────────────
 // Kolejka odroczonego rendera — gdy user ma focus w input, render czeka
@@ -2456,6 +2888,9 @@ function _applyRemoteStateNow(stateJson) {
     if (Date.now() < _ts2BlockRT && state.teamS2skip !== undefined) {
       incoming.teamS2skip = state.teamS2skip;
     }
+    // MERGE per-pole — gwarantuje że równoległe wpisy dwóch sędziów (S1 M vs S1 K,
+    // albo czas vs DSQ tego samego zawodnika) nie nadpisują się nawzajem.
+    _osfMergeLocalInto(incoming);
     state = incoming;
     ensureStateDefaults();
     // Zaktualizuj cache LS — ZAWSZE (nie tylko gdy truthy)
@@ -2583,7 +3018,11 @@ function startPolling() {
 }
 
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // try/catch: quota / tryb prywatny nie może zabić handlera — upload (scheduleSave) ma się odbyć
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY + '_dirty', '1'); // niewysłane zmiany — czyszczone po udanym uploadzie
+  } catch(_) {}
   _osfSetSave('zapis…', '');
   scheduleSave();
 }
@@ -2882,6 +3321,10 @@ function launchApp() {
   if (savedTab && document.getElementById('page-' + savedTab)) {
     showTab(savedTab);
   }
+  // Nowe moduły: obecność sędziów, auto-migawki, dosłanie zaległych zdarzeń
+  if (typeof startPresence === 'function')   startPresence();
+  if (typeof _startSnapshotTimer === 'function') _startSnapshotTimer();
+  if (typeof _evqFlushSoon === 'function')   _evqFlushSoon();
 }
 
 function resetContest() {
@@ -3039,6 +3482,8 @@ function saveTeamTime(input) {
   const series = input.dataset.series;
   if (!state.teamTimes[team]) state.teamTimes[team] = {};
   state.teamTimes[team][series] = input.value;
+  _osfStampTeamTime(team, series);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(STORAGE_KEY + '_dirty', '1'); } catch(_) {}
   scheduleSave();
 }
 
@@ -3050,7 +3495,11 @@ function commitTeamTime(input) {
   const norm   = raw ? (normalizeTime(raw) || raw) : '';
   input.value  = norm;
   if (!state.teamTimes[team]) state.teamTimes[team] = {};
+  const _prevT = state.teamTimes[team][series];
   state.teamTimes[team][series] = norm;
+  _osfStampTeamTime(team, series);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(STORAGE_KEY + '_dirty', '1'); } catch(_) {}
+  if (_prevT !== norm) logEvent('czas_druzyny', { druzyna: team, seria: series.toUpperCase(), z: _prevT || '—', na: norm || '—' });
   saveImmediate();
   rerenderTeamTime(input);
   if (document.getElementById('page-klasyfikacja')?.classList.contains('active')) {
@@ -4470,6 +4919,7 @@ function confirmClearAthletes() {
   state.lockedPairs = { s1: [], s2: [] };
   if (!state.setup) state.setup = {};
   localStorage.removeItem(STORAGE_KEY + '_import_hash');
+  if (typeof logEvent === 'function') logEvent('wyczyszczenie_zawodnikow', { liczba: count });
   save();
   renderAthletes();
   updateStats();
@@ -5618,6 +6068,8 @@ function saveTime(input) {
   const ser = input.dataset.series;
   if (!state.times[id]) state.times[id] = {};
   state.times[id][ser] = input.value;
+  _osfStampTime(id, ser);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(STORAGE_KEY + '_dirty', '1'); } catch(_) {}
   scheduleSave();
 }
 
@@ -5634,7 +6086,11 @@ function commitTime(input) {
   const wasAutoFilled = !!norm && norm !== rawCompare && norm !== rawInput;
   input.value = norm;
   if (!state.times[id]) state.times[id] = {};
+  const _prev = state.times[id][ser];
   state.times[id][ser] = norm;
+  _osfStampTime(id, ser);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(STORAGE_KEY + '_dirty', '1'); } catch(_) {}
+  if (_prev !== norm) { logEvent('czas', { zawodnik: _osfAthLabel(id), seria: ser.toUpperCase(), z: _prev || '—', na: norm || '—' }); _osfCrossValidate(id); }
   saveImmediate();
   input.classList.toggle('is-best', !!norm && isPersonalBest(id, ser, norm));
   rerenderPairTime(input);
@@ -5699,6 +6155,7 @@ function normalizeTimeInput(input) {
       const series = input.dataset.series;
       if (!state.times[id]) state.times[id] = {};
       state.times[id][series] = norm;
+      _osfStampTime(id, series);
       save();
       input.classList.toggle('is-best', isPersonalBest(id, series, norm));
     }
@@ -5707,6 +6164,7 @@ function normalizeTimeInput(input) {
       const series = input.dataset.series;
       if (!state.teamTimes[team]) state.teamTimes[team] = {};
       state.teamTimes[team][series] = norm;
+      _osfStampTeamTime(team, series);
       save();
     }
   } else if (!norm && val) {
@@ -5728,6 +6186,8 @@ function toggleDisq(id, series) {
   if (!state.disq) state.disq = {};
   if (!state.disq[id]) state.disq[id] = {};
   state.disq[id][series] = !state.disq[id][series];
+  _osfStampDisq(id, series);
+  logEvent('dsq', { zawodnik: _osfAthLabel(id), seria: series.toUpperCase(), aktywne: !!state.disq[id][series] });
   save();
   // przerenderuj pary żeby odświeżyć wygląd
   if (series === 's1') renderSeries1View();
@@ -5743,6 +6203,8 @@ function toggleTeamDisq(team, series) {
   if (!state.teamDisq) state.teamDisq = {};
   if (!state.teamDisq[team]) state.teamDisq[team] = {};
   state.teamDisq[team][series] = !state.teamDisq[team][series];
+  _osfStampTeamDisq(team, series);
+  logEvent('dsq_druzyny', { druzyna: team, seria: series.toUpperCase(), aktywne: !!state.teamDisq[team][series] });
   save();
   renderTeamView();
 }
@@ -6024,7 +6486,86 @@ function filterResults() {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CHECKLISTA KOMPLETNOŚCI — co jest niedokończone przed ogłoszeniem wyników OSF
+// ═══════════════════════════════════════════════════════════════
+function _osfDrawnAthleteIds() {
+  const ids = new Set();
+  (state.s1pairs || []).forEach(p => { if (p.aId) ids.add(p.aId); if (p.bId) ids.add(p.bId); });
+  (state.s2pairs || []).forEach(p => { if (p.aId) ids.add(p.aId); if (p.bId) ids.add(p.bId); });
+  return ids;
+}
+function _buildOsfChecklist() {
+  const issues = [];
+  const push = (grp, txt) => issues.push({ grp, txt });
+  const drawn = _osfDrawnAthleteIds();
+  const s2drawn = (state.s2pairs || []).length > 0;
+  (state.athletes || []).forEach(a => {
+    const inDraw = drawn.has(a.id);
+    const s1 = getTime(a.id, 's1'), s2 = getTime(a.id, 's2');
+    const d1 = isDisq(a.id, 's1'), d2 = isDisq(a.id, 's2');
+    const name = '#' + (a.bib || '?') + ' ' + (a.name || '') + (a.team ? ' (' + a.team + ')' : '');
+    const hasAnyValid = (s1 && !isTimeMarker(s1) && !d1) || (s2 && !isTimeMarker(s2) && !d2);
+    if (inDraw && !hasAnyValid && !(d1 && d2) && !(isTimeMarker(s1) && isTimeMarker(s2)))
+      push('⏱ Wylosowani bez ważnego czasu', name);
+    if (inDraw && s2drawn && s1 && !isTimeMarker(s1) && !s2 && !d2)
+      push('🔁 S1 jest, brak S2', name);
+    if (d1 && d2) push('⛔ DSQ w obu seriach', name);
+    // Podejrzane / rozjazd S1 vs S2
+    if (s1 && s2 && !isTimeMarker(s1) && !isTimeMarker(s2) && !d1 && !d2) {
+      const a1 = parseTime(s1), a2 = parseTime(s2);
+      if (Number.isFinite(a1) && Number.isFinite(a2) && a1 > 0 && a2 > 0) {
+        const hi = Math.max(a1, a2), lo = Math.min(a1, a2);
+        if (hi / lo > 1.5) push('❗ S1 i S2 różnią się o >50%', name + ' (' + s1 + ' / ' + s2 + ')');
+      }
+    }
+  });
+  // Drużyny z niepełną obsadą sklasyfikowanych (heurystyka: min z setupu)
+  const teamMin = parseInt(state.setup?.teamMin) || 0;
+  if (teamMin > 0) {
+    const byTeam = {};
+    (state.athletes || []).forEach(a => { const t = (a.team || '').trim(); if (!t) return; (byTeam[t] = byTeam[t] || []).push(a); });
+    Object.keys(byTeam).sort().forEach(team => {
+      const classified = byTeam[team].filter(a => {
+        const s1 = getTime(a.id, 's1'), s2 = getTime(a.id, 's2');
+        return (s1 && !isTimeMarker(s1) && !isDisq(a.id, 's1')) || (s2 && !isTimeMarker(s2) && !isDisq(a.id, 's2'));
+      }).length;
+      if (classified > 0 && classified < teamMin) push('🛡 Drużyny z niepełną obsadą', team + ' — sklasyfikowanych: ' + classified + '/' + teamMin);
+    });
+  }
+  return issues;
+}
+let _osfChecklistOpen = false;
+function toggleOsfChecklist() { _osfChecklistOpen = !_osfChecklistOpen; _renderOsfChecklist(); }
+function _renderOsfChecklist() {
+  const card = document.getElementById('osf-checklist-card');
+  if (!card) return;
+  const hasData = (state.athletes || []).some(a => getTime(a.id, 's1') || getTime(a.id, 's2'));
+  if (!hasData) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const issues = _buildOsfChecklist();
+  const head = document.getElementById('osf-checklist-head');
+  const body = document.getElementById('osf-checklist-body');
+  if (!issues.length) {
+    head.innerHTML = '<span style="color:var(--green);font-weight:700;">✅ Kontrola kompletności: wszystko kompletne</span><span style="color:var(--text3);font-size:11px;">— można drukować/ogłaszać</span>';
+    body.style.display = 'none';
+    card.style.borderColor = 'rgba(76,175,130,.4)';
+    return;
+  }
+  card.style.borderColor = 'rgba(232,148,77,.45)';
+  head.innerHTML = '<span style="font-weight:700;color:var(--text1);">📋 Kontrola kompletności: <span style="color:var(--orange);">' + issues.length + '</span> do sprawdzenia</span><span style="color:var(--text3);font-size:11px;">' + (_osfChecklistOpen ? '▲ zwiń' : '▼ rozwiń') + '</span>';
+  if (!_osfChecklistOpen) { body.style.display = 'none'; return; }
+  body.style.display = '';
+  const byGrp = {};
+  issues.forEach(i => { (byGrp[i.grp] = byGrp[i.grp] || []).push(i.txt); });
+  body.innerHTML = Object.keys(byGrp).map(grp =>
+    '<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);margin-bottom:4px;">' + esc(grp) + ' <span style="color:var(--text3);font-weight:400;">(' + byGrp[grp].length + ')</span></div>' +
+    byGrp[grp].map(t => '<div style="font-size:12px;color:var(--text2);padding:3px 0 3px 14px;border-left:2px solid var(--border2);margin-left:2px;">' + esc(t) + '</div>').join('') + '</div>'
+  ).join('');
+}
+
 function renderResults() {
+  if (typeof _renderOsfChecklist === 'function') _renderOsfChecklist();
   // Zaktualizuj nagłówek sumy drużynowej
   const sumHeader = document.getElementById('dr-sum-header');
   if (sumHeader) sumHeader.textContent = 'Suma ind. (' + TEAM_COUNT() + ' najl.)';

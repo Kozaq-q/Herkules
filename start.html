@@ -727,11 +727,30 @@ async function saveSlot(slot) {
 }
 
 async function deleteSlot(id) {
+  // Sprzątanie wierszy STANU w chmurze (wcześniej zostawały jako sieroty na zawsze):
+  //  patrol_state.slot_id = id (wprost), osf_state.slot_id = 'osf_slot_'+id,
+  //  app_state.slot_id = czworId (mapowany przez herkules_czwor_map_<id>).
+  const db = getSB();
+  let czworId = null;
+  try { czworId = localStorage.getItem('herkules_czwor_map_' + id); } catch(_) {}
+  const stateDeletes = [
+    db.from('patrol_state').delete().eq('slot_id', String(id)),
+    db.from('osf_state').delete().eq('slot_id', 'osf_slot_' + id),
+  ];
+  if (czworId) stateDeletes.push(db.from('app_state').delete().eq('slot_id', String(czworId)));
+  // Best-effort — błąd czyszczenia stanu nie blokuje usunięcia slotu
+  try { await Promise.allSettled(stateDeletes); } catch(_) {}
+
+  // Lokalne klucze (w tym wieloboju: zawody_slot_<czworId> + mapa)
   localStorage.removeItem('herkules_slot_' + id);
   localStorage.removeItem('zawody_slot_' + id);
   localStorage.removeItem('osf_slot_' + id);
+  if (czworId) {
+    localStorage.removeItem('zawody_slot_' + czworId);
+    localStorage.removeItem('herkules_czwor_map_' + id);
+  }
   saveSlotIds(getSlotIds().filter(x => x !== id));
-  const { error } = await getSB().from(SB_TABLE).delete().eq('slot_id', String(id));
+  const { error } = await db.from(SB_TABLE).delete().eq('slot_id', String(id));
   if (error) throw new Error(error.message);
 }
 
