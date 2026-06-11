@@ -316,9 +316,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-tile2-copy:hover { background: var(--bg4); }
 .ptr-tile2-copy .ptr-i { font-size: 15px; }
 .ptr-tile2-check { color: var(--green); display: flex; flex-shrink: 0; }
-.ptr-tile2-help { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; background: rgba(255,255,255,.05); border: none; border-radius: 50%; color: var(--text3); font-size: 10px; line-height: 16px; text-align: center; cursor: help; padding: 0; opacity: .7; }
-.ptr-tile2:hover .ptr-tile2-help { opacity: 1; }
-.ptr-tile2-help:hover { color: var(--text1); background: rgba(255,255,255,.12); }
+.ptr-tile2-help { flex-shrink: 0; width: 18px; height: 18px; background: var(--bg4); border: 1px solid var(--border2); border-radius: 50%; color: var(--text3); font-size: 11px; font-weight: 700; line-height: 1; text-align: center; cursor: help; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.ptr-tile2-help:hover { color: var(--text1); background: var(--bg3); border-color: var(--text3); }
+/* Pływający dymek pomocy — na body, ucieka z overflow:hidden kategorii, czytelne tło */
+#ptr-help-tip { position: fixed; z-index: 9999; max-width: 340px; background: var(--bg2); border: 1px solid var(--accent); border-radius: 8px; padding: 11px 13px; font-family: var(--font-b); font-size: 12.5px; color: var(--text1); line-height: 1.55; box-shadow: 0 10px 30px rgba(0,0,0,.65); display: none; }
+#ptr-help-tip strong { color: var(--accent); }
 .ptr-tile2-badge { font-family: var(--font-b); font-size: 10px; font-weight: 600; letter-spacing: .3px; color: var(--blue); background: rgba(91,155,213,.14); border-radius: 6px; padding: 1px 7px; margin-left: 7px; white-space: nowrap; vertical-align: 1px; }
 /* Inline SVG ikon — dziedziczy kolor i rozmiar po rodzicu */
 .ptr-i { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
@@ -354,6 +356,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 .ptr-note-bar-tag { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 1px 7px; border-radius: 4px; flex-shrink: 0; align-self: center; }
 .ptr-note-bar.important .ptr-note-bar-tag { background: rgba(232,164,93,.2); color: var(--warn); }
 .ptr-note-bar.critical .ptr-note-bar-tag { background: rgba(224,85,85,.2); color: var(--red); }
+.ptr-note-bar-label { font-family: var(--font-h); font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; opacity: .8; margin-bottom: 3px; }
+.ptr-note-bar + .ptr-note-bar { margin-top: -6px; } /* sąsiednie paski bliżej */
+/* Edytor notatek w modalu */
+.ptr-note-edit { border: 1px solid var(--border2); border-left: 3px solid var(--border2); border-radius: 10px; padding: 12px; margin-bottom: 12px; background: var(--bg2); }
+.ptr-note-edit.important { border-left-color: var(--warn); }
+.ptr-note-edit.critical { border-left-color: var(--red); }
+.ptr-note-del { margin-left: auto; width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border2); background: transparent; color: var(--text3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.ptr-note-del:hover { color: var(--red); border-color: rgba(224,85,85,.4); }
+.ptr-note-target { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-b); font-size: 12px; padding: 5px 11px; border-radius: 7px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text3); cursor: pointer; }
+.ptr-note-target.on { border-color: var(--green); color: var(--green); background: rgba(76,175,130,.12); }
+.ptr-note-target .ptr-i { font-size: 13px; }
 
 .stat-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; text-align: center; }
 .stat-num { font-family: var(--font-h); font-size: 38px; font-weight: 800; line-height: 1; color: var(--text1); }
@@ -1123,42 +1136,12 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         <div id="ptr-bento-store" style="display:none;"></div>
       </div>
 
-      <!-- 📌 NOTATKI — slot górny (widoczny gdy notatki niepuste) -->
-      <div id="ptr-notes-top-slot"></div>
-
-      <!-- Karta notatek — pozycja w DOM ustawiana przez _placeNotes() -->
-      <div id="ptr-notes-card" class="card mb-12 ptr-notes-card notes-empty">
-        <div class="ptr-notes-head">
-          <span class="ptr-notes-icon">📌</span>
-          <div class="card-title ptr-notes-title">Notatki sędziowskie</div>
-          <span class="ptr-notes-sub">widoczne dla całego zespołu</span>
-        </div>
-        <textarea id="ptr-notes" rows="3" placeholder="np. Strzelnica suchy stojąco · start z linii ABC · pogoda słoneczna..."
-          oninput="saveSetup();_renderPtrNotesBars();"
-          onblur="_placeNotes();"
-          class="ptr-notes-input"></textarea>
-        <!-- Ważność + na których zakładkach pokazać notatkę -->
-        <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">
-          <div>
-            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Ważność</div>
-            <div id="ptr-note-levels" style="display:inline-flex;gap:4px;">
-              <button type="button" class="ptr-note-lvl" data-level="normal" onclick="setPtrNoteLevel('normal')">Zwykła</button>
-              <button type="button" class="ptr-note-lvl" data-level="important" onclick="setPtrNoteLevel('important')">Ważna</button>
-              <button type="button" class="ptr-note-lvl" data-level="critical" onclick="setPtrNoteLevel('critical')">Krytyczna</button>
-            </div>
-          </div>
-          <div style="flex:1;min-width:200px;">
-            <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Pokaż na górze zakładek</div>
-            <div id="ptr-note-targets" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-          </div>
-        </div>
-      </div>
 
       <!-- KAFELKI TRYBU/DOSTĘPU — 4 obok siebie, pełna szerokość -->
       <div class="ptr-tiles-row mb-12">
         <!-- 1. Tryb pomiaru (stoper w panelu ↔ stoper fizyczny) -->
         <div id="ptr-mode-card" style="position:relative;">
-          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('offline')" title="Co to robi?">?</button>
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('offline', this)" title="Co to robi?">?</button>
           <div class="ptr-help-popover" id="ptr-help-offline">
             <strong>STOPER W PANELU</strong> — przyciski START/STOP w apce, czas sync na żywo (potrzebny stabilny internet u wszystkich sędziów). <strong>STOPER FIZYCZNY</strong> — mierzcie ręcznymi stoperami i wpisujcie czasy ręcznie. Dobry też gdy któryś sędzia ma słaby internet: jego wpisy zapiszą się lokalnie i zsynchronizują gdy sieć wróci.
           </div>
@@ -1170,7 +1153,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         </div>
         <!-- 2. Sędzia startu (rozwijany w pionie, w swojej kolumnie) -->
         <div id="ptr-tile-starter" class="ptr-starter-tile" style="position:relative;">
-          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('starter')" title="Co to robi?" style="display:none;">?</button>
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('starter', this)" title="Co to robi?" style="display:none;">?</button>
           <div class="ptr-help-popover" id="ptr-help-starter">
             <strong>Sędzia startu.</strong> Wygeneruj klucz dostępu i wyślij link sędziemu na starcie. Otworzy on osobną apkę na telefonie z dużymi przyciskami <strong>START / RESET</strong> dla każdej pary i zsynchronizowanym czasem startu (działa jako autorytet zegara dla całego systemu).
           </div>
@@ -1220,7 +1203,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         </div>
         <!-- 3. Speaker (rozwijany — link mobilny dla komentatora) -->
         <div id="ptr-tile-speaker" class="ptr-starter-tile" style="position:relative;">
-          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('speaker')" title="Co to robi?" style="display:none;">?</button>
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('speaker', this)" title="Co to robi?" style="display:none;">?</button>
           <div class="ptr-help-popover" id="ptr-help-speaker">
             <strong>Speaker.</strong> Aplikacja dla komentatora zawodów — wygenerujesz link z kluczem dostępu i wyślesz go speakerowi na telefon. Otrzyma widok mobilny z listą startową (kto biegnie i z kim), aktualnymi parami na trasie i wynikami na żywo (M, K, drużynowa). Tylko do odczytu — speaker nie może niczego edytować.
           </div>
@@ -1266,7 +1249,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
         </div>
         <!-- 4. Status systemu (rozwijany w pionie) -->
         <div id="ptr-tile-status" class="ptr-starter-tile" style="position:relative;">
-          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('status')" title="Co to robi?" style="display:none;">?</button>
+          <button class="ptr-help-btn" onclick="event.stopPropagation();togglePtrHelp('status', this)" title="Co to robi?" style="display:none;">?</button>
           <div class="ptr-help-popover" id="ptr-help-status">
             <strong>Status systemu.</strong> Diagnostyka działania w jednym miejscu: czy zegar serwera się zgadza, czy starter ma świeży puls, czy realtime sync działa, czy nic nie utknęło w kolejce zapisów. Kolory: zielone = wszystko OK, pomarańczowe = warto sprawdzić, czerwone = problem.
           </div>
@@ -1527,7 +1510,6 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
       </div>
 
       <!-- 📌 NOTATKI — slot dolny (widoczny gdy notatki puste) -->
-      <div id="ptr-notes-bottom-slot"></div>
     </div>
 
     <!-- ZAWODNICY -->
@@ -1915,6 +1897,24 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
   </div>
 </div>
 
+<!-- ═══ MODAL: NOTATKI SĘDZIOWSKIE (wiele notatek, każda na wybrane zakładki) ═══ -->
+<div class="modal-overlay" id="modal-ptr-notes">
+  <div class="modal" style="max-width:620px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-flex;font-size:18px;color:var(--text2);"><span class="ptr-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 20l7 -7"/><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8z"/></svg></span></span>
+      <span>Notatki sędziowskie</span>
+      <button class="btn btn-primary" onclick="ptrNoteAdd()" style="font-size:11px;padding:5px 12px;margin-left:auto;">+ Dodaj notatkę</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.5;">
+      Każda notatka może pojawić się na górze wybranych zakładek (Zawodnicy, Pary, Wyniki…). Ważność zmienia jej kolor. Zapis jest automatyczny.
+    </div>
+    <div id="ptr-notes-list" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;">
+      <button class="btn" onclick="closeModal('modal-ptr-notes')">Zamknij</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
 
@@ -2226,7 +2226,23 @@ function ensureStateDefaults() {
   else for (const k in SETUP_DEFAULTS) {
     if (state.setup[k] === undefined) state.setup[k] = SETUP_DEFAULTS[k];
   }
-  if (!state.setup.notesTabs) state.setup.notesTabs = {}; // {athletes, pairs, team-run, results: bool}
+  if (!state.setup.notesTabs) state.setup.notesTabs = {}; // legacy (pojedyncza notatka)
+  // NOWY model: wiele notatek z przypisaniem do zakładek.
+  // noteList = [{ id, text, level:'normal'|'important'|'critical', tabs:{athletes,pairs,team-run,results:bool} }]
+  if (!Array.isArray(state.setup.noteList)) state.setup.noteList = [];
+  // Migracja starej pojedynczej notatki → pierwsza pozycja listy (raz)
+  if (!state.setup._notesMigrated) {
+    const oldTxt = (state.setup.notes || '').trim();
+    if (oldTxt && !state.setup.noteList.length) {
+      state.setup.noteList.push({
+        id: 'n' + Date.now().toString(36),
+        text: oldTxt,
+        level: state.setup.notesLevel || 'normal',
+        tabs: Object.assign({}, state.setup.notesTabs || {})
+      });
+    }
+    state.setup._notesMigrated = true;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3995,20 +4011,7 @@ function saveSetup() {
 }
 
 // Przenosi karte notatek miedzy gornym (gdy niepuste) a dolnym (gdy puste) slotem
-function _placeNotes() {
-  const card = document.getElementById('ptr-notes-card');
-  if (!card) return;
-  const txt = document.getElementById('ptr-notes')?.value || '';
-  const hasContent = !!txt.trim();
-  card.classList.toggle('notes-filled', hasContent);
-  card.classList.toggle('notes-empty', !hasContent);
-  // ŻYWE BENTO adoptuje kartę notatek (kafelek + szczegół) — nie przenoś jej do slotów
-  if (document.getElementById('ptr-bento')?._adopted) return;
-  const topSlot = document.getElementById('ptr-notes-top-slot');
-  const bottomSlot = document.getElementById('ptr-notes-bottom-slot');
-  if (hasContent && topSlot && card.parentNode !== topSlot) topSlot.appendChild(card);
-  else if (!hasContent && bottomSlot && card.parentNode !== bottomSlot) bottomSlot.appendChild(card);
-}
+function _placeNotes() { /* legacy no-op — notatki są teraz w modalu (modal-ptr-notes) */ }
 
 function renderSetupPage() {
   const s = state.setup || {};
@@ -4035,7 +4038,6 @@ function renderSetupPage() {
   if (typeof _renderSpeakerSection === 'function') _renderSpeakerSection();
   _renderPtrShareSection();
   _renderPtrProjSection();
-  if (typeof _renderNoteEditor === 'function') _renderNoteEditor();
   if (typeof _renderPtrNotesBars === 'function') _renderPtrNotesBars();
   if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
 }
@@ -4074,6 +4076,7 @@ const _PTR_ICONS = {
   'user': '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>',
   'download': '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/>',
   'device-floppy': '<path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/>',
+  'alert': '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
   'pin': '<path d="M9 4v6l-2 4v2h10v-2l-2 -4v-6"/><path d="M12 16l0 5"/><path d="M8 4l8 0"/>',
   'alert': '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
   'shield': '<path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/><path d="M12 11m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 12v2.5"/>',
@@ -4101,9 +4104,8 @@ const PTR_BENTO_ITEMS = [
     onOpen: () => { if (typeof expandInfoCard === 'function') expandInfoCard(); } },
   { id: 'athletes', cat: 'zawody', icon: 'users', label: 'Lista startowa', cardId: 'ptr-import-card',
     help: 'Import zawodników z pliku .xlsx/.csv (szablon do pobrania). Ręczne dodawanie i edycja — zakładka Zawodnicy.' },
-  { id: 'notes', cat: 'zawody', icon: 'note', label: 'Notatki', cardId: 'ptr-notes-card',
-    help: 'Notatki sędziowskie widoczne dla całego zespołu (np. warunki na strzelnicy, pogoda, ustalenia).',
-    onOpen: () => { setTimeout(() => { try { document.getElementById('ptr-notes').focus(); } catch(_) {} }, 60); } },
+  { id: 'notes', cat: 'zawody', icon: 'note', label: 'Notatki', modal: true,
+    help: 'Notatki sędziowskie. Każdą możesz wysłać na górę wybranych zakładek (Zawodnicy, Pary, Wyniki…) i nadać jej ważność (zwykła / ważna / krytyczna).' },
   { id: 'mode', cat: 'pomiar', icon: 'stopwatch', label: 'Stoper', cardId: 'ptr-mode-card',
     help: 'STOPER W PANELU — przyciski START/STOP w apce, czas sync na żywo. STOPER FIZYCZNY — pomiar ręcznymi stoperami i ręczne wpisywanie czasów (dobry przy słabym internecie).' },
   { id: 'starter', cat: 'apps', icon: 'flag', label: 'Sędzia startu', cardId: 'ptr-tile-starter', muteable: true, app: true,
@@ -4164,13 +4166,8 @@ function _ptrBentoStates() {
   st.athletes = hasAth
     ? { band: 'done', meta: (state.athletes || []).length + ' zaw.' + (teams ? ' · ' + teams + ' druż.' : '') }
     : { band: 'attention', sub: 'zaimportuj plik albo dodaj zawodników ręcznie', action: 'Importuj' };
-  const _noteTxt = (s.notes || '').trim();
-  const _noteTgt = Object.values(s.notesTabs || {}).filter(Boolean).length;
-  const _noteLvl = s.notesLevel || 'normal';
-  const _noteLvlLbl = _noteLvl === 'critical' ? 'Krytyczna' : (_noteLvl === 'important' ? 'Ważna' : 'Zwykła');
-  st.notes = _noteTxt
-    ? { band: 'done', meta: _noteLvlLbl + (_noteTgt ? ' · ' + _noteTgt + ' zakł.' : ' · nigdzie nie pokazana') }
-    : { band: 'done', meta: 'puste', dim: true };
+  const _noteSummary = (typeof _ptrNotesSummary === 'function') ? _ptrNotesSummary() : 'brak';
+  st.notes = { band: 'done', meta: _noteSummary, dim: _noteSummary === 'brak' };
   st.mode = { band: 'active', pill: cfg.offlineMode ? { t: 'fizyczny', k: 'muted' } : { t: 'w panelu, sync', k: 'ok' } };
   st.starter = muted.starter ? { band: 'muted', meta: 'nieużywany' }
     : cfg.startEnabled ? { band: 'active', pill: { t: 'link aktywny', k: 'ok' }, copy: true }
@@ -4198,7 +4195,7 @@ function _ptrBentoStates() {
 function _ptrBentoNeeds(id, st) { return (st[id] || {}).band === 'attention'; }
 
 function _ptrBentoHelpHtml(it) {
-  return '<button class="ptr-tile2-help" onclick="event.stopPropagation();togglePtrHelp(\'b-' + it.id + '\')" title="Co to robi?" aria-label="Co to robi?">?</button>' +
+  return '<button class="ptr-tile2-help" onclick="event.stopPropagation();togglePtrHelp(\'b-' + it.id + '\', this)" title="Co to robi?" aria-label="Co to robi?">?</button>' +
     '<div class="ptr-help-popover" id="ptr-help-b-' + it.id + '">' + it.help + '</div>';
 }
 
@@ -4229,10 +4226,10 @@ function _ptrBentoTileHtml(it, v, guide) {
   if (v.band === 'done' && v.meta) meta = '<div class="ptr-tile2-meta">' + v.meta + '</div>';
   else if (needs && v.sub) meta = '<div class="ptr-tile2-meta">' + esc(v.sub) + '</div>';
   return '<div class="' + cls + '" data-bid="' + it.id + '" style="view-transition-name:ptrb-' + it.id + ';" onclick="ptrBentoOpen(\'' + it.id + '\')">' +
-    _ptrBentoHelpHtml(it) +
     '<span class="ptr-tile2-ico">' + _ptrIco(it.icon) + '</span>' +
     '<span class="ptr-tile2-main"><span class="ptr-tile2-name">' + esc(it.label) + (it.badge ? '<span class="ptr-tile2-badge">' + esc(it.badge) + '</span>' : '') + '</span>' + meta + '</span>' +
-    right + '</div>';
+    right +
+    _ptrBentoHelpHtml(it) + '</div>';
 }
 
 function renderPtrBento() {
@@ -4240,8 +4237,9 @@ function renderPtrBento() {
   if (!bento) return;
   if (!state || !state.setup) return; // przed bootem nie ma czego renderować
   if (!bento._adopted) _ptrBentoAdopt();
-  // Nie przerysowuj gdy otwarty popover pomocy (re-render by go zamknął)
-  if (bento.querySelector('.ptr-help-popover.open')) return;
+  // Nie przerysowuj gdy otwarty dymek pomocy (kafelek pod nim by się przesunął)
+  const _tip = document.getElementById('ptr-help-tip');
+  if (_tip && _tip.style.display === 'block') return;
   // Nie przerysowuj gdy user pisze w polu wewnątrz bento (notatki, linki) — utrata fokusa
   const _act = document.activeElement;
   if (_act && bento.contains(_act) && /^(INPUT|TEXTAREA|SELECT)$/.test(_act.tagName)) return;
@@ -4361,6 +4359,12 @@ function ptrBentoRenderSmart() {
 let _ptrBentoOpenedAt = 0;   // anti-double-close: kliknięcie tuż po otwarciu nie zamyka
 let _ptrBentoRunOnOpen = false; // onOpen tylko przy ŚWIEŻYM otwarciu, nie przy każdym renderze
 function ptrBentoOpen(id) {
+  // Kafelki "modalowe" (Notatki) otwierają osobne okno zamiast rozwijać się w miejscu
+  const _it = PTR_BENTO_ITEMS.find(x => x.id === id);
+  if (_it && _it.modal) {
+    if (id === 'notes' && typeof openPtrNotesModal === 'function') openPtrNotesModal();
+    return;
+  }
   if (_ptrBentoOpenId === id) {
     // Re-klik w otwarty kafelek = zamknij, ale ignoruj przypadkowy dubel-klik (<350ms)
     if (Date.now() - _ptrBentoOpenedAt < 350) return;
@@ -4472,55 +4476,124 @@ const PTR_NOTE_TABS = [
   { key: 'team-run', page: 'page-team-run', label: 'Pary drużyn' },
   { key: 'results',  page: 'page-results',  label: 'Wyniki' },
 ];
-function _ptrNoteLevel() { return (state.setup && state.setup.notesLevel) || 'normal'; }
-function _ptrNoteTabs()  { return (state.setup && state.setup.notesTabs) || {}; }
-function setPtrNoteLevel(lvl) {
+function _ptrNotes() {
   if (!state.setup) state.setup = {};
-  state.setup.notesLevel = lvl;
+  if (!Array.isArray(state.setup.noteList)) state.setup.noteList = [];
+  return state.setup.noteList;
+}
+function _ptrNoteById(id) { return _ptrNotes().find(n => n.id === id); }
+let _ptrNotesBarTimer = null;
+function _ptrNotesBarsSoon() { clearTimeout(_ptrNotesBarTimer); _ptrNotesBarTimer = setTimeout(_renderPtrNotesBars, 200); }
+
+// Krótki opis stanu notatek do kafelka bento (np. "2 notatki · 3 zakładki")
+function _ptrNotesSummary() {
+  const list = _ptrNotes().filter(n => (n.text || '').trim());
+  if (!list.length) return 'brak';
+  const shown = new Set();
+  list.forEach(n => PTR_NOTE_TABS.forEach(t => { if (n.tabs && n.tabs[t.key]) shown.add(t.key); }));
+  const npl = list.length === 1 ? '1 notatka' : (list.length + (list.length < 5 ? ' notatki' : ' notatek'));
+  return npl + (shown.size ? ' · ' + shown.size + ' zakł.' : ' · nigdzie');
+}
+
+function openPtrNotesModal() {
+  _renderPtrNotesList();
+  openModal('modal-ptr-notes');
+}
+function ptrNoteAdd() {
+  _ptrNotes().push({ id: 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1000), text: '', level: 'normal', tabs: {} });
   save();
-  _renderNoteEditor();
+  _renderPtrNotesList();
+}
+function ptrNoteDelete(id) {
+  const list = _ptrNotes();
+  const i = list.findIndex(n => n.id === id);
+  if (i < 0) return;
+  if ((list[i].text || '').trim() && !confirm('Usunąć tę notatkę?')) return;
+  list.splice(i, 1);
+  save();
+  _renderPtrNotesList();
+  _renderPtrNotesBars();
+  if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
+}
+// oninput — zapis BEZ przerenderowania listy (nie kradnie fokusu z textarea = koniec chaosu przy pisaniu)
+function ptrNoteText(id, el) {
+  const n = _ptrNoteById(id);
+  if (!n) return;
+  n.text = el.value;
+  save();
+  _ptrNotesBarsSoon();
+}
+function ptrNoteLevel(id, lvl) {
+  const n = _ptrNoteById(id);
+  if (!n) return;
+  n.level = lvl;
+  save();
+  _renderPtrNotesList();
   _renderPtrNotesBars();
 }
-function togglePtrNoteTarget(key) {
-  if (!state.setup) state.setup = {};
-  if (!state.setup.notesTabs) state.setup.notesTabs = {};
-  state.setup.notesTabs[key] = !state.setup.notesTabs[key];
+function ptrNoteToggleTab(id, key) {
+  const n = _ptrNoteById(id);
+  if (!n) return;
+  if (!n.tabs) n.tabs = {};
+  n.tabs[key] = !n.tabs[key];
   save();
-  _renderNoteEditor();
+  _renderPtrNotesList();
   _renderPtrNotesBars();
+  if (typeof ptrBentoRenderSmart === 'function') ptrBentoRenderSmart();
 }
-function _renderNoteEditor() {
-  const lvl = _ptrNoteLevel();
-  document.querySelectorAll('.ptr-note-lvl').forEach(b => b.classList.toggle('active', b.dataset.level === lvl));
-  const cont = document.getElementById('ptr-note-targets');
-  if (cont) {
-    const tabs = _ptrNoteTabs();
-    cont.innerHTML = PTR_NOTE_TABS.map(t =>
-      '<button type="button" class="ptr-note-target' + (tabs[t.key] ? ' on' : '') + '" onclick="togglePtrNoteTarget(\'' + t.key + '\')">' +
+function _renderPtrNotesList() {
+  const cont = document.getElementById('ptr-notes-list');
+  if (!cont) return;
+  const list = _ptrNotes();
+  if (!list.length) {
+    cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Brak notatek. Dodaj pierwszą — pojawi się na górze wybranych zakładek.</div>';
+    return;
+  }
+  cont.innerHTML = list.map(n => {
+    const tabs = n.tabs || {};
+    const lvl = n.level || 'normal';
+    const targets = PTR_NOTE_TABS.map(t =>
+      '<button type="button" class="ptr-note-target' + (tabs[t.key] ? ' on' : '') + '" onclick="ptrNoteToggleTab(\'' + n.id + '\',\'' + t.key + '\')">' +
       (tabs[t.key] ? _ptrIco('check') : '') + esc(t.label) + '</button>'
     ).join('');
-  }
+    const lvlBtns = [['normal', 'Zwykła'], ['important', 'Ważna'], ['critical', 'Krytyczna']].map(([k, l]) =>
+      '<button type="button" class="ptr-note-lvl' + (lvl === k ? ' active' : '') + '" data-level="' + k + '" onclick="ptrNoteLevel(\'' + n.id + '\',\'' + k + '\')">' + l + '</button>'
+    ).join('');
+    return '<div class="ptr-note-edit ' + lvl + '">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+        '<div style="display:inline-flex;gap:4px;">' + lvlBtns + '</div>' +
+        '<button class="ptr-note-del" title="Usuń notatkę" aria-label="Usuń notatkę" onclick="ptrNoteDelete(\'' + n.id + '\')">' + _ptrIco('x') + '</button>' +
+      '</div>' +
+      '<textarea class="ptr-notes-input" rows="2" placeholder="np. Strzelnica suchy stojąco · start z linii ABC · pogoda słoneczna..." oninput="ptrNoteText(\'' + n.id + '\', this)">' + esc(n.text || '') + '</textarea>' +
+      '<div style="margin-top:8px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Pokaż na górze zakładek</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + targets + '</div>' +
+    '</div>';
+  }).join('');
 }
-// Wstawia/aktualizuje/usuwa pasek notatki na górze każdej zakładki-celu
+// Renderuje paski WSZYSTKICH notatek na górze każdej zakładki-celu (z podpisem "Notatka sędziowska")
 function _renderPtrNotesBars() {
   if (!state || !state.setup) return;
-  const txt = ((state.setup.notes) || '').trim();
-  const lvl = _ptrNoteLevel();
-  const tabs = _ptrNoteTabs();
-  const tag = lvl === 'critical' ? 'Krytyczne' : (lvl === 'important' ? 'Ważne' : '');
-  const icoName = lvl === 'normal' ? 'pin' : 'alert';
+  const list = _ptrNotes();
   PTR_NOTE_TABS.forEach(t => {
     const page = document.getElementById(t.page);
     if (!page) return;
-    const id = 'ptr-note-bar-' + t.key;
-    let bar = document.getElementById(id);
-    if (!(txt && tabs[t.key])) { if (bar) bar.remove(); return; }
-    if (!bar) { bar = document.createElement('div'); bar.id = id; page.insertBefore(bar, page.firstChild); }
-    else if (bar !== page.firstChild) { page.insertBefore(bar, page.firstChild); } // utrzymaj na górze po rerenderze
-    bar.className = 'ptr-note-bar ' + lvl;
-    bar.innerHTML = '<span class="ptr-i" style="font-size:16px;">' + (_PTR_ICONS[icoName] ? _ptrIco(icoName) : '') + '</span>' +
-      (tag ? '<span class="ptr-note-bar-tag">' + tag + '</span>' : '') +
-      '<span style="flex:1;min-width:0;">' + esc(txt) + '</span>';
+    const wrapId = 'ptr-note-bars-' + t.key;
+    let wrap = document.getElementById(wrapId);
+    const mine = list.filter(n => (n.text || '').trim() && n.tabs && n.tabs[t.key]);
+    if (!mine.length) { if (wrap) wrap.remove(); return; }
+    if (!wrap) { wrap = document.createElement('div'); wrap.id = wrapId; page.insertBefore(wrap, page.firstChild); }
+    else if (wrap !== page.firstChild) page.insertBefore(wrap, page.firstChild);
+    wrap.innerHTML = mine.map(n => {
+      const lvl = n.level || 'normal';
+      const tag = lvl === 'critical' ? 'Krytyczne' : (lvl === 'important' ? 'Ważne' : '');
+      const ico = lvl === 'normal' ? 'note' : 'alert';
+      return '<div class="ptr-note-bar ' + lvl + '">' +
+        '<span class="ptr-i" style="font-size:16px;">' + _ptrIco(ico) + '</span>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="ptr-note-bar-label">Notatka sędziowska' + (tag ? ' · ' + tag : '') + '</div>' +
+          '<div style="white-space:pre-wrap;">' + esc(n.text) + '</div>' +
+        '</div></div>';
+    }).join('');
   });
 }
 
@@ -4840,25 +4913,41 @@ function _applyOfflineMode() {
 }
 
 // ─── HELP POPOVER (?) — proste tłumaczenie zasady działania kafelka ─
-function togglePtrHelp(key) {
-  const pop = document.getElementById('ptr-help-' + key);
-  if (!pop) return;
-  const wasOpen = pop.classList.contains('open');
-  // Zamknij wszystkie inne pomoce
-  document.querySelectorAll('.ptr-help-popover.open').forEach(p => p.classList.remove('open'));
-  if (!wasOpen) {
-    pop.classList.add('open');
-    // Klik poza popoverem zamyka
-    setTimeout(() => {
-      const handler = (e) => {
-        if (!pop.contains(e.target) && !e.target.matches('.ptr-help-btn')) {
-          pop.classList.remove('open');
-          document.removeEventListener('click', handler);
-        }
-      };
-      document.addEventListener('click', handler);
-    }, 10);
-  }
+// Pomoc "?" — pływający dymek na body (ucieka z overflow:hidden kategorii, mieści się w ekranie).
+// Źródłem treści jest ukryty #ptr-help-<key>; btn = kliknięty znak zapytania (do pozycjonowania).
+function _ptrHelpTip() {
+  let t = document.getElementById('ptr-help-tip');
+  if (!t) { t = document.createElement('div'); t.id = 'ptr-help-tip'; document.body.appendChild(t); }
+  return t;
+}
+function togglePtrHelp(key, btn) {
+  const src = document.getElementById('ptr-help-' + key);
+  if (!src) return;
+  const tip = _ptrHelpTip();
+  if (tip._key === key && tip.style.display === 'block') { tip.style.display = 'none'; tip._key = null; return; }
+  tip.innerHTML = src.innerHTML;
+  tip._key = key;
+  tip.style.display = 'block';
+  tip.style.maxWidth = Math.min(340, window.innerWidth - 24) + 'px';
+  // Pozycja: pod znakiem zapytania, dosunięta do ekranu; flip w górę gdy brak miejsca
+  try {
+    const r = (btn || src).getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = Math.max(12, Math.min(r.right - tw, window.innerWidth - tw - 12));
+    let top = r.bottom + 8;
+    if (top + th > window.innerHeight - 12) top = Math.max(12, r.top - th - 8);
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  } catch(_) {}
+  setTimeout(() => {
+    const handler = (e) => {
+      if (!tip.contains(e.target) && !(e.target.closest && e.target.closest('.ptr-tile2-help, .ptr-help-btn'))) {
+        tip.style.display = 'none'; tip._key = null;
+        document.removeEventListener('click', handler);
+      }
+    };
+    document.addEventListener('click', handler);
+  }, 10);
 }
 
 // ─── KAFELEK STATUS SYSTEMU ─────────────────────────────────────
