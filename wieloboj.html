@@ -33,7 +33,8 @@
   --red:      #e05555;
   --warn:     #e8a45d;
   --blue:     #5b9bd5;
-  --orange:   #e8944d;
+  --dsq:      #e8944d;      /* DSQ / przekreślenia / ostrzeżenia — ODDZIELONE od akcentu */
+  --orange:   var(--accent); /* alias: w wieloboju akcent = złoto (kanon). NIE używać do DSQ */
   --m35:      #5b9bd5;
   --m36:      #7b6fd4;
   --k35:      #d45b9b;
@@ -151,8 +152,18 @@ html, body {
 .wjb-prog-bar { height:6px; background:var(--bg3); border-radius:3px; overflow:hidden; } .wjb-prog-fill { height:100%; background:var(--accent); border-radius:3px; transition:width .4s; }
 /* Paski notatek na zakładkach konkurencji */
 .wjb-note-bar { display:flex; align-items:flex-start; gap:10px; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-family:var(--font-b); font-size:13.5px; line-height:1.5; border:1px solid; }
+.wjb-note-bar + .wjb-note-bar { margin-top:-4px; }
 .wjb-note-bar.normal { background:var(--bg3); border-color:var(--border2); color:var(--text2); }
+.wjb-note-bar.important { background:rgba(232,164,93,.1); border-color:rgba(232,164,93,.45); color:#e8c79d; } .wjb-note-bar.important .wjb-i { color:var(--warn); }
+.wjb-note-bar.critical { background:rgba(224,85,85,.12); border-color:rgba(224,85,85,.5); color:#f0a5a5; } .wjb-note-bar.critical .wjb-i { color:var(--red); }
 .wjb-note-lbl { font-family:var(--font-h); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; opacity:.8; margin-bottom:3px; }
+.wjb-note-edit { border:1px solid var(--border2); border-left:3px solid var(--border2); border-radius:10px; padding:12px; margin-bottom:12px; background:var(--bg2); } .wjb-note-edit.important { border-left-color:var(--warn); } .wjb-note-edit.critical { border-left-color:var(--red); }
+.wjb-note-del { margin-left:auto; width:28px; height:28px; border-radius:7px; border:1px solid var(--border2); background:transparent; color:var(--text3); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; } .wjb-note-del:hover { color:var(--red); border-color:rgba(224,85,85,.4); }
+.wjb-note-lvl { font-family:var(--font-b); font-size:11.5px; padding:5px 11px; border-radius:7px; border:1px solid var(--border2); background:var(--bg3); color:var(--text3); cursor:pointer; }
+.wjb-note-lvl.active[data-level="normal"] { border-color:var(--text3); color:var(--text1); background:var(--bg4); }
+.wjb-note-lvl.active[data-level="important"] { border-color:var(--warn); color:var(--warn); background:rgba(232,164,93,.12); }
+.wjb-note-lvl.active[data-level="critical"] { border-color:var(--red); color:var(--red); background:rgba(224,85,85,.12); }
+.wjb-note-tg { display:inline-flex; align-items:center; gap:5px; font-family:var(--font-b); font-size:12px; padding:5px 11px; border-radius:7px; border:1px solid var(--border2); background:var(--bg3); color:var(--text3); cursor:pointer; } .wjb-note-tg.on { border-color:var(--green); color:var(--green); background:rgba(76,175,130,.12); } .wjb-note-tg .wjb-i { font-size:13px; }
 #wjb-flow { grid-column:1 / -1; width:100%; box-sizing:border-box; background:var(--bg2); border:1px solid var(--border2); border-radius:14px; overflow:hidden; }
 #wjb-flow.enter { animation:wjbFlowIn .18s cubic-bezier(.2,.8,.2,1); } @keyframes wjbFlowIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
 .wjb-flow-head { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; } .wjb-flow-ttl { font-family:var(--font-b); font-size:13.5px; font-weight:500; color:var(--text1); flex:1; }
@@ -378,7 +389,7 @@ html, body {
 .btn-sm { padding: 4px 10px; font-size: 11px; }
 .btn-xs { padding: 2px 7px; font-size: 10px; letter-spacing: 0.5px; }
 .btn-icon { padding: 4px 8px; font-size: 13px; letter-spacing: 0; }
-.btn-warn { background: var(--orange); color: #111; border-color: var(--orange); }
+.btn-warn { background: var(--dsq); color: #111; border-color: var(--dsq); }
 .btn-warn:hover { background: #d07c35; border-color: #d07c35; }
 
 /* ─── FORM ─── */
@@ -500,9 +511,9 @@ tr:last-child > td { border-bottom: none; }
 .qe-time.has-val { border-color: var(--border2); }
 .qe-time.is-best { border-color: var(--green); color: var(--green); }
 .qe-time.dnf-val { border-color: var(--red); color: var(--red); font-style: italic; }
-.qe-time.dq-val { border-color: var(--orange); color: var(--orange); text-decoration: line-through; }
+.qe-time.dq-val { border-color: var(--dsq); color: var(--dsq); text-decoration: line-through; }
 .qe-disq-btn { width: 22px; height: 22px; font-size: 11px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-.qe-disq-btn.dq-active { background: var(--orange); color: #111; border-color: var(--orange); }
+.qe-disq-btn.dq-active { background: var(--dsq); color: #111; border-color: var(--dsq); }
 
 /* ─── TEAM CHIP ─── */
 .druzyna-chip {
@@ -645,7 +656,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 .pk-row td:first-child { opacity: 1; }
 
 /* ─── DQ mark ─── */
-.dq-mark { text-decoration: line-through; color: var(--orange); }
+.dq-mark { text-decoration: line-through; color: var(--dsq); }
 .dnf-mark { color: var(--red); font-style: italic; }
 
 /* ─── RANKING SEARCH ─── */
@@ -991,7 +1002,7 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     <!-- przycisk Menu zawodów ukryty -->
     <div style="position:relative;flex-shrink:0">
       <div style="display:flex;align-items:center;background:var(--green);border-radius:4px;overflow:hidden;border:1px solid var(--green)">
-        <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1">📺 <span class="btn-label-long">Projektor</span></button>
+        <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:6px"><span class="wjb-i" data-ico="device-tv" style="font-size:15px"></span><span class="btn-label-long">Projektor</span></button>
         <div style="width:1px;height:16px;background:rgba(255,255,255,.25);flex-shrink:0"></div>
         <button onclick="toggleProjectorSettings()" title="Ustawienia projektora" style="background:transparent;border:none;color:rgba(255,255,255,.75);font-size:12px;padding:6px 8px;cursor:pointer;line-height:1;display:flex;align-items:center">⚙</button>
       </div>
@@ -1059,10 +1070,10 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border)">
     <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Pokaż punkty per konkurencja</div>
     <div style="display:flex;flex-direction:column;gap:4px">
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k1" style="width:14px;height:14px;accent-color:var(--accent)"> 🪢 Lina (K1)</label>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k2" style="width:14px;height:14px;accent-color:var(--accent)"> 🏃 BTS (K2)</label>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k3" style="width:14px;height:14px;accent-color:var(--accent)"> ⚡ 15×15m (K3)</label>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k4" style="width:14px;height:14px;accent-color:var(--accent)"> 🏅 1000m (K4)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k1" style="width:14px;height:14px;accent-color:var(--accent)"> <span class="wjb-i" data-ico="arrow-up" style="font-size:14px;vertical-align:-2px"></span> Lina (K1)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k2" style="width:14px;height:14px;accent-color:var(--accent)"> <span class="wjb-i" data-ico="run" style="font-size:14px;vertical-align:-2px"></span> BTS (K2)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k3" style="width:14px;height:14px;accent-color:var(--accent)"> <span class="wjb-i" data-ico="arrows-lr" style="font-size:14px;vertical-align:-2px"></span> 15×15m (K3)</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;padding:3px 6px;background:var(--bg3);border-radius:3px"><input type="checkbox" id="proj-show-k4" style="width:14px;height:14px;accent-color:var(--accent)"> <span class="wjb-i" data-ico="route" style="font-size:14px;vertical-align:-2px"></span> 1000m (K4)</label>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:4px">Suma punktów zawsze widoczna.</div>
   </div>
@@ -1109,53 +1120,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 
   <div class="grid-2">
     <div>
-      <div class="card" id="wj-personalize-card">
-        <div class="card-title">🎨 Personalizacja &amp; status</div>
-        <div class="grid-2" style="margin-bottom:10px">
-          <div class="form-group" style="margin:0">
-            <label>Status zawodów</label>
-            <select id="setup-status" onchange="saveSetup()" style="font-weight:700">
-              <option value="planned">📅 Planowane</option>
-              <option value="active">🟢 W trakcie</option>
-              <option value="finished">🏁 Zakończone</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin:0">
-            <label>Kolor akcentu</label>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px" id="accent-picker">
-              <button class="accent-swatch" data-color="#e8d44d" style="background:#e8d44d" title="Złoty (domyślny)"></button>
-              <button class="accent-swatch" data-color="#4caf82" style="background:#4caf82" title="Zielony"></button>
-              <button class="accent-swatch" data-color="#5b9bd5" style="background:#5b9bd5" title="Niebieski"></button>
-              <button class="accent-swatch" data-color="#e05555" style="background:#e05555" title="Czerwony"></button>
-              <button class="accent-swatch" data-color="#e8944d" style="background:#e8944d" title="Pomarańczowy"></button>
-              <button class="accent-swatch" data-color="#c084fc" style="background:#c084fc" title="Fioletowy"></button>
-            </div>
-          </div>
-        </div>
-        <div class="grid-2">
-          <div class="form-group" style="margin:0">
-            <label>Logo jednostki (PNG/JPG)</label>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-              <img id="setup-logo-preview" src="" alt="" style="display:none;height:40px;width:40px;object-fit:contain;border:1px solid var(--border);border-radius:3px;background:var(--bg3)">
-              <div>
-                <button class="btn btn-sm" onclick="document.getElementById('logo-file-input').click()">📁 Wgraj logo</button>
-                <button class="btn btn-sm btn-danger" id="logo-remove-btn" style="display:none" onclick="removeLogo()">✕</button>
-              </div>
-              <input type="file" id="logo-file-input" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
-            </div>
-          </div>
-          <div class="form-group" style="margin:0">
-            <label>Regulamin (PDF)</label>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
-              <a id="setup-rules-link" href="#" style="display:none" class="btn btn-sm btn-success" target="_blank">📄 Pobierz</a>
-              <button class="btn btn-sm" onclick="document.getElementById('rules-file-input').click()">📁 Wgraj PDF</button>
-              <button class="btn btn-sm btn-danger" id="rules-remove-btn" style="display:none" onclick="removeRules()">✕</button>
-            </div>
-            <input type="file" id="rules-file-input" accept=".pdf" style="display:none" onchange="handleRulesUpload(event)">
-          </div>
-        </div>
-      </div>
-
       <div class="card" id="wj-info-card">
         <div class="card-title">📋 Informacje ogólne</div>
         <div class="form-group">
@@ -1735,6 +1699,24 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   </div>
 </div>
 
+<!-- NOTATKI SĘDZIOWSKIE — wiele notatek, ważność, targetowanie per-zakładka -->
+<div class="modal-overlay" id="modal-wj-notes">
+  <div class="modal" style="max-width:620px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-flex;font-size:18px;color:var(--text2);"><span class="wjb-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 20l7 -7"/><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8z"/></svg></span></span>
+      <span>Notatki sędziowskie</span>
+      <button class="btn btn-primary" onclick="wjNoteAdd()" style="font-size:11px;padding:5px 12px;margin-left:auto;">+ Dodaj notatkę</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.5;">
+      Każda notatka może pojawić się na górze wybranych zakładek (Konfiguracja, Zawodnicy, Lina, BTS, 15×15m, 1000m, Ranking). Ważność zmienia jej kolor. Zapis jest automatyczny.
+    </div>
+    <div id="wj-notes-list" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;">
+      <button class="btn" onclick="closeModal('modal-wj-notes')">Zamknij</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- HIDDEN INPUTS -->
@@ -2096,7 +2078,7 @@ async function saveToSupabase() {
   } catch(e) {
     console.error('Supabase save exception:', e);
     const el = document.getElementById('header-autosave');
-    if (el) { el.textContent = '⚠ OFFLINE — zmiany lokalne'; el.style.color = 'var(--orange)'; }
+    if (el) { el.textContent = '⚠ OFFLINE — zmiany lokalne'; el.style.color = 'var(--dsq)'; }
   }
 }
 
@@ -2306,7 +2288,7 @@ async function openWjEventsLog() {
     const { data, error } = await getSupabase().from('mss_events').select('user_name,user_email,role,action,details,client_at,created_at').eq('slot_id', _w4Slot()).order('id', { ascending: false }).limit(200);
     if (error) throw error;
     const pend = _evqLoad().length;
-    const pendInfo = pend ? '<div style="font-size:11px;color:var(--orange);margin-bottom:8px;">⏳ ' + pend + ' zdarzeń czeka na wysłanie (offline)</div>' : '';
+    const pendInfo = pend ? '<div style="font-size:11px;color:var(--dsq);margin-bottom:8px;">⏳ ' + pend + ' zdarzeń czeka na wysłanie (offline)</div>' : '';
     if (!data || !data.length) { body.innerHTML = pendInfo + '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;">Brak zdarzeń.</div>'; return; }
     const fmtT = iso => { try { const d = new Date(iso); const p = n => (n<10?'0':'')+n; return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds()); } catch(_) { return '—'; } };
     body.innerHTML = pendInfo + data.map(ev => {
@@ -2697,29 +2679,87 @@ function renderRulesLink() {
   }
 }
 
-function saveNotes() {
-  if (!STATE.setup.notes) STATE.setup.notes = {};
-  STATE.setup.notes.k1 = document.getElementById('notes-k1')?.value || '';
-  STATE.setup.notes.k2 = document.getElementById('notes-k2')?.value || '';
-  STATE.setup.notes.k3 = document.getElementById('notes-k3')?.value || '';
-  STATE.setup.notes.k4 = document.getElementById('notes-k4')?.value || '';
-  save();
-  renderAllNotesBars();
+// ═══ NOTATKI SĘDZIOWSKIE WIELOBÓJ — wiele notatek, ważność, targetowanie per-zakładka ═══
+// Model: STATE.setup.noteList = [{id, text, level:'normal'|'important'|'critical', tabs:{}}]
+const WJ_NOTE_TABS = [
+  { key:'setup',     page:'page-setup',     label:'Konfiguracja' },
+  { key:'zawodnicy', page:'page-zawodnicy', label:'Zawodnicy' },
+  { key:'k1',        page:'page-k1',        label:'Lina' },
+  { key:'k2',        page:'page-k2',        label:'BTS' },
+  { key:'k3',        page:'page-k3',        label:'15×15m' },
+  { key:'k4',        page:'page-k4',        label:'1000m' },
+  { key:'ranking',   page:'page-ranking',   label:'Ranking' },
+];
+function _wjNotes() {
+  if (!STATE.setup) STATE.setup = {};
+  if (!Array.isArray(STATE.setup.noteList)) STATE.setup.noteList = [];
+  // Migracja starych notatek per-konkurencja (STATE.setup.notes {k1..k4}) → noteList (raz)
+  if (!STATE.setup._notesMigrated) {
+    const old = STATE.setup.notes || {};
+    ['k1','k2','k3','k4'].forEach(k => {
+      const txt = (old[k] || '').trim();
+      if (txt) STATE.setup.noteList.push({ id:'n'+Date.now().toString(36)+Math.floor(Math.random()*1000), text:txt, level:'normal', tabs:{ [k]:true } });
+    });
+    STATE.setup._notesMigrated = true;
+  }
+  return STATE.setup.noteList;
 }
-
-function renderAllNotesBars() {
-  ['k1','k2','k3','k4'].forEach(k => {
-    const bar = document.getElementById('judge-notes-' + k + '-bar');
-    if (!bar) return;
-    const note = STATE.setup.notes?.[k] || '';
-    if (note.trim()) {
-      bar.textContent = note;
-      bar.style.display = 'block';
-    } else {
-      bar.style.display = 'none';
-    }
+function _wjNoteById(id) { return _wjNotes().find(n => n.id === id); }
+let _wjNotesBarTimer = null;
+function _wjNotesBarsSoon() { clearTimeout(_wjNotesBarTimer); _wjNotesBarTimer = setTimeout(_renderWjNotesBars, 200); }
+function _wjNotesSummary() {
+  const list = _wjNotes().filter(n => (n.text || '').trim());
+  if (!list.length) return 'brak';
+  const shown = new Set();
+  list.forEach(n => WJ_NOTE_TABS.forEach(t => { if (n.tabs && n.tabs[t.key]) shown.add(t.key); }));
+  const npl = list.length === 1 ? '1 notatka' : (list.length + (list.length < 5 ? ' notatki' : ' notatek'));
+  return npl + (shown.size ? ' · ' + shown.size + ' zakł.' : ' · nigdzie');
+}
+function openWjNotesModal() { _renderWjNotesList(); document.getElementById('modal-wj-notes').classList.add('open'); }
+function wjNoteAdd() { _wjNotes().push({ id:'n'+Date.now().toString(36)+Math.floor(Math.random()*1000), text:'', level:'normal', tabs:{} }); save(); _renderWjNotesList(); }
+function wjNoteDelete(id) {
+  const list = _wjNotes(); const i = list.findIndex(n => n.id === id); if (i < 0) return;
+  if ((list[i].text || '').trim() && !confirm('Usunąć tę notatkę?')) return;
+  list.splice(i, 1); save(); _renderWjNotesList(); _renderWjNotesBars();
+  if (typeof renderWjBento === 'function') renderWjBento();
+}
+function wjNoteText(id, el) { const n = _wjNoteById(id); if (!n) return; n.text = el.value; save(); _wjNotesBarsSoon(); }
+function wjNoteLevel(id, lvl) { const n = _wjNoteById(id); if (!n) return; n.level = lvl; save(); _renderWjNotesList(); _renderWjNotesBars(); }
+function wjNoteToggleTab(id, key) { const n = _wjNoteById(id); if (!n) return; if (!n.tabs) n.tabs = {}; n.tabs[key] = !n.tabs[key]; save(); _renderWjNotesList(); _renderWjNotesBars(); }
+function _renderWjNotesList() {
+  const cont = document.getElementById('wj-notes-list'); if (!cont) return;
+  const list = _wjNotes();
+  if (!list.length) { cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Brak notatek. Dodaj pierwszą — pojawi się na górze wybranych zakładek.</div>'; return; }
+  cont.innerHTML = list.map(n => {
+    const tabs = n.tabs || {}, lvl = n.level || 'normal';
+    const targets = WJ_NOTE_TABS.map(t => '<button type="button" class="wjb-note-tg' + (tabs[t.key] ? ' on' : '') + '" onclick="wjNoteToggleTab(\'' + n.id + '\',\'' + t.key + '\')">' + (tabs[t.key] ? _wjbIco('check') : '') + _w4esc(t.label) + '</button>').join('');
+    const lvlBtns = [['normal','Zwykła'],['important','Ważna'],['critical','Krytyczna']].map(([k,l]) => '<button type="button" class="wjb-note-lvl' + (lvl === k ? ' active' : '') + '" data-level="' + k + '" onclick="wjNoteLevel(\'' + n.id + '\',\'' + k + '\')">' + l + '</button>').join('');
+    return '<div class="wjb-note-edit ' + lvl + '"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><div style="display:inline-flex;gap:4px;">' + lvlBtns + '</div><button class="wjb-note-del" title="Usuń notatkę" aria-label="Usuń notatkę" onclick="wjNoteDelete(\'' + n.id + '\')">' + _wjbIco('x') + '</button></div>' +
+      '<textarea rows="2" placeholder="np. Lina 6m, czas max 14s · tor mokry · uwaga na zakręt..." oninput="wjNoteText(\'' + n.id + '\', this)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text1);padding:9px 11px;font-family:var(--font-b);font-size:13px;resize:vertical;line-height:1.45;">' + _w4esc(n.text || '') + '</textarea>' +
+      '<div style="margin-top:8px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Pokaż na górze zakładek</div><div style="display:flex;flex-wrap:wrap;gap:6px;">' + targets + '</div></div>';
+  }).join('');
+}
+function _renderWjNotesBars() {
+  if (!STATE || !STATE.setup) return;
+  const list = _wjNotes();
+  WJ_NOTE_TABS.forEach(t => {
+    const page = document.getElementById(t.page); if (!page) return;
+    const wrapId = 'wj-note-bars-' + t.key; let wrap = document.getElementById(wrapId);
+    const mine = list.filter(n => (n.text || '').trim() && n.tabs && n.tabs[t.key]);
+    if (!mine.length) { if (wrap) wrap.remove(); return; }
+    if (!wrap) { wrap = document.createElement('div'); wrap.id = wrapId; page.insertBefore(wrap, page.firstChild); }
+    else if (wrap !== page.firstChild) page.insertBefore(wrap, page.firstChild);
+    wrap.innerHTML = mine.map(n => {
+      const lvl = n.level || 'normal';
+      const tag = lvl === 'critical' ? 'Krytyczne' : (lvl === 'important' ? 'Ważne' : '');
+      const ico = lvl === 'normal' ? 'note' : 'alert-triangle';
+      return '<div class="wjb-note-bar ' + lvl + '"><span class="wjb-i" style="font-size:16px;">' + _wjbIco(ico) + '</span><div style="flex:1;min-width:0;"><div class="wjb-note-lbl">Notatka sędziowska' + (tag ? ' · ' + tag : '') + '</div><div style="white-space:pre-wrap;">' + _w4esc(n.text) + '</div></div></div>';
+    }).join('');
   });
 }
+// Legacy aliasy — istniejące wywołania (sync, saveSetup) działają na nowym modelu
+function renderAllNotesBars() { _renderWjNotesBars(); }
+function saveNotes() { /* legacy: notatki przeniesione do modalu (modal-wj-notes) */ }
 
 function renderPersonalization() {
   // Status
@@ -2795,6 +2835,7 @@ function showPage(id) {
   if (id === 'page-k4') renderK4();
   if (id === 'page-ranking') renderRanking();
   if (id === 'page-setup' && typeof renderSetup === 'function') renderSetup();
+  if (typeof _renderWjNotesBars === 'function') { try { _renderWjNotesBars(); } catch(_){} }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2936,9 +2977,8 @@ const WJB_CATS = [
 ];
 const WJB_ITEMS = [
   { id:'info', cat:'zawody', icon:'clipboard-text', label:'Informacje', cardId:'wj-info-card', help:'Nazwa, daty, miejsce i organizator zawodów. Trafiają na wyniki online, projektor i wydruki.' },
-  { id:'brand', cat:'zawody', icon:'palette', label:'Personalizacja', cardId:'wj-personalize-card', help:'Kolor akcentu, logo jednostki, regulamin PDF oraz status zawodów (planowane / w trakcie / zakończone).' },
   { id:'athletes', cat:'zawody', icon:'users', label:'Lista startowa', cardId:'wj-import-card', help:'Import zawodników z pliku .xlsx/.ods/.csv (szablon do pobrania). Drużyny i kategorie tworzą się automatycznie.' },
-  { id:'notes', cat:'zawody', icon:'note', label:'Notatki', cardId:'wj-notes-card', help:'Notatki dla sędziów per konkurencja (Lina, BTS, 15×15m, 1000m) — pokazują się na górze odpowiednich zakładek.' },
+  { id:'notes', cat:'zawody', icon:'note', label:'Notatki', cardId:'wj-notes-card', modal:true, help:'Notatki sędziowskie. Każdą możesz wysłać na górę wybranych zakładek (Konfiguracja, Zawodnicy, Lina, BTS, 15×15m, 1000m, Ranking) i nadać jej ważność (zwykła / ważna / krytyczna).' },
   { id:'status', cat:'system', icon:'activity', label:'Status', info:true, help:'Stan zapisu do chmury i synchronizacji między urządzeniami. Zielone = wszystko działa.' },
   { id:'safety', cat:'system', icon:'database', label:'Dane i kopie', cardId:'wj-safety-card', help:'Dziennik zdarzeń (kto, kiedy, co) + automatyczne migawki stanu co 5 minut z możliwością przywrócenia.' },
   { id:'auth', cat:'system', icon:'shield', label:'Bezpieczeństwo', cardId:'wj-auth-card', help:'Zmiana haseł logowania sędziów.' },
@@ -2968,14 +3008,12 @@ function _wjbStates(){
   const teams=(STATE.teams||[]).length;
   const shareOn=(typeof _getWjPublicShare==='function')?_getWjPublicShare():false;
   const projOn=(typeof _getWjProjectorShare==='function')?_getWjProjectorShare():false;
-  const notes=s.notes||{};
-  const nCount=['k1','k2','k3','k4'].filter(k=>((notes[k]||'').trim())).length;
+  const _nSum=(typeof _wjNotesSummary==='function')?_wjNotesSummary():'brak';
   const fmtD=d=>{try{const p=String(d).split('-');return p.length===3?p[2]+'.'+p[1]:d;}catch(_){return d;}};
   const st={};
   st.info=hasInfo?{band:'done',meta:_w4esc(s.place)+(s.date?', '+_w4esc(fmtD(s.date)):'')}:{band:'attention',sub:'uzupełnij miejsce, datę i organizatora',action:'Uzupełnij'};
-  st.brand={band:'done',meta:(s.status==='active'?'w trakcie':s.status==='finished'?'zakończone':'planowane')+(s.logo?' · logo':'')};
   st.athletes=hasAth?{band:'done',meta:(STATE.athletes||[]).length+' zaw.'+(teams?' · '+teams+' druż.':'')}:{band:'attention',sub:'zaimportuj plik z listą startową',action:'Importuj'};
-  st.notes={band:'done',meta:nCount?nCount+'/4 konkurencji':'puste',dim:!nCount};
+  st.notes={band:'done',meta:_nSum,dim:(_nSum==='brak')};
   st.status={band:'active',pill:{t:'zapis w chmurze',k:'ok'}};
   st.safety={band:'active',pill:{t:'migawki wł.',k:'ok'}};
   st.auth={band:'done',meta:'hasła sędziów',dim:true};
@@ -3072,6 +3110,7 @@ function _wjbMountFlow(){
 function wjbOpen(id){
   const it=WJB_ITEMS.find(x=>x.id===id);
   if(it&&it.info) return;
+  if(it&&it.modal){ if(id==='notes'&&typeof openWjNotesModal==='function') openWjNotesModal(); return; }
   if(it&&it.action){ if(id==='projector'&&typeof openProjector==='function'){ try{ openProjector(); }catch(_){} } return; }
   if(_wjbOpenId===id){ if(Date.now()-_wjbOpenedAt<350) return; wjbClose(); return; }
   try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){}
@@ -3803,7 +3842,7 @@ function renderAthletesList() {
     const teamCell = team
       ? `<span class="druzyna-chip">${team.num}. ${team.name}</span>${loneSusp
           ? ` <span onclick="confirmLoneAthlete(${a.id})"
-                style="cursor:pointer;font-size:12px;color:var(--orange)"
+                style="cursor:pointer;font-size:12px;color:var(--dsq)"
                 title="Jedyny zawodnik w tej drużynie — możliwa literówka w nazwie. Kliknij aby potwierdzić.">🟡 tylko 1 zawodnik</span>`
           : ''}`
       : `<span class="text-muted" style="cursor:pointer" onclick="openAddAthleteModal(${a.id})" title="Kliknij aby przypisać drużynę">—</span>`;
@@ -3811,7 +3850,7 @@ function renderAthletesList() {
     // Kolumna Płeć
     const genderIcon = a.gender === 'M' ? '♂' : '♀';
     const genderCell = genderSusp
-      ? `<span style="color:var(--orange);cursor:pointer;white-space:nowrap"
+      ? `<span style="color:var(--dsq);cursor:pointer;white-space:nowrap"
            onclick="confirmGender(${a.id})"
            title="Imię nie pasuje do płci — kliknij aby potwierdzić że dane są poprawne">
            ${genderIcon} ⚠️
@@ -4409,7 +4448,7 @@ function k3TimeInput(aid, series) {
   const isDq  = d[0] === true;
   const displayVal = isDnf ? 'NKL' : (rawT ? fmtSec1(rawT) : '');
   const hasVal = isDnf || !!rawT;
-  const inputStyle = isDq ? 'text-decoration:line-through;color:var(--orange);border-color:var(--orange)' : '';
+  const inputStyle = isDq ? 'text-decoration:line-through;color:var(--dsq);border-color:var(--dsq)' : '';
   const inputClass = `k3-inline-input${hasVal ? ' k3-has-val' : ''}`;
   return `<div style="display:flex;align-items:center;gap:3px">
     <input
@@ -4463,7 +4502,7 @@ function k3PairCard(pair, pairNum, isLast, series) {
     const t   = r[0];
     let txt, color;
     if (dnf)     { txt = 'S1: NKL'; color = 'var(--red)'; }
-    else if (dq) { txt = 'S1: DSQ'; color = 'var(--orange)'; }
+    else if (dq) { txt = 'S1: DSQ'; color = 'var(--dsq)'; }
     else if (t)  { txt = 'S1: ' + fmtSec1(t) + 's'; color = 'var(--green)'; }
     else         { txt = 'S1: —';  color = 'var(--text3)'; }
     return `<div style="font-size:11px;font-family:var(--font-m);font-weight:600;color:${color};margin-top:3px;letter-spacing:0.5px;border-top:1px solid var(--border);padding-top:2px">${txt}</div>`;
@@ -4588,7 +4627,7 @@ function renderK3S1() {
       return getBestValidTime(r,d,nf) || (nf&&nf[0]);
     })()).length;
     const pkInfo = nPk > 0 ? ` · <span class="pk-badge" style="font-size:10px">${nPk} PK</span>` : '';
-    const oddNote = nNormal%2===1 ? ' · <span style="color:var(--orange)">nieparzysta</span>' : '';
+    const oddNote = nNormal%2===1 ? ' · <span style="color:var(--dsq)">nieparzysta</span>' : '';
 
     html += `<div class="card" style="border-color:${catColors[cat]}44;margin-bottom:12px">
       <div class="card-title flex-between" style="padding-bottom:8px;border-bottom:1px solid var(--border)">
@@ -5004,7 +5043,7 @@ function _renderWjChecklist() {
     return;
   }
   card.style.borderColor = 'rgba(232,148,77,.45)';
-  head.innerHTML = '<span style="font-weight:700;color:var(--text1);">📋 Kontrola kompletności: <span style="color:var(--orange);">' + issues.length + '</span> do sprawdzenia</span><span style="color:var(--text3);font-size:11px;">' + (_wjChecklistOpen ? '▲ zwiń' : '▼ rozwiń') + '</span>';
+  head.innerHTML = '<span style="font-weight:700;color:var(--text1);">📋 Kontrola kompletności: <span style="color:var(--dsq);">' + issues.length + '</span> do sprawdzenia</span><span style="color:var(--text3);font-size:11px;">' + (_wjChecklistOpen ? '▲ zwiń' : '▼ rozwiń') + '</span>';
   if (!_wjChecklistOpen) { body.style.display = 'none'; return; }
   body.style.display = '';
   const byGrp = {};
@@ -6560,8 +6599,8 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
     banner.textContent = '✓ Połączono z chmurą — dane aktualne';
   } else {
     // Fallback: dane z localStorage (lub bootstrapowane)
-    banner.style.borderColor = 'var(--orange)';
-    banner.style.color = 'var(--orange)';
+    banner.style.borderColor = 'var(--dsq)';
+    banner.style.color = 'var(--dsq)';
     banner.textContent = '⚠ Tryb offline — dane z tej przeglądarki';
   }
 
@@ -6838,7 +6877,7 @@ function renderS2Row(a, ev, pos, participants, inputIndex, isStarting) {
   function s1Cell(att) {
     const t = times[att], dq = disqA[att], nkl = dnfA[att];
     if (nkl)      return { txt: 'NKL', color: 'var(--red)',    bold: false };
-    if (dq)       return { txt: 'DSQ', color: 'var(--orange)', bold: false };
+    if (dq)       return { txt: 'DSQ', color: 'var(--dsq)', bold: false };
     if (t)        return { txt: fmtF(t), color: 'var(--text1)', bold: true  };
                   return { txt: '—',   color: 'var(--text3)', bold: false };
   }
@@ -6939,7 +6978,7 @@ function renderKWho(ev) {
       const dnf1  = dnfA[0], dq1 = disqA[0];
       let s1txt, s1color;
       if (dnf1)      { s1txt = 'NKL';           s1color = 'var(--red)'; }
-      else if (dq1)  { s1txt = 'DSQ';           s1color = 'var(--orange)'; }
+      else if (dq1)  { s1txt = 'DSQ';           s1color = 'var(--dsq)'; }
       else if (t1)   { s1txt = fmtSec1(t1)+'s'; s1color = 'var(--green)'; }
       else           { s1txt = '—';             s1color = 'var(--text3)'; }
 
@@ -7001,7 +7040,7 @@ function openKS2Selector(ev, gender) {
     const nk1 = (STATE.dnf[a.id]?.[ev]  || [])[0];
     let s1txt, s1color;
     if (nk1)      { s1txt = 'NKL';            s1color = 'var(--red)'; }
-    else if (dq1) { s1txt = 'DSQ';            s1color = 'var(--orange)'; }
+    else if (dq1) { s1txt = 'DSQ';            s1color = 'var(--dsq)'; }
     else if (t1)  { s1txt = fmtSec1(t1)+'s';  s1color = 'var(--green)'; }
     else          { s1txt = '—';              s1color = 'var(--text3)'; }
 
