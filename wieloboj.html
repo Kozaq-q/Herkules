@@ -993,10 +993,9 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 <!-- HEADER -->
 <div class="app-header">
   <div class="app-brand">
-    <span class="app-brand-name">Military Sports System</span>
-    <span class="app-brand-sub">© By Kozak</span>
+    <span class="app-brand-name">Wielobój</span>
+    <span class="app-brand-sub">MSS</span>
     <span class="header-contest-name" id="header-contest-name"></span>
-    <span id="header-status-badge" style="display:none;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:3px;text-transform:uppercase;white-space:nowrap;flex-shrink:0"></span>
   </div>
   <div id="wj-live-clock" title="Zegar urządzenia">00:00:00</div>
   <div class="app-header-right">
@@ -6637,12 +6636,8 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
   }
   // Zalogowany — ustaw _sessionRole i ograniczenia roli
   try { await authInit(); } catch(_) {}
-  // Pokaż banner ładowania
-  const banner = document.createElement('div');
-  banner.id = 'sync-banner';
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#1c2020;border-bottom:2px solid var(--accent);padding:10px 20px;font-family:var(--font-h);font-size:13px;letter-spacing:1px;color:var(--text2);text-align:center';
-  banner.textContent = '⏳ Łączenie z chmurą...';
-  document.body.appendChild(banner);
+  // Status połączenia pokazuje kapsuła w nagłówku (bez przykrywającego banera)
+  if (typeof _wjSetSync === 'function') _wjSetSync('ŁĄCZENIE', '');
 
   const loaded = await loadFromSupabase();
 
@@ -6652,21 +6647,11 @@ const ORIGINAL_SCORE_TABLES_BY_CAT = {"K35": {"k1": [[3.0, 180.0], [3.1, 178.0],
     renderSetup();
     if (_sessionRole) applyRoleRestrictions(_sessionRole);
     try { renderAthletesList(); } catch(e) {}
-    banner.style.borderColor = 'var(--green)';
-    banner.style.color = 'var(--green)';
-    banner.textContent = '✓ Połączono z chmurą — dane aktualne';
+    if (typeof _wjSetSync === 'function') _wjSetSync('AKTUALNE', 'ok');
   } else {
     // Fallback: dane z localStorage (lub bootstrapowane)
-    banner.style.borderColor = 'var(--dsq)';
-    banner.style.color = 'var(--dsq)';
-    banner.textContent = '⚠ Tryb offline — dane z tej przeglądarki';
+    if (typeof _wjSetSync === 'function') _wjSetSync('OFFLINE', 'warn');
   }
-
-  setTimeout(() => {
-    banner.style.transition = 'opacity 0.5s';
-    banner.style.opacity = '0';
-    setTimeout(() => banner.remove(), 600);
-  }, 2500);
 })();
 
 
