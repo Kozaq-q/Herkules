@@ -932,6 +932,17 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 <div id="projektor-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:14px 16px;min-width:280px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.7)">
   <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">⚙ Ustawienia projektora</div>
 
+  <!-- Toggle: projektor widoczny na sali (osobna flaga projectorShare, niezależna od Wyników online) -->
+  <div id="wj-proj-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleWjProjectorShare()">
+    <div id="wj-proj-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
+      <div id="wj-proj-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div id="wj-proj-toggle-label" style="font-weight:700;font-size:12px;color:var(--text1);">Projektor: WYŁĄCZONY</div>
+      <div id="wj-proj-toggle-desc" style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4;">Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.</div>
+    </div>
+  </div>
+
   <!-- Kategorie -->
   <div style="margin-bottom:12px">
     <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Widoczne kategorie</div>
@@ -2920,6 +2931,65 @@ async function toggleWjPublicShare() {
       slot.publicShare = current;
       localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
       _refreshWjPublicShareUI();
+      alert('Bład zapisu: ' + error.message);
+    }
+  } catch(e) {
+    alert('Bład: ' + e.message);
+  }
+}
+
+// ─── Projektor: osobna flaga projectorShare (niezależna od publicShare, migracja 007) ───
+function _getWjProjectorShare() {
+  try {
+    const id = _getWjHerkulesSlotId();
+    const slotRaw = localStorage.getItem('herkules_slot_' + id);
+    if (!slotRaw) return false;
+    return !!JSON.parse(slotRaw).projectorShare;
+  } catch (e) { return false; }
+}
+function _refreshWjProjectorShareUI() {
+  const on = _getWjProjectorShare();
+  const sw = document.getElementById('wj-proj-toggle-switch');
+  const knob = document.getElementById('wj-proj-toggle-knob');
+  const lbl = document.getElementById('wj-proj-toggle-label');
+  const desc = document.getElementById('wj-proj-toggle-desc');
+  if (!sw) return;
+  if (on) {
+    sw.style.background = 'var(--green)';
+    knob.style.left = '22px';
+    lbl.textContent = 'Projektor: WŁĄCZONY';
+    lbl.style.color = 'var(--green)';
+    desc.textContent = 'Ekran na sali pokazuje wyniki na żywo (bez logowania, tylko odczyt).';
+  } else {
+    sw.style.background = 'var(--border2)';
+    knob.style.left = '2px';
+    lbl.textContent = 'Projektor: WYŁĄCZONY';
+    lbl.style.color = 'var(--text1)';
+    desc.textContent = 'Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.';
+  }
+}
+async function toggleWjProjectorShare() {
+  const id = _getWjHerkulesSlotId();
+  if (!id) return alert('Brak ID slotu - otwórz zawody z panelu Start');
+  const current = _getWjProjectorShare();
+  const newVal = !current;
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + id);
+    if (!slotRaw) return alert('Brak lokalnego cache slotu - wróć do Start i otwórz zawody ponownie');
+    const slot = JSON.parse(slotRaw);
+    slot.projectorShare = newVal;
+    slot._updated = new Date().toISOString();
+    localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+    _refreshWjProjectorShareUI();
+    const { error } = await getSupabase().from('herkules_slots').upsert({
+      slot_id: String(id),
+      slot_json: JSON.stringify(slot),
+      updated_at: slot._updated
+    }, { onConflict: 'slot_id' });
+    if (error) {
+      slot.projectorShare = current;
+      localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+      _refreshWjProjectorShareUI();
       alert('Bład zapisu: ' + error.message);
     }
   } catch(e) {
@@ -5667,7 +5737,7 @@ function toggleProjectorSettings() {
   if (!el) return;
   const isVisible = el.style.display !== 'none';
   el.style.display = isVisible ? 'none' : 'block';
-  if (!isVisible) loadProjectorSettingsIntoUI();
+  if (!isVisible) { loadProjectorSettingsIntoUI(); if (typeof _refreshWjProjectorShareUI === 'function') _refreshWjProjectorShareUI(); }
 }
 
 function loadProjectorSettingsIntoUI() {

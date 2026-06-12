@@ -479,6 +479,17 @@ tr:last-child > td { border-bottom: none; }
           <button onclick="toggleProjSettings()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:0;">×</button>
         </div>
 
+        <!-- Toggle: projektor widoczny na sali (osobna flaga projectorShare, niezależna od Wyników online) -->
+        <div id="osf-proj-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleOsfProjectorShare()">
+          <div id="osf-proj-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
+            <div id="osf-proj-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div id="osf-proj-toggle-label" style="font-weight:700;font-size:12px;color:var(--text1);">Projektor: WYŁĄCZONY</div>
+            <div id="osf-proj-toggle-desc" style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4;">Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.</div>
+          </div>
+        </div>
+
         <!-- WYNIKI — otwórz -->
         <div style="font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Wyniki</div>
         <button onclick="openProjektor()" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text1);text-align:left;display:flex;align-items:center;gap:10px;margin-bottom:12px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
@@ -7346,7 +7357,8 @@ function _osfbStates(){
   st.advanced={band:'done',meta:'backup · reset',dim:true};
   st.share=muted.share?{band:'muted',meta:'nieużywane'}:shareOn?{band:'active',pill:{t:'publikacja wł.',k:'ok'},copy:true}:!hasAth?{band:'later'}:{band:'attention',sub:'publikacja wyłączona — QR nie zadziała',action:'Włącz publikację'};
   st.speaker=muted.speaker?{band:'muted',meta:'nieużywany'}:cfg.speakerEnabled?{band:'active',pill:{t:'link aktywny',k:'ok'},copy:true}:{band:'active',pill:{t:'wyłączony',k:'muted'}};
-  st.projector=muted.projector?{band:'muted',meta:'nieużywany'}:{band:'active',pill:{t:'gotowy',k:'ok'},copy:true};
+  const projOn=(typeof _getOsfProjectorShare==='function')?_getOsfProjectorShare():false;
+  st.projector=muted.projector?{band:'muted',meta:'nieużywany'}:projOn?{band:'active',pill:{t:'na sali wł.',k:'ok'},copy:true}:{band:'active',pill:{t:'ekran wył.',k:'muted'},copy:true};
   st.teamrun={band:'done',meta:(s.teamCount||8)+' najlepszych M'};
   st.women={band:'done',meta:s.kScores?'wliczane do generalnej':'osobna klasyfikacja'};
   st.pairing={band:'done',meta:'tor L/P · zasady'};
@@ -7760,6 +7772,63 @@ async function toggleOsfPublicShare() {
   }
 }
 
+// ─── Projektor: osobna flaga projectorShare (niezależna od publicShare, migracja 007) ───
+function _getOsfProjectorShare() {
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+    if (!slotRaw) return false;
+    return !!JSON.parse(slotRaw).projectorShare;
+  } catch (e) { return false; }
+}
+function _refreshOsfProjectorShareUI() {
+  const on = _getOsfProjectorShare();
+  const sw = document.getElementById('osf-proj-toggle-switch');
+  const knob = document.getElementById('osf-proj-toggle-knob');
+  const lbl = document.getElementById('osf-proj-toggle-label');
+  const desc = document.getElementById('osf-proj-toggle-desc');
+  if (!sw) return;
+  if (on) {
+    sw.style.background = 'var(--green)';
+    knob.style.left = '22px';
+    lbl.textContent = 'Projektor: WŁĄCZONY';
+    lbl.style.color = 'var(--green)';
+    desc.textContent = 'Ekran na sali pokazuje wyniki na żywo (bez logowania, tylko odczyt).';
+  } else {
+    sw.style.background = 'var(--border2)';
+    knob.style.left = '2px';
+    lbl.textContent = 'Projektor: WYŁĄCZONY';
+    lbl.style.color = 'var(--text1)';
+    desc.textContent = 'Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.';
+  }
+}
+async function toggleOsfProjectorShare() {
+  const current = _getOsfProjectorShare();
+  const newVal = !current;
+  try {
+    const slotRaw = localStorage.getItem('herkules_slot_' + SLOT_ID);
+    if (!slotRaw) return alert('Brak lokalnego cache slotu - odśwież stronę');
+    const slot = JSON.parse(slotRaw);
+    slot.projectorShare = newVal;
+    slot._updated = new Date().toISOString();
+    localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+    _refreshOsfProjectorShareUI();
+    if (typeof renderOsfBento === 'function') { try { renderOsfBento(); } catch(_){} }
+    const { error } = await getSupabase().from('herkules_slots').upsert({
+      slot_id: String(SLOT_ID),
+      slot_json: JSON.stringify(slot),
+      updated_at: slot._updated
+    }, { onConflict: 'slot_id' });
+    if (error) {
+      slot.projectorShare = current;
+      localStorage.setItem('herkules_slot_' + SLOT_ID, JSON.stringify(slot));
+      _refreshOsfProjectorShareUI();
+      alert('Bład zapisu: ' + error.message);
+    }
+  } catch(e) {
+    alert('Bład: ' + e.message);
+  }
+}
+
 function _osfGenerateQrDataURL(text, size) {
   if (typeof QRious === 'undefined') return null;
   const tmp = document.createElement('canvas');
@@ -8102,6 +8171,7 @@ function toggleProjSettings() {
   if (pop.style.display === 'none' || pop.style.display === '') {
     pop.style.display = 'block';
     _updateProjTiles();
+    if (typeof _refreshOsfProjectorShareUI === 'function') _refreshOsfProjectorShareUI();
     setTimeout(() => {
       const handler = e => {
         if (!pop.contains(e.target) && !e.target.closest('[onclick*="toggleProjSettings"]')) {
