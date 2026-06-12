@@ -88,7 +88,7 @@ dziedziczony do WSZYSTKICH swoich ekranów (panel + projektor + speaker + tablic
 **SELECT:**
 - `mss_users`: anon=blok, authenticated=true (każdy zalogowany czyta listę)
 - `herkules_slots`: anon=tylko gdy `slot_json->>'publicShare' = 'true'`, authenticated=wszystko
-- `patrol_state/osf_state/app_state`: anon=tylko gdy powiązany slot ma `publicShare=true` (subquery do herkules_slots), authenticated=wszystko
+- `patrol_state/osf_state/app_state`: anon=gdy powiązany slot ma `publicShare=true` **LUB `projectorShare=true`** (subquery do herkules_slots; migracja 007), authenticated=wszystko. **Dodatkowo (migracja 008) patrol_state/osf_state: anon czyta też gdy sam rekord ma `state_json.cfg.speakerEnabled=true`** → speaker działa niezależnie od publicShare/projectorShare. `herkules_slots` NADAL gated tylko `publicShare` (izolacja t.html). **Zasada: publikacja wyników online (publicShare) NIE bramkuje narzędzi obsługi — speaker (cfg.speakerEnabled), projektor (projectorShare), starter (sesja JWT) działają niezależnie.**
 
 **WRITE (INSERT/UPDATE/DELETE):**
 - Wszystkie tabele stanu: tylko `is_active_judge() = true`
@@ -99,6 +99,10 @@ Migracje SQL w `supabase/migrations/`:
 - `002_seed_admin.sql` — szablon do utworzenia pierwszego admina (Pawla)
 - `003_tighten_rls.sql` — zaostrzenie RLS na tabelach stanu
 - `004_public_share_isolation.sql` — anon SELECT tylko publicShare=true
+- `005_events_snapshots.sql` — tabela mss_events (dziennik) + patrol_snapshots (migawki)
+- `006_mss_snapshots.sql` — generyczna tabela migawek (comp_type) dla wszystkich konkurencji
+- `007_projector_share.sql` — anon SELECT *_state gdy publicShare LUB projectorShare (projektor niezależny od tablicy uczestników)
+- `008_speaker_independence.sql` — anon SELECT patrol_state/osf_state także gdy `cfg.speakerEnabled=true` (speaker niezależny od publicShare). Toggle `projectorShare` w panelach: patrol, osf (popover ⚙ Projektor), wieloboj (popover ustawień projektora)
 
 ## Architektura sync (wzorzec wspólny we wszystkich panelach)
 1. **Realtime channel** Supabase (`postgres_changes` na tabeli `<typ>_state`)
