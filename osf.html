@@ -27,6 +27,7 @@
   --accent2: #b5a33a;
   --green:   #4caf82;
   --red:     #e05555;
+  --warn:    #e8a45d;
   --blue:    #5b9bd5;
   --orange:  #e8944d;
   --lane-L:  #5b9bd5;
@@ -2272,6 +2273,24 @@ tr:last-child > td { border-bottom: none; }
   </div>
 </div>
 
+<!-- NOTATKI SĘDZIOWSKIE — wiele notatek, ważność, targetowanie per-zakładka -->
+<div class="modal-overlay" id="modal-osf-notes">
+  <div class="modal" style="max-width:620px;max-height:85vh;display:flex;flex-direction:column;">
+    <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-flex;font-size:18px;color:var(--text2);"><span class="osfb-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 20l7 -7"/><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8z"/></svg></span></span>
+      <span>Notatki sędziowskie</span>
+      <button class="btn btn-primary" onclick="osfNoteAdd()" style="font-size:11px;padding:5px 12px;margin-left:auto;">+ Dodaj notatkę</button>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.5;">
+      Każda notatka może pojawić się na górze wybranych zakładek (Zawodnicy, Seria 1/2, Wyniki, Klasyfikacja, Drużynowy). Ważność zmienia jej kolor. Zapis jest automatyczny.
+    </div>
+    <div id="osf-notes-list" style="overflow:auto;flex:1;min-height:0;"></div>
+    <div class="modal-footer" style="margin-top:12px;">
+      <button class="btn" onclick="closeModal('modal-osf-notes')">Zamknij</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script>
@@ -3443,6 +3462,7 @@ function showTab(name) {
   if (name === 'druzynowy') renderTeamView();
   if (name === 'klasyfikacja') renderKlasyfikacja();
   if (name === 'setup') renderSetupPage();
+  if (typeof _renderOsfNotesBars === 'function') _renderOsfNotesBars();
 }
 
 // ═══════════════════════════════════════════════════
@@ -7251,6 +7271,7 @@ const _OSFB_ICONS = {
   'clipboard-text':'<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12h6"/><path d="M9 16h6"/>',
   'users':'<path d="M9 7a3 3 0 1 0 0 6a3 3 0 0 0 0 -6"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/>',
   'note':'<path d="M13 20l7 -7"/><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8z"/>',
+  'alert':'<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
   'qrcode':'<path d="M4 4h6v6h-6z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6h-6z"/><path d="M14 14h2v2h-2z"/><path d="M18 14h2v2h-2z"/><path d="M14 18h2v2h-2z"/><path d="M18 18h2v2h-2z"/>',
   'microphone':'<path d="M9 2m0 3a3 3 0 0 1 3 -3a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3a3 3 0 0 1 -3 -3z"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/>',
   'device-tv':'<path d="M3 7a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1z"/><path d="M16 3l-4 3l-4 -3"/>',
@@ -7280,7 +7301,7 @@ const OSFB_CATS = [
 const OSFB_ITEMS = [
   { id:'info', cat:'zawody', icon:'clipboard-text', label:'Informacje', cardId:'osf-info-card', help:'Nazwa, miasto, data i organizator zawodów. Trafiają na wyniki online, projektor i wydruki.', onOpen:()=>{ if(typeof expandInfoCard==='function') expandInfoCard(); } },
   { id:'athletes', cat:'zawody', icon:'users', label:'Lista startowa', cardId:'osf-import-card', help:'Import zawodników z pliku .xlsx/.ods/.csv (szablon do pobrania). Edycja na zakładce Zawodnicy.' },
-  { id:'notes', cat:'zawody', icon:'note', label:'Notatki', cardId:'osf-notes-card', help:'Notatki sędziowskie widoczne dla całego zespołu (np. tor mokry, ustalenia).', onOpen:()=>{ setTimeout(()=>{ try{ document.getElementById('osf-setup-notes').focus(); }catch(_){}} ,60); } },
+  { id:'notes', cat:'zawody', icon:'note', label:'Notatki', cardId:'osf-notes-card', modal:true, help:'Notatki sędziowskie. Każdą możesz wysłać na górę wybranych zakładek (Zawodnicy, Seria 1/2, Wyniki, Klasyfikacja, Drużynowy) i nadać jej ważność (zwykła / ważna / krytyczna).' },
   { id:'status', cat:'system', icon:'activity', label:'Status', info:true, help:'Połączenie na żywo (Realtime) i status zapisu do chmury. Zielone = wszystko działa.' },
   { id:'safety', cat:'system', icon:'database', label:'Dane i kopie', cardId:'osf-safety-card', help:'Dziennik zdarzeń (kto, kiedy, co) + automatyczne migawki stanu co 5 minut z możliwością przywrócenia.' },
   { id:'advanced', cat:'system', icon:'adjustments', label:'Zaawansowane', cardId:'osf-advanced-card', help:'Backup/przywracanie pliku, zakończenie zawodów oraz operacje destrukcyjne. Ostrożnie.', onOpen:()=>{ const p=document.getElementById('ops-panel'); if(p)p.style.display='block'; const a=document.getElementById('ops-arrow'); if(a)a.textContent='▼'; } },
@@ -7311,7 +7332,8 @@ function _osfbStates(){
   const st={};
   st.info=hasInfo?{band:'done',meta:esc(s.city)+(s.date?', '+esc(fmtD(s.date)):'')}:{band:'attention',sub:'uzupełnij miasto, datę i organizatora',action:'Uzupełnij'};
   st.athletes=hasAth?{band:'done',meta:(state.athletes||[]).length+' zaw.'+(teams?' · '+teams+' druż.':'')}:{band:'attention',sub:'zaimportuj plik z listą startową',action:'Importuj'};
-  st.notes={band:'done',meta:((s.notes||'').trim())?'wpisana':'pusta',dim:!((s.notes||'').trim())};
+  const _nSum=(typeof _osfNotesSummary==='function')?_osfNotesSummary():'brak';
+  st.notes={band:'done',meta:_nSum,dim:(_nSum==='brak')};
   st.status={band:'active',pill:(typeof _rtHealthy!=='undefined'&&_rtHealthy)?{t:'działa',k:'ok'}:{t:'łączenie…',k:'muted'}};
   st.safety={band:'active',pill:{t:'migawki wł.',k:'ok'}};
   st.advanced={band:'done',meta:'backup · reset',dim:true};
@@ -7412,6 +7434,7 @@ function _osfbMountFlow(){
 function osfbOpen(id){
   const it=OSFB_ITEMS.find(x=>x.id===id);
   if(it&&it.info) return; // status — nieklikalny (tylko "?")
+  if(it&&it.modal){ if(id==='notes'&&typeof openOsfNotesModal==='function') openOsfNotesModal(); return; }
   if(it&&it.action){ if(id==='projector'&&typeof openProjektor==='function'){ try{ openProjektor(); }catch(_){} } return; }
   if(_osfbOpenId===id){ if(Date.now()-_osfbOpenedAt<350) return; osfbClose(); return; }
   try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){}
@@ -7462,6 +7485,143 @@ function osfbHelp(key,btn){
 // Odświeżanie pigułek/statystyk co 5s gdy setup aktywny i nic nie otwarte
 setInterval(()=>{ const p=document.getElementById('page-setup'); if(p&&p.classList.contains('active')&&!_osfbOpenId) try{ renderOsfBento(); }catch(_){} }, 5000);
 
+// ═══════════════════════════════════════════════════════════════
+// NOTATKI SĘDZIOWSKIE OSF — wiele notatek, ważność, targetowanie per-zakładka
+// Model: state.setup.noteList = [{id, text, level:'normal'|'important'|'critical', tabs:{}}]
+// ═══════════════════════════════════════════════════════════════
+const OSF_NOTE_TABS = [
+  { key:'zawodnicy',   page:'page-zawodnicy',   label:'Zawodnicy' },
+  { key:'seria1',      page:'page-seria1',      label:'Seria 1' },
+  { key:'seria2',      page:'page-seria2',      label:'Seria 2' },
+  { key:'wyniki',      page:'page-wyniki',      label:'Wyniki' },
+  { key:'klasyfikacja',page:'page-klasyfikacja',label:'Klasyfikacja' },
+  { key:'druzynowy',   page:'page-druzynowy',   label:'Drużynowy' },
+];
+function _osfNotes() {
+  if (!state.setup) state.setup = {};
+  if (!Array.isArray(state.setup.noteList)) state.setup.noteList = [];
+  // Migracja starej pojedynczej notatki (state.setup.notes) → pierwsza pozycja (raz)
+  if (!state.setup._notesMigrated) {
+    const oldTxt = (state.setup.notes || '').trim();
+    if (oldTxt && !state.setup.noteList.length) {
+      state.setup.noteList.push({ id:'n'+Date.now().toString(36), text:oldTxt, level:'normal', tabs:{} });
+    }
+    state.setup._notesMigrated = true;
+  }
+  return state.setup.noteList;
+}
+function _osfNoteById(id) { return _osfNotes().find(n => n.id === id); }
+let _osfNotesBarTimer = null;
+function _osfNotesBarsSoon() { clearTimeout(_osfNotesBarTimer); _osfNotesBarTimer = setTimeout(_renderOsfNotesBars, 200); }
+function _osfNotesSummary() {
+  const list = _osfNotes().filter(n => (n.text || '').trim());
+  if (!list.length) return 'brak';
+  const shown = new Set();
+  list.forEach(n => OSF_NOTE_TABS.forEach(t => { if (n.tabs && n.tabs[t.key]) shown.add(t.key); }));
+  const npl = list.length === 1 ? '1 notatka' : (list.length + (list.length < 5 ? ' notatki' : ' notatek'));
+  return npl + (shown.size ? ' · ' + shown.size + ' zakł.' : ' · nigdzie');
+}
+function openOsfNotesModal() {
+  _renderOsfNotesList();
+  document.getElementById('modal-osf-notes').classList.add('open');
+}
+function osfNoteAdd() {
+  _osfNotes().push({ id:'n'+Date.now().toString(36)+Math.floor(Math.random()*1000), text:'', level:'normal', tabs:{} });
+  save();
+  _renderOsfNotesList();
+}
+function osfNoteDelete(id) {
+  const list = _osfNotes();
+  const i = list.findIndex(n => n.id === id);
+  if (i < 0) return;
+  if ((list[i].text || '').trim() && !confirm('Usunąć tę notatkę?')) return;
+  list.splice(i, 1);
+  save();
+  _renderOsfNotesList();
+  _renderOsfNotesBars();
+  if (typeof renderOsfBento === 'function') renderOsfBento();
+}
+// oninput — zapis BEZ przerenderowania listy (nie kradnie fokusu z textarea)
+function osfNoteText(id, el) {
+  const n = _osfNoteById(id);
+  if (!n) return;
+  n.text = el.value;
+  save();
+  _osfNotesBarsSoon();
+}
+function osfNoteLevel(id, lvl) {
+  const n = _osfNoteById(id);
+  if (!n) return;
+  n.level = lvl;
+  save();
+  _renderOsfNotesList();
+  _renderOsfNotesBars();
+}
+function osfNoteToggleTab(id, key) {
+  const n = _osfNoteById(id);
+  if (!n) return;
+  if (!n.tabs) n.tabs = {};
+  n.tabs[key] = !n.tabs[key];
+  save();
+  _renderOsfNotesList();
+  _renderOsfNotesBars();
+}
+function _renderOsfNotesList() {
+  const cont = document.getElementById('osf-notes-list');
+  if (!cont) return;
+  const list = _osfNotes();
+  if (!list.length) {
+    cont.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Brak notatek. Dodaj pierwszą — pojawi się na górze wybranych zakładek.</div>';
+    return;
+  }
+  cont.innerHTML = list.map(n => {
+    const tabs = n.tabs || {};
+    const lvl = n.level || 'normal';
+    const targets = OSF_NOTE_TABS.map(t =>
+      '<button type="button" class="osfb-note-tg' + (tabs[t.key] ? ' on' : '') + '" onclick="osfNoteToggleTab(\'' + n.id + '\',\'' + t.key + '\')">' +
+      (tabs[t.key] ? _osfbIco('check') : '') + esc(t.label) + '</button>'
+    ).join('');
+    const lvlBtns = [['normal','Zwykła'],['important','Ważna'],['critical','Krytyczna']].map(([k,l]) =>
+      '<button type="button" class="osfb-note-lvl' + (lvl === k ? ' active' : '') + '" data-level="' + k + '" onclick="osfNoteLevel(\'' + n.id + '\',\'' + k + '\')">' + l + '</button>'
+    ).join('');
+    return '<div class="osfb-note-edit ' + lvl + '">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
+        '<div style="display:inline-flex;gap:4px;">' + lvlBtns + '</div>' +
+        '<button class="osfb-note-del" title="Usuń notatkę" aria-label="Usuń notatkę" onclick="osfNoteDelete(\'' + n.id + '\')">' + _osfbIco('x') + '</button>' +
+      '</div>' +
+      '<textarea rows="2" placeholder="np. Tor mokry · start z linii ABC · pomiar fotokomórką..." oninput="osfNoteText(\'' + n.id + '\', this)" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text1);padding:9px 11px;font-family:var(--font-b);font-size:13px;resize:vertical;line-height:1.45;">' + esc(n.text || '') + '</textarea>' +
+      '<div style="margin-top:8px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Pokaż na górze zakładek</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;">' + targets + '</div>' +
+    '</div>';
+  }).join('');
+}
+// Renderuje paski WSZYSTKICH notatek na górze każdej zakładki-celu (z podpisem "Notatka sędziowska")
+function _renderOsfNotesBars() {
+  if (!state || !state.setup) return;
+  const list = _osfNotes();
+  OSF_NOTE_TABS.forEach(t => {
+    const page = document.getElementById(t.page);
+    if (!page) return;
+    const wrapId = 'osf-note-bars-' + t.key;
+    let wrap = document.getElementById(wrapId);
+    const mine = list.filter(n => (n.text || '').trim() && n.tabs && n.tabs[t.key]);
+    if (!mine.length) { if (wrap) wrap.remove(); return; }
+    if (!wrap) { wrap = document.createElement('div'); wrap.id = wrapId; page.insertBefore(wrap, page.firstChild); }
+    else if (wrap !== page.firstChild) page.insertBefore(wrap, page.firstChild);
+    wrap.innerHTML = mine.map(n => {
+      const lvl = n.level || 'normal';
+      const tag = lvl === 'critical' ? 'Krytyczne' : (lvl === 'important' ? 'Ważne' : '');
+      const ico = lvl === 'normal' ? 'note' : 'alert';
+      return '<div class="osfb-note-bar ' + lvl + '">' +
+        '<span class="osfb-i" style="font-size:16px;">' + _osfbIco(ico) + '</span>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="osfb-note-lbl">Notatka sędziowska' + (tag ? ' · ' + tag : '') + '</div>' +
+          '<div style="white-space:pre-wrap;">' + esc(n.text) + '</div>' +
+        '</div></div>';
+    }).join('');
+  });
+}
+
 function renderSetupPage() {
   const s = state.setup || {};
   const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
@@ -7500,6 +7660,7 @@ function renderSetupPage() {
   _updateInfoCollapsedLine();
   _renderOsfShareSection();
   if (typeof renderOsfBento === 'function') { try { renderOsfBento(); } catch(_){} }
+  if (typeof _renderOsfNotesBars === 'function') { try { _renderOsfNotesBars(); } catch(_){} }
 }
 
 // ─── Tablica wynikow publiczna (QR + link dla uczestnikow) ───
