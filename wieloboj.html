@@ -254,6 +254,19 @@ html, body {
 #wj-live-clock { height: 28px; box-sizing: border-box; display: inline-flex; align-items: center; font-family: var(--font-m); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text1); background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 12px; margin: 0 auto; flex-shrink: 0; }
 @media (min-width: 1250px) { #wj-live-clock { height: 32px; padding: 0 18px; border-bottom: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); font-size: 16px; letter-spacing: 3px; } }
 @media (max-width: 1000px) { #wj-live-clock { display: none; } }
+/* ─── Chipy statusu + przyciski nagłówka (ujednolicone z OSF/patrol) ─── */
+.hdr-status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
+.hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.hdr-status.ok { color: var(--green); border-color: rgba(76,175,130,.35); } .hdr-status.ok .dot { background: var(--green); animation: pulse 2s infinite; }
+.hdr-status.err { color: var(--red); border-color: rgba(224,85,85,.4); } .hdr-status.err .dot { background: var(--red); }
+.hdr-status.warn { color: var(--dsq); border-color: rgba(232,148,77,.4); } .hdr-status.warn .dot { background: var(--dsq); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.hdr-btn { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text1); font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 4px 12px; cursor: pointer; transition: color .12s, border-color .12s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.hdr-btn:hover { color: var(--accent); border-color: var(--accent); }
+.app-header-right > .hdr-status, .app-header-right > .hdr-btn { height: 28px; box-sizing: border-box; }
+.hdr-group > .hdr-btn { height: 100%; background: transparent; border: none; border-radius: 0; }
+.hdr-group > .hdr-btn:hover { color: var(--accent); background: rgba(255,255,255,.03); border-color: transparent; }
+.hdr-group > .hdr-btn:not(:first-child) { border-left: 1px solid var(--border); }
 @media (max-width: 860px) {
   .app-brand-sub { display: none; }
 }
@@ -989,23 +1002,14 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
   <div class="app-header-right">
     <!-- Kapsuła: status (obecność wstrzykiwana przez JS · zapis) -->
     <div class="hdr-group" id="wj-hdr-status-group">
-      <span class="header-autosave" id="header-autosave">● SYNC</span>
+      <div class="hdr-status ok" id="header-autosave" title="Status zapisu"><span class="dot"></span><span id="autosave-label">SYNC</span></div>
     </div>
     <span id="auth-role-badge" style="display:none;flex-shrink:0"></span>
-    <!-- Kapsuła: akcje (panel · zakończ · wyloguj · eksport) -->
+    <!-- Kapsuła: akcje (zapisz · backup · panel) -->
     <div class="hdr-group">
-      <button class="btn btn-sm btn-xs" onclick="window.location.href='start.html'" title="Panel startowy" style="font-size:10px;padding:4px 10px;color:var(--text2)">← Panel</button>
-      <button class="btn btn-sm btn-xs" onclick="finishContest()" title="Zakończ zawody" style="font-size:10px;padding:4px 10px;color:var(--green)">✓ Zakończ</button>
-      <button class="btn btn-sm btn-xs" onclick="authLogout()" title="Wyloguj" style="font-size:10px;padding:4px 10px;color:var(--text3)">⏻ Wyloguj</button>
-      <button class="btn btn-sm btn-xs" onclick="exportData()" title="Pobierz kopię (JSON)" style="font-size:10px;padding:4px 10px;color:var(--text2)">💾 <span class="btn-label-long">Eksport</span></button>
-    </div>
-    <!-- przycisk Menu zawodów ukryty -->
-    <div style="position:relative;flex-shrink:0">
-      <div style="display:flex;align-items:center;background:var(--green);border-radius:4px;overflow:hidden;border:1px solid var(--green)">
-        <button onclick="openProjector()" style="white-space:nowrap;background:transparent;border:none;color:#fff;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:6px 12px;cursor:pointer;line-height:1;display:inline-flex;align-items:center;gap:6px"><span class="wjb-i" data-ico="device-tv" style="font-size:15px"></span><span class="btn-label-long">Projektor</span></button>
-        <div style="width:1px;height:16px;background:rgba(255,255,255,.25);flex-shrink:0"></div>
-        <button onclick="toggleProjectorSettings()" title="Ustawienia projektora" style="background:transparent;border:none;color:rgba(255,255,255,.75);font-size:12px;padding:6px 8px;cursor:pointer;line-height:1;display:flex;align-items:center">⚙</button>
-      </div>
+      <button class="hdr-btn" onclick="wjSaveNow(this)" title="Zapisz teraz + utwórz migawkę stanu" style="color:var(--green);font-weight:800;">💾 Zapisz</button>
+      <button class="hdr-btn" onclick="exportData()" title="Pobierz kopię zapasową zawodów (JSON)">⬇ <span class="btn-label-long">Backup</span></button>
+      <button class="hdr-btn" onclick="window.location.href='start.html'" title="Panel startowy">← <span class="btn-label-long">Panel</span></button>
     </div>
   </div>
 </div>
@@ -2091,12 +2095,9 @@ function save() {
   }
 
   // 2. Aktualizacja wskaźnika w nagłówku
-  const el = document.getElementById('header-autosave');
-  if (el) { el.textContent = '● ZAPISANO ' + new Date().toLocaleTimeString('pl'); }
+  _wjSetSync('ZAPISANO', 'ok');
   clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    if (el) el.textContent = '● SYNC ☁';
-  }, 2000);
+  _saveTimer = setTimeout(() => { _wjSetSync('SYNC', 'ok'); }, 2000);
 
   // 3. Debounced zapis do Supabase (max raz na 1.5s)
   clearTimeout(_supabaseSaveTimer);
@@ -2113,20 +2114,18 @@ async function saveToSupabase() {
       updated_at: new Date().toISOString()
     };
     const { error } = await db.from('app_state').upsert(payload, { onConflict: 'slot_id' });
-    const el = document.getElementById('header-autosave');
     if (error) {
       console.error('Supabase save error:', error);
-      if (el) { el.textContent = '⚠ BŁĄD SYNC'; el.style.color = 'var(--red)'; }
+      _wjSetSync('BŁĄD', 'err');
     } else {
-      if (el) { el.textContent = '● ZAPISANO'; el.style.color = ''; }
+      _wjSetSync('ZAPISANO', 'ok');
       try { localStorage.removeItem(_slotKey(ACTIVE_SLOT_ID) + '_dirty'); } catch(_) {}
       // Aktualizuj meta slotu w panelu (statystyki + status) — throttle 5s
       _syncSlotMetaThrottled();
     }
   } catch(e) {
     console.error('Supabase save exception:', e);
-    const el = document.getElementById('header-autosave');
-    if (el) { el.textContent = '⚠ OFFLINE — zmiany lokalne'; el.style.color = 'var(--dsq)'; }
+    _wjSetSync('OFFLINE', 'warn');
   }
 }
 
@@ -2539,11 +2538,8 @@ function startRealtimeSync() {
           renderPersonalization();
 
           _lastSyncTime = Date.now();
-          const el = document.getElementById('header-autosave');
-          if (el) {
-            el.textContent = '↓ SYNC';
-            setTimeout(() => { el.textContent = '● AUTO-SAVE'; }, 2000);
-          }
+          _wjSetSync('SYNC', 'ok');
+          setTimeout(() => { _wjSetSync('AUTO-SAVE', 'ok'); }, 2000);
         } catch(e) { console.error('Realtime parse error:', e); }
       }
     )
@@ -3212,6 +3208,20 @@ setInterval(updateWjClock,1000); updateWjClock();
 // Wypełnij ikony SVG w nawigacji (i innych [data-ico]) — emoji → Tabler
 function _wjFillIcons(){ document.querySelectorAll('[data-ico]').forEach(el=>{ el.innerHTML=_wjbIco(el.getAttribute('data-ico')); }); }
 try{ _wjFillIcons(); }catch(_){}
+// Wskaźnik zapisu w nagłówku (styl OSF: kropka + label + klasa ok/err/warn)
+function _wjSetSync(label, cls){
+  const el=document.getElementById('header-autosave'); if(!el) return;
+  el.className='hdr-status'+(cls?(' '+cls):''); el.style.color='';
+  const lab=document.getElementById('autosave-label');
+  if(lab) lab.textContent=label; else el.textContent=label;
+}
+// Zapisz teraz: natychmiastowy zapis do chmury + migawka stanu (jak osfSaveNow)
+async function wjSaveNow(btn){
+  try{ if(typeof save==='function') save(); }catch(_){}
+  try{ if(typeof saveToSupabase==='function') await saveToSupabase(); }catch(_){}
+  if(btn){ const o=btn.innerHTML; btn.innerHTML='✓ Zapisano'; btn.disabled=true; setTimeout(()=>{ btn.innerHTML=o; btn.disabled=false; },1400); }
+  try{ if(typeof makeWjSnapshotNow==='function') await makeWjSnapshotNow(); }catch(_){}
+}
 // Rozwijanie panelu "Ustawienia zaawansowane" (force=true wymusza otwarcie)
 function toggleWjOps(force){
   const panel=document.getElementById('wj-ops-panel'), arrow=document.getElementById('wj-ops-arrow');
