@@ -1014,17 +1014,6 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
 <div id="projektor-settings-pop" style="display:none;position:fixed;top:58px;right:16px;z-index:9000;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:14px 16px;min-width:280px;max-height:calc(100vh - 74px);overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,.7)">
   <div style="font-family:var(--font-h);font-size:11px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">⚙ Ustawienia projektora</div>
 
-  <!-- Toggle: projektor widoczny na sali (osobna flaga projectorShare, niezależna od Wyników online) -->
-  <div id="wj-proj-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleWjProjectorShare()">
-    <div id="wj-proj-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
-      <div id="wj-proj-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
-    </div>
-    <div style="flex:1;min-width:0;">
-      <div id="wj-proj-toggle-label" style="font-weight:700;font-size:12px;color:var(--text1);">Projektor: WYŁĄCZONY</div>
-      <div id="wj-proj-toggle-desc" style="font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4;">Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.</div>
-    </div>
-  </div>
-
   <!-- Kategorie -->
   <div style="margin-bottom:12px">
     <div style="font-size:10px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Widoczne kategorie</div>
@@ -1201,9 +1190,43 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         </div>
       </div>
 
-      <div class="card" id="wj-auth-card" data-admin-only>
-        <div class="card-title">🔐 Bezpieczeństwo</div>
-        <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
+      <div class="card" id="wj-advanced-card">
+        <button onclick="toggleWjOps()" style="width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;">
+          <div class="card-title" style="margin:0;">⚙ Ustawienia zaawansowane</div>
+          <span id="wj-ops-arrow" style="color:var(--text3);font-size:12px;">▶</span>
+        </button>
+        <div id="wj-ops-panel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+          <!-- Backup / Przywróć -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <button onclick="exportData()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
+              onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div style="font-size:18px;margin-bottom:3px;">⬇</div>
+              <div style="font-size:11px;font-weight:700;color:var(--text2);">Backup</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:1px;">pobierz JSON</div>
+            </button>
+            <button onclick="document.getElementById('import-file').click()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .15s;"
+              onmouseover="this.style.borderColor='var(--text3)'" onmouseout="this.style.borderColor='var(--border2)'">
+              <div style="font-size:18px;margin-bottom:3px;">↑</div>
+              <div style="font-size:11px;font-weight:700;color:var(--text2);">Przywróć</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:1px;">wgraj backup JSON</div>
+            </button>
+          </div>
+          <!-- Zakończ zawody -->
+          <button onclick="finishContest()" style="background:rgba(76,175,130,.08);border:1px solid rgba(76,175,130,.35);border-radius:var(--radius);padding:12px 14px;cursor:pointer;text-align:center;width:100%;transition:border-color .15s;margin-bottom:14px;"
+            onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='rgba(76,175,130,.35)'">
+            <div style="font-size:13px;font-weight:700;color:var(--green);">✓ Zakończ zawody</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;">wróć do panelu</div>
+          </button>
+          <!-- Destrukcyjne -->
+          <div style="border-top:1px solid var(--border);padding-top:12px;">
+            <div style="font-size:11px;color:var(--dsq);margin-bottom:10px;line-height:1.5;">⚠ Operacje destrukcyjne — używaj ostrożnie:</div>
+            <button class="btn btn-sm" data-admin-only style="color:var(--red);border-color:rgba(224,85,85,.35);justify-content:flex-start;text-align:left;width:100%;" onclick="openResetModal()">⚠ Reset wszystkich danych</button>
+          </div>
+          <!-- Hasła (przeniesione z usuniętej karty Bezpieczeństwo) -->
+          <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:12px;" data-admin-only>
+            <button class="btn btn-sm" onclick="openAuthAdminPanel()">🔑 Zmień hasła logowania</button>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1327,6 +1350,35 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
     #wj-share-card canvas { max-width: 240px; margin: 0 auto; }
   }
   </style>
+
+  <!-- 📺 PROJEKTOR — duży ekran na sali (read-only, bez logowania) -->
+  <div class="card mb-12" id="wj-projector-card" style="margin-top:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+      <div class="card-title" style="margin:0;padding:0;border:none;">📺 Projektor (duży ekran)</div>
+      <div id="wj-proj-share-status" style="font-size:11px;font-family:var(--font-m);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 10px;">—</div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:12px;">
+      Wyniki na monitor lub rzutnik na sali. Działa <strong>bez logowania</strong> i jest <strong>tylko do odczytu</strong>.
+      Niezależny od „Wyników online" — możesz włączyć sam ekran na sali bez udostępniania wyników uczestnikom.
+    </div>
+    <!-- Toggle: projektor ON/OFF (osobna flaga projectorShare, migracja 007) -->
+    <div id="wj-proj-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="toggleWjProjectorShare()">
+      <div id="wj-proj-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
+        <div id="wj-proj-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div id="wj-proj-toggle-label" style="font-weight:700;font-size:13px;color:var(--text1);">Projektor: WYŁĄCZONY</div>
+        <div id="wj-proj-toggle-desc" style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;">Ekran na sali pokaże „Brak danych". Kliknij aby włączyć.</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+      <button class="btn" onclick="openProjector()" style="font-size:11px;padding:8px 14px;color:var(--accent);border-color:rgba(232,212,77,.4);">▶ Otwórz projektor</button>
+      <button class="btn" onclick="toggleProjectorSettings()" style="font-size:11px;padding:8px 14px;">⚙ Ustawienia wyświetlania</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5;">
+      Ustawienia (kategorie, prędkość przewijania) ustawiasz <strong>na komputerze projekcyjnym</strong> przez „Ustawienia wyświetlania".
+    </div>
+  </div>
 
   <!-- 🛡 BEZPIECZEŃSTWO DANYCH — dziennik zdarzeń + migawki stanu (migracja 006) -->
   <div class="card mb-12" id="wj-safety-card" style="margin-top:14px;">
@@ -2981,9 +3033,9 @@ const WJB_ITEMS = [
   { id:'notes', cat:'zawody', icon:'note', label:'Notatki', cardId:'wj-notes-card', modal:true, help:'Notatki sędziowskie. Każdą możesz wysłać na górę wybranych zakładek (Konfiguracja, Zawodnicy, Lina, BTS, 15×15m, 1000m, Ranking) i nadać jej ważność (zwykła / ważna / krytyczna).' },
   { id:'status', cat:'system', icon:'activity', label:'Status', info:true, help:'Stan zapisu do chmury i synchronizacji między urządzeniami. Zielone = wszystko działa.' },
   { id:'safety', cat:'system', icon:'database', label:'Dane i kopie', cardId:'wj-safety-card', help:'Dziennik zdarzeń (kto, kiedy, co) + automatyczne migawki stanu co 5 minut z możliwością przywrócenia.' },
-  { id:'auth', cat:'system', icon:'shield', label:'Bezpieczeństwo', cardId:'wj-auth-card', help:'Zmiana haseł logowania sędziów.' },
+  { id:'advanced', cat:'system', icon:'adjustments', label:'Zaawansowane', cardId:'wj-advanced-card', help:'Kopia zapasowa (backup JSON), przywracanie z pliku, zakończenie zawodów oraz operacje destrukcyjne (reset wszystkich danych).', onOpen:()=>{ if(typeof toggleWjOps==='function') toggleWjOps(true); } },
   { id:'share', cat:'apps', icon:'qrcode', label:'Wyniki online', badge:'dla zawodników', cardId:'wj-share-card', muteable:true, app:true, help:'Publiczne wyniki na telefony uczestników (QR/link, bez logowania, tylko odczyt). To jedyne, co widzą zawodnicy.', onOpen:()=>{ if(typeof _renderWjShareSection==='function') _renderWjShareSection(); } },
-  { id:'projector', cat:'apps', icon:'device-tv', label:'Projektor', action:'projector', muteable:true, app:true, help:'Wyniki na monitor/rzutnik na sali. Bez logowania, tylko odczyt. Działa niezależnie od „Wyników online".' },
+  { id:'projector', cat:'apps', icon:'device-tv', label:'Projektor', cardId:'wj-projector-card', muteable:true, app:true, help:'Wyniki na monitor/rzutnik na sali. Bez logowania, tylko odczyt. Działa niezależnie od „Wyników online". Włącz przełącznikiem, odpal „Otwórz projektor".', onOpen:()=>{ if(typeof _refreshWjProjectorShareUI==='function') _refreshWjProjectorShareUI(); } },
   { id:'teamclass', cat:'format', icon:'flag', label:'Klasyfikacja drużynowa', cardId:'wj-teamclass-card', help:'Ilu najlepszych zawodników (M/K lub łącznie) liczy się do klasyfikacji drużynowej.' },
   { id:'teams', cat:'format', icon:'users-group', label:'Drużyny', cardId:'wj-teams-card', help:'Ręczne dodawanie i edycja drużyn (import listy startowej też je tworzy automatycznie).' },
   { id:'scoretables', cat:'format', icon:'table', label:'Tablice punktowe', cardId:'wj-scoretables-card', help:'Przeliczanie czasu na punkty per kategoria i konkurencja. Bez wgranych tablic ranking nie liczy punktów.' },
@@ -3016,9 +3068,9 @@ function _wjbStates(){
   st.notes={band:'done',meta:_nSum,dim:(_nSum==='brak')};
   st.status={band:'active',pill:{t:'zapis w chmurze',k:'ok'}};
   st.safety={band:'active',pill:{t:'migawki wł.',k:'ok'}};
-  st.auth={band:'done',meta:'hasła sędziów',dim:true};
+  st.advanced={band:'done',meta:'backup · reset',dim:true};
   st.share=muted.share?{band:'muted',meta:'nieużywane'}:shareOn?{band:'active',pill:{t:'publikacja wł.',k:'ok'},copy:true}:!hasAth?{band:'later'}:{band:'attention',sub:'publikacja wyłączona — QR nie zadziała',action:'Włącz publikację'};
-  st.projector=muted.projector?{band:'muted',meta:'nieużywany'}:projOn?{band:'active',pill:{t:'na sali wł.',k:'ok'},copy:true}:{band:'active',pill:{t:'ekran wył.',k:'muted'},copy:true};
+  st.projector=muted.projector?{band:'muted',meta:'nieużywany'}:projOn?{band:'active',pill:{t:'na sali wł.',k:'ok'}}:{band:'active',pill:{t:'ekran wył.',k:'muted'}};
   st.teamclass={band:'done',meta:s.teamLimitOpen?((s.teamLimitOpenN||'?')+' łącznie'):((s.teamLimitM||'?')+'M · '+(s.teamLimitK||'?')+'K')};
   st.teams=teams?{band:'done',meta:teams+' drużyn'}:{band:'later'};
   st.scoretables=_wjbScoreTablesReady()?{band:'done',meta:'wgrane'}:{band:'attention',sub:'brak tablic — ranking nie policzy punktów',action:'Otwórz'};
@@ -3164,6 +3216,14 @@ setInterval(updateWjClock,1000); updateWjClock();
 // Wypełnij ikony SVG w nawigacji (i innych [data-ico]) — emoji → Tabler
 function _wjFillIcons(){ document.querySelectorAll('[data-ico]').forEach(el=>{ el.innerHTML=_wjbIco(el.getAttribute('data-ico')); }); }
 try{ _wjFillIcons(); }catch(_){}
+// Rozwijanie panelu "Ustawienia zaawansowane" (force=true wymusza otwarcie)
+function toggleWjOps(force){
+  const panel=document.getElementById('wj-ops-panel'), arrow=document.getElementById('wj-ops-arrow');
+  if(!panel) return;
+  const open=(force===true)?true:(panel.style.display==='none'||panel.style.display==='');
+  panel.style.display=open?'block':'none';
+  if(arrow) arrow.textContent=open?'▼':'▶';
+}
 
 function renderSetup() {
   document.getElementById('setup-name').value  = STATE.setup.name  || '';
@@ -3268,33 +3328,41 @@ function _refreshWjPublicShareUI() {
   }
 }
 
-async function toggleWjPublicShare() {
+// Odporny zapis flagi slotu (publicShare/projectorShare): czyta AKTUALNY rekord
+// z chmury (nie gubi 'type' ani innych pól, działa gdy brak/nieaktualny lokalny cache),
+// scala flagę i zapisuje. Fallback do lokalnego cache gdy chmura niedostępna.
+async function _wjWriteSlotFlag(flagName, newVal, current, refreshFn) {
   const id = _getWjHerkulesSlotId();
-  if (!id) return alert('Brak ID slotu - otwórz zawody z panelu Start');
-  const current = _getWjPublicShare();
-  const newVal = !current;
+  if (!id) { alert('Brak ID slotu - otwórz zawody z panelu Start'); return false; }
+  const db = getSupabase();
+  let slot = null;
   try {
-    const slotRaw = localStorage.getItem('herkules_slot_' + id);
-    if (!slotRaw) return alert('Brak lokalnego cache slotu - wróć do Start i otwórz zawody ponownie');
-    const slot = JSON.parse(slotRaw);
-    slot.publicShare = newVal;
-    slot._updated = new Date().toISOString();
-    localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
-    _refreshWjPublicShareUI();
-    const { error } = await getSupabase().from('herkules_slots').upsert({
-      slot_id: String(id),
-      slot_json: JSON.stringify(slot),
-      updated_at: slot._updated
-    }, { onConflict: 'slot_id' });
-    if (error) {
-      slot.publicShare = current;
-      localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
-      _refreshWjPublicShareUI();
-      alert('Bład zapisu: ' + error.message);
-    }
+    const { data } = await db.from('herkules_slots').select('slot_json').eq('slot_id', String(id)).maybeSingle();
+    if (data && data.slot_json) slot = (typeof data.slot_json === 'string') ? JSON.parse(data.slot_json) : data.slot_json;
+  } catch(_){}
+  if (!slot) { try { const lr = localStorage.getItem('herkules_slot_' + id); if (lr) slot = JSON.parse(lr); } catch(_){} }
+  if (!slot || typeof slot !== 'object') slot = {};
+  slot[flagName] = newVal;
+  slot._updated = new Date().toISOString();
+  localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+  if (refreshFn) refreshFn();
+  try {
+    const { error } = await db.from('herkules_slots').upsert({ slot_id: String(id), slot_json: JSON.stringify(slot), updated_at: slot._updated }, { onConflict: 'slot_id' });
+    if (error) throw error;
+    return true;
   } catch(e) {
-    alert('Bład: ' + e.message);
+    slot[flagName] = current;
+    localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
+    if (refreshFn) refreshFn();
+    alert('Bład zapisu: ' + (e.message || e));
+    return false;
   }
+}
+async function toggleWjPublicShare() {
+  const current = _getWjPublicShare();
+  const ok = await _wjWriteSlotFlag('publicShare', !current, current, _refreshWjPublicShareUI);
+  if (ok && typeof toast === 'function') toast(!current ? 'Publikacja włączona — wyniki online dostępne' : 'Publikacja wyłączona', !current ? 'success' : 'info');
+  if (ok && typeof renderWjBento === 'function') { try { renderWjBento(); } catch(_){} }
 }
 
 // ─── Projektor: osobna flaga projectorShare (niezależna od publicShare, migracja 007) ───
@@ -3308,6 +3376,13 @@ function _getWjProjectorShare() {
 }
 function _refreshWjProjectorShareUI() {
   const on = _getWjProjectorShare();
+  const st = document.getElementById('wj-proj-share-status');
+  if (st) {
+    st.textContent = on ? '🟢 włączony' : '🔴 wyłączony';
+    st.style.color = on ? 'var(--green)' : 'var(--red)';
+    st.style.borderColor = on ? 'rgba(76,175,130,.4)' : 'rgba(224,85,85,.4)';
+    st.style.background = on ? 'rgba(76,175,130,.06)' : 'rgba(224,85,85,.06)';
+  }
   const sw = document.getElementById('wj-proj-toggle-switch');
   const knob = document.getElementById('wj-proj-toggle-knob');
   const lbl = document.getElementById('wj-proj-toggle-label');
@@ -3328,32 +3403,9 @@ function _refreshWjProjectorShareUI() {
   }
 }
 async function toggleWjProjectorShare() {
-  const id = _getWjHerkulesSlotId();
-  if (!id) return alert('Brak ID slotu - otwórz zawody z panelu Start');
   const current = _getWjProjectorShare();
-  const newVal = !current;
-  try {
-    const slotRaw = localStorage.getItem('herkules_slot_' + id);
-    if (!slotRaw) return alert('Brak lokalnego cache slotu - wróć do Start i otwórz zawody ponownie');
-    const slot = JSON.parse(slotRaw);
-    slot.projectorShare = newVal;
-    slot._updated = new Date().toISOString();
-    localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
-    _refreshWjProjectorShareUI();
-    const { error } = await getSupabase().from('herkules_slots').upsert({
-      slot_id: String(id),
-      slot_json: JSON.stringify(slot),
-      updated_at: slot._updated
-    }, { onConflict: 'slot_id' });
-    if (error) {
-      slot.projectorShare = current;
-      localStorage.setItem('herkules_slot_' + id, JSON.stringify(slot));
-      _refreshWjProjectorShareUI();
-      alert('Bład zapisu: ' + error.message);
-    }
-  } catch(e) {
-    alert('Bład: ' + e.message);
-  }
+  const ok = await _wjWriteSlotFlag('projectorShare', !current, current, ()=>{ _refreshWjProjectorShareUI(); if (typeof renderWjBento === 'function') { try { renderWjBento(); } catch(_){} } });
+  if (ok && typeof toast === 'function') toast(!current ? 'Projektor włączony — ekran na sali widzi wyniki' : 'Projektor wyłączony', !current ? 'success' : 'info');
 }
 
 function _wjGenerateQrDataURL(text, size) {
