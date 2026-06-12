@@ -58,6 +58,12 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .app-brand-sub { font-size: 9px; color: var(--text3); letter-spacing: 1px; font-family: var(--font-m); }
 .header-right { display: flex; align-items: center; gap: 8px; }
 .header-contest-name { font-family: var(--font-b); font-size: 13px; color: var(--text2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw; border-left: 1px solid var(--border2); padding-left: 12px; }
+/* Zegar urządzenia w pasku — środek (auto-marginesy), bez nachodzenia na chipy. */
+#osf-live-clock { height: 28px; box-sizing: border-box; display: inline-flex; align-items: center; font-family: var(--font-m); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--text1); background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: 0 12px; margin: 0 auto; }
+@media (min-width: 1150px) {
+  #osf-live-clock { height: 34px; padding: 0 20px; border-bottom: 2px solid color-mix(in srgb, var(--orange) 60%, transparent); font-size: 18px; letter-spacing: 4px; }
+}
+@media (max-width: 760px) { #osf-live-clock { display: none; } }
 .hdr-status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-m); font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 4px 9px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
 .hdr-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
 .hdr-status.ok { color: var(--green); border-color: rgba(76,175,130,.35); }
@@ -451,6 +457,7 @@ tr:last-child > td { border-bottom: none; }
     <span class="app-brand-sub">OŚRODEK SPRAWNOŚCI FIZYCZNEJ</span>
     <span class="header-contest-name" id="header-contest-name"></span>
   </div>
+  <div class="hdr-status" id="osf-live-clock" title="Zegar urządzenia">00:00:00</div>
   <div class="header-right">
     <!-- Kapsuła: status (obecność wstrzykiwana przez JS · Realtime · zapis) -->
     <div class="hdr-group" id="osf-hdr-status-group">
@@ -7485,11 +7492,22 @@ function osfbHelp(key,btn){
 // Odświeżanie pigułek/statystyk co 5s gdy setup aktywny i nic nie otwarte
 setInterval(()=>{ const p=document.getElementById('page-setup'); if(p&&p.classList.contains('active')&&!_osfbOpenId) try{ renderOsfBento(); }catch(_){} }, 5000);
 
+// Zegar urządzenia w nagłówku — aktualizuje się co sekundę (czas lokalny laptopa sędziego)
+function updateOsfClock() {
+  const el = document.getElementById('osf-live-clock');
+  if (!el) return;
+  const d = new Date(); const p = n => (n < 10 ? '0' : '') + n;
+  el.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+setInterval(updateOsfClock, 1000);
+updateOsfClock();
+
 // ═══════════════════════════════════════════════════════════════
 // NOTATKI SĘDZIOWSKIE OSF — wiele notatek, ważność, targetowanie per-zakładka
 // Model: state.setup.noteList = [{id, text, level:'normal'|'important'|'critical', tabs:{}}]
 // ═══════════════════════════════════════════════════════════════
 const OSF_NOTE_TABS = [
+  { key:'setup',       page:'page-setup',       label:'Konfiguracja' },
   { key:'zawodnicy',   page:'page-zawodnicy',   label:'Zawodnicy' },
   { key:'seria1',      page:'page-seria1',      label:'Seria 1' },
   { key:'seria2',      page:'page-seria2',      label:'Seria 2' },
