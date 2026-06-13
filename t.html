@@ -2089,7 +2089,7 @@ const WIELOBOJ_TABS = [
 
 function _getTabsForType() {
   if (_competitionType === 'patrol')   return PATROL_TABS;
-  if (_competitionType === 'osf')      return (_state && _state.setup && _state.setup.kScores) ? OSF_TABS : OSF_TABS.filter(t => t.id !== 'k');
+  if (_competitionType === 'osf')      return OSF_TABS; // zakladka Kobiet zawsze widoczna (medale indywidualne); kScores wplywa tylko na Generalna
   if (_competitionType === 'wielobój') return WIELOBOJ_TABS;
   return [];
 }
