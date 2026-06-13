@@ -1613,6 +1613,15 @@ function _backBtn() {
   return '<button class="detail-back" onclick="_navBack()"><span class="arrow">←</span><span>' + label + '</span></button>';
 }
 
+// Trwalosc widoku po recznym odswiezeniu (per slot)
+function _viewKey() { return 'mss_tview_' + (URL_SLOT_SHORT || URL_SLOT_FULL || 'x'); }
+function _saveView() {
+  try { localStorage.setItem(_viewKey(), JSON.stringify({ tab: _activeTab, team: _teamDetail, ath: _athleteDetailId })); } catch (_) {}
+}
+function _loadView() {
+  try { const r = localStorage.getItem(_viewKey()); return r ? JSON.parse(r) : null; } catch (_) { return null; }
+}
+
 function _initDelegates() {
   if (_delegatesInit) return;
   _delegatesInit = true;
@@ -2006,6 +2015,7 @@ function renderActiveView() {
 }
 
 function renderTileMenu() {
+  _saveView();
   const tabs = _getTabsForType();
   if (!tabs.length) {
     document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">' + ic('alert') + '</div>Nieznany typ zawodów</div>';
@@ -2026,6 +2036,7 @@ function renderTileMenu() {
 }
 
 function renderDetail() {
+  _saveView();
   if (_activeTab === '__team') {
     document.getElementById('main').innerHTML = _renderTeamDetailWrap();
     return;
@@ -2109,7 +2120,11 @@ async function loadAndRender() {
 
     // Pierwsze wejscie -> ZAWSZE menu kafelkowe.
     // Po wybraniu kategorii _activeTab = id, kolejne auto-refreshe nie zmieniaja widoku.
-    if (_activeTab === undefined) _activeTab = null;
+    if (_activeTab === undefined) {
+      const _v = _loadView();
+      if (_v) { _activeTab = _v.tab; _teamDetail = _v.team || null; _athleteDetailId = _v.ath || null; }
+      else { _activeTab = null; }
+    }
     renderActiveView();
 
     setLive('ok');
