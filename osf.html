@@ -7929,7 +7929,8 @@ function printOsfQR() {
   const posterUrl = 'qr.html?u=' + encodeURIComponent(url) +
     '&n=' + encodeURIComponent(name) +
     (city ? '&c=' + encodeURIComponent(city) : '') +
-    (date ? '&d=' + encodeURIComponent(date) : '');
+    (date ? '&d=' + encodeURIComponent(date) : '') +
+    '&t=osf';
   const w = window.open(posterUrl, '_blank');
   if (!w) alert('Przegladarka zablokowala popup. Pozwol na popup-y dla tej strony i sprobuj ponownie.');
 }
