@@ -298,19 +298,20 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .cat-tile.cat-overall {
   --tile-accent: var(--accent);
   --tile-accent-soft: rgba(232,212,77,.18);
-  grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(232,212,77,.04) 0%, var(--bg2) 60%);
-  min-height: 92px; padding: 20px 18px;
+  order: -1; flex-basis: 100%;
+  border-color: var(--accent);
+  background: linear-gradient(135deg, rgba(232,212,77,.09) 0%, var(--bg2) 70%);
+  min-height: 120px; padding: 26px 18px;
 }
-.cat-tile.cat-overall .cat-icon { font-size: 26px; margin-bottom: 4px; }
-.cat-tile.cat-overall .cat-label { font-size: 17px; }
+.cat-tile.cat-overall .cat-icon { font-size: 30px; margin-bottom: 4px; }
+.cat-tile.cat-overall .cat-label { font-size: 20px; }
 @media (min-width: 900px) {
   .tile-grid { max-width: 1120px; gap: 16px; }
   .cat-tile { padding: 36px 16px 30px; min-height: 160px; flex-basis: calc(25% - 12px); }
   .cat-tile .cat-icon { font-size: 38px; }
   .cat-tile .cat-label { font-size: 18px; }
   .cat-tile .cat-sub { font-size: 12px; }
-  .cat-tile.cat-overall { grid-column: 1 / -1; min-height: 108px; padding: 24px; }
+  .cat-tile.cat-overall { flex-basis: 100%; min-height: 132px; padding: 32px; }
   .cat-tile.cat-overall .cat-icon { font-size: 32px; }
   .cat-tile.cat-overall .cat-label { font-size: 20px; }
 }
