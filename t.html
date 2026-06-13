@@ -244,7 +244,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 
 /* TILE MENU (kategorie jako kafelki — eleganckie) */
 .tile-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
   max-width: 720px; margin: 0 auto;
 }
 .cat-tile {
@@ -260,6 +260,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   transition: transform .18s ease, border-color .2s, background .2s, box-shadow .2s;
   min-height: 134px; justify-content: center;
   position: relative; overflow: hidden;
+  flex: 0 1 calc(50% - 6px);
 }
 .cat-tile::before {
   /* subtelna linia akcent na gornej krawedzi */
@@ -304,8 +305,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .cat-tile.cat-overall .cat-icon { font-size: 26px; margin-bottom: 4px; }
 .cat-tile.cat-overall .cat-label { font-size: 17px; }
 @media (min-width: 900px) {
-  .tile-grid { grid-template-columns: repeat(4, 1fr); max-width: 1120px; gap: 16px; }
-  .cat-tile { padding: 36px 16px 30px; min-height: 160px; }
+  .tile-grid { max-width: 1120px; gap: 16px; }
+  .cat-tile { padding: 36px 16px 30px; min-height: 160px; flex-basis: calc(25% - 12px); }
   .cat-tile .cat-icon { font-size: 38px; }
   .cat-tile .cat-label { font-size: 18px; }
   .cat-tile .cat-sub { font-size: 12px; }
@@ -1400,7 +1401,9 @@ function renderOsfTeam() {
       '<div class="rank-info">' +
         '<div class="rank-name rank-team-link" data-team="' + esc(r.team) + '">' + esc(r.team) + '</div>' +
         '<div class="rank-details">' +
-          '<span><span class="rank-detail-lbl">' + ic('stopwatch') + '</span><span class="rank-detail-val">' + esc(bestDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">S1:</span><span class="rank-detail-val">' + esc(r.s1) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">S2:</span><span class="rank-detail-val">' + esc(r.s2) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' najl.</span><span class="rank-detail-val">' + esc(bestDisp) + '</span></span>' +
         '</div>' +
       '</div>' +
       '<div>' +
@@ -1805,7 +1808,9 @@ function _osfTeamRun() {
   else N = teams.filter(t => teamM(t).length >= teamMin && (getT(t,'s1') || getT(t,'s2'))).length;
   const rows = teams.map(t => {
     const best = bestEff(t);
-    return { team: t, ok: teamM(t).length >= teamMin, best, bestSec: best ? _osfParseTime(best) : Infinity, sumSec: sumEff(t), started: !!(getT(t,'s1') || getT(t,'s2')) };
+    const s1d = isDsq(t, 's1') ? 'DSQ' : (getT(t, 's1') || '—');
+    const s2d = isDsq(t, 's2') ? 'DSQ' : (getT(t, 's2') || '—');
+    return { team: t, ok: teamM(t).length >= teamMin, best, bestSec: best ? _osfParseTime(best) : Infinity, sumSec: sumEff(t), started: !!(getT(t,'s1') || getT(t,'s2')), s1: s1d, s2: s2d };
   }).sort((a, b) => {
     if (!a.ok && b.ok) return 1;
     if (a.ok && !b.ok) return -1;
@@ -1817,7 +1822,7 @@ function _osfTeamRun() {
     const noBest = r.bestSec === Infinity || !r.ok;
     const pts = noBest ? 0 : (rank === 1 ? (N + 1) * mult : Math.max(0, (N + 1 - rank) * mult));
     if (!noBest) rank++;
-    return { team: r.team, best: r.best, bestSec: r.bestSec, started: r.started, ok: r.ok, rank: noBest ? null : rank - 1, pts, N };
+    return { team: r.team, best: r.best, bestSec: r.bestSec, started: r.started, ok: r.ok, s1: r.s1, s2: r.s2, rank: noBest ? null : rank - 1, pts, N };
   });
 }
 function _teamDetailOsf(team) {
