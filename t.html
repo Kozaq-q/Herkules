@@ -369,8 +369,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-info { min-width: 0; }
 .rank-name { font-family: var(--font-b); font-size: 16px; font-weight: 700; color: var(--text1); line-height: 1.2; margin-bottom: 3px; word-wrap: break-word; }
 .rank-team { font-family: var(--font-m); font-size: 11px; color: var(--text3); margin-bottom: 6px; }
-.rank-team-link { cursor: pointer; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 2px; transition: color .12s; }
-.rank-team-link:hover { color: var(--accent); text-decoration-color: var(--accent); }
+.rank-team-link { cursor: pointer; transition: color .12s; }
+.rank-team-link:hover { color: var(--accent); }
+.rank-team-link:active { color: var(--accent); }
 .rank-card.flash { animation: cardflash 2.4s ease-out; }
 @keyframes cardflash {
   0%   { box-shadow: 0 0 0 3px var(--accent); background: rgba(255,255,255,.07); }
@@ -382,10 +383,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .td-chip-big { font-size: 24px; font-weight: 800; color: var(--text1); margin-top: 2px; }
 .td-chip-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
 .td-section-lbl { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px; font-family: var(--font-m); }
-.rank-card-link { cursor: pointer; }
-.rank-card-link:hover { border-color: var(--border2); }
-.rank-card-link .rank-name { text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
-.rank-card-link:hover .rank-name { text-decoration-color: var(--accent); }
+.rank-card[data-aid] .rank-name { cursor: pointer; transition: color .12s; }
+.rank-card[data-aid] .rank-name:hover { color: var(--accent); }
+.rank-card[data-aid] .rank-name:active { color: var(--accent); }
 .td-chip-link { cursor: pointer; }
 .td-chip-link:hover { border-color: var(--accent); }
 #to-top { position: fixed; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
@@ -995,7 +995,7 @@ function renderPatrolIndividual(gender) {
     const ptsDisp = r._pts !== null ? r._pts.toString() : (r.dsq ? 'DSQ' : '—');
     const scoreCls = (r._pts === null) ? ' dnf' : '';
 
-    return '<div class="rank-card rank-card-link' + topCls + dsqCls + '" data-aid="' + esc(String(r.ath.id)) + '" data-kind="ath">' +
+    return '<div class="rank-card' + topCls + dsqCls + '" data-aid="' + esc(String(r.ath.id)) + '">' +
       '<div class="rank-num">' + (medal || rankNum) + '</div>' +
       '<div class="rank-info">' +
         '<div class="rank-name">' + esc(name) + '</div>' +
@@ -1320,7 +1320,7 @@ function renderOsfIndividual(gender) {
     const s1Disp = r.s1 || '—';
     const s2Disp = r.s2 || '—';
 
-    return '<div class="rank-card rank-card-link' + topCls + dsqCls + '" data-aid="' + esc(String(r.ath.id)) + '" data-kind="ath">' +
+    return '<div class="rank-card' + topCls + dsqCls + '" data-aid="' + esc(String(r.ath.id)) + '">' +
       '<div class="rank-num">' + (medal || rankDisp) + '</div>' +
       '<div class="rank-info">' +
         '<div class="rank-name">' + esc(name) + '</div>' +
@@ -1493,7 +1493,7 @@ function renderWielobojIndividual(gender) {
     const p = r.pts;
     const totalDisp = Math.round(p.total);
 
-    return '<div class="rank-card rank-card-link' + topCls + '" data-aid="' + esc(String(r.ath.id)) + '" data-kind="ath">' +
+    return '<div class="rank-card' + topCls + '" data-aid="' + esc(String(r.ath.id)) + '">' +
       '<div class="rank-num">' + (medal || rank) + '</div>' +
       '<div class="rank-info">' +
         '<div class="rank-name">' + esc(name) + '</div>' +
@@ -1564,6 +1564,23 @@ function renderWielobojTeam() {
 // KARTA DRUŻYNY + scroll z lupy (delegowane klikniecia)
 // ═══════════════════════════════════════════════════════════════
 
+let _navStack = [];  // historia widokow do cofania (Wstecz)
+function _pushHistory() {
+  _navStack.push({ tab: _activeTab, team: _teamDetail, ath: _athleteDetailId, y: window.scrollY || 0 });
+  if (_navStack.length > 40) _navStack.shift();
+}
+function _navBack() {
+  if (!_navStack.length) { showTileMenu(); return; }
+  const s = _navStack.pop();
+  _activeTab = s.tab; _teamDetail = s.team; _athleteDetailId = s.ath;
+  renderActiveView();
+  requestAnimationFrame(() => { try { window.scrollTo(0, s.y || 0); } catch (_) {} });
+}
+function _backBtn() {
+  const label = _navStack.length ? 'Wstecz' : 'Kategorie';
+  return '<button class="detail-back" onclick="_navBack()"><span class="arrow">←</span><span>' + label + '</span></button>';
+}
+
 function _initDelegates() {
   if (_delegatesInit) return;
   _delegatesInit = true;
@@ -1573,11 +1590,10 @@ function _initDelegates() {
     if (tl && tl.dataset.team) { showTeamDetail(tl.dataset.team); return; }
     const chip = e.target.closest('.td-chip-link');
     if (chip && chip.dataset.goto) { _gotoRanking(chip.dataset.goto, { team: chip.dataset.team, aid: chip.dataset.aid }); return; }
-    const card = e.target.closest('.rank-card-link');
-    if (card) {
-      if (card.dataset.kind === 'team' && card.dataset.team) showTeamDetail(card.dataset.team);
-      else if (card.dataset.aid) showAthleteDetail(card.dataset.aid);
-      return;
+    const nameEl = e.target.closest('.rank-name');
+    if (nameEl) {
+      const card = nameEl.closest('.rank-card[data-aid]');
+      if (card && card.dataset.aid) { showAthleteDetail(card.dataset.aid); return; }
     }
   });
   const sr = document.getElementById('search-results');
@@ -1596,7 +1612,9 @@ function _initDelegates() {
 function _searchPickTeam(name) { closeSearch(); showTeamDetail(name); }
 
 function showTeamDetail(name) {
+  _pushHistory();
   _teamDetail = name;
+  _athleteDetailId = null;
   _activeTab = '__team';
   try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { window.scrollTo(0, 0); }
   renderDetail();
@@ -1632,7 +1650,7 @@ function _renderTeamDetailWrap() {
     else body = '<div class="empty">—</div>';
   } catch (e) { body = '<div class="empty">Błąd: ' + esc(e.message) + '</div>'; }
   return '<div class="detail-wrap">' +
-    '<button class="detail-back" onclick="showTileMenu()"><span class="arrow">←</span><span>Kategorie</span></button>' +
+    _backBtn() +
     '<div class="detail-title cat-team-color"><span class="icon">🛡</span><span>' + esc(name) + '</span></div>' +
     '<div class="detail-subtitle">Karta drużyny</div>' +
     body +
@@ -1685,7 +1703,7 @@ function _tdAthRowPatrol(r) {
   const osfDisp = r.osf || '—';
   const shot = _shotPointsFromRow(r); const shotDisp = shot !== null ? shot + ' pkt' : '—';
   const totalDisp = _formatTotalDisplay(r);
-  return '<div class="rank-card rank-card-link" data-aid="' + esc(String(r.ath.id)) + '" data-kind="ath"><div class="rank-num" style="font-size:20px;">' + esc(String(place)) + '</div>' +
+  return '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + esc(String(place)) + '</div>' +
     '<div class="rank-info"><div class="rank-name">' + esc(name) + '</div>' +
     '<div class="rank-details">' +
       '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
@@ -1748,7 +1766,7 @@ function _teamDetailOsf(team) {
   const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && a.team === team).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && a.team === team).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   let html = '<div class="td-chips">' + _tdChip('🛡 Drużynowa', cls ? '#' + cls.rank : '—', cls ? ((Math.round(cls.sumSec * 100) / 100).toFixed(2) + ' s') : 'brak 3 sklas.', { goto: 'team', team: team }) + '</div>';
-  const row = r => '<div class="rank-card rank-card-link" data-aid="' + esc(String(r.ath.id)) + '" data-kind="ath"><div class="rank-num" style="font-size:20px;">' + (r._place ? '#' + r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div></div><div><div class="rank-score">' + esc(r.best || '—') + '</div><div class="rank-score-lbl">najl.</div></div></div>';
+  const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? '#' + r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div></div><div><div class="rank-score">' + esc(r.best || '—') + '</div><div class="rank-score-lbl">najl.</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
   if (women.length) html += '<div class="td-section-lbl">Zawodnicy — kobiety</div>' + women.map(row).join('');
   return html;
@@ -1777,7 +1795,7 @@ function _teamDetailWieloboj(team) {
   const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && inTeam(a)).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && inTeam(a)).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   let html = '<div class="td-chips">' + _tdChip('🛡 Drużynowa', cls ? '#' + cls.rank : '—', cls ? (Math.round(cls.total) + ' pkt') : 'brak wyników', { goto: 'team', team: team }) + '</div>';
-  const row = r => '<div class="rank-card rank-card-link" data-aid="' + esc(String(r.ath.id)) + '" data-kind="ath"><div class="rank-num" style="font-size:20px;">' + (r._place ? '#' + r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div>' + (r.ath.cat ? '<div class="rank-team">' + esc(r.ath.cat) + '</div>' : '') + '</div><div><div class="rank-score">' + Math.round(r.pts.total) + '</div><div class="rank-score-lbl">pkt</div></div></div>';
+  const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? '#' + r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div>' + (r.ath.cat ? '<div class="rank-team">' + esc(r.ath.cat) + '</div>' : '') + '</div><div><div class="rank-score">' + Math.round(r.pts.total) + '</div><div class="rank-score-lbl">pkt</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
   if (women.length) html += '<div class="td-section-lbl">Zawodnicy — kobiety</div>' + women.map(row).join('');
   return html;
@@ -1785,6 +1803,7 @@ function _teamDetailWieloboj(team) {
 
 // ── KARTA ZAWODNIKA ──
 function showAthleteDetail(aid) {
+  _pushHistory();
   _athleteDetailId = aid;
   _teamDetail = null;
   _activeTab = '__athlete';
@@ -1794,22 +1813,25 @@ function showAthleteDetail(aid) {
 
 function _gotoRanking(tabId, opts) {
   opts = opts || {};
+  _pushHistory();
   _teamDetail = null;
+  _athleteDetailId = null;
   if (opts.aid) _pendingScroll = '.rank-card[data-aid="' + _cssEsc(opts.aid) + '"]';
   else if (opts.team) _pendingScroll = '.rank-team-link[data-team="' + _cssEsc(opts.team) + '"]';
   else _pendingScroll = null;
-  setTab(tabId);
+  _activeTab = tabId;
+  renderDetail();
 }
 
 function _athTeamSection(team) {
   if (!team) return '';
   return '<div class="td-section-lbl">Drużyna</div>' +
-    '<div class="rank-card rank-card-link" data-kind="team" data-team="' + esc(team) + '"><div class="rank-info"><div class="rank-name">' + esc(team) + '</div></div></div>';
+    '<div class="rank-card"><div class="rank-info"><div class="rank-name rank-team-link" data-team="' + esc(team) + '">' + esc(team) + '</div></div></div>';
 }
 
 function _renderAthleteDetailWrap() {
   const a = (_state.athletes || []).find(x => String(x.id) === String(_athleteDetailId));
-  const back = '<button class="detail-back" onclick="showTileMenu()"><span class="arrow">←</span><span>Kategorie</span></button>';
+  const back = _backBtn();
   if (!a) return '<div class="detail-wrap">' + back + '<div class="empty">Nie znaleziono zawodnika</div></div>';
   const name = (a.rank ? a.rank + ' ' : '') + (a.name || 'Bez nazwy');
   let body = '';
@@ -1915,11 +1937,15 @@ function showTileMenu() {
   _activeTab = null;
   _teamDetail = null;
   _athleteDetailId = null;
+  _navStack = [];
   renderTileMenu();
 }
 
 function setTab(id) {
+  _pushHistory();
   _activeTab = id;
+  _teamDetail = null;
+  _athleteDetailId = null;
   renderDetail();
 }
 
@@ -1966,7 +1992,7 @@ function renderDetail() {
   const titleColorCls = (tab.cls || '').replace('cat-', 'cat-') + '-color';
   const html =
     '<div class="detail-wrap">' +
-    '<button class="detail-back" onclick="showTileMenu()"><span class="arrow">←</span><span>Kategorie</span></button>' +
+    _backBtn() +
     '<div class="detail-title ' + titleColorCls + '"><span class="icon">' + tab.icon + '</span><span>' + esc(tab.label) + '</span></div>' +
     (tab.sub ? '<div class="detail-subtitle">' + esc(tab.sub) + '</div>' : '') +
     tab.render() +
