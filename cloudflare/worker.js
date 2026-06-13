@@ -33,6 +33,8 @@ export default {
     // - nie /rest/v1/rpc/* (RPC calls, moga zwrocic rozne wartosci per call)
     const isData = url.pathname.startsWith('/rest/v1/') && !url.pathname.startsWith('/rest/v1/rpc/');
     const cacheable = request.method === 'GET' && isData;
+    // Tabele stanu z lista zawodnikow — redagujemy stopnie (rank) gdy showRanks != true
+    const isStateTable = /\/rest\/v1\/(patrol_state|osf_state|app_state)\b/.test(url.pathname);
 
     if (cacheable) {
       // Spróbuj z cache
@@ -53,6 +55,21 @@ export default {
         headers: filterRequestHeaders(request.headers),
       });
       const upstream = await fetch(upstreamReq);
+
+      // Tabele stanu: zredaguj stopnie (rank) gdy showRanks != true, ZANIM trafi do cache.
+      // Dzieki temu uczestnicy (t.html -> Worker) nie dostaja stopni nawet w surowym JSON.
+      // Sedziowie ida bezposrednio do Supabase (z pominieciem Workera), wiec widza stopnie.
+      if (isStateTable && (upstream.headers.get('content-type') || '').includes('application/json')) {
+        const text = redactRanksIfHidden(await upstream.text());
+        const headers = new Headers(upstream.headers);
+        headers.delete('content-encoding');
+        headers.delete('content-length');
+        headers.set('Cache-Control', 'public, max-age=' + CACHE_SECONDS);
+        headers.set('X-MSS-Cache', 'MISS');
+        const resp = new Response(text, { status: upstream.status, statusText: upstream.statusText, headers });
+        ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+        return resp;
+      }
 
       // Klonuj odpowiedź zeby modyfikowac headers
       const cloned = new Response(upstream.body, upstream);
@@ -79,6 +96,32 @@ export default {
     return passthru;
   }
 };
+
+// Zeruje pole `rank` zawodnikow w odpowiedzi *_state, chyba ze showRanks=true.
+// showRanks: patrol/osf -> state_json.cfg.showRanks, wieloboj -> state_json.setup.showRanks.
+// Bezpieczna domyslnosc: brak flagi = ukryte (redagujemy). Bledy nie psuja API (zwroc oryginal).
+function redactRanksIfHidden(text) {
+  try {
+    const data = JSON.parse(text);
+    const rows = Array.isArray(data) ? data : [data];
+    for (const row of rows) {
+      if (!row || typeof row !== 'object') continue;
+      let sj = row.state_json;
+      const wasString = (typeof sj === 'string');
+      if (wasString) { try { sj = JSON.parse(sj); } catch (e) { continue; } }
+      if (!sj || typeof sj !== 'object') continue;
+      const show = (sj.cfg && sj.cfg.showRanks === true) || (sj.setup && sj.setup.showRanks === true);
+      if (show) continue;
+      if (Array.isArray(sj.athletes)) {
+        for (const a of sj.athletes) { if (a && typeof a === 'object' && a.rank) a.rank = ''; }
+      }
+      row.state_json = wasString ? JSON.stringify(sj) : sj;
+    }
+    return JSON.stringify(data);
+  } catch (e) {
+    return text;
+  }
+}
 
 // Usun niektore problematyczne headers Cloudflare/HTTP/2 przed forward
 function filterRequestHeaders(headers) {

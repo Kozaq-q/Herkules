@@ -1262,6 +1262,8 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
             📤 Wczytaj Excel lub CSV
           </button>
           <input type="file" id="import-startlist-file" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importStartList(event)">
+          <button class="btn btn-sm" onclick="splitRanksRetroactive()" style="margin-top:8px">✂ Rozdziel stopnie od nazwisk</button>
+          <div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.4">Wyciąga skrót stopnia (np. „sierż.") z pola nazwiska do osobnej rubryki — dla list wczytanych wcześniej. Pokaże podgląd przed zmianą.</div>
         </div>
 
         <!-- Podgląd importu -->
@@ -1317,6 +1319,17 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
       <div style="flex:1;min-width:0;">
         <div id="wj-share-toggle-label" style="font-weight:700;font-size:13px;color:var(--text1);">Publikacja: WYŁĄCZONA</div>
         <div id="wj-share-toggle-desc" style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;">Uczestnicy z QR/linkiem zobaczą "Niedostępne". Kliknij aby włączyć.</div>
+      </div>
+    </div>
+
+    <!-- Toggle: stopnie wojskowe w wynikach online (STATE.setup.showRanks, redakcja w Workerze) -->
+    <div id="wj-ranks-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="toggleWjShowRanks()">
+      <div id="wj-ranks-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
+        <div id="wj-ranks-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div id="wj-ranks-toggle-label" style="font-weight:700;font-size:13px;color:var(--text1);">Stopnie wojskowe: UKRYTE</div>
+        <div id="wj-ranks-toggle-desc" style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;">Uczestnicy nie widzą stopni w wynikach online. Kliknij aby pokazać.</div>
       </div>
     </div>
 
@@ -2597,6 +2610,7 @@ function startPollingFallback() {
 
 function ensureStateDefaults() {
   if (!STATE.setup) STATE.setup = { name:'', date:'', place:'', org:'', days:2 };
+  if (STATE.setup.showRanks === undefined) STATE.setup.showRanks = false; // stopnie w wynikach online domyslnie ukryte
   if (!STATE.setup.days) STATE.setup.days = 2;
   if (!STATE.setup.status) STATE.setup.status = 'planned';
   if (!STATE.setup.accent) STATE.setup.accent = '#e8d44d';
@@ -3330,6 +3344,33 @@ function _refreshWjPublicShareUI() {
     lbl.style.color = 'var(--text1)';
     desc.textContent = 'Uczestnicy z QR/linkiem zobaczą "Niedostępne". Kliknij aby włączyć.';
   }
+  if (typeof _refreshWjShowRanksUI === 'function') _refreshWjShowRanksUI();
+}
+
+// ─── Stopnie w wynikach online (STATE.setup.showRanks — synced do app_state, Worker redaguje) ───
+function toggleWjShowRanks() {
+  if (!STATE.setup) STATE.setup = {};
+  STATE.setup.showRanks = !STATE.setup.showRanks;
+  save();
+  _refreshWjShowRanksUI();
+  toast(STATE.setup.showRanks ? '✓ Stopnie widoczne w wynikach online' : '⏸ Stopnie ukryte w wynikach online');
+}
+function _refreshWjShowRanksUI() {
+  const on = !!(STATE.setup && STATE.setup.showRanks);
+  const sw = document.getElementById('wj-ranks-toggle-switch');
+  const knob = document.getElementById('wj-ranks-toggle-knob');
+  const lbl = document.getElementById('wj-ranks-toggle-label');
+  const desc = document.getElementById('wj-ranks-toggle-desc');
+  if (!sw) return;
+  if (on) {
+    sw.style.background = 'var(--green)'; knob.style.left = '22px';
+    lbl.textContent = 'Stopnie wojskowe: WIDOCZNE'; lbl.style.color = 'var(--green)';
+    desc.textContent = 'Stopnie pokazywane przy nazwiskach w wynikach online.';
+  } else {
+    sw.style.background = 'var(--border2)'; knob.style.left = '2px';
+    lbl.textContent = 'Stopnie wojskowe: UKRYTE'; lbl.style.color = 'var(--text1)';
+    desc.textContent = 'Uczestnicy nie widzą stopni w wynikach online. Kliknij aby pokazać.';
+  }
 }
 
 // Odporny zapis flagi slotu (publicShare/projectorShare): czyta AKTUALNY rekord
@@ -3847,7 +3888,21 @@ function togglePK(id) {
   save(); renderAthletesList();
 }
 
+// Idempotentnie przenosi stopnie sklejone w nazwisku do osobnego pola — obejmuje
+// listy wczytane wczesniej i zsynchronizowane z chmury. Zapis tylko gdy cos zmieniono.
+function _autoSplitRanks() {
+  if (!STATE || !Array.isArray(STATE.athletes)) return;
+  let changed = 0;
+  STATE.athletes.forEach(a => {
+    if (!a || (a.rank && String(a.rank).trim())) return;
+    const sr = splitRank(a.name);
+    if (sr.rank) { a.rank = sr.rank; a.name = sr.name; changed++; }
+  });
+  if (changed) save();
+}
+
 function renderAthletesList() {
+  _autoSplitRanks();
   const filterTeam = parseInt(document.getElementById('filter-team')?.value) || null;
   const filterCat  = _catFilter || '';
   const search     = document.getElementById('filter-search')?.value.toLowerCase() || '';
@@ -3921,7 +3976,7 @@ function renderAthletesList() {
 
     return `<tr class="${a.pk ? 'pk-row' : ''}">
       <td class="mono text-muted">${i+1}</td>
-      <td class="bold">${a.name}${a.pk ? ' <span class="pk-badge">PK</span>' : ''}${missingBadge}</td>
+      <td class="bold">${a.rank ? '<span style="color:var(--text3);font-weight:400">' + a.rank + '</span> ' : ''}${a.name}${a.pk ? ' <span class="pk-badge">PK</span>' : ''}${missingBadge}</td>
       <td>${teamCell}</td>
       <td><span class="cat-badge cat-${a.cat}">${a.cat}</span></td>
       <td>${genderCell}</td>
@@ -4022,10 +4077,11 @@ function handleCSV(e) {
     lines.slice(1).forEach(line => {
       const parts = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));
       if (parts.length >= 4) {
-        const name=parts[0], teamName=parts[1], year=parseInt(parts[2]), gender=parts[3].toUpperCase();
+        let name=parts[0]; const teamName=parts[1], year=parseInt(parts[2]), gender=parts[3].toUpperCase();
+        const _sr=splitRank(name); const rank=_sr.rank; name=_sr.name;
         let team = STATE.teams.find(t=>t.name===teamName);
         if (!team) { team={id:Date.now()+Math.random(),name:teamName,num:STATE.teams.length+1}; STATE.teams.push(team); }
-        STATE.athletes.push({id:Date.now()+Math.random(),name,teamId:team.id,year,gender,cat:getCategory(gender,year),startOrder:null});
+        STATE.athletes.push({id:Date.now()+Math.random(),rank,name,teamId:team.id,year,gender,cat:getCategory(gender,year),startOrder:null});
         added++;
       }
     });
@@ -7347,6 +7403,46 @@ function parseStartListCSV(file) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// PARSER STOPNI WOJSKOWYCH — odcina skrot stopnia od imienia/nazwiska
+// (najdluzszy wariant najpierw, po normalizacji: kropki->spacje, bez
+//  diakrytykow — odporne na "st.szer." i "sierz.").
+// ═══════════════════════════════════════════════════════════════
+const _MIL_RANKS = ['szer.','st. szer.','st. szer. spec.','kpr.','st. kpr.','plut.','sierż.','st. sierż.','mł. chor.','chor.','st. chor.','st. chor. sztab.','ppor.','por.','kpt.','mjr','ppłk','płk','gen. bryg.','gen. dyw.','gen. broni','gen.','mar.','st. mar.','st. mar. spec.','mat','st. mat','bsmt','bsm.','st. bsm.','mł. chor. mar.','chor. mar.','st. chor. mar.','st. chor. sztab. mar.','ppor. mar.','por. mar.','kpt. mar.','kmdr ppor.','kmdr por.','kmdr','kadm.','wadm.','adm. floty','adm.','marsz.'];
+function _normRankTok(t) { return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ł/g,'l').replace(/\./g,'').trim(); }
+const _RANK_TABLE = _MIL_RANKS.map(r => ({ canon: r, toks: r.replace(/\./g,'. ').split(/\s+/).filter(Boolean).map(_normRankTok) })).sort((a,b) => b.toks.length - a.toks.length);
+function splitRank(full) {
+  full = String(full || '').trim();
+  if (!full) return { rank: '', name: '' };
+  const parts = full.replace(/\./g,'. ').split(/\s+/).filter(Boolean);
+  const norm = parts.map(_normRankTok);
+  for (const r of _RANK_TABLE) {
+    const k = r.toks.length;
+    if (k >= parts.length) continue;
+    let ok = true;
+    for (let i = 0; i < k; i++) { if (norm[i] !== r.toks[i]) { ok = false; break; } }
+    if (ok) return { rank: r.canon, name: parts.slice(k).join(' ').trim() };
+  }
+  return { rank: '', name: full };
+}
+
+function splitRanksRetroactive() {
+  const cand = [];
+  STATE.athletes.forEach(a => {
+    if (a.rank && String(a.rank).trim()) return;
+    const sr = splitRank(a.name);
+    if (sr.rank) cand.push({ a, rank: sr.rank, name: sr.name });
+  });
+  if (!cand.length) { toast('Nie znaleziono stopni do rozdzielenia'); return; }
+  const preview = cand.slice(0, 15).map(c => '• ' + c.a.name + '  →  [' + c.rank + ']  ' + c.name).join('\n');
+  const more = cand.length > 15 ? '\n…i ' + (cand.length - 15) + ' więcej' : '';
+  if (!confirm('Znaleziono ' + cand.length + ' stopni do rozdzielenia od nazwiska:\n\n' + preview + more + '\n\nPrzenieść skróty stopni do osobnego pola?')) return;
+  cand.forEach(c => { c.a.rank = c.rank; c.a.name = c.name; });
+  save();
+  renderAthletesList();
+  toast('✓ Rozdzielono ' + cand.length + ' stopni');
+}
+
 // ── Normalizuj wiersze — znajdź kolumny po nagłówkach ──
 function parseStartListRows(raw) {
   if (!raw.length) return [];
@@ -7394,7 +7490,8 @@ function parseStartListRows(raw) {
     if (gender !== 'M' && gender !== 'K') continue;
 
     const pk = colIdx.pk >= 0 ? String(row[colIdx.pk] || '').trim() !== '' : false;
-    result.push({ name, team, year, gender, pk });
+    const sr = splitRank(name);
+    result.push({ rank: sr.rank, name: sr.name, team, year, gender, pk });
   }
 
   return result;
@@ -7406,7 +7503,7 @@ function applyStartList(rows) {
   let athletesAdded  = 0;
   let athletesSkipped = 0;
 
-  rows.forEach(({ name, team: teamName, year, gender, pk }) => {
+  rows.forEach(({ name, team: teamName, year, gender, pk, rank }) => {
     // 1. Znajdź lub utwórz drużynę
     let team = STATE.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
     if (!team) {
@@ -7428,6 +7525,7 @@ function applyStartList(rows) {
     // 4. Dodaj zawodnika
     STATE.athletes.push({
       id: Date.now() + Math.random(),
+      rank: rank || '',
       name,
       teamId: team.id,
       year,

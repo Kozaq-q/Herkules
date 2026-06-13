@@ -659,14 +659,14 @@ function _searchInState(qn) {
       const key = 'ind-m-' + a.id;
       if (seen.has(key)) return; seen.add(key);
       const tab = findTab('m');
-      hits.push({ name: a.name, meta: a.team || '—', catId: 'm', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      hits.push({ name: (a.rank ? a.rank + ' ' : '') + a.name, meta: a.team || '—', catId: 'm', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
     });
     // Indywidualnie K
     (_state.athletes || []).filter(a => a.gender === 'K' && _matchAth(a)).forEach(a => {
       const key = 'ind-k-' + a.id;
       if (seen.has(key)) return; seen.add(key);
       const tab = findTab('k');
-      hits.push({ name: a.name, meta: a.team || '—', catId: 'k', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      hits.push({ name: (a.rank ? a.rank + ' ' : '') + a.name, meta: a.team || '—', catId: 'k', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
     });
     // Druzyny (zbierz z athletes)
     const teamsSeen = new Set();
@@ -687,11 +687,11 @@ function _searchInState(qn) {
   } else if (_competitionType === 'osf') {
     (_state.athletes || []).filter(a => a.gender === 'M' && !a.pk && _matchAth(a)).forEach(a => {
       const tab = findTab('m');
-      hits.push({ name: a.name, meta: a.team || '—', catId: 'm', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      hits.push({ name: (a.rank ? a.rank + ' ' : '') + a.name, meta: a.team || '—', catId: 'm', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
     });
     (_state.athletes || []).filter(a => a.gender === 'K' && !a.pk && _matchAth(a)).forEach(a => {
       const tab = findTab('k');
-      hits.push({ name: a.name, meta: a.team || '—', catId: 'k', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
+      hits.push({ name: (a.rank ? a.rank + ' ' : '') + a.name, meta: a.team || '—', catId: 'k', catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon });
     });
     const teamsSeen = new Set();
     (_state.athletes || []).forEach(a => {
@@ -712,7 +712,7 @@ function _searchInState(qn) {
       const catId = a.gender === 'K' ? 'k' : 'm';
       const tab = findTab(catId);
       hits.push({
-        name: a.name, meta: teamName + (a.cat ? ' · ' + a.cat : ''),
+        name: (a.rank ? a.rank + ' ' : '') + a.name, meta: teamName + (a.cat ? ' · ' + a.cat : ''),
         catId, catLabel: tab.label, catCls: tab.cls, catIcon: tab.icon
       });
     });
@@ -955,7 +955,7 @@ function renderPatrolIndividual(gender) {
     const topCls = (isClassified && visibleRank <= 3) ? ' top-' + visibleRank : '';
     const dsqCls = r.dsq ? ' dsq' : '';
     const medal = _medal(visibleRank);
-    const name = r.ath.name || 'Bez nazwy';
+    const name = (r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || 'Bez nazwy');
     const team = r.ath.team || '';
     const totalDisp = _formatTotalDisplay(r);
     const osfDisp = r.osf || '—';
@@ -1282,7 +1282,7 @@ function renderOsfIndividual(gender) {
     const topCls = (isClassified && visibleRank <= 3) ? ' top-' + visibleRank : '';
     const dsqCls = !isClassified ? ' dsq' : '';
     const medal = _medal(visibleRank);
-    const name = r.ath.name || 'Bez nazwy';
+    const name = (r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || 'Bez nazwy');
     const team = r.ath.team || '';
     const bestDisp = r.best || '—';
     const s1Disp = r.s1 || '—';
@@ -1454,7 +1454,7 @@ function renderWielobojIndividual(gender) {
     const rank = i + 1;
     const topCls = rank <= 3 ? ' top-' + rank : '';
     const medal = _medal(rank);
-    const name = r.ath.name || 'Bez nazwy';
+    const name = (r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || 'Bez nazwy');
     const team = (_state.teams || []).find(t => t.id == r.ath.teamId);
     const teamName = team ? team.name : (r.ath.team || '');
     const cat = r.ath.cat || '';

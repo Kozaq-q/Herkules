@@ -649,7 +649,7 @@ tr:last-child > td { border-bottom: none; }
             <th>#</th>
             <th>⚠</th>
             <th>Płeć</th>
-            <th>Stopień</th>
+            <th style="text-align:right;padding-right:14px;">Stopień</th>
             <th>Imię i nazwisko</th>
             <th>Drużyna</th>
             <th>Nr startowy</th>
@@ -1309,6 +1309,17 @@ tr:last-child > td { border-bottom: none; }
       </div>
     </div>
 
+    <!-- Toggle: stopnie wojskowe w wynikach online (state.cfg.showRanks, redakcja w Workerze) -->
+    <div id="osf-ranks-toggle-row" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="toggleOsfShowRanks()">
+      <div id="osf-ranks-toggle-switch" style="width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;flex-shrink:0;transition:background .2s;">
+        <div id="osf-ranks-toggle-knob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left .2s;"></div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div id="osf-ranks-toggle-label" style="font-weight:700;font-size:13px;color:var(--text1);">Stopnie wojskowe: UKRYTE</div>
+        <div id="osf-ranks-toggle-desc" style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4;">Uczestnicy nie widzą stopni w wynikach online. Kliknij aby pokazać.</div>
+      </div>
+    </div>
+
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
       Udostępnij ten link lub QR kod uczestnikom. Tablica pokazuje na żywo wyniki <strong>tych zawodów OSF</strong> (auto-refresh 10s, bez logowania).
     </div>
@@ -1542,6 +1553,8 @@ tr:last-child > td { border-bottom: none; }
           </button>
         </div>
         <input type="file" id="import-file-config" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importFromFile(event)" />
+        <button class="btn" onclick="splitRanksRetroactive()" style="width:100%;margin-top:8px;font-size:11px;padding:9px;">✂ Rozdziel stopnie od nazwisk</button>
+        <div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.4;">Wyciąga skrót stopnia (np. „sierż.") z pola nazwiska do osobnej rubryki — dla list wczytanych wcześniej. Pokaże podgląd przed zmianą.</div>
         <span id="import-file-name" style="font-size:11px;color:var(--text3);font-family:var(--font-m);"></span>
         <span id="sync-status" style="display:none;"></span>
       </div>
@@ -3346,6 +3359,7 @@ function ensureStateDefaults() {
   if (!state.teamLockedPairs.s1) state.teamLockedPairs.s1 = [];
   if (!state.teamLockedPairs.s2) state.teamLockedPairs.s2 = [];
   if (!state.cfg) state.cfg = {};
+  if (state.cfg.showRanks === undefined) state.cfg.showRanks = false; // stopnie w wynikach online domyslnie ukryte
   // Defaulty setup. Merge — żeby stare sloty dostały nowe pola, a nie nadpisywały starych.
   const SETUP_DEFAULTS = {
     accentColor: '#e8944d', name: '', city: '', date: '', org: '', notes: '',
@@ -4611,11 +4625,12 @@ function openAddModal() {
 }
 
 function addAthlete() {
-  const rank   = document.getElementById('add-rank').value.trim();
-  const name   = document.getElementById('add-name').value.trim();
+  let rank   = document.getElementById('add-rank').value.trim();
+  let name   = document.getElementById('add-name').value.trim();
   const gender = document.getElementById('add-gender').value;
   const team   = document.getElementById('add-team').value.trim();
   if (!name) { alert('Podaj imię i nazwisko.'); return; }
+  if (!rank) { const sr = splitRank(name); rank = sr.rank; name = sr.name; } // auto-odciecie stopnia gdy wpisany w nazwisko
   state.athletes.push({ id: nextId(), rank, name, gender, team, bib: '', pk: false });
   assignBibs();
   save();
@@ -4739,7 +4754,21 @@ function warningBadge(warnings) {
     '<span style="color:' + color + ';font-size:14px;">⚠</span></td>';
 }
 
+// Idempotentnie przenosi stopnie sklejone w nazwisku do osobnego pola — obejmuje
+// listy wczytane wczesniej i zsynchronizowane z chmury. Zapis tylko gdy cos zmieniono.
+function _autoSplitRanks() {
+  if (!state || !Array.isArray(state.athletes)) return;
+  let changed = 0;
+  state.athletes.forEach(a => {
+    if (!a || (a.rank && String(a.rank).trim())) return;
+    const sr = splitRank(a.name);
+    if (sr.rank) { a.rank = sr.rank; a.name = sr.name; changed++; }
+  });
+  if (changed) save();
+}
+
 function renderAthletes() {
+  _autoSplitRanks();
   const tbody = document.getElementById('athletes-tbody');
   const empty = document.getElementById('athletes-empty');
   const filterGender = document.getElementById('filter-gender')?.value || 'all';
@@ -4807,7 +4836,7 @@ function renderAthletes() {
     html += '<td class="mono text-muted" style="font-size:12px;">' + (i+1) + '</td>';
     html += warningBadge(warnings);
     html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
-    html += '<td style="font-size:11px;color:var(--text3);">' + esc(a.rank || '') + '</td>';
+    html += '<td style="font-size:11px;color:var(--text3);text-align:right;padding-right:14px;white-space:nowrap;">' + esc(a.rank || '') + '</td>';
     html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a.m36 ? ' <span class="m36-badge">M36+</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(a.team) + '</td>';
     html += '<td class="mono" style="color:var(--orange);">' + a.bib + '</td>';
@@ -7738,6 +7767,34 @@ function _refreshOsfPublicShareUI() {
     lbl.textContent = 'Publikacja: WYŁĄCZONA';
     lbl.style.color = 'var(--text1)';
     desc.textContent = 'Uczestnicy z QR/linkiem zobaczą "Niedostępne". Kliknij aby włączyć.';
+  }
+  if (typeof _refreshOsfShowRanksUI === 'function') _refreshOsfShowRanksUI();
+}
+
+// ─── Stopnie w wynikach online (state.cfg.showRanks — synced do osf_state, Worker redaguje) ───
+function toggleOsfShowRanks() {
+  if (!state.cfg) state.cfg = {};
+  state.cfg.showRanks = !state.cfg.showRanks;
+  save();
+  _refreshOsfShowRanksUI();
+  showToast(state.cfg.showRanks ? '✓ Stopnie widoczne w wynikach online' : '⏸ Stopnie ukryte w wynikach online',
+            state.cfg.showRanks ? 'success' : 'warning');
+}
+function _refreshOsfShowRanksUI() {
+  const on = !!(state.cfg && state.cfg.showRanks);
+  const sw = document.getElementById('osf-ranks-toggle-switch');
+  const knob = document.getElementById('osf-ranks-toggle-knob');
+  const lbl = document.getElementById('osf-ranks-toggle-label');
+  const desc = document.getElementById('osf-ranks-toggle-desc');
+  if (!sw) return;
+  if (on) {
+    sw.style.background = 'var(--green)'; knob.style.left = '22px';
+    lbl.textContent = 'Stopnie wojskowe: WIDOCZNE'; lbl.style.color = 'var(--green)';
+    desc.textContent = 'Stopnie pokazywane przy nazwiskach w wynikach online.';
+  } else {
+    sw.style.background = 'var(--border2)'; knob.style.left = '2px';
+    lbl.textContent = 'Stopnie wojskowe: UKRYTE'; lbl.style.color = 'var(--text1)';
+    desc.textContent = 'Uczestnicy nie widzą stopni w wynikach online. Kliknij aby pokazać.';
   }
 }
 
@@ -12057,6 +12114,47 @@ function triggerDownload(url, filename) {
 // ═══════════════════════════════════════════════════
 // IMPORT FROM FILE
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// PARSER STOPNI WOJSKOWYCH — odcina skrot stopnia od imienia/nazwiska
+// (najdluzszy wariant najpierw, po normalizacji: kropki->spacje, bez
+//  diakrytykow — odporne na "st.szer." i "sierz.").
+// ═══════════════════════════════════════════════════════════════
+const _MIL_RANKS = ['szer.','st. szer.','st. szer. spec.','kpr.','st. kpr.','plut.','sierż.','st. sierż.','mł. chor.','chor.','st. chor.','st. chor. sztab.','ppor.','por.','kpt.','mjr','ppłk','płk','gen. bryg.','gen. dyw.','gen. broni','gen.','mar.','st. mar.','st. mar. spec.','mat','st. mat','bsmt','bsm.','st. bsm.','mł. chor. mar.','chor. mar.','st. chor. mar.','st. chor. sztab. mar.','ppor. mar.','por. mar.','kpt. mar.','kmdr ppor.','kmdr por.','kmdr','kadm.','wadm.','adm. floty','adm.','marsz.'];
+function _normRankTok(t) { return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/ł/g,'l').replace(/\./g,'').trim(); }
+const _RANK_TABLE = _MIL_RANKS.map(r => ({ canon: r, toks: r.replace(/\./g,'. ').split(/\s+/).filter(Boolean).map(_normRankTok) })).sort((a,b) => b.toks.length - a.toks.length);
+function splitRank(full) {
+  full = String(full || '').trim();
+  if (!full) return { rank: '', name: '' };
+  const parts = full.replace(/\./g,'. ').split(/\s+/).filter(Boolean);
+  const norm = parts.map(_normRankTok);
+  for (const r of _RANK_TABLE) {
+    const k = r.toks.length;
+    if (k >= parts.length) continue;
+    let ok = true;
+    for (let i = 0; i < k; i++) { if (norm[i] !== r.toks[i]) { ok = false; break; } }
+    if (ok) return { rank: r.canon, name: parts.slice(k).join(' ').trim() };
+  }
+  return { rank: '', name: full };
+}
+
+function splitRanksRetroactive() {
+  const cand = [];
+  state.athletes.forEach(a => {
+    if (a.rank && String(a.rank).trim()) return;
+    const sr = splitRank(a.name);
+    if (sr.rank) cand.push({ a, rank: sr.rank, name: sr.name });
+  });
+  if (!cand.length) { showToast('Nie znaleziono stopni do rozdzielenia', 'warning'); return; }
+  const preview = cand.slice(0, 15).map(c => '• ' + c.a.name + '  →  [' + c.rank + ']  ' + c.name).join('\n');
+  const more = cand.length > 15 ? '\n…i ' + (cand.length - 15) + ' więcej' : '';
+  if (!confirm('Znaleziono ' + cand.length + ' stopni do rozdzielenia od nazwiska:\n\n' + preview + more + '\n\nPrzenieść skróty stopni do osobnego pola?')) return;
+  cand.forEach(c => { c.a.rank = c.rank; c.a.name = c.name; });
+  save();
+  renderAthletes();
+  updateStats();
+  showToast('✓ Rozdzielono ' + cand.length + ' stopni', 'success');
+}
+
 function importFromFile(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -12158,7 +12256,8 @@ function parseImportRows(raw) {
     const pkRaw  = col.pk >= 0 ? String(row[col.pk] || '').trim() : '';
     const pk     = pkRaw.length > 0;
 
-    result.push({ name, gender: gNorm, team, bib: bibRaw ? parseInt(bibRaw) : null, m36, pk });
+    const sr = splitRank(name);
+    result.push({ rank: sr.rank, name: sr.name, gender: gNorm, team, bib: bibRaw ? parseInt(bibRaw) : null, m36, pk });
   }
   return result;
 }
@@ -12264,7 +12363,7 @@ function _doImportRows(rows) {
   }
 
   newRows.forEach(r => {
-    state.athletes.push({ id: nextId(), rank: '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: r.pk || false, m36: r.m36 || false });
+    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: r.pk || false, m36: r.m36 || false });
   });
   assignBibs();
   save();
