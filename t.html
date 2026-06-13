@@ -358,7 +358,6 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-card.top-2 { border-color: var(--silver); background: linear-gradient(135deg, var(--bg2) 0%, rgba(192,200,204,.06) 100%); }
 .rank-card.top-3 { border-color: var(--bronze); background: linear-gradient(135deg, var(--bg2) 0%, rgba(205,138,74,.06) 100%); }
 .rank-card.dsq { opacity: .5; }
-.rank-card.name-card { display: block; }
 .td-chip.medal-1 { border: 2px solid var(--gold); background: rgba(255,210,74,.13); }
 .td-chip.medal-2 { border: 2px solid var(--silver); background: rgba(192,200,204,.13); }
 .td-chip.medal-3 { border: 2px solid var(--bronze); background: rgba(205,138,74,.13); }
@@ -379,6 +378,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-team-link { cursor: pointer; transition: color .12s; display: inline-block; }
 .rank-team-link:hover { color: var(--accent); }
 .rank-team-link:active { color: var(--accent); }
+.team-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 999px; padding: 8px 18px; color: var(--text1); font-family: var(--font-b); font-weight: 700; font-size: 14px; cursor: pointer; transition: border-color .12s, color .12s; }
+.team-pill:hover, .team-pill:active { border-color: var(--accent); color: var(--accent); }
+.team-pill .ic { font-size: 16px; color: var(--accent); }
 .rank-card.flash { animation: cardflash 2.4s ease-out; }
 @keyframes cardflash {
   0%   { box-shadow: 0 0 0 3px var(--accent); background: rgba(255,255,255,.07); }
@@ -1875,8 +1877,10 @@ function _gotoRanking(tabId, opts) {
 
 function _athTeamSection(team) {
   if (!team) return '';
-  return '<div class="td-section-lbl">Drużyna</div>' +
-    '<div class="rank-card name-card"><div class="rank-info"><div class="rank-name rank-team-link" data-team="' + esc(team) + '">' + esc(team) + '</div></div></div>';
+  return '<div class="td-section-lbl" style="text-align:center">Drużyna</div>' +
+    '<div style="display:flex;justify-content:center;margin-bottom:6px;">' +
+    '<div class="team-pill rank-team-link" data-team="' + esc(team) + '">' + ic('shield') + '<span>' + esc(team) + '</span></div>' +
+    '</div>';
 }
 
 function _renderAthleteDetailWrap() {
