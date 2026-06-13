@@ -373,8 +373,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-team-link:hover { color: var(--accent); text-decoration-color: var(--accent); }
 .rank-card.flash { animation: cardflash 2.4s ease-out; }
 @keyframes cardflash {
-  0%   { box-shadow: 0 0 0 3px var(--accent); background: rgba(232,212,77,.16); }
-  100% { box-shadow: 0 0 0 0 rgba(232,212,77,0); }
+  0%   { box-shadow: 0 0 0 3px var(--accent); background: rgba(255,255,255,.07); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
 }
 .td-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
 .td-chip { flex: 1; min-width: 120px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
@@ -1982,6 +1982,13 @@ function renderDetail() {
 // MAIN BOOT — z ?slot=
 // ═══════════════════════════════════════════════════════════════
 
+// Akcent aplikacji wg konkurencji (kanon paneli): patrol zielony, OSF pomarancz, wieloboj zloto.
+// Zmienia TYLKO token --accent — uklad i reszta kolorow (M/K, medale, semantyka) bez zmian.
+function _applyAccent(type) {
+  const c = type === 'patrol' ? '#4caf82' : (type === 'osf' ? '#e8944d' : '#e8d44d');
+  document.documentElement.style.setProperty('--accent', c);
+}
+
 async function loadAndRender() {
   try {
     const slotData = await loadSlotMeta(URL_SLOT);
@@ -1994,6 +2001,7 @@ async function loadAndRender() {
     _slot = slotData.row;
     _slotMeta = slotData.meta;
     _competitionType = _resolveType(_slotMeta.type);
+    _applyAccent(_competitionType);
 
     // Header: tylko typ zawodow (subtelnie), nazwa idzie do hero
     const typeLabel = _competitionType === 'wielobój' ? 'Wielobój' : (_competitionType === 'osf' ? 'OSF' : 'Patrol');
