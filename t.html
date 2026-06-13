@@ -358,7 +358,6 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-card.top-2 { border-color: var(--silver); background: linear-gradient(135deg, var(--bg2) 0%, rgba(192,200,204,.06) 100%); }
 .rank-card.top-3 { border-color: var(--bronze); background: linear-gradient(135deg, var(--bg2) 0%, rgba(205,138,74,.06) 100%); }
 .rank-card.dsq { opacity: .5; }
-.rank-card.info-card { grid-template-columns: 1fr auto; }
 .rank-card.name-card { display: block; }
 .td-chip.medal-1 { border: 2px solid var(--gold); background: rgba(255,210,74,.13); }
 .td-chip.medal-2 { border: 2px solid var(--silver); background: rgba(192,200,204,.13); }
@@ -1775,12 +1774,13 @@ function _teamDetailPatrol(team) {
 
   if (tr) {
     const shotD = (tr.tr.shotPoints !== undefined && tr.tr.shotPoints !== null && tr.tr.shotPoints !== '') ? (tr.tr.shotPoints + ' pkt') : '—';
-    html += '<div class="td-section-lbl">Bieg drużynowy</div>' +
-      '<div class="rank-card info-card"><div class="rank-info"><div class="rank-details">' +
-      '<span><span class="rank-detail-lbl">' + ic('run') + '</span><span class="rank-detail-val">' + _formatTeamSec(parseFloat(tr.tr.biegSec)) + '</span></span>' +
-      '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' OSF</span><span class="rank-detail-val">' + _formatTeamSec(parseFloat(tr.tr.osfSec)) + '</span></span>' +
-      '<span><span class="rank-detail-lbl">' + ic('target') + '</span><span class="rank-detail-val">' + shotD + '</span></span>' +
-      '</div></div><div><div class="rank-score">' + (tr.pts !== null ? tr.pts : '—') + '</div><div class="rank-score-lbl">pkt</div></div></div>';
+    html += '<div class="td-section-lbl" style="text-align:center">Bieg drużynowy</div>' +
+      '<div class="stat-row">' +
+      _statTile('run', _formatTeamSec(parseFloat(tr.tr.biegSec)), 'Bieg') +
+      _statTile('stopwatch', _formatTeamSec(parseFloat(tr.tr.osfSec)), 'OSF') +
+      _statTile('target', shotD, 'Strzelanie') +
+      _statTile('trophy', (tr.pts !== null ? tr.pts : '—'), 'Punkty', true) +
+      '</div>';
   }
 
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(_tdAthRowPatrol).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
