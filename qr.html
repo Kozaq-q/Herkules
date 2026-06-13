@@ -243,11 +243,6 @@
     Działa na każdym współczesnym smartfonie z Android lub iOS.
   </div>
 
-  <div class="url-section">
-    <div class="url-label">Lub wpisz w przeglądarce</div>
-    <div class="url" id="url-text">—</div>
-  </div>
-
   <div class="footer">militarysportsystem.pl</div>
 </div>
 
@@ -275,8 +270,11 @@ const _TYPE_LABELS = { patrol: 'Bieg patrolowy', osf: 'OSF', wieloboj: 'Wielobó
   const lbl = _TYPE_LABELS[t];
   if (lbl) { chipEl.textContent = lbl; chipEl.style.display = 'inline-block'; }
 
-  // Nazwa
-  document.getElementById('event-name').textContent = n;
+  // Nazwa — ukryj gdy pokrywa sie z chipem (panel podstawia nazwe typu gdy brak nazwy zawodow)
+  const nameEl = document.getElementById('event-name');
+  const dupesChip = lbl && n.trim().toLowerCase() === lbl.toLowerCase();
+  if (dupesChip) { nameEl.style.display = 'none'; }
+  else { nameEl.textContent = n; }
 
   // Meta: miasto + data
   const metaEl = document.getElementById('event-meta');
@@ -285,9 +283,6 @@ const _TYPE_LABELS = { patrol: 'Bieg patrolowy', osf: 'OSF', wieloboj: 'Wielobó
   const df = _formatDate(d);
   if (df) parts.push('<span>' + _esc(df) + '</span>');
   metaEl.innerHTML = parts.join('<span class="sep">·</span>');
-
-  // URL
-  document.getElementById('url-text').textContent = u;
 
   // QR
   if (u && typeof QRious !== 'undefined') {
