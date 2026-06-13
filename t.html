@@ -400,8 +400,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .td-chip-link:hover { border-color: var(--accent); }
 #to-top { position: fixed; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
 #to-top.show { display: flex; }
-#to-home { position: fixed; left: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
-#to-home.show { display: flex; }
+#to-back { position: fixed; left: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+#to-back.show { display: flex; }
 .rank-details { display: flex; flex-wrap: wrap; gap: 8px 14px; font-family: var(--font-m); font-size: 11px; color: var(--text3); }
 .rank-detail-lbl { color: var(--text3); margin-right: 3px; }
 .rank-detail-val { color: var(--text2); }
@@ -516,7 +516,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   <div class="loading">Ładowanie…</div>
 </main>
 <button id="to-top" aria-label="Na górę" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
-<button id="to-home" aria-label="Do kategorii" onclick="showTileMenu()"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
+<button id="to-back" aria-label="Wstecz" onclick="_navBack()"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14 0"/><path d="M5 12l6 6"/><path d="M5 12l6 -6"/></svg></button>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -806,6 +806,7 @@ const _ICONS = {
   lock: '<path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>',
   qr: '<path d="M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M7 17l0 .01"/><path d="M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M14 14l0 .01"/><path d="M14 19l0 .01"/><path d="M19 14l0 .01"/><path d="M19 19l0 .01"/>',
   alert: '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
+  home: '<path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/>',
   moodEmpty: '<path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9 15l6 0"/>'
 };
 function ic(name) {
@@ -1613,10 +1614,9 @@ function _navBack() {
   renderActiveView();
   requestAnimationFrame(() => { try { window.scrollTo(0, s.y || 0); } catch (_) {} });
 }
-function _toggleHomeBtn(on) { const b = document.getElementById('to-home'); if (b) b.classList.toggle('show', !!on); }
-function _backBtn() {
-  const label = _navStack.length ? 'Wstecz' : 'Kategorie';
-  return '<button class="detail-back" onclick="_navBack()"><span class="arrow">←</span><span>' + label + '</span></button>';
+function _toggleBackBtn(on) { const b = document.getElementById('to-back'); if (b) b.classList.toggle('show', !!on); }
+function _homeBtn() {
+  return '<button class="detail-back" onclick="showTileMenu()"><span class="arrow">' + ic('home') + '</span><span>Kategorie</span></button>';
 }
 
 // Trwalosc widoku po recznym odswiezeniu (per slot)
@@ -1699,7 +1699,7 @@ function _renderTeamDetailWrap() {
     else body = '<div class="empty">—</div>';
   } catch (e) { body = '<div class="empty">Błąd: ' + esc(e.message) + '</div>'; }
   return '<div class="detail-wrap">' +
-    _backBtn() +
+    _homeBtn() +
     '<div class="detail-title cat-team-color"><span class="icon">' + ic('shield') + '</span><span>' + esc(name) + '</span></div>' +
     '<div class="detail-subtitle">Karta drużyny</div>' +
     body +
@@ -1881,7 +1881,7 @@ function _athTeamSection(team) {
 
 function _renderAthleteDetailWrap() {
   const a = (_state.athletes || []).find(x => String(x.id) === String(_athleteDetailId));
-  const back = _backBtn();
+  const back = _homeBtn();
   if (!a) return '<div class="detail-wrap">' + back + '<div class="empty">Nie znaleziono zawodnika</div></div>';
   const name = (a.rank ? a.rank + ' ' : '') + (a.name || 'Bez nazwy');
   let body = '';
@@ -2029,7 +2029,7 @@ function renderActiveView() {
 
 function renderTileMenu() {
   _saveView();
-  _toggleHomeBtn(false);
+  _toggleBackBtn(false);
   const tabs = _getTabsForType();
   if (!tabs.length) {
     document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">' + ic('alert') + '</div>Nieznany typ zawodów</div>';
@@ -2051,7 +2051,7 @@ function renderTileMenu() {
 
 function renderDetail() {
   _saveView();
-  _toggleHomeBtn(true);
+  _toggleBackBtn(true);
   if (_activeTab === '__team') {
     document.getElementById('main').innerHTML = _renderTeamDetailWrap();
     return;
@@ -2069,7 +2069,7 @@ function renderDetail() {
   const titleColorCls = (tab.cls || '').replace('cat-', 'cat-') + '-color';
   const html =
     '<div class="detail-wrap">' +
-    _backBtn() +
+    _homeBtn() +
     '<div class="detail-title ' + titleColorCls + '"><span class="icon">' + tab.icon + '</span><span>' + esc(tab.label) + '</span></div>' +
     (tab.sub ? '<div class="detail-subtitle">' + esc(tab.sub) + '</div>' : '') +
     tab.render() +
