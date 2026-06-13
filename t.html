@@ -417,6 +417,12 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .empty-icon { font-size: 48px; opacity: .3; margin-bottom: 16px; }
 .ic { display: inline-flex; align-items: center; justify-content: center; vertical-align: -0.15em; }
 .ic svg { width: 1em; height: 1em; display: block; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 10px; margin-bottom: 6px; }
+.stat-tile { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 8px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.stat-tile .st-ic { color: var(--accent); font-size: 18px; display: block; margin-bottom: 5px; }
+.stat-tile .st-val { font-family: var(--font-m); font-size: 19px; font-weight: 700; color: var(--text1); line-height: 1.1; word-break: break-word; }
+.stat-tile .st-val.st-val-accent { color: var(--accent); }
+.stat-tile .st-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-top: 5px; }
 
 /* LOADING */
 .loading { text-align: center; padding: 60px 20px; color: var(--text3); font-family: var(--font-m); font-size: 12px; }
@@ -1873,14 +1879,30 @@ function _renderAthleteDetailWrap() {
     '<div class="detail-subtitle">Karta zawodnika</div>' + body + '</div>';
 }
 
+function _statTile(iconName, val, lbl, accent) {
+  const icHtml = iconName ? '<span class="st-ic">' + ic(iconName) + '</span>' : '';
+  return '<div class="stat-tile">' + icHtml + '<div class="st-val' + (accent ? ' st-val-accent' : '') + '">' + esc(String(val)) + '</div><div class="st-lbl">' + esc(lbl) + '</div></div>';
+}
+
 function _athleteDetailPatrol(a) {
   const row = _patrolGenderStandings(a.gender).find(r => r.ath.id === a.id);
   const place = (row && row._place) ? row._place : '—';
   const catId = a.gender === 'K' ? 'k' : 'm';
   let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
-  html += _athTeamSection(a.team || '');
   html += '<div class="td-section-lbl">Wynik</div>';
-  html += row ? _tdAthRowPatrol(row) : '<div class="empty" style="padding:18px;">Brak wpisanego wyniku</div>';
+  if (row) {
+    const pts = (row._pts !== null && row._pts !== undefined) ? row._pts : (row.dsq ? 'DSQ' : '—');
+    const shot = _shotPointsFromRow(row);
+    html += '<div class="stat-grid">' +
+      _statTile('trophy', pts, 'Punkty', true) +
+      _statTile('run', _formatTotalDisplay(row), 'Bieg') +
+      _statTile('stopwatch', row.osf || '—', 'OSF') +
+      _statTile('target', shot !== null ? shot + ' pkt' : '—', 'Strzelanie') +
+    '</div>';
+  } else {
+    html += '<div class="empty" style="padding:18px;">Brak wpisanego wyniku</div>';
+  }
+  html += _athTeamSection(a.team || '');
   return html;
 }
 
@@ -1892,12 +1914,13 @@ function _athleteDetailOsf(a) {
   const s2 = _osfGetTime(_state, a.id, 's2') || '—';
   const best = _osfBestTime(_state, a.id) || '—';
   let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
-  html += _athTeamSection(a.team || '');
   html += '<div class="td-section-lbl">Czasy</div>' +
-    '<div class="rank-card info-card"><div class="rank-info"><div class="rank-details">' +
-    '<span><span class="rank-detail-lbl">S1:</span><span class="rank-detail-val">' + esc(s1) + '</span></span>' +
-    '<span><span class="rank-detail-lbl">S2:</span><span class="rank-detail-val">' + esc(s2) + '</span></span>' +
-    '</div></div><div><div class="rank-score">' + esc(best) + '</div><div class="rank-score-lbl">najl.</div></div></div>';
+    '<div class="stat-grid">' +
+    _statTile('stopwatch', s1, 'Seria 1') +
+    _statTile('stopwatch', s2, 'Seria 2') +
+    _statTile('target', best, 'Najlepszy', true) +
+    '</div>';
+  html += _athTeamSection(a.team || '');
   return html;
 }
 
@@ -1909,14 +1932,15 @@ function _athleteDetailWieloboj(a) {
   const team = (_state.teams || []).find(t => t.id == a.teamId);
   const teamName = team ? team.name : (a.team || '');
   let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, (a.gender === 'K' ? 'Kobiety' : 'Mężczyźni') + (a.cat ? ' · ' + a.cat : ''), { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
-  html += _athTeamSection(teamName);
   html += '<div class="td-section-lbl">Punkty</div>' +
-    '<div class="rank-card info-card"><div class="rank-info"><div class="rank-details">' +
-    '<span><span class="rank-detail-lbl">K1:</span><span class="rank-detail-val">' + Math.round(p.k1) + '</span></span>' +
-    '<span><span class="rank-detail-lbl">K2:</span><span class="rank-detail-val">' + Math.round(p.k2) + '</span></span>' +
-    '<span><span class="rank-detail-lbl">K3:</span><span class="rank-detail-val">' + Math.round(p.k3) + '</span></span>' +
-    '<span><span class="rank-detail-lbl">K4:</span><span class="rank-detail-val">' + Math.round(p.k4) + '</span></span>' +
-    '</div></div><div><div class="rank-score">' + Math.round(p.total) + '</div><div class="rank-score-lbl">pkt</div></div></div>';
+    '<div class="stat-grid">' +
+    _statTile('trophy', Math.round(p.total), 'Suma', true) +
+    _statTile('', Math.round(p.k1), 'K1') +
+    _statTile('', Math.round(p.k2), 'K2') +
+    _statTile('', Math.round(p.k3), 'K3') +
+    _statTile('', Math.round(p.k4), 'K4') +
+    '</div>';
+  html += _athTeamSection(teamName);
   return html;
 }
 
