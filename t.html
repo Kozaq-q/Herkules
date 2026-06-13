@@ -385,7 +385,10 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   0%   { box-shadow: 0 0 0 3px var(--accent); background: rgba(255,255,255,.07); }
   100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
 }
-.td-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.td-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; justify-content: center; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 6px; }
+.stat-row .stat-tile { width: 92px; }
+.td-chip-big.td-chip-accentval { color: var(--accent); }
 .td-chip { box-sizing: border-box; flex: 0 0 auto; width: 108px; height: 108px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .td-chip-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; line-height: 1.15; }
 .td-chip-big { font-size: 38px; font-weight: 800; color: var(--text1); line-height: 1; margin: 5px 0 3px; }
@@ -1679,7 +1682,8 @@ function _tdChip(lbl, big, sub, opts) {
     ? (' data-goto="' + esc(opts.goto) + '"' + (opts.team ? ' data-team="' + esc(opts.team) + '"' : '') + (opts.aid ? ' data-aid="' + esc(String(opts.aid)) + '"' : ''))
     : '';
   const medalCls = (opts.rank >= 1 && opts.rank <= 3) ? (' medal-' + opts.rank) : '';
-  return '<div class="td-chip' + cls + medalCls + '"' + attrs + '><div class="td-chip-lbl">' + lbl + '</div><div class="td-chip-big">' + esc(String(big)) + '</div><div class="td-chip-sub">' + esc(String(sub)) + '</div></div>';
+  const bigCls = opts.accent ? ' td-chip-accentval' : '';
+  return '<div class="td-chip' + cls + medalCls + '"' + attrs + '><div class="td-chip-lbl">' + lbl + '</div><div class="td-chip-big' + bigCls + '">' + esc(String(big)) + '</div><div class="td-chip-sub">' + esc(String(sub)) + '</div></div>';
 }
 
 function _renderTeamDetailWrap() {
@@ -1897,19 +1901,20 @@ function _athleteDetailPatrol(a) {
   const row = _patrolGenderStandings(a.gender).find(r => r.ath.id === a.id);
   const place = (row && row._place) ? row._place : '—';
   const catId = a.gender === 'K' ? 'k' : 'm';
-  let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
-  html += '<div class="td-section-lbl">Wynik</div>';
+  const miejsceChip = _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 });
+  let html;
   if (row) {
     const pts = (row._pts !== null && row._pts !== undefined) ? row._pts : (row.dsq ? 'DSQ' : '—');
     const shot = _shotPointsFromRow(row);
-    html += '<div class="stat-grid">' +
-      _statTile('trophy', pts, 'Punkty', true) +
+    html = '<div class="td-chips">' + miejsceChip + _tdChip(ic('trophy') + ' Wynik', pts, 'punkty', { accent: true }) + '</div>';
+    html += '<div class="td-section-lbl" style="text-align:center">Konkurencje</div>' +
+      '<div class="stat-row">' +
       _statTile('run', _formatTotalDisplay(row), 'Bieg') +
       _statTile('stopwatch', row.osf || '—', 'OSF') +
       _statTile('target', shot !== null ? shot + ' pkt' : '—', 'Strzelanie') +
-    '</div>';
+      '</div>';
   } else {
-    html += '<div class="empty" style="padding:18px;">Brak wpisanego wyniku</div>';
+    html = '<div class="td-chips">' + miejsceChip + '</div><div class="empty" style="padding:18px;">Brak wpisanego wyniku</div>';
   }
   html += _athTeamSection(a.team || '');
   return html;
@@ -1922,12 +1927,14 @@ function _athleteDetailOsf(a) {
   const s1 = _osfGetTime(_state, a.id, 's1') || '—';
   const s2 = _osfGetTime(_state, a.id, 's2') || '—';
   const best = _osfBestTime(_state, a.id) || '—';
-  let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
-  html += '<div class="td-section-lbl">Czasy</div>' +
-    '<div class="stat-grid">' +
+  let html = '<div class="td-chips">' +
+    _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) +
+    _tdChip(ic('target') + ' Najlepszy', best, 'czas', { accent: true }) +
+    '</div>';
+  html += '<div class="td-section-lbl" style="text-align:center">Serie</div>' +
+    '<div class="stat-row">' +
     _statTile('stopwatch', s1, 'Seria 1') +
     _statTile('stopwatch', s2, 'Seria 2') +
-    _statTile('target', best, 'Najlepszy', true) +
     '</div>';
   html += _athTeamSection(a.team || '');
   return html;
@@ -1940,10 +1947,12 @@ function _athleteDetailWieloboj(a) {
   const p = _wjGetAthletePoints(_state, a.id);
   const team = (_state.teams || []).find(t => t.id == a.teamId);
   const teamName = team ? team.name : (a.team || '');
-  let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, (a.gender === 'K' ? 'Kobiety' : 'Mężczyźni') + (a.cat ? ' · ' + a.cat : ''), { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
-  html += '<div class="td-section-lbl">Punkty</div>' +
-    '<div class="stat-grid">' +
-    _statTile('trophy', Math.round(p.total), 'Suma', true) +
+  let html = '<div class="td-chips">' +
+    _tdChip(ic('clipboard') + ' Miejsce', place, (a.gender === 'K' ? 'Kobiety' : 'Mężczyźni') + (a.cat ? ' · ' + a.cat : ''), { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) +
+    _tdChip(ic('trophy') + ' Wynik', Math.round(p.total), 'punkty', { accent: true }) +
+    '</div>';
+  html += '<div class="td-section-lbl" style="text-align:center">Konkurencje</div>' +
+    '<div class="stat-row">' +
     _statTile('', Math.round(p.k1), 'K1') +
     _statTile('', Math.round(p.k2), 'K2') +
     _statTile('', Math.round(p.k3), 'K3') +
