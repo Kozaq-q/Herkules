@@ -764,7 +764,7 @@ function _searchInState(qn) {
       const nMatch = _normForSearch(a.name || '').includes(qn);
       const tMatch = _normForSearch(teamName).includes(qn);
       if (!nMatch && !tMatch) return;
-      const catId = a.gender === 'K' ? 'k' : 'm';
+      const catId = (a.cat || (a.gender === 'K' ? 'k' : 'm')).toLowerCase();
       const tab = findTab(catId);
       hits.push({
         name: (a.rank ? a.rank + ' ' : '') + a.name, meta: teamName + (a.cat ? ' · ' + a.cat : ''),
@@ -1074,14 +1074,15 @@ function renderPatrolTeam() {
     if (classified.length < 3) continue;
     const top3 = classified.slice(0, 3);
     const sum = top3.reduce((s, r) => s + r._pts, 0);
-    teamRows.push({ team, sum, top3 });
+    teamRows.push({ team, sum, top3, classified: classified.length });
   }
 
   if (teamRows.length === 0) {
     return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak drużyn z 3 sklasyfikowanymi M</div>';
   }
 
-  teamRows.sort((a, b) => a.sum - b.sum);
+  // Sortowanie jak w panelu (calcTeamScore/renderTeamView): najpierw liczba sklasyfikowanych M (malejaco), potem suma rosnaco
+  teamRows.sort((a, b) => a.classified !== b.classified ? b.classified - a.classified : a.sum - b.sum);
 
   return teamRows.map((r, i) => {
     const rank = i + 1;
@@ -1484,23 +1485,21 @@ function _wjGetAthletePoints(state, athleteId) {
   return { k1: k1p, k2: k2p, k3: k3p, k4: k4p, total: k1p + k2p + k3p + k4p };
 }
 
-function renderWielobojIndividual(gender) {
+function renderWielobojIndividual(cat) {
   if (!_state.athletes || _state.athletes.length === 0) {
     return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak zawodników</div>';
   }
   const rows = _state.athletes
-    .filter(a => a.gender === gender && !a.pk)
-    .map(a => {
-      const pts = _wjGetAthletePoints(_state, a.id);
-      return { ath: a, pts };
-    })
+    .filter(a => a.cat === cat && !a.pk)
+    .map(a => ({ ath: a, pts: _wjGetAthletePoints(_state, a.id) }))
     .filter(r => r.pts.total > 0);
 
   if (rows.length === 0) {
     return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak wpisanych wyników</div>';
   }
 
-  rows.sort((a, b) => b.pts.total - a.pts.total);
+  // Sortowanie jak panel renderIndivRanking: suma malejaco, tie-break po K2 (bieg) malejaco
+  rows.sort((a, b) => (b.pts.total - a.pts.total) || (b.pts.k2 - a.pts.k2));
 
   return rows.map((r, i) => {
     const rank = i + 1;
@@ -1533,49 +1532,46 @@ function renderWielobojIndividual(gender) {
   }).join('');
 }
 
+// Wynik drużyny wieloboju — odtworzenie getTeamScore() z panelu:
+// tryb domyslny = top teamLimitM M + top teamLimitK K (limity z setup, fallback bez limitu);
+// tryb teamLimitOpen = N najlepszych lacznie (teamLimitOpenN). Tylko !pk.
+function _wjTeamScore(team) {
+  const setup = _state.setup || {};
+  const all = (_state.athletes || []).filter(a => a.teamId == team.id && !a.pk).map(a => ({ a, pts: _wjGetAthletePoints(_state, a.id).total }));
+  if (setup.teamLimitOpen) {
+    const limitN = (setup.teamLimitOpenN != null) ? setup.teamLimitOpenN : Infinity;
+    const used = [...all].sort((x, y) => y.pts - x.pts).slice(0, limitN);
+    return { team, open: true, total: used.reduce((s, x) => s + x.pts, 0), mUsed: used.filter(x => x.a.gender === 'M').length, kUsed: used.filter(x => x.a.gender === 'K').length };
+  }
+  const limitM = (setup.teamLimitM != null) ? setup.teamLimitM : Infinity;
+  const limitK = (setup.teamLimitK != null) ? setup.teamLimitK : Infinity;
+  const menUsed = all.filter(x => x.a.gender === 'M').sort((a, b) => b.pts - a.pts).slice(0, limitM);
+  const womenUsed = all.filter(x => x.a.gender === 'K').sort((a, b) => b.pts - a.pts).slice(0, limitK);
+  return { team, open: false, sumMen: menUsed.reduce((s, x) => s + x.pts, 0), sumWomen: womenUsed.reduce((s, x) => s + x.pts, 0), mUsed: menUsed.length, kUsed: womenUsed.length, total: [...menUsed, ...womenUsed].reduce((s, x) => s + x.pts, 0) };
+}
+
 function renderWielobojTeam() {
-  // Suma punktów top 5 M + top 3 K z drużyny (uproszczona klasyfikacja)
   if (!_state.athletes || _state.athletes.length === 0) {
     return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak zawodników</div>';
   }
-  const teams = _state.teams || [];
-  const teamRows = teams.map(team => {
-    const ath = _state.athletes.filter(a => a.teamId == team.id && !a.pk);
-    const men = ath.filter(a => a.gender === 'M').map(a => ({ a, pts: _wjGetAthletePoints(_state, a.id).total })).filter(x => x.pts > 0);
-    const women = ath.filter(a => a.gender === 'K').map(a => ({ a, pts: _wjGetAthletePoints(_state, a.id).total })).filter(x => x.pts > 0);
-    men.sort((a, b) => b.pts - a.pts);
-    women.sort((a, b) => b.pts - a.pts);
-    const topMen = men.slice(0, 5);
-    const topWomen = women.slice(0, 3);
-    const sumMen = topMen.reduce((s, x) => s + x.pts, 0);
-    const sumWomen = topWomen.reduce((s, x) => s + x.pts, 0);
-    const total = sumMen + sumWomen;
-    return { team, total, sumMen, sumWomen, mCount: topMen.length, kCount: topWomen.length };
-  }).filter(t => t.total > 0);
-
-  if (teamRows.length === 0) {
+  const rows = (_state.teams || []).map(t => _wjTeamScore(t)).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+  if (!rows.length) {
     return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak drużyn z wynikami</div>';
   }
-
-  teamRows.sort((a, b) => b.total - a.total);
-
-  return teamRows.map((r, i) => {
+  return rows.map((r, i) => {
     const rank = i + 1;
     const topCls = rank <= 3 ? ' top-' + rank : '';
-    const medal = _medal(rank);
+    const detail = r.open
+      ? '<span><span class="rank-detail-lbl">Najlepszych ' + (r.mUsed + r.kUsed) + '</span><span class="rank-detail-val">' + r.mUsed + '×' + ic('male') + ' ' + r.kUsed + '×' + ic('female') + '</span></span>'
+      : '<span><span class="rank-detail-lbl">' + ic('male') + ' M (' + r.mUsed + ')</span><span class="rank-detail-val">' + Math.round(r.sumMen) + '</span></span>' +
+        '<span><span class="rank-detail-lbl">' + ic('female') + ' K (' + r.kUsed + ')</span><span class="rank-detail-val">' + Math.round(r.sumWomen) + '</span></span>';
     return '<div class="rank-card' + topCls + '">' +
-      '<div class="rank-num">' + (medal || rank) + '</div>' +
+      '<div class="rank-num">' + rank + '</div>' +
       '<div class="rank-info">' +
         '<div class="rank-name rank-team-link" data-team="' + esc(r.team.name) + '">' + esc(r.team.name) + '</div>' +
-        '<div class="rank-details" style="margin-top:6px;">' +
-          '<span><span class="rank-detail-lbl">' + ic('male') + ' M (top ' + r.mCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumMen) + '</span></span>' +
-          '<span><span class="rank-detail-lbl">' + ic('female') + ' K (top ' + r.kCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumWomen) + '</span></span>' +
-        '</div>' +
+        '<div class="rank-details" style="margin-top:6px;">' + detail + '</div>' +
       '</div>' +
-      '<div>' +
-        '<div class="rank-score">' + Math.round(r.total) + '</div>' +
-        '<div class="rank-score-lbl">pkt</div>' +
-      '</div>' +
+      '<div><div class="rank-score">' + Math.round(r.total) + '</div><div class="rank-score-lbl">pkt</div></div>' +
     '</div>';
   }).join('');
 }
@@ -1838,27 +1834,22 @@ function _teamDetailOsf(team) {
 }
 
 // ── WIELOBÓJ ──
-function _wjGenderStandings(gender) {
-  const rows = _state.athletes.filter(a => a.gender === gender && !a.pk).map(a => ({ ath: a, pts: _wjGetAthletePoints(_state, a.id) })).filter(r => r.pts.total > 0);
-  rows.sort((a, b) => b.pts.total - a.pts.total); rows.forEach((r, i) => r._place = i + 1); return rows;
+function _wjCatStandings(cat) {
+  const rows = _state.athletes.filter(a => a.cat === cat && !a.pk).map(a => ({ ath: a, pts: _wjGetAthletePoints(_state, a.id) })).filter(r => r.pts.total > 0);
+  rows.sort((a, b) => (b.pts.total - a.pts.total) || (b.pts.k2 - a.pts.k2)); rows.forEach((r, i) => r._place = i + 1); return rows;
 }
 function _wjTeamStandings() {
-  const arr = (_state.teams || []).map(team => {
-    const ath = _state.athletes.filter(a => a.teamId == team.id && !a.pk);
-    const men = ath.filter(a => a.gender === 'M').map(a => _wjGetAthletePoints(_state, a.id).total).filter(p => p > 0).sort((a, b) => b - a);
-    const women = ath.filter(a => a.gender === 'K').map(a => _wjGetAthletePoints(_state, a.id).total).filter(p => p > 0).sort((a, b) => b - a);
-    return { team, total: men.slice(0, 5).reduce((s, x) => s + x, 0) + women.slice(0, 3).reduce((s, x) => s + x, 0) };
-  }).filter(t => t.total > 0);
-  arr.sort((a, b) => b.total - a.total); arr.forEach((r, i) => r.rank = i + 1); return arr;
+  const arr = (_state.teams || []).map(t => _wjTeamScore(t)).filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+  arr.forEach((r, i) => r.rank = i + 1); return arr;
 }
 function _teamDetailWieloboj(team) {
   const tObj = (_state.teams || []).find(t => t.name === team);
   const cls = tObj ? _wjTeamStandings().find(r => r.team.id === tObj.id) : null;
-  const standM = _wjGenderStandings('M'), standK = _wjGenderStandings('K');
+  const stByCat = { M35: _wjCatStandings('M35'), M36: _wjCatStandings('M36'), K35: _wjCatStandings('K35'), K36: _wjCatStandings('K36') };
+  const lookup = a => (stByCat[a.cat] || []).find(r => r.ath.id === a.id) || { ath: a, pts: { total: 0 }, _place: null };
   const inTeam = a => tObj ? (a.teamId == tObj.id) : (a.team === team);
-  const stub = a => ({ ath: a, pts: { total: 0 }, _place: null });
-  const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && inTeam(a)).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
-  const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && inTeam(a)).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
+  const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && inTeam(a)).map(lookup).sort(_tdByPlace);
+  const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && inTeam(a)).map(lookup).sort(_tdByPlace);
   let html = '<div class="td-chips">' + _tdChip(ic('shield') + ' Drużynowa', cls ? cls.rank : '—', cls ? (Math.round(cls.total) + ' pkt') : 'brak wyników', { goto: 'team', team: team, rank: cls ? cls.rank : 0 }) + '</div>';
   const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div>' + (r.ath.cat ? '<div class="rank-team">' + esc(r.ath.cat) + '</div>' : '') + '</div><div><div class="rank-score">' + Math.round(r.pts.total) + '</div><div class="rank-score-lbl">pkt</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
@@ -1962,9 +1953,9 @@ function _athleteDetailOsf(a) {
 }
 
 function _athleteDetailWieloboj(a) {
-  const row = _wjGenderStandings(a.gender).find(r => r.ath.id === a.id);
+  const row = _wjCatStandings(a.cat).find(r => r.ath.id === a.id);
   const place = (row && row._place) ? row._place : '—';
-  const catId = a.gender === 'K' ? 'k' : 'm';
+  const catId = (a.cat || '').toLowerCase();
   const p = _wjGetAthletePoints(_state, a.id);
   const team = (_state.teams || []).find(t => t.id == a.teamId);
   const teamName = team ? team.name : (a.team || '');
@@ -1995,29 +1986,113 @@ const PATROL_TABS = [
   { id: 'overall', label: 'Generalna',  icon: ic('trophy'), cls: 'cat-overall', sub: 'Indywidualna + bieg drużynowy', render: () => renderPatrolOverall() },
 ];
 
+// ── OSF: Generalna (getTeamClassification z panelu) = pkt indywidualne M [+K jesli kScores] + pkt bieg druzynowy ──
+function _osfIndPoints(rank, N) { return rank === 1 ? N + 1 : Math.max(0, N - rank + 1); }
+function _osfBestSec(id) { const b = _osfBestTime(_state, id); return b ? _osfParseTime(b) : Infinity; }
+function _osfRankedMen() {
+  const men = (_state.athletes || []).filter(a => a.gender === 'M' && !a.pk);
+  const N = men.length;
+  const ranked = men.map(a => ({ a, bestSec: _osfBestSec(a.id), sumSec: _osfSumTime(_state, a.id) }))
+    .sort((x, y) => x.bestSec !== y.bestSec ? x.bestSec - y.bestSec : x.sumSec - y.sumSec);
+  const limit = (_state.setup && _state.setup.maxScoringM) ? _state.setup.maxScoringM : 0;
+  const scoringIds = new Map();
+  if (limit > 0) {
+    [...new Set(men.map(a => a.team).filter(Boolean))].forEach(team => {
+      const ids = men.filter(a => a.team === team).map(a => ({ id: a.id, sec: _osfBestSec(a.id) })).filter(x => Number.isFinite(x.sec)).sort((p, q) => p.sec - q.sec).slice(0, limit).map(x => x.id);
+      scoringIds.set(team, new Set(ids));
+    });
+  }
+  let rank = 1;
+  return ranked.map(r => {
+    const noBest = !Number.isFinite(r.bestSec);
+    const scores = (limit === 0 || !r.a.team) ? true : (scoringIds.has(r.a.team) ? scoringIds.get(r.a.team).has(r.a.id) : true);
+    const pts = (noBest || !scores) ? 0 : _osfIndPoints(rank, N);
+    if (!noBest) rank++;
+    return { a: r.a, rank: noBest ? null : rank - 1, pts };
+  });
+}
+function _osfWomenTeamPts() {
+  if (!(_state.setup && _state.setup.kScores)) return {};
+  const nM = (_state.athletes || []).filter(a => a.gender === 'M' && !a.pk).length;
+  const women = (_state.athletes || []).filter(a => a.gender === 'K' && !a.pk)
+    .map(a => ({ a, bestSec: _osfBestSec(a.id), sumSec: _osfSumTime(_state, a.id) }))
+    .sort((x, y) => x.bestSec !== y.bestSec ? x.bestSec - y.bestSec : x.sumSec - y.sumSec);
+  const limitK = (_state.setup.maxScoringK) ? _state.setup.maxScoringK : 0;
+  let scoringW = null;
+  if (limitK > 0) {
+    scoringW = new Map();
+    [...new Set(women.map(w => w.a.team).filter(Boolean))].forEach(team => {
+      const ids = women.filter(w => w.a.team === team && Number.isFinite(w.bestSec)).slice(0, limitK).map(w => w.a.id);
+      scoringW.set(team, new Set(ids));
+    });
+  }
+  const teamPts = {};
+  let rank = 1;
+  women.forEach(w => {
+    if (!Number.isFinite(w.bestSec)) return;
+    const pts = _osfIndPoints(rank, nM); rank++;
+    const t = w.a.team; if (!t) return;
+    const counts = !scoringW || (scoringW.has(t) ? scoringW.get(t).has(w.a.id) : true);
+    if (counts) teamPts[t] = (teamPts[t] || 0) + pts;
+  });
+  return teamPts;
+}
+function _osfGeneralna() {
+  const indPts = {};
+  _osfRankedMen().forEach(r => { const t = r.a.team; if (t) indPts[t] = (indPts[t] || 0) + r.pts; });
+  const wPts = _osfWomenTeamPts();
+  for (const t in wPts) indPts[t] = (indPts[t] || 0) + wPts[t];
+  const teamPts = {};
+  _osfTeamRun().forEach(r => { teamPts[r.team] = r.pts; });
+  const teamSet = new Set();
+  (_state.athletes || []).forEach(a => { if (a.team) teamSet.add(a.team); });
+  Object.keys(teamPts).forEach(t => teamSet.add(t));
+  return [...teamSet].map(team => ({ team, indPts: indPts[team] || 0, teamPts: teamPts[team] || 0, total: (indPts[team] || 0) + (teamPts[team] || 0) })).sort((a, b) => b.total - a.total);
+}
+function renderOsfGeneralna() {
+  if (!_state.athletes || !_state.athletes.length) return '<div class="empty"><div class="empty-icon">' + ic('trophy') + '</div>Brak zawodników</div>';
+  const rows = _osfGeneralna().filter(r => r.total > 0);
+  if (!rows.length) return '<div class="empty"><div class="empty-icon">' + ic('trophy') + '</div>Brak wyników</div>';
+  return rows.map((r, i) => {
+    const rank = i + 1; const topCls = rank <= 3 ? ' top-' + rank : '';
+    return '<div class="rank-card' + topCls + '">' +
+      '<div class="rank-num">' + rank + '</div>' +
+      '<div class="rank-info"><div class="rank-name rank-team-link" data-team="' + esc(r.team) + '">' + esc(r.team) + '</div>' +
+        '<div class="rank-details">' +
+          '<span><span class="rank-detail-lbl">Indyw:</span><span class="rank-detail-val">' + Math.round(r.indPts) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">Bieg dr.:</span><span class="rank-detail-val">' + Math.round(r.teamPts) + '</span></span>' +
+        '</div></div>' +
+      '<div><div class="rank-score">' + Math.round(r.total) + '</div><div class="rank-score-lbl">pkt</div></div>' +
+    '</div>';
+  }).join('');
+}
+
 const OSF_TABS = [
+  { id: 'overall', label: 'Generalna', icon: ic('trophy'), cls: 'cat-overall', sub: 'Indywidualny M + bieg drużynowy', render: () => renderOsfGeneralna() },
   { id: 'm',    label: 'Mężczyźni', icon: ic('male'), cls: 'cat-m',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('M') },
   { id: 'k',    label: 'Kobiety',   icon: ic('female'), cls: 'cat-k',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('K') },
   { id: 'team', label: 'Bieg drużynowy', icon: ic('run'), cls: 'cat-team', sub: 'Osobny przejazd drużyny (S1/S2)', render: () => renderOsfTeam() },
 ];
 
 const WIELOBOJ_TABS = [
-  { id: 'm',    label: 'Mężczyźni', icon: ic('male'), cls: 'cat-m',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('M') },
-  { id: 'k',    label: 'Kobiety',   icon: ic('female'), cls: 'cat-k',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('K') },
-  { id: 'team', label: 'Drużynowa', icon: ic('shield'), cls: 'cat-team', sub: 'Top 5 M + top 3 K',  render: () => renderWielobojTeam() },
+  { id: 'm35', label: 'M35', icon: ic('male'),   cls: 'cat-m',    sub: 'Mężczyźni do 35 lat', render: () => renderWielobojIndividual('M35') },
+  { id: 'm36', label: 'M36', icon: ic('male'),   cls: 'cat-m',    sub: 'Mężczyźni 36+',       render: () => renderWielobojIndividual('M36') },
+  { id: 'k35', label: 'K35', icon: ic('female'), cls: 'cat-k',    sub: 'Kobiety do 35 lat',   render: () => renderWielobojIndividual('K35') },
+  { id: 'k36', label: 'K36', icon: ic('female'), cls: 'cat-k',    sub: 'Kobiety 36+',         render: () => renderWielobojIndividual('K36') },
+  { id: 'team', label: 'Drużynowa', icon: ic('shield'), cls: 'cat-team', sub: 'Klasyfikacja zespołowa', render: () => renderWielobojTeam() },
 ];
 
 function _getTabsForType() {
   if (_competitionType === 'patrol')   return PATROL_TABS;
-  if (_competitionType === 'osf')      return OSF_TABS;
+  if (_competitionType === 'osf')      return (_state && _state.setup && _state.setup.kScores) ? OSF_TABS : OSF_TABS.filter(t => t.id !== 'k');
   if (_competitionType === 'wielobój') return WIELOBOJ_TABS;
   return [];
 }
 
 function _getDefaultTab() {
   if (_competitionType === 'patrol')   return 'overall';
-  if (_competitionType === 'osf')      return 'm';
-  if (_competitionType === 'wielobój') return 'm';
+  if (_competitionType === 'osf')      return 'overall';
+  if (_competitionType === 'wielobój') return 'm35';
   return null;
 }
 
