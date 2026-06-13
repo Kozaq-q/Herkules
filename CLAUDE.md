@@ -73,7 +73,7 @@ dziedziczony do WSZYSTKICH swoich ekranów (panel + projektor + speaker + tablic
 - ✅ Radius patrol-start → 4px
 - ✅ Patrol → zielony na `patrol-start`, `patrol-speaker`, `patrol-projektor` (token + odcienie rgba; patrol-start ma osobny `--warn` na ostrzeżenia)
 - ⬜ Wielobój → złoto (panel `wieloboj.html` + `projektor.html`; wymaga rozdzielenia DSQ od akcentu)
-- ⬜ `t.html` → akcent dynamiczny wg typu ładowanej konkurencji
+- ✅ `t.html` → akcent dynamiczny wg typu (`_applyAccent`, tylko token `--accent`) + cross-linking, karty zawodnika/drużyny, historia cofania, ikony SVG, trwałość widoku per slot
 - ⬜ `start.html` → opcjonalne kolorowanie slotów wg typu
 
 ## Tabele Supabase
@@ -269,12 +269,16 @@ Obszary: `patrol`, `patrol-team-run`, `patrol-team-timer`, `patrol-start`, `patr
 
 **Tablica `t.html` — features:**
 - Kafelkowy layout (jak patrol-speaker) — kategorie jako tile grid
-- Klik kafelek → detail view z back button "← Kategorie"
-- Hero section: chip typu (BIEG PATROLOWY/OSF/WIELOBÓJ) + duży tytuł zawodów + miasto/data
-- Subtelny header z `mss-api` URL i 🔍 lupą + ● LIVE indicator
-- **Lupa wyszukiwania** (Cmd+K też): szuka zawodników i drużyn forgiving (ignoruje polskie znaki, case)
-- Auto-refresh co 10s (state.runs via PostgREST)
-- Zawsze startuje od menu kafelkowego (nie z localStorage tab)
+- **Cross-linking (nawigacja "wszystko klikalne")**: klikalna NAZWA zawodnika → karta zawodnika (`__athlete`, wynik rozbity na stat-tiles), klikalna NAZWA drużyny gdziekolwiek → karta drużyny (`__team`); pigułki pozycji w karcie drużyny (Generalna/Drużynowa/Bieg) → odpowiedni ranking + scroll do drużyny. Klikalny jest TYLKO tekst nazwy (`inline-block`), nie cała karta — bez przypadkowych kliknięć. Delegacja: `.rank-team-link` / `.td-chip-link` / `.rank-name` w `[data-aid]`.
+- **Historia cofania**: `_navStack` (widok + scrollY); przycisk „← Wstecz" wraca o krok i przywraca pozycję, na górnym poziomie pokazuje „← Kategorie" (menu).
+- Hero section: chip typu + duży tytuł zawodów + miasto/data
+- **Lupa wyszukiwania** (Cmd+K): forgiving (polskie znaki, case). Zawodnik → skok do kategorii + scroll + złoty błysk; drużyna → karta drużyny.
+- **Top-3**: kwadratowe kafle miejsca z wycentrowanym numerem (medal: ramka 2px + tło + numer w kolorze złoto/srebro/brąz), w listach kolorowy numer zamiast emoji.
+- **Ikony**: inline SVG styl Tabler (`ic()` + `_ICONS`), bez emoji (zostają tylko `←` `↑` `✕`).
+- **Akcent dynamiczny wg typu** (`_applyAccent`): patrol `#4caf82`, OSF `#e8944d`, wieloboj `#e8d44d` — zmienia TYLKO token `--accent`, reszta (M/K, medale, semantyka) bez zmian.
+- **Zapamiętuje ostatni widok per slot** (`localStorage` `mss_tview_<slot>`, `_saveView`/`_loadView`) — po ręcznym odświeżeniu wraca na tę samą zakładkę/kartę; nowy gość bez zapisu → menu kafelkowe.
+- Pływający przycisk „↑ na górę" (po przewinięciu >280px)
+- Auto-refresh co 10s (`*_state` via Worker; redakcja stopni gdy `showRanks=false`)
 - Pełna funkcjonalność dla 3 typów: patrol (M/K/Drużynowa/Bieg dr./Generalna), OSF (M/K/Drużynowa), wieloboj (M/K/Drużynowa)
 - Mobile responsive + projector-friendly (CSS breakpointy)
 
