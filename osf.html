@@ -1688,12 +1688,11 @@ tr:last-child > td { border-bottom: none; }
     <div style="margin-bottom:14px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">Pobierz szablon</div>
       <div class="flex">
-        <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">↓ Excel (.xlsx)</button>
-        <button class="btn btn-sm btn-success" onclick="downloadTemplateODS()">↓ LibreOffice (.ods)</button>
-        <button class="btn btn-sm" onclick="downloadTemplateCSV()">↓ CSV</button>
+        <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">↓ Excel / wydruk (.xls)</button>
+        <button class="btn btn-sm" onclick="downloadTemplateCSV()">↓ CSV (zapasowy)</button>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:6px;">
-        Kolumny: <span class="mono">Nazwisko Imię · M/K · Drużyna · Nr startowy</span> (nr opcjonalny)
+        Kolumny: <span class="mono">Stopień, imię i nazwisko · Płeć (M/K) · Drużyna · M36+ · PK</span>
       </div>
     </div>
 
@@ -2041,17 +2040,14 @@ tr:last-child > td { border-bottom: none; }
   <div class="modal" style="max-width:360px;">
     <div class="modal-title">↓ Pobierz szablon listy startowej</div>
     <div style="font-size:12px;color:var(--text3);margin-bottom:16px;line-height:1.6;">
-      Kolumny: <span class="mono" style="color:var(--text2);">Stopień · Imię i Nazwisko · M/K · Drużyna · Nr startowy</span>
+      Kolumny: <span class="mono" style="color:var(--text2);">Stopień, imię i nazwisko · Płeć (M/K) · Drużyna · M36+ · PK</span>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button class="btn" onclick="downloadTemplateXLSX();closeModal('modal-template')" style="justify-content:flex-start;gap:10px;">
-        <span style="font-size:16px;">📊</span> Excel (.xlsx)
-      </button>
-      <button class="btn" onclick="downloadTemplateODS();closeModal('modal-template')" style="justify-content:flex-start;gap:10px;">
-        <span style="font-size:16px;">📄</span> LibreOffice (.ods)
+        <span style="font-size:16px;">📊</span> Excel / wydruk (.xls)
       </button>
       <button class="btn" onclick="downloadTemplateCSV();closeModal('modal-template')" style="justify-content:flex-start;gap:10px;">
-        <span style="font-size:16px;">📋</span> CSV
+        <span style="font-size:16px;">📋</span> CSV (zapasowy)
       </button>
     </div>
     <div class="modal-footer">
@@ -11932,12 +11928,12 @@ document.addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════
 // TEMPLATE DOWNLOAD
 // ═══════════════════════════════════════════════════
-const TEMPLATE_HEADERS = ['Lp', 'Stopień / Imię i Nazwisko', 'Płeć', 'Drużyna', 'M36+', 'PK'];
+const TEMPLATE_HEADERS = ['Lp', 'Stopień, imię i nazwisko', 'Płeć (M/K)', 'Drużyna', 'M36+', 'PK'];
 const TEMPLATE_EXAMPLE = [
-  [1, 'sierż. KOWALSKI Jan',        'M', 'JW 1234',  '',     ''  ],
-  [2, 'kpr. NOWAK Anna',            'K', 'JW 1234',  '',     ''  ],
-  [3, 'st.szer. WIŚNIEWSKI Piotr',  'M', 'JW 5678',  'M36+', ''  ],
-  [4, 'szer. ZAJĄC Tomasz',         'M', 'JW 5678',  '',     'PK'],
+  [1, 'sierż. Jan Kowalski',        'M', 'JW 1234',  '',     ''  ],
+  [2, 'kpr. Anna Nowak',            'K', 'JW 1234',  '',     ''  ],
+  [3, 'st. szer. Piotr Wiśniewski', 'M', 'JW 5678',  'M36+', ''  ],
+  [4, 'szer. Tomasz Zając',         'M', 'JW 5678',  '',     'PK'],
 ];
 
 function downloadTemplateCSV() {
@@ -11957,27 +11953,29 @@ function downloadTemplateXLSX() {
   }));
 
   const emptyRows = [];
-  for (let i = examples.length + 1; i <= 80; i++) emptyRows.push(i);
+  for (let i = examples.length + 1; i <= 34; i++) emptyRows.push(i);
 
   function exRow(r) {
+    const z = r.lp % 2 === 0 ? 'zebra' : 'white';
     return `<tr>
-      <td class="lp">${r.lp}</td>
-      <td class="data">${r.name}</td>
-      <td class="data center">${r.gender}</td>
-      <td class="data">${r.team}</td>
-      <td class="data center">${r.m36}</td>
-      <td class="data center">${r.pk}</td>
+      <td class="lp ${z}">${r.lp}</td>
+      <td class="data ${z}">${r.name}</td>
+      <td class="data center ${z}">${r.gender}</td>
+      <td class="data ${z}">${r.team}</td>
+      <td class="data center ${z}">${r.m36}</td>
+      <td class="data center ${z}">${r.pk}</td>
     </tr>`;
   }
 
   function emptyRow(i) {
+    const z = i % 2 === 0 ? 'zebra' : 'white';
     return `<tr>
-      <td class="lp">${i}</td>
-      <td class="data"></td>
-      <td class="data center"></td>
-      <td class="data"></td>
-      <td class="data center"></td>
-      <td class="data center"></td>
+      <td class="lp ${z}">${i}</td>
+      <td class="data ${z}"></td>
+      <td class="data center ${z}"></td>
+      <td class="data ${z}"></td>
+      <td class="data center ${z}"></td>
+      <td class="data center ${z}"></td>
     </tr>`;
   }
 
@@ -11997,22 +11995,24 @@ function downloadTemplateXLSX() {
     table { border-collapse: collapse; width: 100%; }
     td, th { padding: 6px 10px; vertical-align: middle; word-wrap: break-word; }
 
-    .hdr-osf  { background:#0d1b2a; color:#c8a000; font-size:16pt; font-weight:bold; text-align:center; height:38px; border:none; }
-    .hdr-name { background:#0d1b2a; color:#ffffff; font-size:11pt; font-weight:bold; text-align:center; height:22px; border:none; }
-    .hdr-meta { background:#0d1b2a; color:#8a9bb0; font-size:9pt; font-style:italic; text-align:center; height:18px; border:none; }
-    .hdr-sep  { background:#0d1b2a; height:8px; border:none; }
+    .hdr-osf  { background:#cf7b32; color:#ffffff; font-size:16pt; font-weight:bold; text-align:center; height:40px; border:none; letter-spacing:1px; }
+    .hdr-name { background:#ffffff; color:#cf7b32; font-size:12pt; font-weight:bold; text-align:center; height:24px; border:none; }
+    .hdr-meta { background:#ffffff; color:#6b7280; font-size:9.5pt; font-style:italic; text-align:center; height:18px; border:none; }
+    .hdr-sep  { background:#e8944d; height:4px; border:none; }
 
     .col-hdr th {
-      background:#1c3a5a; color:#ffffff;
+      background:#cf7b32; color:#ffffff;
       font-weight:bold; font-size:10pt;
       text-align:center; height:26px;
-      border:1px solid #2a5080;
+      border:1px solid #cf7b32;
       white-space:nowrap;
     }
 
-    .lp   { text-align:center; color:#9aa8b8; font-size:9pt; width:36px; border:1px solid #d0d8e4; background:#f4f6f9; }
-    .data { border:1px solid #d0d8e4; color:#1a2535; background:#ffffff; }
+    .lp   { text-align:center; color:#9aa3af; font-size:9pt; width:36px; border:1px solid #d8dde3; }
+    .data { border:1px solid #d8dde3; color:#1a2230; }
     .center { text-align:center; }
+    .zebra { background:#f3f4f6; }
+    .white { background:#ffffff; }
   </style>
 </head>
 <body>
@@ -12030,8 +12030,8 @@ function downloadTemplateXLSX() {
   <tr><td colspan="6" class="hdr-sep"></td></tr>
   <tr class="col-hdr">
     <th>Lp</th>
-    <th style="text-align:left;">Stopień / Imię i Nazwisko</th>
-    <th>Płeć</th>
+    <th style="text-align:left;">Stopień, imię i nazwisko</th>
+    <th>Płeć (M/K)</th>
     <th style="text-align:left;">Drużyna / Jednostka</th>
     <th>M36+</th>
     <th>PK</th>
@@ -12046,15 +12046,6 @@ function downloadTemplateXLSX() {
   a.href = URL.createObjectURL(blob);
   a.download = 'osf_lista_startowa.xls';
   a.click();
-}
-
-function downloadTemplateODS() {
-  if (typeof XLSX === 'undefined') { alert('Biblioteka nie jest załadowana — spróbuj za chwilę.'); return; }
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE]);
-  ws['!cols'] = [{ wch: 5 }, { wch: 38 }, { wch: 8 }, { wch: 28 }, { wch: 8 }, { wch: 8 }];
-  XLSX.utils.book_append_sheet(wb, ws, 'Zawodnicy');
-  XLSX.writeFile(wb, 'osf_lista_startowa.ods', { bookType: 'ods' });
 }
 
 function triggerDownload(url, filename) {

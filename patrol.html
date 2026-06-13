@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script src="auth.js"></script>
 <style>
 :root {
@@ -1490,13 +1491,16 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
                 <span style="font-size:11px;font-weight:700;">Wgraj plik</span>
                 <span style="font-size:10px;color:var(--text3);">.xlsx / .csv</span>
               </button>
-              <button class="btn" onclick="downloadPatrolTemplateCSV()" style="flex:1;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;height:auto;">
+              <button class="btn" onclick="downloadPatrolTemplateXLS()" style="flex:1;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px;height:auto;">
                 <span style="font-size:20px;">↓</span>
                 <span style="font-size:11px;font-weight:700;">Pobierz szablon</span>
-                <span style="font-size:10px;color:var(--text3);">CSV</span>
+                <span style="font-size:10px;color:var(--text3);">.xls (Excel / druk)</span>
               </button>
             </div>
-            <input type="file" id="ptr-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importPatrolFile(event)" />
+            <div style="text-align:center;margin-bottom:4px;">
+              <button onclick="downloadPatrolTemplateCSV()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;text-decoration:underline;padding:2px;">lub pobierz CSV (zapasowy)</button>
+            </div>
+            <input type="file" id="ptr-import-file" accept=".xlsx,.xls,.ods,.csv" style="display:none" onchange="importPatrolFile(event)" />
           </div>
 
           <!-- Ustawienia zaawansowane -->
@@ -5801,14 +5805,95 @@ function renderAthletes() {
 // ═══════════════════════════════════════════════════════════════
 // IMPORT — CSV/XLSX
 // ═══════════════════════════════════════════════════════════════
+// Wspólny builder eleganckiego arkusza .xls (kolor konkurencji + zebra + nagłówek z miastem/datą).
+// Header band: tytuł(0), nazwa zawodów(1), miasto·data(2), listwa akcentu(3), nagłówki kolumn(4) — parser szuka nagłówka w pierwszych wierszach.
+function buildStartlistXLS(opts) {
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cols = opts.cols, ncol = cols.length + 1;
+  const colgroup = '<col style="width:42px">' + cols.map(c => '<col style="width:' + c.w + 'px">').join('');
+  function rowHtml(lp, vals) {
+    const z = (lp % 2 === 0) ? 'zebra' : 'white';
+    let tds = '<td class="lp ' + z + '">' + lp + '</td>';
+    for (let i = 0; i < cols.length; i++) {
+      const al = cols[i].align === 'left' ? 'left' : 'center';
+      const v = (vals && vals[i] != null) ? esc(vals[i]) : '';
+      tds += '<td class="cell ' + al + ' ' + z + '">' + v + '</td>';
+    }
+    return '<tr>' + tds + '</tr>';
+  }
+  let body = '', n = 0;
+  (opts.rows || []).forEach(r => { n++; body += rowHtml(n, r); });
+  for (let i = 0; i < (opts.empties || 0); i++) { n++; body += rowHtml(n, null); }
+  const colHdr = '<tr class="col-hdr"><th>Lp</th>' +
+    cols.map(c => '<th' + (c.align === 'left' ? ' class="left"' : '') + '>' + c.label + '</th>').join('') + '</tr>';
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="UTF-8">'
+    + '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Lista startowa</x:Name>'
+    + '<x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>5</x:SplitHorizontal><x:TopRowBottomPane>5</x:TopRowBottomPane></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+    + '<style>'
+    + 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;}'
+    + 'table{border-collapse:collapse;width:100%;}'
+    + 'td,th{padding:6px 10px;vertical-align:middle;word-wrap:break-word;}'
+    + '.hdr-title{background:' + opts.band + ';color:#ffffff;font-size:16pt;font-weight:bold;text-align:center;height:40px;border:none;letter-spacing:1px;}'
+    + '.hdr-name{background:#ffffff;color:' + opts.band + ';font-size:12pt;font-weight:bold;text-align:center;height:24px;border:none;}'
+    + '.hdr-meta{background:#ffffff;color:#6b7280;font-size:9.5pt;font-style:italic;text-align:center;height:18px;border:none;}'
+    + '.hdr-rule{background:' + opts.rule + ';height:4px;border:none;}'
+    + '.col-hdr th{background:' + opts.band + ';color:#ffffff;font-weight:bold;font-size:10pt;text-align:center;height:26px;border:1px solid ' + opts.band + ';white-space:nowrap;}'
+    + '.col-hdr th.left{text-align:left;}'
+    + '.lp{text-align:center;color:#9aa3af;font-size:9pt;border:1px solid #d8dde3;}'
+    + '.cell{border:1px solid #d8dde3;color:#1a2230;}'
+    + '.center{text-align:center;}.left{text-align:left;}'
+    + '.zebra{background:#f3f4f6;}.white{background:#ffffff;}'
+    + '</style></head><body><table>'
+    + colgroup
+    + '<tr><td colspan="' + ncol + '" class="hdr-title">' + opts.title + '</td></tr>'
+    + '<tr><td colspan="' + ncol + '" class="hdr-name">' + (esc(opts.name) || '&nbsp;') + '</td></tr>'
+    + '<tr><td colspan="' + ncol + '" class="hdr-meta">' + (esc(opts.meta) || '&nbsp;') + '</td></tr>'
+    + '<tr><td colspan="' + ncol + '" class="hdr-rule"></td></tr>'
+    + colHdr
+    + body
+    + '</table></body></html>';
+}
+
+function downloadPatrolTemplateXLS() {
+  const s = state.setup || {}, c = state.contest || {};
+  const meta = [ (s.city || c.city || '').trim(), (s.date || c.date || '').trim() ].filter(Boolean).join(' · ');
+  const html = buildStartlistXLS({
+    title: 'BIEG PATROLOWY &mdash; LISTA STARTOWA',
+    band: '#2f8f63', rule: '#4caf82',
+    name: (s.name || c.name || '').trim(), meta,
+    cols: [
+      { label: 'Stopień, imię i nazwisko', w: 300, align: 'left' },
+      { label: 'Płeć (M/K)', w: 75, align: 'center' },
+      { label: 'Drużyna', w: 200, align: 'left' },
+      { label: 'PK', w: 55, align: 'center' },
+    ],
+    rows: [
+      ['sierż. Jan Kowalski', 'M', '1 Batalion', ''],
+      ['kpr. Anna Nowak', 'K', '1 Batalion', ''],
+      ['st. szer. Piotr Wiśniewski', 'M', '2 Batalion', ''],
+      ['szer. Tomasz Zając', 'M', '2 Batalion', 'PK'],
+    ],
+    empties: 30,
+  });
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'patrol_lista_startowa.xls';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function downloadPatrolTemplateCSV() {
-  const csv = 'Lp;Stopień / Imię i Nazwisko;Płeć;Drużyna\n' +
-              '1;szer. Jan KOWALSKI;M;1 Batalion\n' +
-              '2;Kpr. Anna NOWAK;K;1 Batalion\n';
+  const csv = 'Lp;Stopień, imię i nazwisko;Płeć (M/K);Drużyna;PK\r\n' +
+              '1;sierż. Jan Kowalski;M;1 Batalion;\r\n' +
+              '2;kpr. Anna Nowak;K;1 Batalion;\r\n' +
+              '3;st. szer. Piotr Wiśniewski;M;2 Batalion;\r\n' +
+              '4;szer. Tomasz Zając;M;2 Batalion;PK\r\n';
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'patrol-szablon.csv';
+  a.href = url; a.download = 'patrol_lista_startowa.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -5817,6 +5902,31 @@ function importPatrolFile(e) {
   const file = e.target.files[0];
   if (!file) return;
   e.target.value = '';
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+
+  // Excel / LibreOffice — przez SheetJS
+  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') {
+    if (typeof XLSX === 'undefined') {
+      showToast('Biblioteka Excel jeszcze się ładuje — spróbuj za chwilę lub wczytaj CSV', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const rows = parseImportRows(raw);
+        if (!rows.length) { showToast('Nie udało się rozpoznać formatu', 'error'); return; }
+        _showImportPreview(rows);
+      } catch(err) { alert('Błąd odczytu pliku: ' + err.message); }
+    };
+    reader.onerror = () => showToast('Błąd odczytu pliku', 'error');
+    reader.readAsArrayBuffer(file);
+    return;
+  }
+
+  // CSV / zwykły tekst
   const reader = new FileReader();
   reader.onload = ev => {
     try {
@@ -5849,6 +5959,7 @@ function parseImportRows(raw) {
     name:   findCol('imie', 'imię', 'nazwisko', 'stopien', 'zawodnik'),
     gender: findCol('plec', 'płeć', 'm/k', 'gender'),
     team:   findCol('druzyna', 'drużyna', 'jednostka', 'team', 'oddzial'),
+    pk:     findCol('pk', 'poza konkur', 'poza_konkur'),
   };
   if (col.name   < 0) col.name   = 1;
   if (col.gender < 0) col.gender = 2;
@@ -5865,7 +5976,8 @@ function parseImportRows(raw) {
     const gNorm = (gender === 'M' || gender.startsWith('MĘ') || gender.startsWith('ME')) ? 'M'
                 : (gender === 'K' || gender.startsWith('KO')) ? 'K' : null;
     if (!gNorm) continue;
-    result.push({ name, gender: gNorm, team });
+    const pk = col.pk >= 0 ? String(row[col.pk] || '').trim() !== '' : false;
+    result.push({ name, gender: gNorm, team, pk });
   }
   return result;
 }
@@ -5920,7 +6032,7 @@ function _doImportRows(rows) {
   const newRows = rows.filter(r => !existingKeys.has((r.name + '|' + r.team + '|' + r.gender).toLowerCase()));
   if (!newRows.length) { showToast('Wszyscy z listy już istnieją', 'warning'); return; }
   newRows.forEach(r => {
-    state.athletes.push({ id: nextId(), rank: '', name: r.name, gender: r.gender, team: r.team, bib: '' });
+    state.athletes.push({ id: nextId(), rank: '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: !!r.pk });
   });
   assignBibs();
   save();

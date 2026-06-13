@@ -1245,9 +1245,8 @@ input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent);
         <div style="margin-bottom:12px">
           <div style="font-size:11px;color:var(--text3);font-family:var(--font-h);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Pobierz template</div>
           <div class="flex" style="gap:8px">
-            <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">📥 Excel (.xlsx)</button>
-            <button class="btn btn-sm btn-success" onclick="downloadTemplateODS()">📥 LibreOffice (.ods)</button>
-            <button class="btn btn-sm" onclick="downloadTemplateCSV()">📥 CSV</button>
+            <button class="btn btn-sm btn-success" onclick="downloadTemplateXLSX()">📥 Excel / wydruk (.xls)</button>
+            <button class="btn btn-sm" onclick="downloadTemplateCSV()">📥 CSV (zapasowy)</button>
           </div>
         </div>
 
@@ -7180,45 +7179,92 @@ function setAllSeries2(ev, val) {
 // Kolumny: Lp | Stopień imię nazwisko | Drużyna | Rok ur. | Płeć
 // ════════════════════════════════════════════════════════════
 
-const STARTLIST_HEADERS = ['Lp', 'Stopień imię nazwisko', 'Drużyna', 'Rok urodzenia', 'Płeć (M/K)'];
+const STARTLIST_HEADERS = ['Lp', 'Stopień, imię i nazwisko', 'Drużyna', 'Rok urodzenia', 'Płeć (M/K)', 'PK'];
 const STARTLIST_EXAMPLE = [
-  [1, 'sierż. Jan Kowalski',   'JW 1234', 1989, 'M'],
-  [2, 'kpr. Anna Nowak',       'JW 1234', 1992, 'K'],
-  [3, 'st.szer. Piotr Wiśniewski', 'JW 5678', 1985, 'M'],
+  [1, 'sierż. Jan Kowalski',   'JW 1234', 1989, 'M', ''],
+  [2, 'kpr. Anna Nowak',       'JW 1234', 1992, 'K', ''],
+  [3, 'st. szer. Piotr Wiśniewski', 'JW 5678', 1985, 'M', ''],
+  [4, 'szer. Tomasz Zając',    'JW 5678', 1988, 'M', 'PK'],
 ];
 
-// ── Pobierz template XLSX (sformatowany, wbudowany) ──
-const STARTLIST_TEMPLATE_B64 = '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';
+// ── Pobierz szablon .xls (sformatowany arkusz + wydruk) ──
+
+// Wspólny builder eleganckiego arkusza .xls (kolor konkurencji + zebra + nagłówek z miastem/datą).
+// Header band: tytuł(0), nazwa zawodów(1), miasto·data(2), listwa akcentu(3), nagłówki kolumn(4) — parser szuka nagłówka w pierwszych wierszach.
+function buildStartlistXLS(opts) {
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cols = opts.cols, ncol = cols.length + 1;
+  const colgroup = '<col style="width:42px">' + cols.map(c => '<col style="width:' + c.w + 'px">').join('');
+  function rowHtml(lp, vals) {
+    const z = (lp % 2 === 0) ? 'zebra' : 'white';
+    let tds = '<td class="lp ' + z + '">' + lp + '</td>';
+    for (let i = 0; i < cols.length; i++) {
+      const al = cols[i].align === 'left' ? 'left' : 'center';
+      const v = (vals && vals[i] != null) ? esc(vals[i]) : '';
+      tds += '<td class="cell ' + al + ' ' + z + '">' + v + '</td>';
+    }
+    return '<tr>' + tds + '</tr>';
+  }
+  let body = '', n = 0;
+  (opts.rows || []).forEach(r => { n++; body += rowHtml(n, r); });
+  for (let i = 0; i < (opts.empties || 0); i++) { n++; body += rowHtml(n, null); }
+  const colHdr = '<tr class="col-hdr"><th>Lp</th>' +
+    cols.map(c => '<th' + (c.align === 'left' ? ' class="left"' : '') + '>' + c.label + '</th>').join('') + '</tr>';
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="UTF-8">'
+    + '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Lista startowa</x:Name>'
+    + '<x:WorksheetOptions><x:FreezePanes/><x:FrozenNoSplit/><x:SplitHorizontal>5</x:SplitHorizontal><x:TopRowBottomPane>5</x:TopRowBottomPane></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->'
+    + '<style>'
+    + 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;}'
+    + 'table{border-collapse:collapse;width:100%;}'
+    + 'td,th{padding:6px 10px;vertical-align:middle;word-wrap:break-word;}'
+    + '.hdr-title{background:' + opts.band + ';color:#ffffff;font-size:16pt;font-weight:bold;text-align:center;height:40px;border:none;letter-spacing:1px;}'
+    + '.hdr-name{background:#ffffff;color:' + opts.band + ';font-size:12pt;font-weight:bold;text-align:center;height:24px;border:none;}'
+    + '.hdr-meta{background:#ffffff;color:#6b7280;font-size:9.5pt;font-style:italic;text-align:center;height:18px;border:none;}'
+    + '.hdr-rule{background:' + opts.rule + ';height:4px;border:none;}'
+    + '.col-hdr th{background:' + opts.band + ';color:#ffffff;font-weight:bold;font-size:10pt;text-align:center;height:26px;border:1px solid ' + opts.band + ';white-space:nowrap;}'
+    + '.col-hdr th.left{text-align:left;}'
+    + '.lp{text-align:center;color:#9aa3af;font-size:9pt;border:1px solid #d8dde3;}'
+    + '.cell{border:1px solid #d8dde3;color:#1a2230;}'
+    + '.center{text-align:center;}.left{text-align:left;}'
+    + '.zebra{background:#f3f4f6;}.white{background:#ffffff;}'
+    + '</style></head><body><table>'
+    + colgroup
+    + '<tr><td colspan="' + ncol + '" class="hdr-title">' + opts.title + '</td></tr>'
+    + '<tr><td colspan="' + ncol + '" class="hdr-name">' + (esc(opts.name) || '&nbsp;') + '</td></tr>'
+    + '<tr><td colspan="' + ncol + '" class="hdr-meta">' + (esc(opts.meta) || '&nbsp;') + '</td></tr>'
+    + '<tr><td colspan="' + ncol + '" class="hdr-rule"></td></tr>'
+    + colHdr
+    + body
+    + '</table></body></html>';
+}
 
 function downloadTemplateXLSX() {
-  const bin = atob(STARTLIST_TEMPLATE_B64);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'lista_startowa_template.xlsx';
+  const s = STATE.setup || {};
+  const meta = [ (s.place || '').trim(), (s.date || '').trim() ].filter(Boolean).join(' · ');
+  const html = buildStartlistXLS({
+    title: 'WIELOBÓJ &mdash; LISTA STARTOWA',
+    band: '#b3941c', rule: '#e8d44d',
+    name: (s.name || '').trim(), meta,
+    cols: [
+      { label: 'Stopień, imię i nazwisko', w: 300, align: 'left' },
+      { label: 'Drużyna', w: 200, align: 'left' },
+      { label: 'Rok urodzenia', w: 95, align: 'center' },
+      { label: 'Płeć (M/K)', w: 75, align: 'center' },
+      { label: 'PK', w: 55, align: 'center' },
+    ],
+    rows: STARTLIST_EXAMPLE.map(r => [r[1], r[2], r[3], r[4], r[5] || '']),
+    empties: 30,
+  });
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'wieloboj_lista_startowa.xls';
   a.click();
   URL.revokeObjectURL(url);
-  toast('Template Excel pobrany');
+  toast('Szablon .xls pobrany');
 }
 
-
-// ── Pobierz template ODS (LibreOffice) — konwersja z wbudowanego xlsx ──
-function downloadTemplateODS() {
-  if (typeof XLSX === 'undefined') {
-    toast('Ładowanie biblioteki — spróbuj za chwilę');
-    return;
-  }
-  // Wczytaj wbudowany xlsx i zapisz jako ods
-  const bin = atob(STARTLIST_TEMPLATE_B64);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  const wb = XLSX.read(arr, { type: 'array' });
-  XLSX.writeFile(wb, 'lista_startowa_template.ods', { bookType: 'ods' });
-  toast('Template LibreOffice pobrany');
-}
 
 // ── Pobierz template CSV ──
 function downloadTemplateCSV() {
@@ -7323,6 +7369,7 @@ function parseStartListRows(raw) {
     team:  headers.findIndex(h => h.includes('drużyna') || h.includes('druzyna') || h.includes('jednostka') || h.includes('zespół')),
     year:  headers.findIndex(h => h.includes('rok') || h.includes('rocznik') || h.includes('urodz')),
     gender:headers.findIndex(h => h.includes('płeć') || h.includes('plec') || h.includes('płec') || h.includes('m/k') || h.includes('k/m')),
+    pk:    headers.findIndex(h => h === 'pk' || h.includes('poza konkur')),
   };
 
   // Fallback pozycji gdy nagłówek nie znaleziony (Lp, Nazwisko, Drużyna, Rok, Płeć)
@@ -7346,7 +7393,8 @@ function parseStartListRows(raw) {
     // Pomiń jeśli płeć nierozpoznana
     if (gender !== 'M' && gender !== 'K') continue;
 
-    result.push({ name, team, year, gender });
+    const pk = colIdx.pk >= 0 ? String(row[colIdx.pk] || '').trim() !== '' : false;
+    result.push({ name, team, year, gender, pk });
   }
 
   return result;
@@ -7358,7 +7406,7 @@ function applyStartList(rows) {
   let athletesAdded  = 0;
   let athletesSkipped = 0;
 
-  rows.forEach(({ name, team: teamName, year, gender }) => {
+  rows.forEach(({ name, team: teamName, year, gender, pk }) => {
     // 1. Znajdź lub utwórz drużynę
     let team = STATE.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
     if (!team) {
@@ -7385,7 +7433,7 @@ function applyStartList(rows) {
       year,
       gender,
       cat,
-      pk: false,
+      pk: !!pk,
       startOrder: null,
     });
     athletesAdded++;
