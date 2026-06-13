@@ -360,9 +360,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-card.dsq { opacity: .5; }
 .rank-card.info-card { grid-template-columns: 1fr auto; }
 .rank-card.name-card { display: block; }
-.td-chip.medal-1 { border-color: var(--gold); background: rgba(255,210,74,.10); }
-.td-chip.medal-2 { border-color: var(--silver); background: rgba(192,200,204,.10); }
-.td-chip.medal-3 { border-color: var(--bronze); background: rgba(205,138,74,.10); }
+.td-chip.medal-1 { border: 2px solid var(--gold); background: rgba(255,210,74,.13); }
+.td-chip.medal-2 { border: 2px solid var(--silver); background: rgba(192,200,204,.13); }
+.td-chip.medal-3 { border: 2px solid var(--bronze); background: rgba(205,138,74,.13); }
 .td-chip.medal-1 .td-chip-big { color: var(--gold); }
 .td-chip.medal-2 .td-chip-big { color: var(--silver); }
 .td-chip.medal-3 .td-chip-big { color: var(--bronze); }
@@ -386,10 +386,10 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
 }
 .td-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
-.td-chip { flex: 1; min-width: 120px; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-.td-chip-lbl { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
-.td-chip-big { font-size: 24px; font-weight: 800; color: var(--text1); margin-top: 2px; }
-.td-chip-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.td-chip { box-sizing: border-box; flex: 0 0 auto; width: 108px; height: 108px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.td-chip-lbl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; line-height: 1.15; }
+.td-chip-big { font-size: 38px; font-weight: 800; color: var(--text1); line-height: 1; margin: 5px 0 3px; }
+.td-chip-sub { font-size: 10px; color: var(--text3); line-height: 1.15; }
 .td-section-lbl { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 8px; font-family: var(--font-m); }
 .rank-card[data-aid] .rank-name { cursor: pointer; transition: color .12s; display: inline-block; }
 .rank-card[data-aid] .rank-name:hover { color: var(--accent); }
@@ -415,6 +415,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
   text-transform: uppercase;
 }
 .empty-icon { font-size: 48px; opacity: .3; margin-bottom: 16px; }
+.ic { display: inline-flex; align-items: center; justify-content: center; vertical-align: -0.15em; }
+.ic svg { width: 1em; height: 1em; display: block; }
 
 /* LOADING */
 .loading { text-align: center; padding: 60px 20px; color: var(--text3); font-family: var(--font-m); font-size: 12px; }
@@ -650,7 +652,7 @@ function runSearch() {
     : (hits.length === 1 ? '1 wynik' : (hits.length + (hits.length < 5 ? ' wyniki' : ' wyników')));
 
   if (hits.length === 0) {
-    results.innerHTML = '<div class="search-empty">😕<br><br>Nic nie znaleziono</div>';
+    results.innerHTML = '<div class="search-empty">' + ic('moodEmpty') + '<br><br>Nic nie znaleziono</div>';
     return;
   }
   results.innerHTML = hits.map(h =>
@@ -780,6 +782,25 @@ window.addEventListener('keydown', function(e) {
   }
 });
 
+// Ikony SVG (styl Tabler, kontur) — zamiast emoji. Sterowane font-size kontenera (1em).
+const _ICONS = {
+  male: '<path d="M10 14m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/><path d="M19 5l-5.4 5.4"/><path d="M19 5h-5"/><path d="M19 5v5"/>',
+  female: '<path d="M12 9m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/><path d="M12 14v7"/><path d="M9 18h6"/>',
+  shield: '<path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/>',
+  run: '<path d="M13 4m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M4 17l5 1l.75 -1.5"/><path d="M15 21l0 -4l-4 -3l1 -6"/><path d="M7 12l0 -3l5 -1l3 3l3 1"/>',
+  trophy: '<path d="M8 21l8 0"/><path d="M12 17l0 4"/><path d="M7 4l10 0"/><path d="M17 4v8a5 5 0 0 1 -10 0v-8"/><path d="M5 9m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M19 9m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>',
+  stopwatch: '<path d="M5 13a7 7 0 1 0 14 0a7 7 0 0 0 -14 0z"/><path d="M14.5 10.5l-2.5 2.5"/><path d="M17 8l1 -1"/><path d="M14 3h-4"/>',
+  target: '<path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>',
+  clipboard: '<path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/>',
+  lock: '<path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>',
+  qr: '<path d="M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M7 17l0 .01"/><path d="M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M14 14l0 .01"/><path d="M14 19l0 .01"/><path d="M19 14l0 .01"/><path d="M19 19l0 .01"/>',
+  alert: '<path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/>',
+  moodEmpty: '<path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9 15l6 0"/>'
+};
+function ic(name) {
+  return '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (_ICONS[name] || '') + '</svg></span>';
+}
+
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
 // ═══════════════════════════════════════════════════════════════
@@ -808,7 +829,7 @@ async function showSlotsList() {
 
     if (active.length === 0) {
       document.getElementById('main').innerHTML =
-        '<div class="empty"><div class="empty-icon">🏁</div>Brak aktywnych zawodów</div>';
+        '<div class="empty"><div class="empty-icon">' + ic('run') + '</div>Brak aktywnych zawodów</div>';
       return;
     }
 
@@ -837,7 +858,7 @@ async function showSlotsList() {
     console.error('[tablica] showSlotsList', e);
     setLive('err');
     document.getElementById('main').innerHTML =
-      '<div class="empty"><div class="empty-icon">⚠</div>Bład: ' + esc(e.message) + '</div>';
+      '<div class="empty"><div class="empty-icon">' + ic('alert') + '</div>Bład: ' + esc(e.message) + '</div>';
   }
 }
 
@@ -974,16 +995,13 @@ function _sortPatrolRows(rows) {
 // ═══════════════════════════════════════════════════════════════
 
 function _medal(rank) {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return '';
+  return ''; // medale jako kolorowy numer (top-1/2/3), bez emoji
 }
 
 function renderPatrolIndividual(gender) {
   const rows = _state.athletes.filter(a => a.gender === gender).map(a => _buildPatrolRow(a, _state)).filter(r => r.hasAny);
   if (!rows.length) {
-    return '<div class="empty"><div class="empty-icon">📋</div>Brak wpisanych wyników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak wpisanych wyników</div>';
   }
   _sortPatrolRows(rows);
 
@@ -1009,9 +1027,9 @@ function renderPatrolIndividual(gender) {
         '<div class="rank-name">' + esc(name) + '</div>' +
         (team ? '<div class="rank-team rank-team-link" data-team="' + esc(team) + '">' + esc(team) + '</div>' : '') +
         '<div class="rank-details">' +
-          '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
-          '<span><span class="rank-detail-lbl">⏱ OSF</span><span class="rank-detail-val">' + esc(osfDisp) + '</span></span>' +
-          '<span><span class="rank-detail-lbl">🎯</span><span class="rank-detail-val">' + esc(shotDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('run') + '</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' OSF</span><span class="rank-detail-val">' + esc(osfDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('target') + '</span><span class="rank-detail-val">' + esc(shotDisp) + '</span></span>' +
         '</div>' +
       '</div>' +
       '<div>' +
@@ -1046,7 +1064,7 @@ function renderPatrolTeam() {
   }
 
   if (teamRows.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🛡</div>Brak drużyn z 3 sklasyfikowanymi M</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak drużyn z 3 sklasyfikowanymi M</div>';
   }
 
   teamRows.sort((a, b) => a.sum - b.sum);
@@ -1109,7 +1127,7 @@ function renderPatrolTeamRun() {
   const teamRun = _state.teamRun || {};
   const teamNames = Object.keys(teamRun);
   if (teamNames.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🏃</div>Brak wpisanych biegów drużynowych</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('run') + '</div>Brak wpisanych biegów drużynowych</div>';
   }
 
   const rows = teamNames.map(name => {
@@ -1146,10 +1164,10 @@ function renderPatrolTeamRun() {
       '<div class="rank-info">' +
         '<div class="rank-name rank-team-link" data-team="' + esc(r.name) + '">' + esc(r.name) + '</div>' +
         '<div class="rank-details">' +
-          '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + biegDisp + '</span></span>' +
-          '<span><span class="rank-detail-lbl">⏱ OSF</span><span class="rank-detail-val">' + osfDisp + '</span></span>' +
-          '<span><span class="rank-detail-lbl">🎯</span><span class="rank-detail-val">' + shotDisp + '</span></span>' +
-          (elim > 0 ? '<span style="color:var(--red);">⚠ ' + elim + ' eliminacji</span>' : '') +
+          '<span><span class="rank-detail-lbl">' + ic('run') + '</span><span class="rank-detail-val">' + biegDisp + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' OSF</span><span class="rank-detail-val">' + osfDisp + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('target') + '</span><span class="rank-detail-val">' + shotDisp + '</span></span>' +
+          (elim > 0 ? '<span style="color:var(--red);">' + ic('alert') + ' ' + elim + ' eliminacji</span>' : '') +
         '</div>' +
       '</div>' +
       '<div>' +
@@ -1189,7 +1207,7 @@ function renderPatrolOverall() {
   }
 
   if (overall.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🏆</div>Brak drużyn z kompletem wyników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('trophy') + '</div>Brak drużyn z kompletem wyników</div>';
   }
 
   overall.sort((a, b) => a.total - b.total);
@@ -1290,7 +1308,7 @@ function _osfSumTime(state, id) {
 
 function renderOsfIndividual(gender) {
   if (!_state.athletes || _state.athletes.length === 0) {
-    return '<div class="empty"><div class="empty-icon">📋</div>Brak zawodników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak zawodników</div>';
   }
   const rows = _state.athletes
     .filter(a => a.gender === gender && !a.pk)
@@ -1305,7 +1323,7 @@ function renderOsfIndividual(gender) {
     .filter(r => r.s1 || r.s2);
 
   if (rows.length === 0) {
-    return '<div class="empty"><div class="empty-icon">📋</div>Brak wpisanych czasów</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak wpisanych czasów</div>';
   }
 
   rows.sort((a, b) => {
@@ -1349,7 +1367,7 @@ function renderOsfIndividual(gender) {
 function renderOsfTeam() {
   // Ranking drużynowy: suma najlepszych czasów min 3 (M+K) z drużyny
   if (!_state.athletes || _state.athletes.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🛡</div>Brak zawodników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak zawodników</div>';
   }
   const byTeam = {};
   _state.athletes.forEach(a => {
@@ -1371,7 +1389,7 @@ function renderOsfTeam() {
   }
 
   if (teamRows.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🛡</div>Brak drużyn z min. 3 sklasyfikowanymi</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak drużyn z min. 3 sklasyfikowanymi</div>';
   }
 
   teamRows.sort((a, b) => a.sumSec - b.sumSec);
@@ -1474,7 +1492,7 @@ function _wjGetAthletePoints(state, athleteId) {
 
 function renderWielobojIndividual(gender) {
   if (!_state.athletes || _state.athletes.length === 0) {
-    return '<div class="empty"><div class="empty-icon">📋</div>Brak zawodników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak zawodników</div>';
   }
   const rows = _state.athletes
     .filter(a => a.gender === gender && !a.pk)
@@ -1485,7 +1503,7 @@ function renderWielobojIndividual(gender) {
     .filter(r => r.pts.total > 0);
 
   if (rows.length === 0) {
-    return '<div class="empty"><div class="empty-icon">📋</div>Brak wpisanych wyników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak wpisanych wyników</div>';
   }
 
   rows.sort((a, b) => b.pts.total - a.pts.total);
@@ -1524,7 +1542,7 @@ function renderWielobojIndividual(gender) {
 function renderWielobojTeam() {
   // Suma punktów top 5 M + top 3 K z drużyny (uproszczona klasyfikacja)
   if (!_state.athletes || _state.athletes.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🛡</div>Brak zawodników</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak zawodników</div>';
   }
   const teams = _state.teams || [];
   const teamRows = teams.map(team => {
@@ -1542,7 +1560,7 @@ function renderWielobojTeam() {
   }).filter(t => t.total > 0);
 
   if (teamRows.length === 0) {
-    return '<div class="empty"><div class="empty-icon">🛡</div>Brak drużyn z wynikami</div>';
+    return '<div class="empty"><div class="empty-icon">' + ic('shield') + '</div>Brak drużyn z wynikami</div>';
   }
 
   teamRows.sort((a, b) => b.total - a.total);
@@ -1556,8 +1574,8 @@ function renderWielobojTeam() {
       '<div class="rank-info">' +
         '<div class="rank-name rank-team-link" data-team="' + esc(r.team.name) + '">' + esc(r.team.name) + '</div>' +
         '<div class="rank-details" style="margin-top:6px;">' +
-          '<span><span class="rank-detail-lbl">♂ M (top ' + r.mCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumMen) + '</span></span>' +
-          '<span><span class="rank-detail-lbl">♀ K (top ' + r.kCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumWomen) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('male') + ' M (top ' + r.mCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumMen) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">' + ic('female') + ' K (top ' + r.kCount + '):</span><span class="rank-detail-val">' + Math.round(r.sumWomen) + '</span></span>' +
         '</div>' +
       '</div>' +
       '<div>' +
@@ -1660,7 +1678,7 @@ function _renderTeamDetailWrap() {
   } catch (e) { body = '<div class="empty">Błąd: ' + esc(e.message) + '</div>'; }
   return '<div class="detail-wrap">' +
     _backBtn() +
-    '<div class="detail-title cat-team-color"><span class="icon">🛡</span><span>' + esc(name) + '</span></div>' +
+    '<div class="detail-title cat-team-color"><span class="icon">' + ic('shield') + '</span><span>' + esc(name) + '</span></div>' +
     '<div class="detail-subtitle">Karta drużyny</div>' +
     body +
   '</div>';
@@ -1715,9 +1733,9 @@ function _tdAthRowPatrol(r) {
   return '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + esc(String(place)) + '</div>' +
     '<div class="rank-info"><div class="rank-name">' + esc(name) + '</div>' +
     '<div class="rank-details">' +
-      '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
-      '<span><span class="rank-detail-lbl">⏱ OSF</span><span class="rank-detail-val">' + esc(osfDisp) + '</span></span>' +
-      '<span><span class="rank-detail-lbl">🎯</span><span class="rank-detail-val">' + shotDisp + '</span></span>' +
+      '<span><span class="rank-detail-lbl">' + ic('run') + '</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
+      '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' OSF</span><span class="rank-detail-val">' + esc(osfDisp) + '</span></span>' +
+      '<span><span class="rank-detail-lbl">' + ic('target') + '</span><span class="rank-detail-val">' + shotDisp + '</span></span>' +
     '</div></div>' +
     '<div><div class="rank-score">' + esc(String(pts)) + '</div><div class="rank-score-lbl">pkt</div></div></div>';
 }
@@ -1731,18 +1749,18 @@ function _teamDetailPatrol(team) {
   const women = _state.athletes.filter(a => a.gender === 'K' && a.team === team).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
 
   let html = '<div class="td-chips">';
-  html += _tdChip('🏆 Generalna', overall ? overall.rank : '—', overall ? overall.total + ' pkt' : 'brak kompletu', { goto: 'overall', team: team, rank: overall ? overall.rank : 0 });
-  html += _tdChip('🛡 Drużynowa', teamCls ? teamCls.rank : '—', teamCls ? teamCls.sum + ' pkt' : 'brak 3 sklas. M', { goto: 'team', team: team, rank: teamCls ? teamCls.rank : 0 });
-  html += _tdChip('🏃 Bieg druż.', (tr && tr.rank) ? tr.rank : '—', tr ? (tr.pts !== null ? tr.pts + ' pkt' : 'DSQ/niekompl.') : 'brak', { goto: 'trun', team: team, rank: (tr && tr.rank) ? tr.rank : 0 });
+  html += _tdChip(ic('trophy') + ' Generalna', overall ? overall.rank : '—', overall ? overall.total + ' pkt' : 'brak kompletu', { goto: 'overall', team: team, rank: overall ? overall.rank : 0 });
+  html += _tdChip(ic('shield') + ' Drużynowa', teamCls ? teamCls.rank : '—', teamCls ? teamCls.sum + ' pkt' : 'brak 3 sklas. M', { goto: 'team', team: team, rank: teamCls ? teamCls.rank : 0 });
+  html += _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', tr ? (tr.pts !== null ? tr.pts + ' pkt' : 'DSQ/niekompl.') : 'brak', { goto: 'trun', team: team, rank: (tr && tr.rank) ? tr.rank : 0 });
   html += '</div>';
 
   if (tr) {
     const shotD = (tr.tr.shotPoints !== undefined && tr.tr.shotPoints !== null && tr.tr.shotPoints !== '') ? (tr.tr.shotPoints + ' pkt') : '—';
     html += '<div class="td-section-lbl">Bieg drużynowy</div>' +
       '<div class="rank-card info-card"><div class="rank-info"><div class="rank-details">' +
-      '<span><span class="rank-detail-lbl">🏃</span><span class="rank-detail-val">' + _formatTeamSec(parseFloat(tr.tr.biegSec)) + '</span></span>' +
-      '<span><span class="rank-detail-lbl">⏱ OSF</span><span class="rank-detail-val">' + _formatTeamSec(parseFloat(tr.tr.osfSec)) + '</span></span>' +
-      '<span><span class="rank-detail-lbl">🎯</span><span class="rank-detail-val">' + shotD + '</span></span>' +
+      '<span><span class="rank-detail-lbl">' + ic('run') + '</span><span class="rank-detail-val">' + _formatTeamSec(parseFloat(tr.tr.biegSec)) + '</span></span>' +
+      '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' OSF</span><span class="rank-detail-val">' + _formatTeamSec(parseFloat(tr.tr.osfSec)) + '</span></span>' +
+      '<span><span class="rank-detail-lbl">' + ic('target') + '</span><span class="rank-detail-val">' + shotD + '</span></span>' +
       '</div></div><div><div class="rank-score">' + (tr.pts !== null ? tr.pts : '—') + '</div><div class="rank-score-lbl">pkt</div></div></div>';
   }
 
@@ -1774,7 +1792,7 @@ function _teamDetailOsf(team) {
   const stub = a => ({ ath: a, best: '', _place: null });
   const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && a.team === team).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && a.team === team).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
-  let html = '<div class="td-chips">' + _tdChip('🛡 Drużynowa', cls ? cls.rank : '—', cls ? ((Math.round(cls.sumSec * 100) / 100).toFixed(2) + ' s') : 'brak 3 sklas.', { goto: 'team', team: team, rank: cls ? cls.rank : 0 }) + '</div>';
+  let html = '<div class="td-chips">' + _tdChip(ic('shield') + ' Drużynowa', cls ? cls.rank : '—', cls ? ((Math.round(cls.sumSec * 100) / 100).toFixed(2) + ' s') : 'brak 3 sklas.', { goto: 'team', team: team, rank: cls ? cls.rank : 0 }) + '</div>';
   const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div></div><div><div class="rank-score">' + esc(r.best || '—') + '</div><div class="rank-score-lbl">najl.</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
   if (women.length) html += '<div class="td-section-lbl">Zawodnicy — kobiety</div>' + women.map(row).join('');
@@ -1803,7 +1821,7 @@ function _teamDetailWieloboj(team) {
   const stub = a => ({ ath: a, pts: { total: 0 }, _place: null });
   const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && inTeam(a)).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && inTeam(a)).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
-  let html = '<div class="td-chips">' + _tdChip('🛡 Drużynowa', cls ? cls.rank : '—', cls ? (Math.round(cls.total) + ' pkt') : 'brak wyników', { goto: 'team', team: team, rank: cls ? cls.rank : 0 }) + '</div>';
+  let html = '<div class="td-chips">' + _tdChip(ic('shield') + ' Drużynowa', cls ? cls.rank : '—', cls ? (Math.round(cls.total) + ' pkt') : 'brak wyników', { goto: 'team', team: team, rank: cls ? cls.rank : 0 }) + '</div>';
   const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div>' + (r.ath.cat ? '<div class="rank-team">' + esc(r.ath.cat) + '</div>' : '') + '</div><div><div class="rank-score">' + Math.round(r.pts.total) + '</div><div class="rank-score-lbl">pkt</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
   if (women.length) html += '<div class="td-section-lbl">Zawodnicy — kobiety</div>' + women.map(row).join('');
@@ -1851,7 +1869,7 @@ function _renderAthleteDetailWrap() {
   } catch (e) { body = '<div class="empty">Błąd: ' + esc(e.message) + '</div>'; }
   const gc = a.gender === 'K' ? 'cat-k-color' : 'cat-m-color';
   return '<div class="detail-wrap">' + back +
-    '<div class="detail-title ' + gc + '"><span class="icon">' + (a.gender === 'K' ? '♀' : '♂') + '</span><span>' + esc(name) + '</span></div>' +
+    '<div class="detail-title ' + gc + '"><span class="icon">' + (a.gender === 'K' ? ic('female') : ic('male')) + '</span><span>' + esc(name) + '</span></div>' +
     '<div class="detail-subtitle">Karta zawodnika</div>' + body + '</div>';
 }
 
@@ -1859,7 +1877,7 @@ function _athleteDetailPatrol(a) {
   const row = _patrolGenderStandings(a.gender).find(r => r.ath.id === a.id);
   const place = (row && row._place) ? row._place : '—';
   const catId = a.gender === 'K' ? 'k' : 'm';
-  let html = '<div class="td-chips">' + _tdChip('📋 Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
+  let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
   html += _athTeamSection(a.team || '');
   html += '<div class="td-section-lbl">Wynik</div>';
   html += row ? _tdAthRowPatrol(row) : '<div class="empty" style="padding:18px;">Brak wpisanego wyniku</div>';
@@ -1873,7 +1891,7 @@ function _athleteDetailOsf(a) {
   const s1 = _osfGetTime(_state, a.id, 's1') || '—';
   const s2 = _osfGetTime(_state, a.id, 's2') || '—';
   const best = _osfBestTime(_state, a.id) || '—';
-  let html = '<div class="td-chips">' + _tdChip('📋 Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
+  let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, a.gender === 'K' ? 'Kobiety' : 'Mężczyźni', { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
   html += _athTeamSection(a.team || '');
   html += '<div class="td-section-lbl">Czasy</div>' +
     '<div class="rank-card info-card"><div class="rank-info"><div class="rank-details">' +
@@ -1890,7 +1908,7 @@ function _athleteDetailWieloboj(a) {
   const p = _wjGetAthletePoints(_state, a.id);
   const team = (_state.teams || []).find(t => t.id == a.teamId);
   const teamName = team ? team.name : (a.team || '');
-  let html = '<div class="td-chips">' + _tdChip('📋 Miejsce', place, (a.gender === 'K' ? 'Kobiety' : 'Mężczyźni') + (a.cat ? ' · ' + a.cat : ''), { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
+  let html = '<div class="td-chips">' + _tdChip(ic('clipboard') + ' Miejsce', place, (a.gender === 'K' ? 'Kobiety' : 'Mężczyźni') + (a.cat ? ' · ' + a.cat : ''), { goto: catId, aid: a.id, rank: (row && row._place) ? row._place : 0 }) + '</div>';
   html += _athTeamSection(teamName);
   html += '<div class="td-section-lbl">Punkty</div>' +
     '<div class="rank-card info-card"><div class="rank-info"><div class="rank-details">' +
@@ -1907,23 +1925,23 @@ function _athleteDetailWieloboj(a) {
 // ═══════════════════════════════════════════════════════════════
 
 const PATROL_TABS = [
-  { id: 'm',       label: 'Mężczyźni',  icon: '♂', cls: 'cat-m',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('M') },
-  { id: 'k',       label: 'Kobiety',    icon: '♀', cls: 'cat-k',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('K') },
-  { id: 'team',    label: 'Drużynowa',  icon: '🛡', cls: 'cat-team',    sub: 'Suma 3 najlepszych M',     render: () => renderPatrolTeam() },
-  { id: 'trun',    label: 'Bieg drużynowy', icon: '🏃', cls: 'cat-trun', sub: '3-osobowy patrol',         render: () => renderPatrolTeamRun() },
-  { id: 'overall', label: 'Generalna',  icon: '🏆', cls: 'cat-overall', sub: 'Indywidualna + bieg drużynowy', render: () => renderPatrolOverall() },
+  { id: 'm',       label: 'Mężczyźni',  icon: ic('male'), cls: 'cat-m',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('M') },
+  { id: 'k',       label: 'Kobiety',    icon: ic('female'), cls: 'cat-k',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('K') },
+  { id: 'team',    label: 'Drużynowa',  icon: ic('shield'), cls: 'cat-team',    sub: 'Suma 3 najlepszych M',     render: () => renderPatrolTeam() },
+  { id: 'trun',    label: 'Bieg drużynowy', icon: ic('run'), cls: 'cat-trun', sub: '3-osobowy patrol',         render: () => renderPatrolTeamRun() },
+  { id: 'overall', label: 'Generalna',  icon: ic('trophy'), cls: 'cat-overall', sub: 'Indywidualna + bieg drużynowy', render: () => renderPatrolOverall() },
 ];
 
 const OSF_TABS = [
-  { id: 'm',    label: 'Mężczyźni', icon: '♂', cls: 'cat-m',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('M') },
-  { id: 'k',    label: 'Kobiety',   icon: '♀', cls: 'cat-k',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('K') },
-  { id: 'team', label: 'Drużynowa', icon: '🛡', cls: 'cat-team', sub: 'Suma 3 najlepszych z drużyny', render: () => renderOsfTeam() },
+  { id: 'm',    label: 'Mężczyźni', icon: ic('male'), cls: 'cat-m',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('M') },
+  { id: 'k',    label: 'Kobiety',   icon: ic('female'), cls: 'cat-k',    sub: 'Najlepszy czas (S1 lub S2)', render: () => renderOsfIndividual('K') },
+  { id: 'team', label: 'Drużynowa', icon: ic('shield'), cls: 'cat-team', sub: 'Suma 3 najlepszych z drużyny', render: () => renderOsfTeam() },
 ];
 
 const WIELOBOJ_TABS = [
-  { id: 'm',    label: 'Mężczyźni', icon: '♂', cls: 'cat-m',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('M') },
-  { id: 'k',    label: 'Kobiety',   icon: '♀', cls: 'cat-k',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('K') },
-  { id: 'team', label: 'Drużynowa', icon: '🛡', cls: 'cat-team', sub: 'Top 5 M + top 3 K',  render: () => renderWielobojTeam() },
+  { id: 'm',    label: 'Mężczyźni', icon: ic('male'), cls: 'cat-m',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('M') },
+  { id: 'k',    label: 'Kobiety',   icon: ic('female'), cls: 'cat-k',    sub: 'Suma punktów K1-K4', render: () => renderWielobojIndividual('K') },
+  { id: 'team', label: 'Drużynowa', icon: ic('shield'), cls: 'cat-team', sub: 'Top 5 M + top 3 K',  render: () => renderWielobojTeam() },
 ];
 
 function _getTabsForType() {
@@ -1966,7 +1984,7 @@ function renderActiveView() {
 function renderTileMenu() {
   const tabs = _getTabsForType();
   if (!tabs.length) {
-    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów</div>';
+    document.getElementById('main').innerHTML = '<div class="empty"><div class="empty-icon">' + ic('alert') + '</div>Nieznany typ zawodów</div>';
     return;
   }
   const html = [_heroHTML(), '<div class="tile-grid">'];
@@ -2030,7 +2048,7 @@ async function loadAndRender() {
     if (!slotData) {
       setLive('err');
       document.getElementById('main').innerHTML =
-        '<div class="empty" style="padding:80px 20px;"><div class="empty-icon">🔒</div><div style="margin-bottom:8px;">Zawody niedostępne</div><div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Publikacja wyników nie jest włączona, lub link jest nieprawidłowy.</div></div>';
+        '<div class="empty" style="padding:80px 20px;"><div class="empty-icon">' + ic('lock') + '</div><div style="margin-bottom:8px;">Zawody niedostępne</div><div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Publikacja wyników nie jest włączona, lub link jest nieprawidłowy.</div></div>';
       return;
     }
     _slot = slotData.row;
@@ -2053,7 +2071,7 @@ async function loadAndRender() {
     if (!loader) {
       setLive('err');
       document.getElementById('main').innerHTML =
-        '<div class="empty"><div class="empty-icon">❓</div>Nieznany typ zawodów: ' + esc(_slotMeta.type || '?') + '</div>';
+        '<div class="empty"><div class="empty-icon">' + ic('alert') + '</div>Nieznany typ zawodów: ' + esc(_slotMeta.type || '?') + '</div>';
       return;
     }
 
@@ -2061,7 +2079,7 @@ async function loadAndRender() {
     if (!_state) {
       setLive('ok');
       document.getElementById('main').innerHTML =
-        '<div class="empty"><div class="empty-icon">📭</div>Brak danych konkurencji</div>';
+        '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak danych konkurencji</div>';
       return;
     }
 
@@ -2075,7 +2093,7 @@ async function loadAndRender() {
     console.error('[tablica]', e);
     setLive('err');
     document.getElementById('main').innerHTML =
-      '<div class="empty"><div class="empty-icon">⚠</div>Błąd: ' + esc(e.message) + '</div>';
+      '<div class="empty"><div class="empty-icon">' + ic('alert') + '</div>Błąd: ' + esc(e.message) + '</div>';
   }
 }
 
@@ -2096,7 +2114,7 @@ function startAutoRefresh() {
     setMeta('Tablica wyników MSS');
     document.getElementById('main').innerHTML =
       '<div class="empty" style="padding:80px 20px;">' +
-        '<div class="empty-icon">📱</div>' +
+        '<div class="empty-icon">' + ic('qr') + '</div>' +
         '<div style="margin-bottom:8px;">Zeskanuj QR kod zawodów</div>' +
         '<div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Każde zawody mają indywidualny QR kod / link.<br>Otrzymasz go od organizatora.</div>' +
       '</div>';
@@ -2114,7 +2132,7 @@ function startAutoRefresh() {
       setMeta('Tablica wyników MSS');
       document.getElementById('main').innerHTML =
         '<div class="empty" style="padding:80px 20px;">' +
-          '<div class="empty-icon">🔒</div>' +
+          '<div class="empty-icon">' + ic('lock') + '</div>' +
           '<div style="margin-bottom:8px;">Zawody niedostępne</div>' +
           '<div style="font-size:13px;color:var(--text3);text-transform:none;font-family:var(--font-b);letter-spacing:0;font-weight:normal;margin-top:8px;">Kod zawodów <code>' + esc(URL_SLOT_SHORT) + '</code> nie został znaleziony, lub publikacja wyników nie jest jeszcze włączona przez organizatora.</div>' +
         '</div>';
