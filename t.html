@@ -409,6 +409,8 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-details { display: flex; flex-wrap: wrap; gap: 8px 14px; font-family: var(--font-m); font-size: 11px; color: var(--text3); }
 .rank-detail-lbl { color: var(--text3); margin-right: 3px; }
 .rank-detail-val { color: var(--text2); }
+.rank-detail-val.best-time { color: var(--green); font-weight: 700; }
+.stat-tile .st-val.st-val-best { color: var(--green); }
 .rank-score {
   font-family: var(--font-m); font-size: 22px; font-weight: 700;
   color: var(--accent); text-align: right; line-height: 1; padding-left: 8px;
@@ -1401,16 +1403,16 @@ function renderOsfTeam() {
     const topCls = (isCls && r.rank <= 3) ? ' top-' + r.rank : '';
     const dsqCls = isCls ? '' : ' dsq';
     const rankDisp = isCls ? r.rank : (r.ok ? '—' : 'DSQ');
-    const bestDisp = r.best || '—';
     const ptsDisp = isCls ? r.pts : '—';
+    const s1Best = !!(r.best && r.s1 === r.best);
+    const s2Best = !!(r.best && r.s2 === r.best);
     return '<div class="rank-card' + topCls + dsqCls + '">' +
       '<div class="rank-num">' + rankDisp + '</div>' +
       '<div class="rank-info">' +
         '<div class="rank-name rank-team-link" data-team="' + esc(r.team) + '">' + esc(r.team) + '</div>' +
         '<div class="rank-details">' +
-          '<span><span class="rank-detail-lbl">S1:</span><span class="rank-detail-val">' + esc(r.s1) + '</span></span>' +
-          '<span><span class="rank-detail-lbl">S2:</span><span class="rank-detail-val">' + esc(r.s2) + '</span></span>' +
-          '<span><span class="rank-detail-lbl">' + ic('stopwatch') + ' najl.</span><span class="rank-detail-val">' + esc(bestDisp) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">S1:</span><span class="rank-detail-val' + (s1Best ? ' best-time' : '') + '">' + esc(r.s1) + '</span></span>' +
+          '<span><span class="rank-detail-lbl">S2:</span><span class="rank-detail-val' + (s2Best ? ' best-time' : '') + '">' + esc(r.s2) + '</span></span>' +
         '</div>' +
       '</div>' +
       '<div>' +
@@ -1838,7 +1840,14 @@ function _teamDetailOsf(team) {
   const stub = a => ({ ath: a, best: '', _place: null });
   const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && a.team === team).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && a.team === team).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
-  let html = '<div class="td-chips">' + _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', (tr && tr.rank) ? (tr.best || '—') : 'brak', { goto: 'team', team: team, rank: (tr && tr.rank) ? tr.rank : 0 }) + '</div>';
+  let html = '<div class="td-chips">' + _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', (tr && tr.rank) ? (tr.pts + ' pkt') : 'brak', { goto: 'team', team: team, rank: (tr && tr.rank) ? tr.rank : 0 }) + '</div>';
+  if (tr && tr.started) {
+    const s1Best = !!(tr.best && tr.s1 === tr.best);
+    const s2Best = !!(tr.best && tr.s2 === tr.best);
+    const serTile = (lbl, val, isBest) => '<div class="stat-tile"><span class="st-ic">' + ic('stopwatch') + '</span><div class="st-val' + (isBest ? ' st-val-best' : '') + '">' + esc(val) + '</div><div class="st-lbl">' + esc(lbl) + '</div></div>';
+    html += '<div class="td-section-lbl" style="text-align:center">Serie biegu drużynowego</div>' +
+      '<div class="stat-row">' + serTile('Seria 1', tr.s1, s1Best) + serTile('Seria 2', tr.s2, s2Best) + '</div>';
+  }
   const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div></div><div><div class="rank-score">' + esc(r.best || '—') + '</div><div class="rank-score-lbl">najl.</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
   if (women.length) html += '<div class="td-section-lbl">Zawodnicy — kobiety</div>' + women.map(row).join('');
