@@ -36,18 +36,29 @@
   .toolbar .btn.sec { background: #fff; color: #000; }
   .toolbar .btn:hover { opacity: .85; }
 
-  /* Sam plakat */
+  /* Sam plakat — wypelnia cala wysokosc strony A4 */
   .poster {
     max-width: 720px;
+    min-height: 100vh;
     margin: 0 auto;
-    padding: 64px 60px 52px;
+    padding: 56px 60px;
     text-align: center;
     border: 1px solid #e6e6e6;
     background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
   }
+  .poster > * { flex: 0 0 auto; }
 
   /* Cienka czarna linia u gory */
-  .top-rule { width: 100%; height: 2px; background: #000; margin-bottom: 30px; }
+  .top-rule { width: 100%; height: 2px; background: #000; }
+
+  /* Grupy rozkladane pionowo na A4 */
+  .p-head { display: flex; flex-direction: column; align-items: center; }
+  .p-steps { display: flex; flex-direction: column; align-items: center; }
 
   /* Naglowek z logo MSS */
   .brand {
@@ -65,9 +76,9 @@
   /* Glowne 'WYNIKI NA ZYWO' */
   .heading {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 56px; font-weight: 700;
+    font-size: 72px; font-weight: 700;
     letter-spacing: 1px; text-transform: uppercase;
-    margin: 0 0 16px;
+    margin: 18px 0 18px;
     line-height: 0.98;
   }
 
@@ -76,27 +87,26 @@
     display: inline-block;
     border: 1.5px solid #000;
     border-radius: 4px;
-    padding: 4px 14px;
+    padding: 5px 18px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px; font-weight: 600;
+    font-size: 16px; font-weight: 600;
     letter-spacing: 3px; text-transform: uppercase;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
   }
 
   /* Nazwa zawodow */
   .event-name {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 24px; color: #000;
+    font-size: 30px; color: #000;
     font-weight: 600;
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     line-height: 1.15;
-    max-width: 520px; margin-left: auto; margin-right: auto;
+    max-width: 560px; margin-left: auto; margin-right: auto;
   }
   .event-meta {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; color: #333;
+    font-size: 16px; color: #333;
     letter-spacing: 1px;
-    margin-bottom: 34px;
     font-weight: 400;
   }
   .event-meta .sep { opacity: .5; margin: 0 8px; }
@@ -105,14 +115,14 @@
   .qr-wrap {
     position: relative;
     display: inline-block;
-    padding: 16px;
+    padding: 18px;
     border: 1px solid #000;
-    margin: 0 auto 36px;
+    margin: 0 auto;
     background: #fff;
   }
-  .qr-wrap canvas { display: block; width: 256px; height: 256px; }
+  .qr-wrap canvas { display: block; width: 340px; height: 340px; }
   .qr-corner {
-    position: absolute; width: 18px; height: 18px;
+    position: absolute; width: 22px; height: 22px;
   }
   .qr-corner.tl { top: -2px; left: -2px; border-top: 3px solid #000; border-left: 3px solid #000; }
   .qr-corner.tr { top: -2px; right: -2px; border-top: 3px solid #000; border-right: 3px solid #000; }
@@ -122,54 +132,56 @@
   /* Sekcja instrukcji */
   .steps {
     list-style: none; padding: 0; margin: 0 auto 22px;
-    display: flex; flex-direction: column; gap: 13px;
-    max-width: 360px;
+    display: flex; flex-direction: column; gap: 18px;
+    max-width: 440px;
     text-align: left;
   }
-  .step { display: flex; align-items: center; gap: 14px; }
+  .step { display: flex; align-items: center; gap: 18px; }
   .step-num {
-    width: 26px; height: 26px;
+    width: 34px; height: 34px;
     border: 1.5px solid #000; border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px; font-weight: 700;
+    font-size: 19px; font-weight: 700;
     flex-shrink: 0;
   }
   .step-text {
-    font-size: 14.5px; color: #000;
+    font-size: 18px; color: #000;
     line-height: 1.35;
   }
   .step-text strong { font-weight: 600; }
 
   .note {
-    font-size: 12px; color: #555;
+    font-size: 14px; color: #555;
     font-style: italic;
-    margin-bottom: 34px; line-height: 1.5;
-    max-width: 380px; margin-left: auto; margin-right: auto;
+    line-height: 1.5;
+    max-width: 440px; margin: 0 auto;
   }
 
   /* Stopka */
   .footer {
-    margin-top: 32px;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px; letter-spacing: 3px;
+    font-size: 13px; letter-spacing: 3px;
     text-transform: uppercase; color: #999;
   }
 
-  /* Print: zdejmij ramke i przyciski */
+  /* Print: zdejmij ramke i przyciski, wypelnij strone */
   @media print {
     .toolbar { display: none !important; }
-    .poster { border: none; padding: 34px 28px; max-width: 100%; }
+    .poster { border: none; padding: 20mm 18mm; max-width: 100%; min-height: 100vh; }
     body { background: #fff; }
   }
 
   /* Mobile preview */
   @media (max-width: 600px) {
-    .poster { padding: 36px 20px; }
-    .heading { font-size: 40px; }
-    .event-name { font-size: 20px; }
-    .qr-wrap canvas { width: 220px; height: 220px; }
-    .url { font-size: 12px; }
+    .poster { padding: 32px 22px; min-height: 0; }
+    .heading { font-size: 46px; }
+    .event-name { font-size: 22px; }
+    .event-meta { font-size: 13px; }
+    .type-chip { font-size: 13px; }
+    .qr-wrap canvas { width: 240px; height: 240px; }
+    .step-text { font-size: 15px; }
+    .step-num { width: 28px; height: 28px; font-size: 16px; }
   }
 </style>
 </head>
@@ -183,20 +195,22 @@
 <div class="poster" id="poster">
   <div class="top-rule"></div>
 
-  <header class="brand">
-    <span class="brand-hex">
-      <svg viewBox="0 0 32 32" width="24" height="24">
-        <polygon points="16,2.5 28.12,9.5 28.12,22.5 16,29.5 3.88,22.5 3.88,9.5"
-                 fill="#f2f2f2" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/>
-      </svg>
-    </span>
-    <span class="brand-name">Military Sports System</span>
-  </header>
+  <div class="p-head">
+    <header class="brand">
+      <span class="brand-hex">
+        <svg viewBox="0 0 32 32" width="26" height="26">
+          <polygon points="16,2.5 28.12,9.5 28.12,22.5 16,29.5 3.88,22.5 3.88,9.5"
+                   fill="#f2f2f2" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">Military Sports System</span>
+    </header>
 
-  <h1 class="heading">Wyniki na żywo</h1>
-  <div class="type-chip" id="type-chip" style="display:none"></div>
-  <div class="event-name" id="event-name">—</div>
-  <div class="event-meta" id="event-meta"></div>
+    <h1 class="heading">Wyniki na żywo</h1>
+    <div class="type-chip" id="type-chip" style="display:none"></div>
+    <div class="event-name" id="event-name">—</div>
+    <div class="event-meta" id="event-meta"></div>
+  </div>
 
   <div class="qr-wrap">
     <span class="qr-corner tl"></span><span class="qr-corner tr"></span>
@@ -204,24 +218,26 @@
     <canvas id="qr-canvas"></canvas>
   </div>
 
-  <ol class="steps">
-    <li class="step">
-      <div class="step-num">1</div>
-      <div class="step-text">Otwórz <strong>aparat</strong> w swoim telefonie</div>
-    </li>
-    <li class="step">
-      <div class="step-num">2</div>
-      <div class="step-text">Skieruj go na <strong>kod QR powyżej</strong></div>
-    </li>
-    <li class="step">
-      <div class="step-num">3</div>
-      <div class="step-text">Dotknij <strong>linku</strong> — wyniki otworzą się same</div>
-    </li>
-  </ol>
+  <div class="p-steps">
+    <ol class="steps">
+      <li class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Otwórz <strong>aparat</strong> w swoim telefonie</div>
+      </li>
+      <li class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Skieruj go na <strong>kod QR powyżej</strong></div>
+      </li>
+      <li class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Dotknij <strong>linku</strong> — wyniki otworzą się same</div>
+      </li>
+    </ol>
 
-  <div class="note">
-    Bez potrzeby instalowania aplikacji.<br>
-    Działa na każdym współczesnym smartfonie z Android lub iOS.
+    <div class="note">
+      Bez potrzeby instalowania aplikacji.<br>
+      Działa na każdym współczesnym smartfonie z Android lub iOS.
+    </div>
   </div>
 
   <div class="footer">militarysportsystem.pl</div>
