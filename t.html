@@ -411,6 +411,12 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-detail-val { color: var(--text2); }
 .rank-detail-val.best-time { color: var(--green); font-weight: 700; }
 .stat-tile .st-val.st-val-best { color: var(--green); }
+.rank-score-formula { font-family: var(--font-m); font-size: 9px; color: var(--text3); margin-top: 3px; white-space: nowrap; letter-spacing: .3px; }
+.td-chip.td-chip-feat { flex-basis: 100%; width: 100%; max-width: 100%; height: auto; padding: 18px 16px; border-width: 2px; border-color: var(--accent); }
+.td-chip.td-chip-feat .td-chip-big { font-size: 50px; }
+.td-chip.td-chip-feat.medal-1 { border-color: var(--gold); }
+.td-chip.td-chip-feat.medal-2 { border-color: var(--silver); }
+.td-chip.td-chip-feat.medal-3 { border-color: var(--bronze); }
 .rank-score {
   font-family: var(--font-m); font-size: 22px; font-weight: 700;
   color: var(--accent); text-align: right; line-height: 1; padding-left: 8px;
@@ -1404,6 +1410,8 @@ function renderOsfTeam() {
     const dsqCls = isCls ? '' : ' dsq';
     const rankDisp = isCls ? r.rank : (r.ok ? '—' : 'DSQ');
     const ptsDisp = isCls ? r.pts : '—';
+    const mult = (_state.setup && _state.setup.teamMultiplier) ? _state.setup.teamMultiplier : 3;
+    const formula = isCls ? (r.rank === 1 ? '(' + r.N + '+1)×' + mult : '(' + r.N + '+1−' + r.rank + ')×' + mult) : '';
     const s1Best = !!(r.best && r.s1 === r.best);
     const s2Best = !!(r.best && r.s2 === r.best);
     return '<div class="rank-card' + topCls + dsqCls + '">' +
@@ -1418,6 +1426,7 @@ function renderOsfTeam() {
       '<div>' +
         '<div class="rank-score">' + ptsDisp + '</div>' +
         '<div class="rank-score-lbl">pkt</div>' +
+        (formula ? '<div class="rank-score-formula">' + formula + '</div>' : '') +
       '</div>' +
     '</div>';
   }).join('');
@@ -1675,8 +1684,9 @@ function _tdChip(lbl, big, sub, opts) {
     ? (' data-goto="' + esc(opts.goto) + '"' + (opts.team ? ' data-team="' + esc(opts.team) + '"' : '') + (opts.aid ? ' data-aid="' + esc(String(opts.aid)) + '"' : ''))
     : '';
   const medalCls = (opts.rank >= 1 && opts.rank <= 3) ? (' medal-' + opts.rank) : '';
+  const featCls = opts.feat ? ' td-chip-feat' : '';
   const bigCls = opts.accent ? ' td-chip-accentval' : '';
-  return '<div class="td-chip' + cls + medalCls + '"' + attrs + '><div class="td-chip-lbl">' + lbl + '</div><div class="td-chip-big' + bigCls + '">' + esc(String(big)) + '</div><div class="td-chip-sub">' + esc(String(sub)) + '</div></div>';
+  return '<div class="td-chip' + cls + medalCls + featCls + '"' + attrs + '><div class="td-chip-lbl">' + lbl + '</div><div class="td-chip-big' + bigCls + '">' + esc(String(big)) + '</div><div class="td-chip-sub">' + esc(String(sub)) + '</div></div>';
 }
 
 function _renderTeamDetailWrap() {
@@ -1840,7 +1850,12 @@ function _teamDetailOsf(team) {
   const stub = a => ({ ath: a, best: '', _place: null });
   const men = _state.athletes.filter(a => a.gender === 'M' && !a.pk && a.team === team).map(a => standM.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
   const women = _state.athletes.filter(a => a.gender === 'K' && !a.pk && a.team === team).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
-  let html = '<div class="td-chips">' + _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', (tr && tr.rank) ? (tr.pts + ' pkt') : 'brak', { goto: 'team', team: team, rank: (tr && tr.rank) ? tr.rank : 0 }) + '</div>';
+  const genRows = _osfGeneralna().filter(r => r.total > 0);
+  const genIdx = genRows.findIndex(r => r.team === team);
+  const genRow = genIdx >= 0 ? genRows[genIdx] : null;
+  const genPlace = genIdx >= 0 ? genIdx + 1 : 0;
+  let html = '<div class="td-chips">' + _tdChip(ic('trophy') + ' Generalna', genPlace || '—', genRow ? Math.round(genRow.total) + ' pkt' : 'brak wyników', { goto: 'overall', team: team, rank: genPlace, feat: true }) + '</div>';
+  html += '<div class="td-chips">' + _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', (tr && tr.rank) ? (tr.pts + ' pkt') : 'brak', { goto: 'team', team: team, rank: (tr && tr.rank) ? tr.rank : 0 }) + '</div>';
   if (tr && tr.started) {
     const s1Best = !!(tr.best && tr.s1 === tr.best);
     const s2Best = !!(tr.best && tr.s2 === tr.best);
