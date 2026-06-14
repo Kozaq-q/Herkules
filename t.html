@@ -411,9 +411,9 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-detail-val { color: var(--text2); }
 .rank-detail-val.best-time { color: var(--green); font-weight: 700; }
 .stat-tile .st-val.st-val-best { color: var(--green); }
-.rank-score-formula { font-family: var(--font-m); font-size: 9px; color: var(--text3); margin-top: 3px; white-space: nowrap; letter-spacing: .3px; }
-.td-chip.td-chip-feat { flex-basis: 100%; width: 100%; max-width: 100%; height: auto; padding: 18px 16px; border-width: 2px; border-color: var(--accent); }
-.td-chip.td-chip-feat .td-chip-big { font-size: 50px; }
+.rank-score-formula { font-family: var(--font-m); font-size: 8px; color: var(--text3); white-space: nowrap; letter-spacing: .3px; margin-left: 4px; font-weight: 400; text-transform: none; }
+.td-chip.td-chip-feat { flex-basis: auto; width: auto; min-width: 240px; max-width: 100%; height: auto; padding: 12px 24px; border-width: 2px; border-color: var(--accent); }
+.td-chip.td-chip-feat .td-chip-big { font-size: 34px; }
 .td-chip.td-chip-feat.medal-1 { border-color: var(--gold); }
 .td-chip.td-chip-feat.medal-2 { border-color: var(--silver); }
 .td-chip.td-chip-feat.medal-3 { border-color: var(--bronze); }
@@ -1425,8 +1425,7 @@ function renderOsfTeam() {
       '</div>' +
       '<div>' +
         '<div class="rank-score">' + ptsDisp + '</div>' +
-        '<div class="rank-score-lbl">pkt</div>' +
-        (formula ? '<div class="rank-score-formula">' + formula + '</div>' : '') +
+        '<div class="rank-score-lbl">pkt' + (formula ? '<span class="rank-score-formula">' + formula + '</span>' : '') + '</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1855,13 +1854,15 @@ function _teamDetailOsf(team) {
   const genRow = genIdx >= 0 ? genRows[genIdx] : null;
   const genPlace = genIdx >= 0 ? genIdx + 1 : 0;
   let html = '<div class="td-chips">' + _tdChip(ic('trophy') + ' Generalna', genPlace || '—', genRow ? Math.round(genRow.total) + ' pkt' : 'brak wyników', { goto: 'overall', team: team, rank: genPlace, feat: true }) + '</div>';
-  html += '<div class="td-chips">' + _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', (tr && tr.rank) ? (tr.pts + ' pkt') : 'brak', { goto: 'team', team: team, rank: (tr && tr.rank) ? tr.rank : 0 }) + '</div>';
+  const biegChip = _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', (tr && tr.rank) ? (tr.pts + ' pkt') : 'brak', { goto: 'team', team: team, rank: (tr && tr.rank) ? tr.rank : 0 });
   if (tr && tr.started) {
     const s1Best = !!(tr.best && tr.s1 === tr.best);
     const s2Best = !!(tr.best && tr.s2 === tr.best);
     const serTile = (lbl, val, isBest) => '<div class="stat-tile"><span class="st-ic">' + ic('stopwatch') + '</span><div class="st-val' + (isBest ? ' st-val-best' : '') + '">' + esc(val) + '</div><div class="st-lbl">' + esc(lbl) + '</div></div>';
-    html += '<div class="td-section-lbl" style="text-align:center">Serie biegu drużynowego</div>' +
-      '<div class="stat-row">' + serTile('Seria 1', tr.s1, s1Best) + serTile('Seria 2', tr.s2, s2Best) + '</div>';
+    html += '<div class="td-section-lbl" style="text-align:center">Bieg drużynowy</div>' +
+      '<div class="stat-row">' + biegChip + serTile('Seria 1', tr.s1, s1Best) + serTile('Seria 2', tr.s2, s2Best) + '</div>';
+  } else {
+    html += '<div class="td-chips">' + biegChip + '</div>';
   }
   const row = r => '<div class="rank-card" data-aid="' + esc(String(r.ath.id)) + '"><div class="rank-num" style="font-size:20px;">' + (r._place ? r._place : '—') + '</div><div class="rank-info"><div class="rank-name">' + esc((r.ath.rank ? r.ath.rank + ' ' : '') + (r.ath.name || '')) + '</div></div><div><div class="rank-score">' + esc(r.best || '—') + '</div><div class="rank-score-lbl">najl.</div></div></div>';
   html += '<div class="td-section-lbl">Zawodnicy — mężczyźni</div>' + (men.length ? men.map(row).join('') : '<div class="empty" style="padding:18px;">Brak</div>');
