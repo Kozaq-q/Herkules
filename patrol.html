@@ -2354,6 +2354,16 @@ async function loadFromSupabase() {
   } catch(e) { return false; }
 }
 
+// Znacznik ostatniej lokalnej edycji ROSTERA (lista zawodnikow: dodanie/usuniecie,
+// PK, 36+, edycja nazwy/druzyny/bib, import). Uzywany przy mergu z przychodzacym
+// stanem — najswiezsza edycja rostera wygrywa, zeby polling nie cofal flagi.
+function _touchRoster() { try { state._athletesAt = Date.now(); } catch(_) {} }
+// Lekki podpis rostera — do wykrycia czy lista faktycznie sie zmienila (czy warto
+// przerysowac). Bez tego kazdy poll przerysowuje liste i przycisk znika spod palca.
+function _rosterSig(arr) {
+  return (arr || []).map(a => a.id + ':' + (a.pk ? 1 : 0) + (a.over36 ? 1 : 0) + ':' + (a.bib || '') + ':' + (a.name || '') + ':' + (a.team || '') + ':' + (a.rank || '')).join('|');
+}
+
 function save() {
   // try/catch: quota / tryb prywatny nie może zabić handlera kliknięcia —
   // zapis do chmury (scheduleSave) ma się odbyć mimo padu localStorage.
@@ -3265,6 +3275,13 @@ function _applyRemoteStateNow(stateJson) {
 // Per-pole: times, disq, teamRun. Per-key z tombstonami: runs, teamRuns.
 function _mergeLocalIntoIncoming(incoming) {
   if (!state) return incoming;
+  // ROSTER (lista zawodnikow): jesli lokalna edycja jest swiezsza niz przychodzaca,
+  // zachowaj lokalna liste w calosci. Chroni PK/36+/nazwy przed cofnieciem przez
+  // staly poll (last-writer-wins na calym rosterze — edycje rostera sa rzadkie/ADMIN).
+  if (Array.isArray(state.athletes) && (state._athletesAt || 0) > (incoming._athletesAt || 0)) {
+    incoming.athletes = state.athletes;
+    incoming._athletesAt = state._athletesAt;
+  }
   if (state.times) {
     if (!incoming.times) incoming.times = {};
     mergeTimesPerField(state.times, incoming.times);
@@ -3294,6 +3311,7 @@ function _applyRemoteStateNowInternal(stateJson) {
     const incoming = JSON.parse(stateJson);
     if (incoming._writerTag && incoming._writerTag === _myWriteTag) return;
     if (_isSaving) return;
+    const _prevRosterSig = _rosterSig(state && state.athletes);
     // MERGE per-pole — gwarantuje że jeśli sędzia A i B wpisali różne pola
     // dla tego samego zawodnika/drużyny, oba zostaną zachowane.
     _mergeLocalIntoIncoming(incoming);
@@ -3311,7 +3329,12 @@ function _applyRemoteStateNowInternal(stateJson) {
     if (active) {
       const tabId = active.id.replace('tab-', '');
       if (tabId === 'setup' && typeof renderSetupPage === 'function') renderSetupPage();
-      else if (tabId === 'athletes' && typeof renderAthletes === 'function') { renderAthletes(); updateAthleteStats(); }
+      else if (tabId === 'athletes' && typeof renderAthletes === 'function') {
+        // Przerysuj liste TYLKO gdy roster faktycznie sie zmienil — inaczej
+        // przycisk (PK/36+/✎/✕) znika spod palca przy kazdym pollu.
+        if (_rosterSig(state.athletes) !== _prevRosterSig) { renderAthletes(); updateAthleteStats(); }
+        else if (typeof updateAthleteStats === 'function') updateAthleteStats();
+      }
       else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
       else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
@@ -5642,6 +5665,7 @@ function addAthlete() {
   if (!rank) { const sr = splitRank(name); rank = sr.rank; name = sr.name; } // auto-odciecie stopnia gdy wpisany w nazwisko
   state.athletes.push({ id: nextId(), rank, name, gender, team, bib: '' });
   assignBibs();
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
@@ -5681,6 +5705,7 @@ function saveEditAthlete() {
       a.bib = newBib; a._manualBib = true;
     }
   }
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
@@ -5702,6 +5727,7 @@ function removeAthlete(id) {
     return p;
   }).filter(p => p.aId || p.bId);
   assignBibs();
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
@@ -5782,6 +5808,7 @@ function togglePtrPK(id) {
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
   a.pk = !a.pk;
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
@@ -5793,6 +5820,7 @@ function togglePtrM36(id) {
   const a = state.athletes.find(x => x.id === id);
   if (!a) return;
   a.over36 = !a.over36;
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
@@ -5811,6 +5839,7 @@ function removePatrolDuplicates() {
   state.athletes = state.athletes.filter(a => !dupIds.has(a.id));
   // Wyczyść też ich czasy/disq
   dupIds.forEach(id => { delete state.times[id]; delete state.disq[id]; });
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
@@ -5827,7 +5856,7 @@ function _autoSplitRanks() {
     const sr = splitRank(a.name);
     if (sr.rank) { a.rank = sr.rank; a.name = sr.name; changed++; }
   });
-  if (changed) save();
+  if (changed) { _touchRoster(); save(); }
 }
 
 function renderAthletes() {
@@ -6184,6 +6213,7 @@ function _doImportRows(rows) {
     state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: !!r.pk, over36: !!r.m36 });
   });
   assignBibs();
+  _touchRoster();
   save();
   renderAthletes();
   updateAthleteStats();
