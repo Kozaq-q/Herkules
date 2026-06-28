@@ -405,6 +405,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--o
 
 /* PK / M36+ / WARN BADGES */
 .pk-badge { display: inline-block; font-family: var(--font-h); font-size: 9px; font-weight: 800; padding: 1px 5px; background: rgba(200,50,50,.15); color: #c83232; border: 1px solid rgba(200,50,50,.4); border-radius: 2px; letter-spacing: 1px; }
+.m36-badge { display: inline-block; font-family: var(--font-h); font-size: 9px; font-weight: 800; padding: 1px 5px; background: rgba(91,155,213,.15); color: #5b9bd5; border: 1px solid rgba(91,155,213,.45); border-radius: 2px; letter-spacing: 1px; }
 .gender-M { color: var(--male); font-weight: 700; }
 .gender-K { color: var(--female); font-weight: 700; }
 .team-sep-row td { background: var(--bg3) !important; padding: 4px 10px !important; }
@@ -5756,6 +5757,17 @@ function togglePtrPK(id) {
   updateAthleteStats();
 }
 
+// Kategoria wiekowa 36+ (M36/K36) — dodatkowa, honorowa klasyfikacja.
+// NIE wpływa na klasyfikację open / drużynową / generalną — zawodnik zostaje w open.
+function togglePtrM36(id) {
+  const a = state.athletes.find(x => x.id === id);
+  if (!a) return;
+  a.over36 = !a.over36;
+  save();
+  renderAthletes();
+  updateAthleteStats();
+}
+
 function removePatrolDuplicates() {
   const seen = new Map(); // key → first id
   const dupIds = new Set();
@@ -5847,11 +5859,12 @@ function renderAthletes() {
     html += ptrWarningBadge(warnings);
     html += '<td><span class="gender-' + a.gender + '">' + a.gender + '</span></td>';
     html += '<td style="font-size:11px;color:var(--text3);text-align:right;padding-right:14px;white-space:nowrap;">' + esc(a.rank || '') + '</td>';
-    html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a._manualBib ? ' <span style="font-size:9px;background:rgba(232,148,77,.15);color:var(--orange);padding:1px 5px;border-radius:2px;letter-spacing:1px;">RĘCZNY</span>' : '') + '</td>';
+    html += '<td style="font-weight:600;">' + esc(a.name) + (a.pk ? ' <span class="pk-badge">PK</span>' : '') + (a.over36 ? ' <span class="m36-badge">36+</span>' : '') + (a._manualBib ? ' <span style="font-size:9px;background:rgba(232,148,77,.15);color:var(--orange);padding:1px 5px;border-radius:2px;letter-spacing:1px;">RĘCZNY</span>' : '') + '</td>';
     html += '<td style="color:var(--text2);font-size:12px;">' + esc(a.team) + '</td>';
     html += '<td class="bib-cell" onclick="openEditModal(' + a.id + ')" title="Kliknij aby edytować">' + esc(a.bib||'—') + '</td>';
     html += '<td><div style="display:flex;gap:4px;justify-content:flex-end;">';
     html += '<button class="btn btn-xs" onclick="togglePtrPK(' + a.id + ')" title="' + (a.pk ? 'Usuń PK' : 'Oznacz jako Poza Konkurencją') + '" style="' + (a.pk ? 'color:#c83232;border-color:rgba(200,50,50,.4);opacity:1;' : 'opacity:.5;') + '">' + (a.pk ? 'PK ✓' : 'PK') + '</button>';
+    html += '<button class="btn btn-xs" onclick="togglePtrM36(' + a.id + ')" title="' + (a.over36 ? 'Usuń kat. 36+' : 'Oznacz jako 36+ (M36/K36)') + '" style="' + (a.over36 ? 'color:#5b9bd5;border-color:rgba(91,155,213,.5);opacity:1;' : 'opacity:.5;') + '">' + (a.over36 ? '36+ ✓' : '36+') + '</button>';
     html += '<button class="btn btn-xs" onclick="openEditModal(' + a.id + ')" title="Edytuj">✎</button>';
     html += '<button class="btn btn-xs btn-danger" onclick="removeAthlete(' + a.id + ')" title="Usuń">✕</button>';
     html += '</div></td>';
@@ -6062,6 +6075,7 @@ function parseImportRows(raw) {
     gender: findCol('plec', 'płeć', 'm/k', 'gender'),
     team:   findCol('druzyna', 'drużyna', 'jednostka', 'team', 'oddzial'),
     pk:     findCol('pk', 'poza konkur', 'poza_konkur'),
+    m36:    findCol('m36', 'k36', '36+', 'kat36', 'wiek36', '36 plus'),
   };
   if (col.name   < 0) col.name   = 1;
   if (col.gender < 0) col.gender = 2;
@@ -6079,8 +6093,9 @@ function parseImportRows(raw) {
                 : (gender === 'K' || gender.startsWith('KO')) ? 'K' : null;
     if (!gNorm) continue;
     const pk = col.pk >= 0 ? String(row[col.pk] || '').trim() !== '' : false;
+    const m36 = col.m36 >= 0 ? String(row[col.m36] || '').trim() !== '' : false;
     const sr = splitRank(name);
-    result.push({ rank: sr.rank, name: sr.name, gender: gNorm, team, pk });
+    result.push({ rank: sr.rank, name: sr.name, gender: gNorm, team, pk, m36 });
   }
   return result;
 }
@@ -6135,7 +6150,7 @@ function _doImportRows(rows) {
   const newRows = rows.filter(r => !existingKeys.has((r.name + '|' + r.team + '|' + r.gender).toLowerCase()));
   if (!newRows.length) { showToast('Wszyscy z listy już istnieją', 'warning'); return; }
   newRows.forEach(r => {
-    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: !!r.pk });
+    state.athletes.push({ id: nextId(), rank: r.rank || '', name: r.name, gender: r.gender, team: r.team, bib: '', pk: !!r.pk, over36: !!r.m36 });
   });
   assignBibs();
   save();
@@ -6725,6 +6740,7 @@ function athleteCardHTML(a, lane, pairNum, gender, runCtx) {
       removeIndBtn +
       '<span class="pair-athlete-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:700;">' + esc(displayName(a)) +
         (a.pk ? ' <span class="pk-badge" style="background:rgba(200,50,50,.15);color:#c83232;border:1px solid rgba(200,50,50,.4);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">PK</span>' : '') +
+        (a.over36 ? ' <span class="m36-badge" style="background:rgba(91,155,213,.15);color:#5b9bd5;border:1px solid rgba(91,155,213,.45);font-size:9px;font-weight:800;padding:1px 5px;border-radius:2px;">36+</span>' : '') +
         ' <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);font-weight:400;margin-left:3px;">#' + esc(a.bib) + '</span>' +
       '</span>' +
     '</div>' +
