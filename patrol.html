@@ -3957,7 +3957,7 @@ function _ptrBuildTeamRunPrintHTML(asFragment) {
   rows.sort((a, b) => {
     if (a.dsq && !b.dsq) return 1;
     if (!a.dsq && b.dsq) return -1;
-    return (a.pts || 0) - (b.pts || 0);
+    return ((a.pts || 0) - (b.pts || 0)) || _teamRunCmp(a.tr, b.tr);
   });
   const title = 'Bieg drużynowy (patrol 3-osobowy)';
   if (!rows.length) {
@@ -4019,7 +4019,9 @@ function _ptrBuildOverallPrintHTML(asFragment) {
   }).filter(r => r.overall !== null);
   rows.sort((a, b) => {
     if (a.overall !== b.overall) return a.overall - b.overall;
-    return (a.trEff || Infinity) - (b.trEff || Infinity);
+    // Tie-break 8c: wyzsze miejsce w biegu zespolowym (lepsze pkt biegu, dalej strzelanie/OSF/dziesiatki)
+    if ((a.trEff || Infinity) !== (b.trEff || Infinity)) return (a.trEff || Infinity) - (b.trEff || Infinity);
+    return _teamRunCmp(state.teamRun && state.teamRun[a.name], state.teamRun && state.teamRun[b.name]);
   });
   const title = 'KLASYFIKACJA GENERALNA — 11DKPanc';
   if (!rows.length) {
@@ -9419,7 +9421,7 @@ function renderTeamRunResults() {
   rows.sort((a, b) => {
     const aT = _trTier(a), bT = _trTier(b);
     if (aT !== bT) return aT - bT;
-    if (aT === 1) return a.pts - b.pts;
+    if (aT === 1) return (a.pts - b.pts) || _teamRunCmp(a.tr, b.tr);
     return 0;
   });
   let rank = 0;
@@ -9474,6 +9476,19 @@ function calcTeamRunPoints(tr) {
   const osfTeamPts = 480 - 2 * osfSec;
   const strzPts    = shotPts * 2;
   return Math.round(biegSec - osfTeamPts - strzPts + elim * 100);
+}
+
+// Tie-break biegu zespolowego (regulamin 8b): przy rownej liczbie pkt o miejscu
+// decyduje kolejno lepsze strzelanie -> lepszy OSF -> wiecej dziesiatek.
+// Zwraca <0 gdy trA wyzej. Dane: teamRun.shotPoints / osfSec / tens.
+function _teamRunCmp(trA, trB) {
+  trA = trA || {}; trB = trB || {};
+  const shotA = parseInt(trA.shotPoints) || 0, shotB = parseInt(trB.shotPoints) || 0;
+  if (shotA !== shotB) return shotB - shotA;
+  const osfA = parseFloat(trA.osfSec), osfB = parseFloat(trB.osfSec);
+  const oA = Number.isFinite(osfA) ? osfA : Infinity, oB = Number.isFinite(osfB) ? osfB : Infinity;
+  if (oA !== oB) return oA - oB;
+  return (parseInt(trB.tens) || 0) - (parseInt(trA.tens) || 0);
 }
 
 // Format float seconds → "m:ss.SS" (np. 154.32 → "2:34.32")
@@ -10660,7 +10675,9 @@ function renderOverallView() {
     if (a.overallTotal !== b.overallTotal) return a.overallTotal - b.overallTotal;
     const aT = a.teamRunPtsEff !== null ? a.teamRunPtsEff : Infinity;
     const bT = b.teamRunPtsEff !== null ? b.teamRunPtsEff : Infinity;
-    return aT - bT;
+    // Tie-break 8c: wyzsze miejsce w biegu zespolowym (pkt biegu, dalej strzelanie/OSF/dziesiatki)
+    if (aT !== bT) return aT - bT;
+    return _teamRunCmp(state.teamRun && state.teamRun[a.name], state.teamRun && state.teamRun[b.name]);
   });
   // Niesklasyfikowane (mają ind. ale brak biegu w ogóle) — pokażemy na dole
   const nonEligible = teams.filter(t => !t.eligible);

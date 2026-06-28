@@ -1147,6 +1147,16 @@ function calcTeamRunPoints(tr) {
   const elimPts = eliminated * 100;
   return Math.round(biegSec - osfPts - strzPts + elimPts);
 }
+// Tie-break biegu zespolowego (regulamin 8b): strzelanie -> OSF -> dziesiatki.
+function _teamRunCmp(trA, trB) {
+  trA = trA || {}; trB = trB || {};
+  const shotA = parseInt(trA.shotPoints) || 0, shotB = parseInt(trB.shotPoints) || 0;
+  if (shotA !== shotB) return shotB - shotA;
+  const oA = parseFloat(trA.osfSec), oB = parseFloat(trB.osfSec);
+  const osfA = Number.isFinite(oA) ? oA : Infinity, osfB = Number.isFinite(oB) ? oB : Infinity;
+  if (osfA !== osfB) return osfA - osfB;
+  return (parseInt(trB.tens) || 0) - (parseInt(trA.tens) || 0);
+}
 
 function _formatTeamSec(sec) {
   if (!Number.isFinite(sec)) return '—';
@@ -1733,7 +1743,7 @@ function _patrolTeamStandings() {
 function _patrolTeamRunStandings() {
   const teamRun = _state.teamRun || {};
   const arr = Object.keys(teamRun).map(name => ({ name, tr: teamRun[name], pts: calcTeamRunPoints(teamRun[name]) }));
-  arr.sort((a, b) => { if (a.pts === null && b.pts === null) return 0; if (a.pts === null) return 1; if (b.pts === null) return -1; return a.pts - b.pts; });
+  arr.sort((a, b) => { if (a.pts === null && b.pts === null) return 0; if (a.pts === null) return 1; if (b.pts === null) return -1; return (a.pts - b.pts) || _teamRunCmp(a.tr, b.tr); });
   let vr = 0; arr.forEach(r => { if (r.pts !== null) { vr++; r.rank = vr; } else r.rank = null; });
   return arr;
 }
@@ -1742,8 +1752,9 @@ function _patrolOverallStandings() {
   _state.athletes.filter(a => a.gender === 'M').map(a => _buildPatrolRow(a, _state)).forEach(r => { if (!r.ath.team) return; (byTeam[r.ath.team] = byTeam[r.ath.team] || []).push(r); });
   const teamRun = _state.teamRun || {};
   const arr = [];
-  for (const t in byTeam) { const all = byTeam[t]; _sortPatrolRows(all); const cl = all.filter(r => r._pts !== null); if (cl.length < 3) continue; const indSum = cl.slice(0, 3).reduce((s, r) => s + r._pts, 0); const tr = teamRun[t]; const trPts = tr ? calcTeamRunPoints(tr) : null; const pen = trPts === null ? 1200 : 0; arr.push({ team: t, indSum, trPts, total: indSum + (trPts !== null ? trPts : 0) + pen }); }
-  arr.sort((a, b) => a.total - b.total); arr.forEach((r, i) => r.rank = i + 1); return arr;
+  for (const t in byTeam) { const all = byTeam[t]; _sortPatrolRows(all); const cl = all.filter(r => r._pts !== null); if (cl.length < 3) continue; const indSum = cl.slice(0, 3).reduce((s, r) => s + r._pts, 0); const tr = teamRun[t]; const trPts = tr ? calcTeamRunPoints(tr) : null; const pen = trPts === null ? 1200 : 0; arr.push({ team: t, indSum, trPts, tr, trEff: (trPts !== null ? trPts : 1200), total: indSum + (trPts !== null ? trPts : 0) + pen }); }
+  // Tie-break 8c: wyzsze miejsce w biegu zespolowym (pkt biegu, dalej strzelanie/OSF/dziesiatki)
+  arr.sort((a, b) => (a.total - b.total) || (a.trEff - b.trEff) || _teamRunCmp(a.tr, b.tr)); arr.forEach((r, i) => r.rank = i + 1); return arr;
 }
 function _tdAthRowPatrol(r) {
   const place = r._place ? r._place : '—';

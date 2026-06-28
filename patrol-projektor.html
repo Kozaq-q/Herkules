@@ -580,6 +580,16 @@ function _calcTeamRunPointsProj(tr) {
   const elim = parseInt(tr.eliminated) || 0;
   return Math.round(biegSec - (480 - 2 * osfSec) - shotPts * 2 + elim * 100);
 }
+// Tie-break biegu zespolowego (regulamin 8b): strzelanie -> OSF -> dziesiatki.
+function _teamRunCmp(trA, trB) {
+  trA = trA || {}; trB = trB || {};
+  const shotA = parseInt(trA.shotPoints) || 0, shotB = parseInt(trB.shotPoints) || 0;
+  if (shotA !== shotB) return shotB - shotA;
+  const oA = parseFloat(trA.osfSec), oB = parseFloat(trB.osfSec);
+  const osfA = Number.isFinite(oA) ? oA : Infinity, osfB = Number.isFinite(oB) ? oB : Infinity;
+  if (osfA !== osfB) return osfA - osfB;
+  return (parseInt(trB.tens) || 0) - (parseInt(trA.tens) || 0);
+}
 function _formatTeamRunSec(sec) {
   const n = parseFloat(sec);
   if (!Number.isFinite(n) || n <= 0) return '—';
@@ -600,7 +610,7 @@ function buildTeamRunRows() {
   rows.sort((a, b) => {
     const aT = tier(a), bT = tier(b);
     if (aT !== bT) return aT - bT;
-    if (aT === 1) return a.pts - b.pts;
+    if (aT === 1) return (a.pts - b.pts) || _teamRunCmp(a.tr, b.tr);
     return 0;
   });
   return rows;
