@@ -605,9 +605,9 @@ function renderMenus() {
       tileHTML('result', 'ind', 'K', 'k', '♀', 'Kobiety') +
       (has36('M') ? tileHTML('result', 'ind36', 'M', 'm', '36+', 'M36 (36+)') : '') +
       (has36('K') ? tileHTML('result', 'ind36', 'K', 'k', '36+', 'K36 (36+)') : '') +
-      tileHTML('result', 'team', null, 'team', '🛡', 'Drużynowa (top 3 M)') +
+      tileHTML('result', 'team', null, 'team', '🛡', 'Drużynowa (pomocn.)') +
       tileHTML('result', 'teamrun', null, 'teamrun', '🏃', 'Bieg drużynowy') +
-      tileHTML('result', 'overall', null, 'overall', '🏆', 'Generalna');
+      tileHTML('result', 'overall', null, 'overall', '🏆', 'Zespołowa');
   }
 }
 
@@ -931,7 +931,7 @@ function renderTeamRunResults() {
 // ════════════ KLASYFIKACJA GENERALNA (ind. top 3 M + bieg drużynowy) ════════════
 // Regulamin 11DKPanc: drużyna bez biegu drużynowego dostaje +1200 pkt karnych ("600 wyjściowych podwojonych")
 function renderOverallClassification() {
-  document.getElementById('detail-title').textContent = 'Klasyfikacja generalna';
+  document.getElementById('detail-title').textContent = 'Klasyfikacja zespołowa';
   // Zbierz wszystkie drużyny które mają ≥3 M sklasyfikowanych ind. LUB mają wpis w teamRun
   const allTeams = new Set();
   (state.athletes || []).forEach(a => { const t = (a.team||'').trim(); if (t) allTeams.add(t); });

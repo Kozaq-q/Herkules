@@ -1782,7 +1782,7 @@ function _teamDetailPatrol(team) {
   const women = _state.athletes.filter(a => a.gender === 'K' && a.team === team).map(a => standK.find(r => r.ath.id === a.id) || stub(a)).sort(_tdByPlace);
 
   let html = '<div class="td-chips">';
-  html += _tdChip(ic('trophy') + ' Generalna', overall ? overall.rank : '—', overall ? overall.total + ' pkt' : 'brak kompletu', { goto: 'overall', team: team, rank: overall ? overall.rank : 0 });
+  html += _tdChip(ic('trophy') + ' Zespołowa', overall ? overall.rank : '—', overall ? overall.total + ' pkt' : 'brak kompletu', { goto: 'overall', team: team, rank: overall ? overall.rank : 0 });
   html += _tdChip(ic('shield') + ' Drużynowa', teamCls ? teamCls.rank : '—', teamCls ? teamCls.sum + ' pkt' : 'brak 3 sklas. M', { goto: 'team', team: team, rank: teamCls ? teamCls.rank : 0 });
   html += _tdChip(ic('run') + ' Bieg druż.', (tr && tr.rank) ? tr.rank : '—', tr ? (tr.pts !== null ? tr.pts + ' pkt' : 'DSQ/niekompl.') : 'brak', { goto: 'trun', team: team, rank: (tr && tr.rank) ? tr.rank : 0 });
   html += '</div>';
@@ -2035,9 +2035,9 @@ function _athleteDetailWieloboj(a) {
 const PATROL_TABS = [
   { id: 'm',       label: 'Mężczyźni',  icon: ic('male'), cls: 'cat-m',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('M') },
   { id: 'k',       label: 'Kobiety',    icon: ic('female'), cls: 'cat-k',       sub: 'Klasyfikacja indywidualna', render: () => renderPatrolIndividual('K') },
-  { id: 'team',    label: 'Drużynowa',  icon: ic('shield'), cls: 'cat-team',    sub: 'Suma 3 najlepszych M',     render: () => renderPatrolTeam() },
+  { id: 'team',    label: 'Drużynowa',  icon: ic('shield'), cls: 'cat-team',    sub: 'Pomocnicza — suma 3 najlepszych M', render: () => renderPatrolTeam() },
   { id: 'trun',    label: 'Bieg drużynowy', icon: ic('run'), cls: 'cat-trun', sub: '3-osobowy patrol',         render: () => renderPatrolTeamRun() },
-  { id: 'overall', label: 'Generalna',  icon: ic('trophy'), cls: 'cat-overall', sub: 'Indywidualna + bieg drużynowy', render: () => renderPatrolOverall() },
+  { id: 'overall', label: 'Zespołowa',  icon: ic('trophy'), cls: 'cat-overall', sub: '3 najlepszych M ind. + bieg zespołowy', render: () => renderPatrolOverall() },
 ];
 
 // ── OSF: Generalna (getTeamClassification z panelu) = pkt indywidualne M [+K jesli kScores] + pkt bieg druzynowy ──

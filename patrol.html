@@ -1703,7 +1703,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
             <button class="btn btn-sm" onclick="printPtrInd36('K')" style="font-size:11px;padding:6px 12px;color:var(--female);border-color:rgba(213,123,155,.4);" title="Klasyfikacja wiekowa 36+ kobiet">🖨 K36</button>
             <button class="btn btn-sm" onclick="printPtrTeam()" style="font-size:11px;padding:6px 12px;color:var(--orange);border-color:rgba(232,148,77,.4);">🖨 🛡 Drużynowa ind.</button>
             <button class="btn btn-sm" onclick="printPtrTeamRun()" style="font-size:11px;padding:6px 12px;color:var(--blue);border-color:rgba(96,168,232,.4);">🖨 🏃 Bieg drużynowy</button>
-            <button class="btn btn-sm" onclick="printPtrOverall()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🖨 🏆 Generalna</button>
+            <button class="btn btn-sm" onclick="printPtrOverall()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🖨 🏆 Zespołowa</button>
             <button class="btn btn-sm" onclick="printPtrAll()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">📄 Komplet (wszystko)</button>
           </div>
         </div>
@@ -1773,13 +1773,14 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
 
       <div class="card mb-12" id="ptr-team-card" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Drużynowa (suma 3 najlepszych M ind.)</div>
+          <div class="card-title" style="margin:0;padding:0;border:none;">🛡 Drużynowa ind. — pomocnicza (suma 3 najlepszych M)</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(76,175,130,.06);border:1px solid rgba(76,175,130,.3);border-radius:var(--radius);padding:4px 10px;">
             ✓ Regulamin 11DKPanc 2025
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
           Suma punktów <strong>3 najlepszych mężczyzn</strong> z biegu indywidualnego. Kobiety nie liczą.
+          <em>To składnik klasyfikacji zespołowej (oficjalny wynik = Zespołowa: ind. + bieg drużynowy).</em>
         </div>
         <div id="ptr-team-list"></div>
       </div>
@@ -1802,7 +1803,7 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
       <!-- 🏆 KLASYFIKACJA GENERALNA -->
       <div class="card mb-12" id="ptr-overall-card" style="display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;">
-          <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Klasyfikacja generalna (ind. + drużynowy)</div>
+          <div class="card-title" style="margin:0;padding:0;border:none;">🏆 Klasyfikacja zespołowa (3 najlepszych M ind. + bieg drużynowy)</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--font-m);background:rgba(232,212,77,.08);border:1px solid rgba(232,212,77,.4);border-radius:var(--radius);padding:4px 10px;">
             ✓ Regulamin 11DKPanc 2025
           </div>
@@ -3930,7 +3931,7 @@ function _ptrHas36(gender) {
 function printPtrAll() {
   // Kolejność: GENERALNA (najważniejsza) → DRUŻYNOWA ind. → BIEG DRUŻYNOWY → M → K → (M36/K36 jeśli są)
   const html =
-    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (Generalna, Drużynowa ind., Bieg drużynowy, M, K)') +
+    _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (Zespołowa, Drużynowa ind., Bieg drużynowy, M, K)') +
     _ptrBuildOverallPrintHTML(true) +
     _ptrBuildTeamPrintHTML(true) +
     _ptrBuildTeamRunPrintHTML(true) +
@@ -4023,7 +4024,7 @@ function _ptrBuildOverallPrintHTML(asFragment) {
     if ((a.trEff || Infinity) !== (b.trEff || Infinity)) return (a.trEff || Infinity) - (b.trEff || Infinity);
     return _teamRunCmp(state.teamRun && state.teamRun[a.name], state.teamRun && state.teamRun[b.name]);
   });
-  const title = 'KLASYFIKACJA GENERALNA — 11DKPanc';
+  const title = 'KLASYFIKACJA ZESPOŁOWA — 11DKPanc';
   if (!rows.length) {
     const inner = '<div style="padding:30px;text-align:center;color:#888;font-size:13px;">Brak sklasyfikowanych drużyn.</div>';
     if (asFragment) return '<div class="ranking-section"><div class="section-title">' + esc(title) + '</div>' + inner + '</div>';
@@ -4050,7 +4051,7 @@ function _ptrBuildOverallPrintHTML(asFragment) {
   }
   const sectionBody =
     podium +
-    '<div class="section-title">' + (asFragment ? 'Klasyfikacja generalna — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div>' +
+    '<div class="section-title">' + (asFragment ? 'Klasyfikacja zespołowa — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div>' +
     '<table><thead><tr>' +
       '<th class="rank-col">Msc</th>' +
       '<th>Drużyna</th>' +
@@ -10435,7 +10436,7 @@ function _buildResultsCatBar() {
     ['ind',      '♂♀', 'Indywidualne',   indHas],
     ['team',     '🛡',  'Drużynowa',      teamHas],
     ['team-run', '🏃', 'Bieg drużynowy', teamRunHas],
-    ['overall',  '🏆', 'Generalna',      overallHas],
+    ['overall',  '🏆', 'Zespołowa',      overallHas],
   ];
   el.innerHTML = items.map(([k, glyph, label, hasData]) =>
     '<button class="' + (_resultsCategory === k ? 'active' : '') + '" data-cat="' + k + '" data-filter="' + k + '" onclick="setResultsCategory(\'' + k + '\')" type="button">' +
