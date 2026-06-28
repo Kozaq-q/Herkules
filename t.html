@@ -400,6 +400,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
 .rank-card[data-aid] .rank-name { cursor: pointer; transition: color .12s; display: inline-block; }
 .rank-card[data-aid] .rank-name:hover { color: var(--accent); }
 .rank-card[data-aid] .rank-name:active { color: var(--accent); }
+.age36 { display: inline-block; font-family: var(--font-m); font-size: 9px; font-weight: 700; padding: 1px 5px; background: rgba(91,155,213,.15); color: #5b9bd5; border: 1px solid rgba(91,155,213,.45); border-radius: 3px; letter-spacing: .5px; margin-left: 6px; vertical-align: 2px; }
 .td-chip-link { cursor: pointer; }
 .td-chip-link:hover { border-color: var(--accent); }
 #to-top { position: fixed; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border2); color: var(--text1); font-size: 20px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 60; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
@@ -1028,8 +1029,8 @@ function _medal(rank) {
   return ''; // medale jako kolorowy numer (top-1/2/3), bez emoji
 }
 
-function renderPatrolIndividual(gender) {
-  const rows = _state.athletes.filter(a => a.gender === gender).map(a => _buildPatrolRow(a, _state)).filter(r => r.hasAny);
+function renderPatrolIndividual(gender, over36Only) {
+  const rows = _state.athletes.filter(a => a.gender === gender && (!over36Only || a.over36)).map(a => _buildPatrolRow(a, _state)).filter(r => r.hasAny);
   if (!rows.length) {
     return '<div class="empty"><div class="empty-icon">' + ic('clipboard') + '</div>Brak wpisanych wyników</div>';
   }
@@ -1054,7 +1055,7 @@ function renderPatrolIndividual(gender) {
     return '<div class="rank-card' + topCls + dsqCls + '" data-aid="' + esc(String(r.ath.id)) + '">' +
       '<div class="rank-num">' + (medal || rankNum) + '</div>' +
       '<div class="rank-info">' +
-        '<div class="rank-name">' + esc(name) + '</div>' +
+        '<div class="rank-name">' + esc(name) + (r.ath.over36 ? ' <span class="age36">36+</span>' : '') + '</div>' +
         (team ? '<div class="rank-team rank-team-link" data-team="' + esc(team) + '">' + esc(team) + '</div>' : '') +
         '<div class="rank-details">' +
           '<span><span class="rank-detail-lbl">' + ic('run') + '</span><span class="rank-detail-val">' + esc(totalDisp) + '</span></span>' +
@@ -1942,7 +1943,7 @@ function _renderAthleteDetailWrap() {
   } catch (e) { body = '<div class="empty">Błąd: ' + esc(e.message) + '</div>'; }
   const gc = a.gender === 'K' ? 'cat-k-color' : 'cat-m-color';
   return '<div class="detail-wrap">' + back +
-    '<div class="detail-title ' + gc + '"><span class="icon">' + (a.gender === 'K' ? ic('female') : ic('male')) + '</span><span>' + esc(name) + '</span></div>' +
+    '<div class="detail-title ' + gc + '"><span class="icon">' + (a.gender === 'K' ? ic('female') : ic('male')) + '</span><span>' + esc(name) + (a.over36 ? ' <span class="age36">36+</span>' : '') + '</span></div>' +
     '<div class="detail-subtitle">Karta zawodnika</div>' + body + '</div>';
 }
 
@@ -2154,7 +2155,17 @@ const WIELOBOJ_TABS = [
 ];
 
 function _getTabsForType() {
-  if (_competitionType === 'patrol')   return PATROL_TABS;
+  if (_competitionType === 'patrol') {
+    const has = g => (_state.athletes || []).some(a => a.gender === g && a.over36);
+    if (!has('M') && !has('K')) return PATROL_TABS;
+    const tabs = PATROL_TABS.slice();
+    const extra = [];
+    if (has('M')) extra.push({ id: 'm36', label: 'M36', icon: ic('male'), cls: 'cat-m', sub: 'Klasyfikacja wiekowa 36+', render: () => renderPatrolIndividual('M', true) });
+    if (has('K')) extra.push({ id: 'k36', label: 'K36', icon: ic('female'), cls: 'cat-k', sub: 'Klasyfikacja wiekowa 36+', render: () => renderPatrolIndividual('K', true) });
+    const idx = tabs.findIndex(t => t.id === 'k');
+    tabs.splice(idx >= 0 ? idx + 1 : tabs.length, 0, ...extra);
+    return tabs;
+  }
   if (_competitionType === 'osf')      return OSF_TABS; // zakladka Kobiet zawsze widoczna (medale indywidualne); kScores wplywa tylko na Generalna
   if (_competitionType === 'wielobój') return WIELOBOJ_TABS;
   return [];
