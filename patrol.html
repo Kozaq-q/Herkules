@@ -1699,6 +1699,8 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm" onclick="printPtrInd('M')" style="font-size:11px;padding:6px 12px;color:var(--male);border-color:rgba(91,155,213,.4);">🖨 ♂ Mężczyźni</button>
             <button class="btn btn-sm" onclick="printPtrInd('K')" style="font-size:11px;padding:6px 12px;color:var(--female);border-color:rgba(213,123,155,.4);">🖨 ♀ Kobiety</button>
+            <button class="btn btn-sm" onclick="printPtrInd36('M')" style="font-size:11px;padding:6px 12px;color:#5b9bd5;border-color:rgba(91,155,213,.4);" title="Klasyfikacja wiekowa 36+ mężczyzn">🖨 M36</button>
+            <button class="btn btn-sm" onclick="printPtrInd36('K')" style="font-size:11px;padding:6px 12px;color:var(--female);border-color:rgba(213,123,155,.4);" title="Klasyfikacja wiekowa 36+ kobiet">🖨 K36</button>
             <button class="btn btn-sm" onclick="printPtrTeam()" style="font-size:11px;padding:6px 12px;color:var(--orange);border-color:rgba(232,148,77,.4);">🖨 🛡 Drużynowa ind.</button>
             <button class="btn btn-sm" onclick="printPtrTeamRun()" style="font-size:11px;padding:6px 12px;color:var(--blue);border-color:rgba(96,168,232,.4);">🖨 🏃 Bieg drużynowy</button>
             <button class="btn btn-sm" onclick="printPtrOverall()" style="font-size:11px;padding:6px 12px;color:var(--accent);border-color:rgba(232,212,77,.5);background:rgba(232,212,77,.06);">🖨 🏆 Generalna</button>
@@ -1744,6 +1746,27 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
           <div class="ptr-results-col">
             <div class="ptr-results-col-title" style="color:var(--female);border-bottom-color:var(--female);">♀ Kobiety <span id="ptr-results-count-K" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:6px;"></span></div>
             <div id="ptr-results-K"></div>
+          </div>
+        </div>
+
+        <!-- 🎖 KLASYFIKACJA WIEKOWA 36+ (honorowa, te same punkty co open) -->
+        <div id="ptr-results-36-wrap" style="display:none;margin-top:18px;border-top:1px dashed var(--border2);padding-top:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span class="m36-badge">36+</span>
+            <div class="card-title" style="margin:0;padding:0;border:none;font-size:14px;">Klasyfikacja wiekowa 36+ (honorowa)</div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.5;">
+            Te same punkty co w klasyfikacji open — dodatkowe uhonorowanie zawodników 36+. Nie wpływa na open / drużynową / generalną.
+          </div>
+          <div class="ptr-results-grid">
+            <div class="ptr-results-col">
+              <div class="ptr-results-col-title" style="color:var(--male);border-bottom-color:var(--male);">♂ M36 <span id="ptr-results-count-M36" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:6px;"></span></div>
+              <div id="ptr-results-M36"></div>
+            </div>
+            <div class="ptr-results-col">
+              <div class="ptr-results-col-title" style="color:var(--female);border-bottom-color:var(--female);">♀ K36 <span id="ptr-results-count-K36" style="color:var(--text3);font-weight:400;font-size:11px;margin-left:6px;"></span></div>
+              <div id="ptr-results-K36"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -3682,12 +3705,12 @@ function _ptrOpenPrintWindow(htmlBody) {
 
 // Buduje pełną klasyfikację indywidualną (tabela + podium) dla danej płci.
 // asFragment=true: zwraca tylko sekcję rankingową (bez doc-headera/footera) — do złożenia w "Komplet"
-function _ptrBuildIndPrintHTML(gender, asFragment) {
-  const rows = state.athletes.filter(a => a.gender === gender).map(_patrolBuildRow).filter(r => r.hasAny);
+function _ptrBuildIndPrintHTML(gender, asFragment, over36Only) {
+  const rows = state.athletes.filter(a => a.gender === gender && (!over36Only || a.over36)).map(_patrolBuildRow).filter(r => r.hasAny);
   rows.sort((a, b) => a.tier !== b.tier ? a.tier - b.tier : a.totalSec - b.totalSec);
 
-  const gLabel = gender === 'M' ? 'Mężczyźni' : 'Kobiety';
-  const title = 'Bieg patrolowy — ' + gLabel;
+  const gLabel = (over36Only ? (gender === 'M' ? 'M36' : 'K36') : (gender === 'M' ? 'Mężczyźni' : 'Kobiety'));
+  const title = (over36Only ? 'Bieg patrolowy 36+ — ' : 'Bieg patrolowy — ') + gLabel;
 
   if (!rows.length) {
     if (asFragment) {
@@ -3875,9 +3898,14 @@ function _ptrBuildTeamPrintHTML(asFragment) {
 
 // Public API — wywoływane z przycisków
 function printPtrInd(gender)   { _ptrOpenPrintWindow(_ptrBuildIndPrintHTML(gender)); }
+function printPtrInd36(gender) { _ptrOpenPrintWindow(_ptrBuildIndPrintHTML(gender, false, true)); }
 function printPtrTeam()        { _ptrOpenPrintWindow(_ptrBuildTeamPrintHTML()); }
+// Czy są sklasyfikowani zawodnicy 36+ danej płci (do warunkowego dodania sekcji w komplecie)
+function _ptrHas36(gender) {
+  return (state.athletes || []).some(a => a.gender === gender && a.over36 && _patrolBuildRow(a).hasAny);
+}
 function printPtrAll() {
-  // Kolejność: GENERALNA (najważniejsza) → DRUŻYNOWA ind. → BIEG DRUŻYNOWY → M → K
+  // Kolejność: GENERALNA (najważniejsza) → DRUŻYNOWA ind. → BIEG DRUŻYNOWY → M → K → (M36/K36 jeśli są)
   const html =
     _ptrPdfHeader('PATROL', 'Klasyfikacja — komplet (Generalna, Drużynowa ind., Bieg drużynowy, M, K)') +
     _ptrBuildOverallPrintHTML(true) +
@@ -3885,6 +3913,8 @@ function printPtrAll() {
     _ptrBuildTeamRunPrintHTML(true) +
     _ptrBuildIndPrintHTML('M', true) +
     _ptrBuildIndPrintHTML('K', true) +
+    (_ptrHas36('M') ? _ptrBuildIndPrintHTML('M', true, true) : '') +
+    (_ptrHas36('K') ? _ptrBuildIndPrintHTML('K', true, true) : '') +
     _ptrPdfFooter();
   _ptrOpenPrintWindow(html);
 }
@@ -9232,10 +9262,11 @@ function renderResultsView() {
     return state.athletes.filter(a => a.gender === gender).map(_patrolBuildRow);
   }
 
-  function renderList(containerId, gender) {
+  function renderList(containerId, gender, extraFilter) {
     const el = document.getElementById(containerId);
     if (!el) return;
-    const rows = buildRows(gender).filter(r => r.hasAny);
+    let rows = buildRows(gender).filter(r => r.hasAny);
+    if (extraFilter) rows = rows.filter(extraFilter);
     if (!rows.length) {
       el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);">Brak wpisanych wyników.</div>';
       return;
@@ -9313,6 +9344,20 @@ function renderResultsView() {
   if (hasAny) {
     renderList('ptr-results-M', 'M');
     renderList('ptr-results-K', 'K');
+  }
+  // 🎖 Klasyfikacja wiekowa 36+ (honorowa) — te same punkty, tylko zawodnicy over36
+  const m36 = allM.filter(r => r.ath.over36);
+  const k36 = allK.filter(r => r.ath.over36);
+  const wrap36 = document.getElementById('ptr-results-36-wrap');
+  const has36 = m36.length > 0 || k36.length > 0;
+  if (wrap36) wrap36.style.display = has36 ? '' : 'none';
+  if (has36) {
+    const c36M = document.getElementById('ptr-results-count-M36');
+    const c36K = document.getElementById('ptr-results-count-K36');
+    if (c36M) c36M.textContent = m36.length ? '(' + m36.length + ')' : '';
+    if (c36K) c36K.textContent = k36.length ? '(' + k36.length + ')' : '';
+    renderList('ptr-results-M36', 'M', r => r.ath.over36);
+    renderList('ptr-results-K36', 'K', r => r.ath.over36);
   }
   renderTeamView();
   if (typeof renderTeamRunResults === 'function') renderTeamRunResults();
