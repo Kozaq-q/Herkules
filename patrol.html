@@ -5968,12 +5968,13 @@ function downloadPatrolTemplateXLS() {
       { label: 'Płeć (M/K)', w: 75, align: 'center' },
       { label: 'Drużyna', w: 200, align: 'left' },
       { label: 'PK', w: 55, align: 'center' },
+      { label: '36+', w: 55, align: 'center' },
     ],
     rows: [
-      ['sierż. Jan Kowalski', 'M', '1 Batalion', ''],
-      ['kpr. Anna Nowak', 'K', '1 Batalion', ''],
-      ['st. szer. Piotr Wiśniewski', 'M', '2 Batalion', ''],
-      ['szer. Tomasz Zając', 'M', '2 Batalion', 'PK'],
+      ['sierż. Jan Kowalski', 'M', '1 Batalion', '', '36+'],
+      ['kpr. Anna Nowak', 'K', '1 Batalion', '', ''],
+      ['st. szer. Piotr Wiśniewski', 'M', '2 Batalion', '', ''],
+      ['szer. Tomasz Zając', 'M', '2 Batalion', 'PK', ''],
     ],
     empties: 30,
   });
@@ -5986,11 +5987,11 @@ function downloadPatrolTemplateXLS() {
 }
 
 function downloadPatrolTemplateCSV() {
-  const csv = 'Lp;Stopień, imię i nazwisko;Płeć (M/K);Drużyna;PK\r\n' +
-              '1;sierż. Jan Kowalski;M;1 Batalion;\r\n' +
-              '2;kpr. Anna Nowak;K;1 Batalion;\r\n' +
-              '3;st. szer. Piotr Wiśniewski;M;2 Batalion;\r\n' +
-              '4;szer. Tomasz Zając;M;2 Batalion;PK\r\n';
+  const csv = 'Lp;Stopień, imię i nazwisko;Płeć (M/K);Drużyna;PK;36+\r\n' +
+              '1;sierż. Jan Kowalski;M;1 Batalion;;36+\r\n' +
+              '2;kpr. Anna Nowak;K;1 Batalion;;\r\n' +
+              '3;st. szer. Piotr Wiśniewski;M;2 Batalion;;\r\n' +
+              '4;szer. Tomasz Zając;M;2 Batalion;PK;\r\n';
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
