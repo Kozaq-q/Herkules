@@ -1632,13 +1632,13 @@ body.ptr-offline-mode .pair-vs-fallback { display: flex !important; }
             </div>
             <div>
               <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:4px;">Interwał (sekundy)</label>
-              <input type="number" min="10" max="3600" step="5" id="auto-start-interval" value="60" style="width:100px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:14px;text-align:center;" />
+              <input type="number" min="10" max="3600" step="5" id="auto-start-interval" value="300" style="width:100px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:7px 10px;font-family:var(--font-m);font-size:14px;text-align:center;" />
             </div>
             <button onclick="generateAutoStartSchedule()" class="btn btn-primary" style="padding:10px 18px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:none;background:var(--orange);color:#111;border-radius:var(--radius);">⚙ Wygeneruj harmonogram</button>
             <button onclick="clearAutoStartSchedule()" class="btn" style="padding:8px 14px;font-size:11px;">✕ Wyczyść wszystkie</button>
           </div>
           <div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.5;">
-            Pierwsza para o <strong id="auto-start-preview-first">10:00:00</strong>, każda kolejna co <strong id="auto-start-preview-interval">60</strong> s.
+            Pierwsza para o <strong id="auto-start-preview-first">10:00:00</strong>, każda kolejna co <strong id="auto-start-preview-interval">300</strong> s.
             Można potem zmienić godzinę konkretnej pary klikając ⏰ przy niej.
           </div>
         </div>
@@ -7214,7 +7214,7 @@ function toggleAutoStartCard() {
 // Generuj harmonogram auto-startu dla wszystkich par (dziś)
 function generateAutoStartSchedule() {
   const firstStr = document.getElementById('auto-start-first')?.value || '10:00:00';
-  const intervalSec = parseInt(document.getElementById('auto-start-interval')?.value || '60');
+  const intervalSec = parseInt(document.getElementById('auto-start-interval')?.value || '300');
   if (!firstStr || !Number.isFinite(intervalSec) || intervalSec < 5) {
     showToast('Nieprawidłowe parametry', 'error'); return;
   }

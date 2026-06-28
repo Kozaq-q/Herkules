@@ -274,7 +274,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
         </div>
         <div>
           <label style="display:block;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Interwał (s)</label>
-          <input type="number" min="10" max="3600" step="5" id="sched-interval-M" value="60" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
+          <input type="number" min="10" max="3600" step="5" id="sched-interval-M" value="300" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
         </div>
       </div>
     </div>
@@ -292,7 +292,7 @@ html, body { background: var(--bg); color: var(--text1); font-family: var(--font
         </div>
         <div>
           <label style="display:block;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;">Interwał (s)</label>
-          <input type="number" min="10" max="3600" step="5" id="sched-interval-K" value="60" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
+          <input type="number" min="10" max="3600" step="5" id="sched-interval-K" value="300" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text1);padding:10px;font-family:var(--font-m);font-size:16px;font-weight:700;text-align:center;" />
         </div>
       </div>
     </div>
@@ -1769,7 +1769,7 @@ function confirmGenerateSchedule() {
     const gPairs = pairs.filter(p => p.gender === g).sort((a, b) => a.pairNum - b.pairNum);
     if (!gPairs.length) continue;
     const firstStr = document.getElementById('sched-first-' + g).value || (g === 'M' ? '10:00:00' : '10:30:00');
-    const intervalSec = parseInt(document.getElementById('sched-interval-' + g).value || '60');
+    const intervalSec = parseInt(document.getElementById('sched-interval-' + g).value || '300');
     if (!Number.isFinite(intervalSec) || intervalSec < 5) {
       showToast('Nieprawidłowy interwał dla ' + g, 'error'); return;
     }
