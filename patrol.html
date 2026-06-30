@@ -3046,6 +3046,38 @@ function _applyRemoteState(stateJson) {
   _applyRemoteStateNow(stateJson);
 }
 
+// ── Ochrona przed utratą focusa w polach wpisywania wyników ──────────────
+// Gdy synchronizacja chce przerysować widok wpisywania (Pary / Pary drużyn),
+// a sędzia właśnie pisze w polu — NIE przerysowujemy (re-render niszczyłby
+// input pod kursorem i przerywał pisanie). Stan i tak jest scalony; sam widok
+// odświeżamy dopiero gdy sędzia opuści pola (focusout). Wzorzec jak w bento.
+let _ptrPendingViewRefresh = false;
+function _ptrTypingInActivePage() {
+  const a = document.activeElement;
+  if (!a || !/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) return false;
+  const page = a.closest('.page');
+  return !!(page && page.classList.contains('active'));
+}
+function _ptrRefreshActiveEntryView() {
+  const active = document.querySelector('.nav-tab.active');
+  if (!active) return;
+  const tabId = active.id.replace('tab-', '');
+  if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
+  else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
+}
+// Po opuszczeniu pola: jeśli był odłożony render i sędzia NIE przeszedł do innego
+// pola (Tab), dorenderuj — pokaże ewentualne zmiany innych sędziów. setTimeout
+// daje czas na przejście focusa do kolejnego inputu (wtedy nie renderujemy).
+document.addEventListener('focusout', () => {
+  if (!_ptrPendingViewRefresh) return;
+  setTimeout(() => {
+    if (_ptrPendingViewRefresh && !_ptrTypingInActivePage()) {
+      _ptrPendingViewRefresh = false;
+      _ptrRefreshActiveEntryView();
+    }
+  }, 60);
+});
+
 // ═══════════════════════════════════════════════════════════════
 // MERGE PER-POLE — bezpieczna synchronizacja gdy dwóch sędziów
 // pracuje równocześnie nad tym samym zawodnikiem ale na różnych polach
@@ -3336,8 +3368,13 @@ function _applyRemoteStateNowInternal(stateJson) {
         if (_rosterSig(state.athletes) !== _prevRosterSig) { renderAthletes(); updateAthleteStats(); }
         else if (typeof updateAthleteStats === 'function') updateAthleteStats();
       }
-      else if (tabId === 'pairs' && typeof renderPairsView === 'function') renderPairsView();
-      else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') renderTeamRunList();
+      else if (tabId === 'pairs' && typeof renderPairsView === 'function') {
+        // Nie przerysowuj gdy sędzia pisze w polu — odłóż do opuszczenia pól (focusout)
+        if (_ptrTypingInActivePage()) _ptrPendingViewRefresh = true; else renderPairsView();
+      }
+      else if (tabId === 'team-run' && typeof renderTeamRunList === 'function') {
+        if (_ptrTypingInActivePage()) _ptrPendingViewRefresh = true; else renderTeamRunList();
+      }
       else if (tabId === 'results' && typeof renderResultsView === 'function') renderResultsView();
     }
     // B) Wykryj nowy start pary od innego sędziego — toast + pip
