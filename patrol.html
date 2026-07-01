@@ -3783,28 +3783,9 @@ function _ptrBuildIndPrintHTML(gender, asFragment, over36Only) {
       _ptrPdfFooter();
   }
 
-  // Podium top 3 (tylko ci z czasem — pomija DNF/DNS/DSQ)
-  const top3 = rows.filter(r => r.totalSec !== Infinity).slice(0, 3);
+  // Podium budujemy PO regulaminowym sortowaniu po punktach (niżej), nie tutaj —
+  // inaczej medale trafiały do najszybszych czasowo, a nie do faktycznych miejsc.
   let podium = '';
-  if (top3.length >= 1) {
-    const order = [top3[1] || null, top3[0] || null, top3[2] || null]; // 2, 1, 3
-    const cls   = ['p2', 'p1', 'p3'];
-    const medal = ['🥈', '🥇', '🥉'];
-    podium = '<div class="podium-block">';
-    order.forEach((r, i) => {
-      if (!r) {
-        podium += '<div class="podium-place ' + cls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>';
-        return;
-      }
-      podium += '<div class="podium-place ' + cls[i] + '">' +
-        '<div class="podium-rank">' + medal[i] + '</div>' +
-        '<div class="podium-name">' + esc(displayName(r.ath)) + '</div>' +
-        '<div class="podium-team">' + esc(r.ath.team || '') + '</div>' +
-        '<div class="podium-time">' + esc(r.total || '—') + '</div>' +
-      '</div>';
-    });
-    podium += '</div>';
-  }
 
   // Sortowanie regulaminowe: po punktach rosnąco (najniższy wygrywa), tie-break: strzelanie → OSF → dziesiątki
   rows.forEach(r => { r._pts = calcPatrolPoints(r.ath, r); });
@@ -3825,6 +3806,29 @@ function _ptrBuildIndPrintHTML(gender, asFragment, over36Only) {
     }
     return a.totalSec - b.totalSec;
   });
+
+  // Podium top 3 — WG MIEJSC (po punktach, z powyższego sortu regulaminowego),
+  // nie po czasie. Tylko sklasyfikowani (tier 0 + policzone pkt). Liczba = punkty.
+  const top3 = rows.filter(r => r.tier === 0 && r._pts !== null).slice(0, 3);
+  if (top3.length >= 1) {
+    const order = [top3[1] || null, top3[0] || null, top3[2] || null]; // 2, 1, 3
+    const cls   = ['p2', 'p1', 'p3'];
+    const medal = ['🥈', '🥇', '🥉'];
+    podium = '<div class="podium-block">';
+    order.forEach((r, i) => {
+      if (!r) {
+        podium += '<div class="podium-place ' + cls[i] + '" style="opacity:.15;"><div class="podium-rank">—</div></div>';
+        return;
+      }
+      podium += '<div class="podium-place ' + cls[i] + '">' +
+        '<div class="podium-rank">' + medal[i] + '</div>' +
+        '<div class="podium-name">' + esc(displayName(r.ath)) + '</div>' +
+        '<div class="podium-team">' + esc(r.ath.team || '') + '</div>' +
+        '<div class="podium-time">' + (r._pts !== null ? r._pts + ' pkt' : '—') + '</div>' +
+      '</div>';
+    });
+    podium += '</div>';
+  }
 
   // Pełna tabela — sekcja owinięta w .ranking-section (smart page-break)
   const sectionBody =
