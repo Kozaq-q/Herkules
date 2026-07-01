@@ -3716,10 +3716,17 @@ const PTR_PDF_CSS = `
   .dsq { text-decoration: line-through; color: #999; }
   .dsq-label { font-size: 9px; margin-left: 3px; color: #999; }
   .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #000; padding: 4px 0 3px; margin: 16px 0 0; color: #000; page-break-after: avoid; break-after: avoid; }
-  /* Kategoria — staraj się trzymać razem; przeskocz na nową stronę jeśli się nie mieści */
-  .ranking-section { page-break-inside: avoid; break-inside: avoid; }
+  /* Kategoria płynie przez strony (gęsto, min. stron). NIE „break-inside: avoid"
+     na całości — inaczej duża tabela wypychana byłaby w całości na nową stronę
+     (pusta pierwsza strona). Zamiast tego kleimy tylko małe bloki (niżej). */
+  .ranking-section { break-inside: auto; }
   tbody tr { page-break-inside: avoid; break-inside: avoid; }
   thead { display: table-header-group; }
+  /* Nagłówek sekcji (podium + tytuł) trzyma się razem i z początkiem tabeli */
+  .rank-head { page-break-inside: avoid; break-inside: avoid; page-break-after: avoid; break-after: avoid; }
+  /* Pierwsze i ostatnie wiersze klejone, by żadna strona nie miała 1–2 sierot */
+  tr.keep-head { page-break-before: avoid; break-before: avoid; }
+  tr.keep-tail { page-break-before: avoid; break-before: avoid; }
   .podium-block { display: flex; gap: 0; margin-bottom: 16px; align-items: flex-end; }
   .podium-place { flex: 1; padding: 12px 12px; border: 1px solid #ccc; border-right: none; }
   .podium-place:last-child { border-right: 1px solid #ccc; }
@@ -3832,8 +3839,8 @@ function _ptrBuildIndPrintHTML(gender, asFragment, over36Only) {
 
   // Pełna tabela — sekcja owinięta w .ranking-section (smart page-break)
   const sectionBody =
-    podium +
-    '<div class="section-title">' + (asFragment ? esc(title) + ' — ' : 'Pełna klasyfikacja — ') + rows.length + ' zawodników</div>' +
+    '<div class="rank-head">' + podium +
+    '<div class="section-title">' + (asFragment ? esc(title) + ' — ' : 'Pełna klasyfikacja — ') + rows.length + ' zawodników</div></div>' +
     '<table><thead><tr>' +
       '<th class="rank-col">Msc</th>' +
       '<th>Zawodnik</th>' +
@@ -3846,9 +3853,11 @@ function _ptrBuildIndPrintHTML(gender, asFragment, over36Only) {
     (() => {
       let rank = 1;
       let body = '';
-      rows.forEach(r => {
+      const N = rows.length;
+      rows.forEach((r, idx) => {
         const noTime = r.totalSec === Infinity;
         const topCls = (!noTime && !r.dsq) ? (rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '') : '';
+        const glue = (idx === 1 || idx === 2) ? ' keep-head' : (idx >= N - 2 ? ' keep-tail' : '');
         const rankDisp = r.dsq ? 'DSQ' : (noTime ? (r.marker || '—') : rank);
         const totalCell = r.dsq ? '<span class="marker-badge">DSQ</span>' :
                           isTimeMarker(r.total) ? '<span class="marker-badge">' + r.total + '</span>' :
@@ -3857,7 +3866,7 @@ function _ptrBuildIndPrintHTML(gender, asFragment, over36Only) {
         const shotPts = _shotPointsFromRow(r);
         const shotCell  = r.dsq ? '—' : (shotPts !== null ? (shotPts + '/50' + (r.tens ? ' (' + r.tens + '×10)' : '')) : '—');
         const ptsCell   = (r._pts === null) ? '—' : ('<strong>' + r._pts + '</strong>');
-        body += '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + '">' +
+        body += '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + glue + '">' +
           '<td class="rank-col">' + rankDisp + '</td>' +
           '<td class="bold">' + esc(displayName(r.ath)) + (r.ath.bib ? '<span class="bib">' + esc(r.ath.bib) + '</span>' : '') + '</td>' +
           '<td class="small">' + esc(r.ath.team || '') + '</td>' +
@@ -3927,8 +3936,8 @@ function _ptrBuildTeamPrintHTML(asFragment) {
   }
 
   const sectionBody =
-    podium +
-    '<div class="section-title">' + (asFragment ? 'Klasyfikacja drużynowa — ' : 'Pełna klasyfikacja — ') + teams.length + ' drużyn</div>' +
+    '<div class="rank-head">' + podium +
+    '<div class="section-title">' + (asFragment ? 'Klasyfikacja drużynowa — ' : 'Pełna klasyfikacja — ') + teams.length + ' drużyn</div></div>' +
     '<table><thead><tr>' +
       '<th class="rank-col">Msc</th>' +
       '<th>Drużyna</th>' +
@@ -3940,13 +3949,14 @@ function _ptrBuildTeamPrintHTML(asFragment) {
     teams.map((t, i) => {
       const rank = i + 1;
       const topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '';
+      const glue = (i === 1 || i === 2) ? ' keep-head' : (i >= teams.length - 2 ? ' keep-tail' : '');
       const composition = (t.counts.M ? '♂ ' + t.counts.M : '') + (t.counts.M && t.counts.K ? ' · ' : '') + (t.counts.K ? '♀ ' + t.counts.K : '');
       const extras = [];
       if (t.score.dnf) extras.push(t.score.dnf + '×DNF');
       if (t.score.dns) extras.push(t.score.dns + '×DNS');
       if (t.score.dsq) extras.push(t.score.dsq + '×DSQ');
       const extrasTxt = extras.length ? extras.join(' · ') : '—';
-      return '<tr class="' + topCls + '">' +
+      return '<tr class="' + topCls + glue + '">' +
         '<td class="rank-col">' + rank + '</td>' +
         '<td class="bold">' + esc(t.name) + '</td>' +
         '<td class="c small">' + composition + '</td>' +
@@ -4009,7 +4019,7 @@ function _ptrBuildTeamRunPrintHTML(asFragment) {
   }
   let rank = 0;
   const sectionBody =
-    '<div class="section-title">' + (asFragment ? esc(title) + ' — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div>' +
+    '<div class="rank-head"><div class="section-title">' + (asFragment ? esc(title) + ' — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div></div>' +
     '<table><thead><tr>' +
       '<th class="rank-col">Msc</th>' +
       '<th>Drużyna</th>' +
@@ -4019,13 +4029,14 @@ function _ptrBuildTeamRunPrintHTML(asFragment) {
       '<th class="c">Elim.</th>' +
       '<th class="c">Wynik (pkt)</th>' +
     '</tr></thead><tbody>' +
-    rows.map(r => {
+    rows.map((r, i) => {
       let topCls = '';
       if (!r.dsq) { rank++; topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : ''; }
+      const glue = (i === 1 || i === 2) ? ' keep-head' : (i >= rows.length - 2 ? ' keep-tail' : '');
       const biegStr = r.tr.biegSec ? Math.floor(r.tr.biegSec/60) + ':' + String(r.tr.biegSec%60).padStart(2,'0') : '—';
       const elim = r.tr.eliminated || 0;
       const pts = r.dsq ? '<span style="color:#c00;font-weight:800;">DSQ</span>' : r.pts;
-      return '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + '">' +
+      return '<tr class="' + topCls + (r.dsq ? ' dsq' : '') + glue + '">' +
         '<td class="rank-col">' + (r.dsq ? 'DSQ' : rank) + '</td>' +
         '<td class="bold">' + esc(r.name) + '</td>' +
         '<td class="c mono">' + biegStr + '</td>' +
@@ -4091,8 +4102,8 @@ function _ptrBuildOverallPrintHTML(asFragment) {
     podium += '</div>';
   }
   const sectionBody =
-    podium +
-    '<div class="section-title">' + (asFragment ? 'Klasyfikacja zespołowa — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div>' +
+    '<div class="rank-head">' + podium +
+    '<div class="section-title">' + (asFragment ? 'Klasyfikacja zespołowa — ' : 'Pełna klasyfikacja — ') + rows.length + ' drużyn</div></div>' +
     '<table><thead><tr>' +
       '<th class="rank-col">Msc</th>' +
       '<th>Drużyna</th>' +
@@ -4103,8 +4114,9 @@ function _ptrBuildOverallPrintHTML(asFragment) {
     rows.map((r, i) => {
       const rank = i + 1;
       const topCls = rank === 1 ? ' top1' : rank === 2 ? ' top2' : rank === 3 ? ' top3' : '';
+      const glue = (i === 1 || i === 2) ? ' keep-head' : (i >= rows.length - 2 ? ' keep-tail' : '');
       const trCell = r.trMissing ? r.trEff + ' <span class="small" style="color:#c80;">(brak biegu +1200)</span>' : (r.trEff !== null ? r.trEff : '—');
-      return '<tr class="' + topCls + '">' +
+      return '<tr class="' + topCls + glue + '">' +
         '<td class="rank-col">' + rank + '</td>' +
         '<td class="bold">' + esc(r.name) + '</td>' +
         '<td class="c mono">' + r.indPts + '</td>' +
